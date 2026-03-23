@@ -1,0 +1,55 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172321;
+  background: #f4f7f5;
+  line-height: 1.5;
+  font-weight: 400;
+  --bg: #f4f7f5;
+  --surface: #ffffff;
+  --surface-alt: #edf4ef;
+  --border: #d7e3db;
+  --text: #172321;
+  --muted: #60716c;
+  --accent: #2f6f5f;
+  --accent-soft: #dfeee8;
+  --shadow: 0 10px 30px rgba(23, 35, 33, 0.08);
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --max-content: 1200px;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; background: var(--bg); }
+body { color: var(--text); }
+a { color: inherit; text-decoration: none; }
+.app-shell { min-height: 100vh; }
+.app-sidebar { display: none; }
+.app-main { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px); background: rgba(244, 247, 245, 0.82); border-bottom: 1px solid var(--border); padding: 1rem 1rem 0.9rem; }
+.topbar-title { margin: 0.1rem 0 0; font-size: clamp(1.15rem, 2vw, 1.6rem); line-height: 1.2; }
+.content { width: min(100%, var(--max-content)); margin: 0 auto; padding: 1rem 1rem 6rem; }
+.page-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.25rem; }
+.page-card h1 { margin: 0.1rem 0 0.75rem; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; }
+.page-card p { margin: 0; color: var(--muted); max-width: 65ch; }
+.eyebrow { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; font-weight: 700; }
+.bottom-nav { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom)); background: rgba(244, 247, 245, 0.94); backdrop-filter: blur(14px); border-top: 1px solid var(--border); }
+.bottom-link, .nav-link { border: 1px solid transparent; border-radius: var(--radius-sm); padding: 0.75rem 0.9rem; color: var(--muted); text-align: center; font-weight: 600; }
+.bottom-link.active, .nav-link.active { background: var(--accent-soft); color: var(--accent); border-color: #c7ddd4; }
+.brand { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.25rem; }
+.brand-mark { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 1.25rem; font-weight: 700; }
+.brand-title { font-weight: 800; }
+.brand-subtitle { font-size: 0.9rem; color: var(--muted); }
+.nav-list { display: grid; gap: 0.4rem; }
+
+@media (min-width: 768px) {
+  .topbar, .content { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .content { padding-bottom: 2rem; }
+  .bottom-nav { display: none; }
+  .app-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+  .app-sidebar { display: block; position: sticky; top: 0; align-self: start; min-height: 100vh; padding: 1.25rem; background: var(--surface-alt); border-right: 1px solid var(--border); }
+  .page-card { padding: 1.75rem; }
+}
+@media (min-width: 1200px) {
+  .topbar, .content { padding-left: 2rem; padding-right: 2rem; }
+  .page-card { padding: 2rem; }
+}

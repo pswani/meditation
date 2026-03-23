@@ -1,0 +1,109 @@
+# Meditation App
+
+A focused meditation practice app built with React, TypeScript, and Vite.
+
+## Product focus
+
+This app is designed as a disciplined meditation practice tool, not a broad wellness marketplace.
+
+Core capabilities:
+- timer-based meditation
+- meditation types
+- custom meditation plays
+- playlists
+- automatic and manual session logging
+- summaries and insights
+- sankalpa goals
+
+## Meditation types
+- Vipassana
+- Ajapa
+- Tratak
+- Kriya
+- Sahaj
+
+## UX scope
+
+The UX must work well across:
+- mobile phones
+- tablets
+- laptops
+- desktops
+
+Design goals:
+- responsive layouts
+- calm and uncluttered UI
+- quick meditation start on mobile
+- efficient information density on desktop
+- consistent terminology and flows across breakpoints
+
+## Tech stack
+- React
+- TypeScript
+- Vite
+- React Router
+- local state first
+- local persistence first
+
+## Getting started
+
+### 1. Install Node.js
+Use Node 20+.
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Start the app
+```bash
+npm run dev
+```
+
+### 4. Build for production
+```bash
+npm run build
+```
+
+### 5. Preview production build
+```bash
+npm run preview
+```
+
+## Quality commands
+
+```bash
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+## Suggested implementation order
+1. app shell and responsive navigation
+2. timer flow
+3. meditation types
+4. custom plays
+5. playlists
+6. logging
+7. summaries
+8. sankalpa goals
+
+## Codex notes
+Read:
+- AGENTS.md
+- PLANS.md
+- docs/product-requirements.md
+- docs/architecture.md
+- docs/ux-spec.md
+- docs/screen-inventory.md
+- requirements/roadmap.md
+- requirements/decisions.md
+- requirements/session-handoff.md
+- requirements/prompts.md
+
+Before major feature work:
+- plan first
+- keep changes scoped
+- update requirements/session-handoff.md and requirements/decisions.md
+- run lint, test, typecheck, and build
