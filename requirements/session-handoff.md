@@ -1,7 +1,12 @@
 # Session Handoff
 
 ## Current status
-Project scaffold created.
+Responsive app shell and route-level placeholder screens are implemented.
+Primary destinations are wired with breakpoint-adaptive navigation:
+- mobile: bottom navigation
+- tablet/desktop: sidebar navigation
+
+Navigation labels now use `Sankalpa` instead of `Goals` while route compatibility remains at `/goals`.
 
 ## What the next Codex session should read first
 - AGENTS.md
@@ -11,6 +16,7 @@ Project scaffold created.
 - docs/screen-inventory.md
 - requirements/roadmap.md
 - requirements/decisions.md
+- requirements/execplan-responsive-app-shell.md
 
 ## Recommended next task
-Implement app shell and responsive navigation with placeholder screens.
+Implement timer setup and active session flow with validation for duration and interval sounds.
