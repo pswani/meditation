@@ -25,6 +25,11 @@ Implemented timer-to-history vertical slice:
   - mobile bottom nav
   - tablet/desktop sidebar nav
 
+Completed UX review for this slice:
+- findings documented in `docs/ux-review-timer-history.md`
+- prioritized recommendations split into `critical`, `important`, and `nice to have`
+- no code changes in this review step
+
 ## What the next Codex session should read first
 - AGENTS.md
 - PLANS.md
@@ -32,21 +37,27 @@ Implemented timer-to-history vertical slice:
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-timer-history.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/execplan-timer-history-vertical-slice.md
 
 ## What remains for the next vertical slice
-- Manual log flow and form validation
-- Summary foundation (overall and by meditation type)
-- Sankalpa integration with session log progress
-- Custom play and playlist vertical slices (still intentionally excluded from this slice)
+- Implement `critical` and `important` UX improvements from `docs/ux-review-timer-history.md` for:
+  - `Practice / Timer Setup`
+  - `Active Timer`
+  - `History`
+- Manual log flow and form validation (after UX refinement pass)
+- Summary foundation and sankalpa integration in later slices
 
 ## Known limitations
 - Sound selection is mock state only; no real audio playback.
 - Active timer state is in-memory; browser refresh during an active session does not recover the running timer.
 - History currently focuses on recent auto log entries only and does not include filters yet.
 - Session logs are local-only and limited to prototype persistence.
+- `End Early` currently has no confirmation guard.
+- Optional timer sounds are not grouped under an advanced panel yet.
+- Setup validation feedback is still more immediate than ideal for first interaction.
 
 ## Exact recommended next prompt
 Read:
@@ -56,54 +67,31 @@ Read:
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-timer-history.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
 
 Then do the following:
 
-1. Create an ExecPlan for a vertical slice that implements:
-   - manual log screen
-   - history integration for manual log entries
-   - basic history filters for source and date range
-
-2. Keep the scope intentionally bounded to this slice only.
-   Included:
-   - manual log form with:
-     - duration
-     - meditation type
-     - session timestamp
-   - validation:
-     - duration > 0
-     - meditation type required
-     - session timestamp required
-   - add manual log entries to the same history list as auto log entries
-   - clearly distinguish manual log vs auto log in history
-   - simple filter controls on history:
-     - source (all, auto log, manual log)
-     - date range (last 7 days, last 30 days, all)
-   - responsive UX across mobile, tablet, and desktop
-   - local-only persistence updates
-
-   Excluded:
-   - summaries
-   - sankalpa goal calculations
-   - backend/cloud sync
-   - notifications
-   - custom plays
-   - playlists
-
-3. Use existing product terminology exactly.
-4. Add focused tests for manual log validation and history filter logic.
-5. Keep the design calm and minimal.
-6. Avoid unrelated refactors and extra dependencies.
-7. Run:
+1. create an ExecPlan
+2. implement the critical and important UX improvements from docs/ux-review-timer-history.md
+3. keep scope bounded to UX improvements for:
+   - Timer Setup
+   - Active Timer
+   - History
+4. preserve existing functionality unless a reviewed issue requires a behavior fix
+5. improve responsive behavior across mobile, tablet, and desktop
+6. keep the design calm, minimal, and readable
+7. add or update focused tests where behavior changes
+8. run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-8. Update:
+9. update:
    - requirements/decisions.md
    - requirements/session-handoff.md
-9. Commit with a clear message, for example:
-   feat(logging): add manual log flow and history filters vertical slice
+10. include the exact recommended next prompt in session-handoff
+11. commit with a clear message:
+   feat(ux): refine timer and history responsive experience
