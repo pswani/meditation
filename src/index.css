@@ -408,6 +408,16 @@ button.secondary {
   gap: 0.5rem;
 }
 
+.history-item-main {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.history-item-side {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .history-row {
   display: flex;
   justify-content: space-between;
@@ -490,6 +500,23 @@ button.secondary {
   gap: 0.5rem;
 }
 
+.custom-play-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.custom-play-main,
+.custom-play-side {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.custom-play-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 @media (min-width: 48rem) {
   .app-shell {
     display: grid;
@@ -537,6 +564,30 @@ button.secondary {
 
   .history-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .history-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 0.8rem;
+  }
+
+  .history-item-side {
+    justify-content: flex-end;
+  }
+
+  .custom-play-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 0.8rem;
+  }
+
+  .custom-play-side {
+    justify-items: end;
+  }
+
+  .custom-play-actions {
+    justify-content: flex-end;
   }
 }
 

@@ -1,30 +1,24 @@
 # Session Handoff
 
 ## Current status
-Custom Plays + Manual Session Logging vertical slice is implemented.
+Custom Plays + Manual Session Logging UX refinement slice is implemented.
 
-Implemented:
-- `custom play` flow in Practice:
-  - create
-  - edit
-  - delete
-  - favorite/unfavorite
-- `manual log` flow in History:
-  - duration input
-  - meditation type selector
-  - session timestamp input
-  - validation errors for required fields/rules
-- Unified `history` list now shows:
-  - status (`completed` / `ended early`)
-  - source (`auto log` / `manual log`)
-- Local-only persistence:
-  - custom plays
-  - session logs (including manual logs)
-  - existing timer settings persistence retained
-- Focused tests added for:
-  - custom play validation/create/update helpers
-  - manual log validation/log creation helpers
-- Existing timer slice behavior preserved (active timer, pause/resume, auto log).
+Implemented in this slice:
+- `custom play` UX
+  - added primary `Use Custom Play` action to prefill timer setup
+  - added delete confirmation flow before removal
+  - clarified duplicate labels:
+    - `Custom play meditation type`
+    - `Custom play duration (minutes)`
+- `manual log` UX
+  - added explicit success feedback after save
+  - added `session timestamp` helper text for local-time intent
+- `history` and `custom play` responsive readability
+  - improved medium/large-screen row structure for metadata, badges, and actions
+- Focused tests added for changed behavior:
+  - custom-play-to-timer prefill helper
+  - custom play apply + delete confirmation UX
+  - manual log success feedback UX
 
 Validation commands run and passing:
 - `npm run typecheck`
@@ -34,6 +28,7 @@ Validation commands run and passing:
 
 ## What the next Codex session should read first
 - AGENTS.md
+- PLANS.md
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
@@ -43,21 +38,19 @@ Validation commands run and passing:
 - requirements/session-handoff.md
 
 ## What remains for the next vertical slice
-- Run a principal-level UX review for the implemented Custom Plays + Manual Session Logging + History integration slice.
-- Capture prioritized findings (critical/important/nice to have).
-- Write review outputs into:
-  - `docs/ux-review-custom-plays.md`
-  - `requirements/session-handoff.md`
+- Implement Playlists as a full vertical slice.
+- Define playlist item ordering, total duration behavior, run flow, and logging behavior.
+- Integrate playlist logs into History with focused validation/logging tests.
 
 ## Known limitations
-- `custom play` entries are managed locally only and are not yet selectable to prefill timer setup.
-- Manual logs are currently recorded as completed entries only; no manual status override is included.
-- Sound behavior remains mocked; no real audio playback.
-- Active timer is still in-memory only and does not restore after page refresh during an active session.
+- `custom play` prefill currently maps duration and meditation type only.
+- Manual log flow currently uses inline success messaging and no separate toast queue.
+- History still has no filtering controls (source/status filters are still future UX enhancements).
 
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
+- PLANS.md
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
@@ -67,15 +60,17 @@ Read:
 - requirements/session-handoff.md
 
 Then:
-1. review the currently implemented Custom Plays + Manual Session Logging + History integration slice
-2. act as a principal UX reviewer for responsive design across mobile, tablet, and desktop
-3. identify friction, confusing labels, weak forms, missing states, and responsive issues
-4. produce a prioritized recommendation list:
-   - critical
-   - important
-   - nice to have
-5. do not implement changes in this step
-6. write findings into:
-   - docs/ux-review-custom-plays.md
-   - requirements/session-handoff.md
-7. include the exact recommended next prompt in session-handoff
+1. create an ExecPlan
+2. implement Playlists as a vertical slice
+3. support create/edit/delete/favorite playlists
+4. support ordered playlist items and derived total duration
+5. add a lightweight playlist run flow suitable for a prototype
+6. define and implement how playlist sessions are logged
+7. integrate playlist logs into History
+8. keep the UX responsive and calm across mobile, tablet, and desktop
+9. add focused tests for playlist validation and logging rules
+10. run typecheck, lint, test, and build
+11. update decisions and session-handoff
+12. include the exact recommended next prompt in session-handoff
+13. commit with a clear message:
+   feat(playlists): add playlists and playlist logging vertical slice

@@ -41,3 +41,13 @@
   - session timestamp
 - Model manual entries as completed local logs with derived start/end timestamps and include them in the same unified history list.
 - Use explicit source/status pills in `history` to clearly distinguish `manual log` vs `auto log` and `completed` vs `ended early`.
+
+### 2026-03-23 custom-plays manual-log UX refinement decisions
+- Implement explicit delete confirmation for `custom play` entries instead of silent immediate deletion.
+- Add a primary `Use Custom Play` action that prefills timer setup duration and meditation type while preserving other timer options.
+- Clarify duplicate field copy by renaming custom play fields to:
+  - `Custom play meditation type`
+  - `Custom play duration (minutes)`
+- Add explicit post-save confirmation for manual log creation with inline success status.
+- Add helper guidance for `session timestamp` to clarify local-time intent.
+- Refine list row structure for `custom play` and `history` items to improve tablet/desktop scanability without introducing dense table UI.

@@ -1,4 +1,5 @@
 import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../types/customPlay';
+import type { TimerSettings } from '../types/timer';
 
 export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValidationResult {
   const errors: CustomPlayValidationResult['errors'] = {};
@@ -44,5 +45,13 @@ export function updateCustomPlay(existing: CustomPlay, draft: CustomPlayDraft, n
     durationMinutes: draft.durationMinutes,
     recordingLabel: draft.recordingLabel.trim(),
     updatedAt: now.toISOString(),
+  };
+}
+
+export function applyCustomPlayToTimerSettings(settings: TimerSettings, play: Pick<CustomPlay, 'durationMinutes' | 'meditationType'>): TimerSettings {
+  return {
+    ...settings,
+    durationMinutes: play.durationMinutes,
+    meditationType: play.meditationType,
   };
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from './customPlay';
+import type { TimerSettings } from '../types/timer';
+import { applyCustomPlayToTimerSettings, createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from './customPlay';
 
 describe('custom play helpers', () => {
   it('validates required custom play fields', () => {
@@ -42,5 +43,27 @@ describe('custom play helpers', () => {
     expect(updated.meditationType).toBe('Ajapa');
     expect(updated.durationMinutes).toBe(25);
     expect(updated.updatedAt).toBe('2026-03-23T11:00:00.000Z');
+  });
+
+  it('applies custom play fields onto timer settings', () => {
+    const settings: TimerSettings = {
+      durationMinutes: 10,
+      meditationType: 'Ajapa',
+      startSound: 'Soft Chime',
+      endSound: 'Temple Bell',
+      intervalEnabled: true,
+      intervalMinutes: 4,
+      intervalSound: 'Wood Block',
+    };
+
+    const next = applyCustomPlayToTimerSettings(settings, {
+      durationMinutes: 30,
+      meditationType: 'Vipassana',
+    });
+
+    expect(next.durationMinutes).toBe(30);
+    expect(next.meditationType).toBe('Vipassana');
+    expect(next.startSound).toBe('Soft Chime');
+    expect(next.intervalEnabled).toBe(true);
   });
 });

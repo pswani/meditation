@@ -23,6 +23,7 @@ export default function HistoryPage() {
   const navigate = useNavigate();
   const [manualLog, setManualLog] = useState<ManualLogInput>(initialManualLog);
   const [errors, setErrors] = useState<ManualLogValidationResult['errors']>({});
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   function submitManualLog(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,6 +35,9 @@ export default function HistoryPage() {
         ...initialManualLog,
         sessionTimestamp: getDefaultTimestamp(),
       });
+      setSaveSuccessMessage('Manual log saved to history.');
+    } else {
+      setSaveSuccessMessage(null);
     }
   }
 
@@ -44,6 +48,11 @@ export default function HistoryPage() {
 
       <section className="manual-log-panel">
         <h3 className="section-title">Add Manual Log</h3>
+        {saveSuccessMessage ? (
+          <div className="status-banner ok" role="status">
+            <p>{saveSuccessMessage}</p>
+          </div>
+        ) : null}
         <form className="form-grid" onSubmit={submitManualLog}>
           <label>
             <span>Duration (minutes)</span>
@@ -51,12 +60,13 @@ export default function HistoryPage() {
               type="number"
               min={1}
               value={manualLog.durationMinutes}
-              onChange={(event) =>
+              onChange={(event) => {
+                setSaveSuccessMessage(null);
                 setManualLog((current) => ({
                   ...current,
                   durationMinutes: Number(event.target.value),
-                }))
-              }
+                }));
+              }}
             />
             {errors.durationMinutes ? <small className="error-text">{errors.durationMinutes}</small> : null}
           </label>
@@ -65,12 +75,13 @@ export default function HistoryPage() {
             <span>Meditation type</span>
             <select
               value={manualLog.meditationType}
-              onChange={(event) =>
+              onChange={(event) => {
+                setSaveSuccessMessage(null);
                 setManualLog((current) => ({
                   ...current,
                   meditationType: event.target.value as ManualLogInput['meditationType'],
-                }))
-              }
+                }));
+              }}
             >
               <option value="">Select meditation type</option>
               {meditationTypes.map((meditationType) => (
@@ -87,14 +98,19 @@ export default function HistoryPage() {
             <input
               type="datetime-local"
               value={manualLog.sessionTimestamp}
-              onChange={(event) =>
+              onChange={(event) => {
+                setSaveSuccessMessage(null);
                 setManualLog((current) => ({
                   ...current,
                   sessionTimestamp: event.target.value,
-                }))
-              }
+                }));
+              }}
             />
-            {errors.sessionTimestamp ? <small className="error-text">{errors.sessionTimestamp}</small> : null}
+            {errors.sessionTimestamp ? (
+              <small className="error-text">{errors.sessionTimestamp}</small>
+            ) : (
+              <small className="hint-text">Use your local date and time when the session ended.</small>
+            )}
           </label>
 
           <div className="timer-actions">
@@ -115,20 +131,21 @@ export default function HistoryPage() {
         <ul className="history-list">
           {recentLogs.map((entry) => (
             <li key={entry.id} className="history-item">
-              <div className="history-row">
-                <div>
-                  <strong>{entry.meditationType}</strong>
-                  <p className="history-time">{new Date(entry.endedAt).toLocaleString()}</p>
+              <div className="history-item-main">
+                <strong>{entry.meditationType}</strong>
+                <p className="history-time">{new Date(entry.endedAt).toLocaleString()}</p>
+
+                <div className="history-meta">
+                  <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
+                  <span>Planned: {formatDurationLabel(entry.intendedDurationSeconds)}</span>
                 </div>
+              </div>
+
+              <div className="history-item-side">
                 <div className="badge-row">
                   <span className={`pill ${entry.status === 'completed' ? 'ok' : 'warn'}`}>{entry.status}</span>
                   <span className={`pill source ${entry.source === 'manual log' ? 'manual' : 'auto'}`}>{entry.source}</span>
                 </div>
-              </div>
-
-              <div className="history-meta">
-                <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
-                <span>Planned: {formatDurationLabel(entry.intendedDurationSeconds)}</span>
               </div>
             </li>
           ))}
