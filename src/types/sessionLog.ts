@@ -1,6 +1,7 @@
 import type { MeditationType } from './timer';
 
 export type SessionLogStatus = 'completed' | 'ended early';
+export type SessionLogSource = 'auto log' | 'manual log';
 
 export interface SessionLog {
   readonly id: string;
@@ -10,7 +11,7 @@ export interface SessionLog {
   readonly intendedDurationSeconds: number;
   readonly completedDurationSeconds: number;
   readonly status: SessionLogStatus;
-  readonly source: 'auto log';
+  readonly source: SessionLogSource;
   readonly startSound: string;
   readonly endSound: string;
   readonly intervalEnabled: boolean;

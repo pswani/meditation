@@ -30,3 +30,14 @@
 - Add explicit interval sound selection when interval bell is enabled, while keeping sound options mocked.
 - Use progressive validation display on setup fields to reduce first-load error noise.
 - Improve `history` readability on larger screens with timestamp emphasis and multi-column metadata layout.
+
+### 2026-03-23 custom-plays manual-log vertical slice decisions
+- Add a dedicated `custom play` model with local-only persistence and support create/edit/delete/favorite in the Practice screen.
+- Keep `custom play` controls embedded within the existing Practice route-level screen to avoid navigation sprawl for this slice.
+- Extend `session log` source typing to include both `auto log` and `manual log`.
+- Add a bounded manual log form in `history` with required fields:
+  - duration
+  - meditation type
+  - session timestamp
+- Model manual entries as completed local logs with derived start/end timestamps and include them in the same unified history list.
+- Use explicit source/status pills in `history` to clearly distinguish `manual log` vs `auto log` and `completed` vs `ended early`.

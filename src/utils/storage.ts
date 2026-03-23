@@ -1,8 +1,10 @@
+import type { CustomPlay } from '../types/customPlay';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 
 function isTimerSettings(value: unknown): value is TimerSettings {
   if (typeof value !== 'object' || value === null) {
@@ -62,4 +64,22 @@ export function loadSessionLogs(): SessionLog[] {
 
 export function saveSessionLogs(logs: SessionLog[]): void {
   localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(logs));
+}
+
+export function loadCustomPlays(): CustomPlay[] {
+  const raw = localStorage.getItem(CUSTOM_PLAYS_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as CustomPlay[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPlays(customPlays: CustomPlay[]): void {
+  localStorage.setItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays));
 }

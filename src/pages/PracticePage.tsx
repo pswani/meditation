@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CustomPlayManager from '../features/customPlays/CustomPlayManager';
 import { meditationTypes, soundOptions } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { MeditationType, TimerSettings } from '../types/timer';
@@ -214,6 +215,8 @@ export default function PracticePage() {
           Start Session
         </button>
       </div>
+
+      <CustomPlayManager />
     </section>
   );
 }

@@ -11,7 +11,8 @@ describe('ActiveTimerPage UX', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
+    const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
+    fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /end early/i }));

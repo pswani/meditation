@@ -198,6 +198,19 @@ a {
   gap: 1rem;
 }
 
+.section-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .form-grid {
   display: grid;
   gap: 0.9rem;
@@ -276,6 +289,16 @@ button.secondary {
   display: grid;
   gap: 1rem;
   padding: 0 0.9rem 0.9rem;
+}
+
+.custom-play-panel,
+.manual-log-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #f9fcfa;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.8rem;
 }
 
 .checkbox-row {
@@ -399,6 +422,13 @@ button.secondary {
   font-size: 0.92rem;
 }
 
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
 .history-time {
   margin: 0.2rem 0 0;
   color: var(--text);
@@ -424,6 +454,16 @@ button.secondary {
   color: #725b2e;
 }
 
+.pill.source.auto {
+  background: #e4edf9;
+  color: #2c4e77;
+}
+
+.pill.source.manual {
+  background: #f1e9fc;
+  color: #5b3f83;
+}
+
 .empty-state {
   border: 1px dashed var(--border);
   border-radius: var(--radius-md);
@@ -431,6 +471,23 @@ button.secondary {
   color: var(--muted);
   display: grid;
   gap: 0.45rem;
+}
+
+.custom-play-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.custom-play-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 @media (min-width: 48rem) {
