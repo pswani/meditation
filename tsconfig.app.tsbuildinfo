@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/app/appshell.tsx","./src/app/routes.ts","./src/components/placeholderscreen.tsx","./src/pages/historypage.tsx","./src/pages/homepage.tsx","./src/pages/practicepage.tsx","./src/pages/sankalpapage.tsx","./src/pages/settingspage.tsx"],"version":"5.9.3"}
