@@ -93,4 +93,8 @@ Excluded:
 
 ## 12. Progress log
 - Completed: prompt and document review.
-- In progress: implementation.
+- Completed: Timer Setup UX refinements (advanced grouping, interval sound selector, progressive validation visibility).
+- Completed: Active Timer UX refinements (paused hierarchy, end-early confirmation, clearer completion messaging).
+- Completed: History UX refinements (empty-state CTA and improved readability at larger breakpoints).
+- Completed: focused tests for progressive setup validation and end-early confirmation interaction.
+- Completed: verification run on 2026-03-23 (`typecheck`, `lint`, `test`, `build`).

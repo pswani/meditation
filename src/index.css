@@ -255,6 +255,29 @@ button.secondary {
   justify-self: start;
 }
 
+.advanced-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #f8fbf9;
+}
+
+.advanced-toggle {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+  padding: 0.75rem 0.9rem;
+  font-weight: 700;
+}
+
+.advanced-content {
+  display: grid;
+  gap: 1rem;
+  padding: 0 0.9rem 0.9rem;
+}
+
 .checkbox-row {
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -269,7 +292,7 @@ button.secondary {
 .interval-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: #f8fbf9;
+  background: #fff;
   padding: 0.9rem;
 }
 
@@ -315,6 +338,36 @@ button.secondary {
   letter-spacing: 0.04em;
 }
 
+.session-state {
+  margin: -0.1rem 0 0;
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1f5b4d;
+  background: #d6e7df;
+}
+
+.session-state.paused {
+  color: #725b2e;
+  background: #ece3d4;
+}
+
+.confirm-sheet {
+  border: 1px solid #d9cdb9;
+  border-radius: var(--radius-md);
+  background: #fffaf1;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.confirm-sheet p {
+  margin: 0;
+  color: #6b552c;
+}
+
 .history-list {
   list-style: none;
   margin: 0;
@@ -335,15 +388,21 @@ button.secondary {
 .history-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
 }
 
 .history-meta {
   color: var(--muted);
   display: grid;
-  gap: 0.2rem;
+  gap: 0.35rem;
   font-size: 0.92rem;
+}
+
+.history-time {
+  margin: 0.2rem 0 0;
+  color: var(--text);
+  font-size: 0.86rem;
 }
 
 .pill {
@@ -370,6 +429,8 @@ button.secondary {
   border-radius: var(--radius-md);
   padding: 1rem;
   color: var(--muted);
+  display: grid;
+  gap: 0.45rem;
 }
 
 @media (min-width: 48rem) {
@@ -416,6 +477,10 @@ button.secondary {
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .history-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 75rem) {
@@ -431,5 +496,9 @@ button.secondary {
 
   .page-card {
     padding: 1.8rem;
+  }
+
+  .history-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

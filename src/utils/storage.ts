@@ -17,7 +17,7 @@ function isTimerSettings(value: unknown): value is TimerSettings {
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&
     typeof candidate.intervalMinutes === 'number' &&
-    typeof candidate.intervalSound === 'string'
+    (typeof candidate.intervalSound === 'string' || typeof candidate.intervalSound === 'undefined')
   );
 }
 
@@ -29,7 +29,14 @@ export function loadTimerSettings(): TimerSettings | null {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isTimerSettings(parsed) ? parsed : null;
+    if (!isTimerSettings(parsed)) {
+      return null;
+    }
+
+    return {
+      ...parsed,
+      intervalSound: parsed.intervalSound ?? 'Temple Bell',
+    };
   } catch {
     return null;
   }

@@ -23,3 +23,10 @@
 - Model active timing in seconds and use end-time-based recalculation to preserve pause/resume correctness.
 - Auto-create a session log for both `completed` and `ended early` outcomes with source set to `auto log`.
 - Keep primary navigation unchanged and add route-level active timer at `/practice/active`.
+
+### 2026-03-23 timer-history UX refinement decisions
+- Require explicit confirmation before finalizing `ended early` to reduce accidental session interruption.
+- Group optional timer controls under a collapsed `Advanced` section to keep setup focused and calm.
+- Add explicit interval sound selection when interval bell is enabled, while keeping sound options mocked.
+- Use progressive validation display on setup fields to reduce first-load error noise.
+- Improve `history` readability on larger screens with timestamp emphasis and multi-column metadata layout.
