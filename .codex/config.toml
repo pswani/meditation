@@ -2,6 +2,14 @@ model = "gpt-5.4"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"
+profile = "deep-build"
 
 project_doc_fallback_filenames = ["TEAM_GUIDE.md"]
 project_doc_max_bytes = 65536
+
+
+[profiles.deep-build]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
