@@ -9,6 +9,7 @@ const base: TimerSettings = {
   endSound: 'Temple Bell',
   intervalEnabled: false,
   intervalMinutes: 5,
+  intervalSound: 'Temple Bell',
 };
 
 describe('validateTimerSettings', () => {

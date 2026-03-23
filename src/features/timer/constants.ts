@@ -11,4 +11,5 @@ export const defaultTimerSettings = {
   endSound: 'Temple Bell',
   intervalEnabled: false,
   intervalMinutes: 5,
+  intervalSound: 'Temple Bell',
 } as const;

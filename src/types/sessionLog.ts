@@ -15,4 +15,5 @@ export interface SessionLog {
   readonly endSound: string;
   readonly intervalEnabled: boolean;
   readonly intervalMinutes: number;
+  readonly intervalSound: string;
 }

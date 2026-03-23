@@ -9,6 +9,7 @@ const validSettings: TimerSettings = {
   endSound: 'Temple Bell',
   intervalEnabled: true,
   intervalMinutes: 2,
+  intervalSound: 'Temple Bell',
 };
 
 describe('timerReducer', () => {

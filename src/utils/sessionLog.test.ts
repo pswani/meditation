@@ -12,6 +12,7 @@ const activeSession: ActiveSession = {
   endSound: 'Temple Bell',
   intervalEnabled: true,
   intervalMinutes: 5,
+  intervalSound: 'Soft Chime',
   endAtMs: Date.parse('2026-03-23T10:20:00.000Z'),
 };
 

@@ -71,6 +71,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           endSound: state.settings.endSound,
           intervalEnabled: state.settings.intervalEnabled,
           intervalMinutes: state.settings.intervalMinutes,
+          intervalSound: state.settings.intervalSound,
           endAtMs: action.nowMs + durationSeconds * 1000,
         },
       };

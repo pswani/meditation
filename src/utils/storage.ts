@@ -16,7 +16,8 @@ function isTimerSettings(value: unknown): value is TimerSettings {
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&
-    typeof candidate.intervalMinutes === 'number'
+    typeof candidate.intervalMinutes === 'number' &&
+    typeof candidate.intervalSound === 'string'
   );
 }
 

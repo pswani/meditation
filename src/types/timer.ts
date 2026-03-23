@@ -9,6 +9,7 @@ export interface TimerSettings {
   endSound: string;
   intervalEnabled: boolean;
   intervalMinutes: number;
+  intervalSound: string;
 }
 
 export interface ActiveSession {
@@ -21,6 +22,7 @@ export interface ActiveSession {
   readonly endSound: string;
   readonly intervalEnabled: boolean;
   readonly intervalMinutes: number;
+  readonly intervalSound: string;
   readonly endAtMs: number;
 }
 
