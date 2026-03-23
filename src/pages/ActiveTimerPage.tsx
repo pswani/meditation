@@ -1,0 +1,72 @@
+import { useNavigate } from 'react-router-dom';
+import { formatRemainingTime } from '../features/timer/time';
+import { useTimer } from '../features/timer/useTimer';
+
+export default function ActiveTimerPage() {
+  const { activeSession, isPaused, pauseSession, resumeSession, endSessionEarly, lastOutcome, clearOutcome } = useTimer();
+  const navigate = useNavigate();
+
+  if (!activeSession) {
+    if (lastOutcome) {
+      return (
+        <section className="page-card active-timer">
+          <h2 className="page-title">Session {lastOutcome.status}</h2>
+          <p className="page-description">
+            An auto log was created for {Math.max(1, Math.round(lastOutcome.completedDurationSeconds / 60))} minutes.
+          </p>
+          <div className="timer-actions">
+            <button
+              type="button"
+              onClick={() => {
+                clearOutcome();
+                navigate('/practice');
+              }}
+            >
+              Start Another Session
+            </button>
+            <button type="button" className="secondary" onClick={() => navigate('/history')}>
+              View History
+            </button>
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section className="page-card active-timer">
+        <h2 className="page-title">Active Timer</h2>
+        <p className="page-description">No active session right now.</p>
+        <button type="button" onClick={() => navigate('/practice')}>
+          Go To Timer Setup
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="page-card active-timer">
+      <p className="eyebrow">{activeSession.meditationType}</p>
+      <h2 className="timer-clock">{formatRemainingTime(activeSession.remainingSeconds)}</h2>
+      <p className="page-description">Stay present. Pause or resume anytime, or end early if needed.</p>
+
+      <div className="timer-actions">
+        {isPaused ? (
+          <button type="button" onClick={resumeSession}>
+            Resume
+          </button>
+        ) : (
+          <button type="button" onClick={pauseSession}>
+            Pause
+          </button>
+        )}
+        <button type="button" className="secondary" onClick={endSessionEarly}>
+          End Early
+        </button>
+      </div>
+
+      <button type="button" className="link-button" onClick={() => navigate('/history')}>
+        View History
+      </button>
+    </section>
+  );
+}
