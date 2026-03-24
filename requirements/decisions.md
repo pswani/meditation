@@ -182,3 +182,11 @@
 - Introduce a local media/session metadata catalog and API-boundary utility with an explicit list endpoint contract (`/api/media/custom-plays`) for future backend compatibility.
 - Store media/session path references and metadata identifiers directly on `custom play` entries in local persistence, while backend/database implementation remains out of scope in this front-end-only workspace.
 - Normalize legacy stored custom-play entries with safe defaults to preserve backward compatibility during model expansion.
+
+### 2026-03-24 custom plays review remediation pass-3 decisions
+- Tighten custom-play load normalization to enforce core domain validity:
+  - `meditationType` must match supported meditation types
+  - `durationMinutes` must be greater than `0`
+  - invalid entries are dropped during load
+- Improve media-model UX clarity by prioritizing human-readable metadata (label, duration, type) and keeping filesystem path as secondary managed detail.
+- Add explicit inline success feedback for custom-play create/update actions to reduce save-state ambiguity.

@@ -210,4 +210,32 @@ describe('storage custom plays', () => {
       },
     ]);
   });
+
+  it('drops custom-play entries with invalid meditation type or non-positive duration', () => {
+    localStorage.setItem(
+      rawCustomPlaysKey,
+      JSON.stringify([
+        {
+          id: 'invalid-play-type',
+          name: 'Invalid Type',
+          meditationType: 'Breathwork',
+          durationMinutes: 20,
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+        {
+          id: 'invalid-play-duration',
+          name: 'Invalid Duration',
+          meditationType: 'Vipassana',
+          durationMinutes: 0,
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    expect(loadCustomPlays()).toEqual([]);
+  });
 });

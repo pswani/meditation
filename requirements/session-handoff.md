@@ -1,77 +1,61 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-b-practice-composition/04-implement-custom-plays.md` is complete.
+Prompt `prompts/milestone-b-practice-composition/06-fix-custom-plays-review-findings.md` is complete.
 
-Custom plays now support optional sound presets and media/session metadata selection, integrated with local-first persistence and timer/home flows.
+Custom-play review remediation pass 3 is now implemented for all important findings.
 
 ## What was implemented
 - Added and completed ExecPlan:
-  - `requirements/execplan-custom-plays-implementation-pass2.md`
-- Extended custom-play domain model:
-  - `src/types/customPlay.ts`
-  - added fields:
-    - `startSound`
-    - `endSound`
-    - `mediaAssetId`
-    - `mediaAssetLabel`
-    - `mediaAssetPath`
-- Added media/session metadata boundary:
-  - `src/types/mediaAsset.ts`
-  - `src/utils/mediaAssetApi.ts`
-  - local metadata entries include file path, duration, mime type, and size
-  - explicit endpoint contract constant for future backend path:
-    - `/api/media/custom-plays`
-- Updated custom-play helper logic:
-  - `src/utils/customPlay.ts`
-  - validation now guards unknown media asset selection
-  - create/update now persist media metadata references
-  - apply-to-timer now includes sound presets
-- Updated Practice custom-play UI:
-  - `src/features/customPlays/CustomPlayManager.tsx`
-  - create/edit controls now include:
-    - custom play start sound (optional)
-    - custom play end sound (optional)
-    - media session (optional)
-  - list rows now surface sound + media metadata context
-- Updated Home favorite custom-play shortcut integration:
-  - `src/pages/HomePage.tsx`
-  - shortcut now applies custom-play sound presets in addition to duration/type
-- Strengthened custom-play persistence boundary:
+  - `requirements/execplan-custom-plays-review-remediation-pass3.md`
+- Tightened custom-play persistence validation:
   - `src/utils/storage.ts`
-  - legacy entries are normalized with defaults for new fields
-  - malformed entries are filtered out
+  - custom-play load normalization now enforces:
+    - valid `meditationType` enum
+    - `durationMinutes > 0`
+  - malformed custom-play entries are dropped during load
+- Improved file-backed media model clarity in custom-play UI:
+  - `src/features/customPlays/CustomPlayManager.tsx`
+  - media presentation now leads with human-readable metadata (label/duration/type)
+  - managed path remains visible as secondary metadata
+  - helper copy now clarifies path is managed metadata, not manual input
+- Added explicit create/update success feedback:
+  - `src/features/customPlays/CustomPlayManager.tsx`
+  - calm inline status confirms save outcome
+- Updated focused tests:
+  - `src/utils/storage.test.ts`
+    - added invalid custom-play drop coverage
+  - `src/features/customPlays/CustomPlayManager.test.tsx`
+    - added explicit save/update feedback coverage
+- Retained review artifact for traceability:
+  - `docs/review-custom-plays.md`
 
 ## QA coverage improved in this slice
-- Custom-play validation:
-  - unknown media-session selection is rejected
-- Custom-play helper behavior:
-  - create/update persist sound + media metadata references
-  - apply-to-timer updates start/end sounds
-- Persistence:
-  - extended custom-play payload save/load
-  - legacy payload normalization for backward compatibility
-- UI integration:
-  - custom-play create/use flow verifies media selection and sound preset application
-- API boundary:
-  - media metadata list/find behavior validated
+- Custom-play persistence boundary:
+  - invalid domain entries are filtered on load
+- Custom-play UX:
+  - explicit save feedback after update
+  - media metadata clarity in row/form presentation
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
   - 20 test files
-  - 77 tests passing
+  - 79 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-custom-plays-implementation-pass2.md`.
-- Updated `requirements/decisions.md` with custom-play implementation pass-2 decisions.
+- Added and completed `requirements/execplan-custom-plays-review-remediation-pass3.md`.
+- Updated `requirements/decisions.md` with custom-play remediation pass-3 decisions.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This workspace is front-end only; backend file storage/database/REST endpoint implementation is not available in this repo.
-- Media/session metadata is represented via a local catalog plus API-boundary utility to keep migration path explicit for future backend integration.
+- This workspace remains front-end only; backend media/file/database endpoints are still out of scope.
+- Nice-to-have review items remain intentionally deferred:
+  - media filtering/grouping in selection
+  - favorite-first sorting
+  - reduced action density on narrow phones
 
 ## Exact recommended next prompt
 Read:
@@ -88,11 +72,17 @@ Read:
 
 Then:
 
-1. Execute prompt `prompts/milestone-b-practice-composition/05-review-custom-plays.md`.
-2. Review custom-play behavior from UX, usability, and data-integrity perspectives across mobile/tablet/desktop.
-3. Identify critical, important, and nice-to-have issues.
-4. Do not implement code changes in this review pass.
-5. Write findings into:
-   - docs/review-custom-plays.md
+1. Execute prompt `prompts/milestone-b-practice-composition/07-implement-playlists.md`.
+2. Create an ExecPlan for playlists.
+3. Keep scope bounded to playlist management, playlist run flow, and minimum history integration.
+4. Add focused tests for playlist validation, run behavior, and logging boundaries.
+5. Run:
+   - npm run typecheck
+   - npm run lint
+   - npm run test
+   - npm run build
+6. Update:
+   - requirements/decisions.md
    - requirements/session-handoff.md
-6. Include an exact recommended next prompt for remediation and commit.
+7. Commit with a clear message:
+   feat(composition): add playlists and playlist run flow

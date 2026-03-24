@@ -26,6 +26,7 @@ export default function CustomPlayManager() {
   const [editId, setEditId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [appliedPlayId, setAppliedPlayId] = useState<string | null>(null);
+  const [saveFeedbackMessage, setSaveFeedbackMessage] = useState<string | null>(null);
   const [mediaAssets, setMediaAssets] = useState<MediaAssetMetadata[]>([]);
   const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
 
@@ -53,12 +54,17 @@ export default function CustomPlayManager() {
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const playName = draft.name.trim() || 'Custom play';
+    const feedbackMessage = editId ? `Custom play "${playName}" updated.` : `Custom play "${playName}" saved.`;
     const result = saveCustomPlay(draft, editId ?? undefined);
     setErrors(result.errors);
 
     if (result.isValid) {
       setDraft(initialDraft);
       setEditId(null);
+      setSaveFeedbackMessage(feedbackMessage);
+    } else {
+      setSaveFeedbackMessage(null);
     }
   }
 
@@ -71,15 +77,18 @@ export default function CustomPlayManager() {
     setSettings(applyCustomPlayToTimerSettings(settings, match));
     setPendingDeleteId(null);
     setAppliedPlayId(match.id);
+    setSaveFeedbackMessage(null);
   }
 
   function requestDelete(playId: string) {
     setPendingDeleteId(playId);
+    setSaveFeedbackMessage(null);
   }
 
   function confirmDelete(playId: string) {
     deleteCustomPlay(playId);
     setPendingDeleteId(null);
+    setSaveFeedbackMessage(null);
 
     if (editId === playId) {
       setEditId(null);
@@ -99,6 +108,7 @@ export default function CustomPlayManager() {
     }
 
     setEditId(playId);
+    setSaveFeedbackMessage(null);
     setDraft({
       name: match.name,
       meditationType: match.meditationType,
@@ -117,12 +127,21 @@ export default function CustomPlayManager() {
       <h3 className="section-title">Custom Plays</h3>
       <p className="section-subtitle">Create and manage your custom play presets.</p>
 
+      {saveFeedbackMessage ? (
+        <div className="status-banner ok" role="status">
+          <p>{saveFeedbackMessage}</p>
+        </div>
+      ) : null}
+
       <form className="form-grid" onSubmit={onSubmit}>
         <label>
           <span>Custom play name</span>
           <input
             value={draft.name}
-            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
+              setDraft((current) => ({ ...current, name: event.target.value }));
+            }}
             placeholder="Morning Focus"
           />
           {errors.name ? <small className="error-text">{errors.name}</small> : null}
@@ -132,12 +151,13 @@ export default function CustomPlayManager() {
           <span>Custom play meditation type</span>
           <select
             value={draft.meditationType}
-            onChange={(event) =>
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
               setDraft((current) => ({
                 ...current,
                 meditationType: event.target.value as CustomPlayDraft['meditationType'],
-              }))
-            }
+              }));
+            }}
           >
             <option value="">Select custom play meditation type</option>
             {meditationTypes.map((meditationType) => (
@@ -155,12 +175,13 @@ export default function CustomPlayManager() {
             type="number"
             min={1}
             value={draft.durationMinutes}
-            onChange={(event) =>
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
               setDraft((current) => ({
                 ...current,
                 durationMinutes: Number(event.target.value),
-              }))
-            }
+              }));
+            }}
           />
           {errors.durationMinutes ? <small className="error-text">{errors.durationMinutes}</small> : null}
         </label>
@@ -169,12 +190,13 @@ export default function CustomPlayManager() {
           <span>Custom play start sound (optional)</span>
           <select
             value={draft.startSound}
-            onChange={(event) =>
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
               setDraft((current) => ({
                 ...current,
                 startSound: event.target.value,
-              }))
-            }
+              }));
+            }}
           >
             {soundOptions.map((sound) => (
               <option key={sound} value={sound}>
@@ -188,12 +210,13 @@ export default function CustomPlayManager() {
           <span>Custom play end sound (optional)</span>
           <select
             value={draft.endSound}
-            onChange={(event) =>
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
               setDraft((current) => ({
                 ...current,
                 endSound: event.target.value,
-              }))
-            }
+              }));
+            }}
           >
             {soundOptions.map((sound) => (
               <option key={sound} value={sound}>
@@ -207,12 +230,13 @@ export default function CustomPlayManager() {
           <span>Media session (optional)</span>
           <select
             value={draft.mediaAssetId}
-            onChange={(event) =>
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
               setDraft((current) => ({
                 ...current,
                 mediaAssetId: event.target.value,
-              }))
-            }
+              }));
+            }}
           >
             <option value="">No linked media session</option>
             {mediaAssets.map((asset) => (
@@ -224,13 +248,20 @@ export default function CustomPlayManager() {
           {errors.mediaAssetId ? (
             <small className="error-text">{errors.mediaAssetId}</small>
           ) : selectedMediaAsset ? (
-            <small className="hint-text">
-              Path: {selectedMediaAsset.filePath} · {(selectedMediaAsset.durationSeconds / 60).toFixed(0)} min
-            </small>
+            <>
+              <small className="hint-text">
+                Linked media: {selectedMediaAsset.label} · {(selectedMediaAsset.durationSeconds / 60).toFixed(0)} min ·{' '}
+                {selectedMediaAsset.mimeType}
+              </small>
+              <small className="hint-text">File path is managed by media metadata and cannot be edited here.</small>
+              <small className="hint-text">Managed path: {selectedMediaAsset.filePath}</small>
+            </>
           ) : mediaLoadError ? (
             <small className="error-text">{mediaLoadError}</small>
           ) : (
-            <small className="hint-text">Choose an existing media session metadata entry.</small>
+            <small className="hint-text">
+              Choose a linked media session from managed metadata. You do not enter file paths manually.
+            </small>
           )}
         </label>
 
@@ -238,7 +269,10 @@ export default function CustomPlayManager() {
           <span>Session note (optional)</span>
           <input
             value={draft.recordingLabel}
-            onChange={(event) => setDraft((current) => ({ ...current, recordingLabel: event.target.value }))}
+            onChange={(event) => {
+              setSaveFeedbackMessage(null);
+              setDraft((current) => ({ ...current, recordingLabel: event.target.value }));
+            }}
             placeholder="Breath emphasis"
           />
         </label>
@@ -253,6 +287,7 @@ export default function CustomPlayManager() {
                 setEditId(null);
                 setDraft(initialDraft);
                 setErrors(initialErrors);
+                setSaveFeedbackMessage(null);
               }}
             >
               Cancel Edit
@@ -268,69 +303,77 @@ export default function CustomPlayManager() {
         </div>
       ) : (
         <ul className="custom-play-list">
-          {customPlays.map((play) => (
-            <li key={play.id} className="custom-play-item">
-              <div className="custom-play-grid">
-                <div className="custom-play-main">
-                  <div className="history-row">
-                    <div>
-                      <strong>{play.name}</strong>
-                      <p className="history-time">
-                        {play.meditationType} · {play.durationMinutes} min
-                      </p>
-                    </div>
-                    {play.favorite ? <span className="pill ok">favorite</span> : null}
-                  </div>
+          {customPlays.map((play) => {
+            const linkedAsset = play.mediaAssetId ? mediaAssets.find((asset) => asset.id === play.mediaAssetId) : null;
 
-                  {play.recordingLabel ? <p className="section-subtitle">Session note: {play.recordingLabel}</p> : null}
-                  <p className="section-subtitle">
-                    Sounds: {play.startSound} start · {play.endSound} end
-                  </p>
-                  {play.mediaAssetLabel ? (
-                    <p className="section-subtitle">
-                      Media: {play.mediaAssetLabel} · {play.mediaAssetPath}
-                    </p>
-                  ) : null}
-                  {appliedPlayId === play.id ? (
-                    <p className="section-subtitle" role="status">
-                      Custom play "{play.name}" applied to timer setup.
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="custom-play-side">
-                  <div className="custom-play-actions">
-                    <button type="button" onClick={() => applyCustomPlay(play.id)}>
-                      Use Custom Play
-                    </button>
-                    <button type="button" className="secondary" onClick={() => startEdit(play.id)}>
-                      Edit
-                    </button>
-                    <button type="button" className="secondary" onClick={() => toggleFavoriteCustomPlay(play.id)}>
-                      {play.favorite ? 'Unfavorite' : 'Favorite'}
-                    </button>
-                    <button type="button" className="secondary" onClick={() => requestDelete(play.id)}>
-                      Delete
-                    </button>
-                  </div>
-
-                  {pendingDeleteId === play.id ? (
-                    <div className="confirm-sheet" role="dialog" aria-label={`Delete custom play ${play.name} confirmation`}>
-                      <p>Delete custom play "{play.name}"?</p>
-                      <div className="timer-actions">
-                        <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
-                          Keep Custom Play
-                        </button>
-                        <button type="button" onClick={() => confirmDelete(play.id)}>
-                          Delete Custom Play
-                        </button>
+            return (
+              <li key={play.id} className="custom-play-item">
+                <div className="custom-play-grid">
+                  <div className="custom-play-main">
+                    <div className="history-row">
+                      <div>
+                        <strong>{play.name}</strong>
+                        <p className="history-time">
+                          {play.meditationType} · {play.durationMinutes} min
+                        </p>
                       </div>
+                      {play.favorite ? <span className="pill ok">favorite</span> : null}
                     </div>
-                  ) : null}
+
+                    {play.recordingLabel ? <p className="section-subtitle">Session note: {play.recordingLabel}</p> : null}
+                    <p className="section-subtitle">
+                      Sounds: {play.startSound} start · {play.endSound} end
+                    </p>
+                    {play.mediaAssetLabel ? (
+                      <>
+                        <p className="section-subtitle">
+                          Media session: {play.mediaAssetLabel}
+                          {linkedAsset ? ` · ${(linkedAsset.durationSeconds / 60).toFixed(0)} min · ${linkedAsset.mimeType}` : ''}
+                        </p>
+                        <p className="section-subtitle">Managed path: {play.mediaAssetPath}</p>
+                      </>
+                    ) : null}
+                    {appliedPlayId === play.id ? (
+                      <p className="section-subtitle" role="status">
+                        Custom play "{play.name}" applied to timer setup.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="custom-play-side">
+                    <div className="custom-play-actions">
+                      <button type="button" onClick={() => applyCustomPlay(play.id)}>
+                        Use Custom Play
+                      </button>
+                      <button type="button" className="secondary" onClick={() => startEdit(play.id)}>
+                        Edit
+                      </button>
+                      <button type="button" className="secondary" onClick={() => toggleFavoriteCustomPlay(play.id)}>
+                        {play.favorite ? 'Unfavorite' : 'Favorite'}
+                      </button>
+                      <button type="button" className="secondary" onClick={() => requestDelete(play.id)}>
+                        Delete
+                      </button>
+                    </div>
+
+                    {pendingDeleteId === play.id ? (
+                      <div className="confirm-sheet" role="dialog" aria-label={`Delete custom play ${play.name} confirmation`}>
+                        <p>Delete custom play "{play.name}"?</p>
+                        <div className="timer-actions">
+                          <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
+                            Keep Custom Play
+                          </button>
+                          <button type="button" onClick={() => confirmDelete(play.id)}>
+                            Delete Custom Play
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

@@ -9,6 +9,7 @@ const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
+const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -29,6 +30,10 @@ function isTimerSettings(value: unknown): value is TimerSettings {
     typeof candidate.intervalMinutes === 'number' &&
     (typeof candidate.intervalSound === 'string' || typeof candidate.intervalSound === 'undefined')
   );
+}
+
+function isMeditationType(value: unknown): value is CustomPlay['meditationType'] {
+  return typeof value === 'string' && MEDITATION_TYPES.includes(value as (typeof MEDITATION_TYPES)[number]);
 }
 
 function isSessionLog(value: unknown): value is SessionLog {
@@ -72,8 +77,9 @@ function normalizeCustomPlay(value: unknown): CustomPlay | null {
   if (
     typeof candidate.id !== 'string' ||
     typeof candidate.name !== 'string' ||
-    typeof candidate.meditationType !== 'string' ||
+    !isMeditationType(candidate.meditationType) ||
     typeof candidate.durationMinutes !== 'number' ||
+    candidate.durationMinutes <= 0 ||
     typeof candidate.favorite !== 'boolean' ||
     typeof candidate.createdAt !== 'string' ||
     typeof candidate.updatedAt !== 'string'
@@ -84,7 +90,7 @@ function normalizeCustomPlay(value: unknown): CustomPlay | null {
   return {
     id: candidate.id,
     name: candidate.name,
-    meditationType: candidate.meditationType as CustomPlay['meditationType'],
+    meditationType: candidate.meditationType,
     durationMinutes: candidate.durationMinutes,
     startSound: typeof candidate.startSound === 'string' ? candidate.startSound : 'None',
     endSound: typeof candidate.endSound === 'string' ? candidate.endSound : 'Temple Bell',
