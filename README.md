@@ -59,6 +59,7 @@ npm install
 ```bash
 npm run dev
 ```
+Vite prints the local dev URL in the terminal (typically `http://localhost:5173/`).
 
 ### 4. Build for production
 ```bash

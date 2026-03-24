@@ -16,6 +16,8 @@ describe('CustomPlayManager UX', () => {
       </MemoryRouter>
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });

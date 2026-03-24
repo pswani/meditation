@@ -91,3 +91,51 @@
   - duration-based goals sum `completedDurationSeconds` (including partial ended-early logs)
   - session-count goals count matching `session log` entries
   - matching is constrained to the goal window (`createdAt` through `createdAt + days`)
+
+### 2026-03-24 local setup verification decisions
+- Keep setup verification scoped to operational readiness only:
+  - install
+  - typecheck
+  - lint
+  - test
+  - build
+  - local dev startup
+- Treat generated build/dev artifacts (`dist`, vite cache, tsbuildinfo) as non-functional output and exclude them from setup commits unless explicitly requested.
+- Document the observed local dev URL (`http://localhost:5173/`) as a typical startup target, while preserving that Vite may choose a different port when needed.
+
+### 2026-03-24 home and settings functional slice decisions
+- Implement `Home` and `Settings` as route-level functional screens within the existing app shell, without adding new feature areas.
+- Define Home “today” summary from local `session log` data using local-date boundaries and include:
+  - session log count
+  - completed vs ended-early count
+  - total completed duration
+- Keep Home quick-start behavior explicit:
+  - resume active timer if present
+  - otherwise attempt timer quick start
+  - if quick start cannot run, route to Practice with guidance
+- Surface favorite shortcuts only for currently supported state:
+  - favorite custom play shortcut loads timer defaults and opens Practice
+  - favorite playlist shortcut attempts run with existing run-block safeguards
+- Use explicit `Save Defaults` and `Reset To App Defaults` behavior in Settings for predictable preference control.
+- Persist Settings through existing timer settings state pipeline (local-first storage), with validation aligned to timer rules.
+
+### 2026-03-24 home/settings UX refinement decisions
+- Pass Home quick-start validation failures to Practice through route state and render an entry status banner in timer setup, then clear route state after first display.
+- Add a lightweight Home `sankalpa` snapshot using locally stored goals and derived progress, selecting the top active item by nearest deadline.
+- Remove Home `Next Actions` buttons that duplicated shell navigation to reduce visual noise and keep Home focused on meaningful launch content.
+- Add explicit Settings unsaved-edits affordance and disable `Save Defaults` until the draft differs from persisted defaults.
+- Improve favorite shortcut row behavior on narrow phones by allowing long-label wrapping and stacking the action button when space is constrained.
+- Strengthen UX coverage with focused tests for:
+  - Home empty/populated states
+  - Home quick-start failure handoff to Practice
+  - Practice route-state status banner dismissal
+  - Settings dirty-state + persistence behavior
+
+### 2026-03-24 full-app UX phase-1 remediation decisions
+- Add a global shell-level active-state banner in the top bar when a timer session or playlist run is active, with one-tap resume actions:
+  - `Resume Active Timer`
+  - `Resume Playlist Run`
+- Keep Practice as the single setup route for this slice, but reduce cognitive load by collapsing management-heavy controls (`custom play`, playlists) behind a secondary `Practice Tools` disclosure by default.
+- Reorder History information hierarchy so recent `session log` content is first, and move `manual log` into a secondary collapsible section (`Add Manual Log`) that opens by default only when there are no logs.
+- Improve trust in short-session feedback by showing precise `mm:ss` completion duration text using `formatRemainingTime` in completion/last-outcome messaging.
+- Improve test reliability in touched routes by enforcing cleanup/localStorage reset patterns where multi-render leakage caused ambiguous UI queries.
