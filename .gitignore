@@ -1,0 +1,90 @@
+# --------------------------------------------------
+# Dependencies
+# --------------------------------------------------
+node_modules/
+
+# --------------------------------------------------
+# Build output / caches
+# --------------------------------------------------
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.cache/
+
+# --------------------------------------------------
+# Environment files
+# --------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --------------------------------------------------
+# Logs
+# --------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --------------------------------------------------
+# Temporary / runtime files
+# --------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.pid
+*.pid.lock
+*.seed
+*.swp
+*.swo
+*~
+
+# --------------------------------------------------
+# Editor / OS files
+# --------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+
+# Keep only shareable VS Code config if you want
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# --------------------------------------------------
+# Test artifacts
+# --------------------------------------------------
+playwright-report/
+test-results/
+
+# --------------------------------------------------
+# Package manager caches
+# --------------------------------------------------
+.npm/
+.pnpm-store/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# --------------------------------------------------
+# Codex local state
+# Keep project config, ignore everything else
+# --------------------------------------------------
+.codex/*
+!.codex/config.toml
+
+# --------------------------------------------------
+# Local app data / exports
+# --------------------------------------------------
+local-data/
+exports/
