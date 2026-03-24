@@ -22,6 +22,7 @@ export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, 
     endSound: session.endSound,
     intervalEnabled: session.intervalEnabled,
     intervalMinutes: session.intervalMinutes,
+    intervalSound: session.intervalSound,
   };
 }
 

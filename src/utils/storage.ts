@@ -1,8 +1,14 @@
+import type { CustomPlay } from '../types/customPlay';
+import type { Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
+import type { SankalpaGoal } from '../types/sankalpa';
 import type { TimerSettings } from '../types/timer';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
+const PLAYLISTS_KEY = 'meditation.playlists.v1';
+const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 
 function isTimerSettings(value: unknown): value is TimerSettings {
   if (typeof value !== 'object' || value === null) {
@@ -16,7 +22,8 @@ function isTimerSettings(value: unknown): value is TimerSettings {
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&
-    typeof candidate.intervalMinutes === 'number'
+    typeof candidate.intervalMinutes === 'number' &&
+    (typeof candidate.intervalSound === 'string' || typeof candidate.intervalSound === 'undefined')
   );
 }
 
@@ -28,7 +35,14 @@ export function loadTimerSettings(): TimerSettings | null {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isTimerSettings(parsed) ? parsed : null;
+    if (!isTimerSettings(parsed)) {
+      return null;
+    }
+
+    return {
+      ...parsed,
+      intervalSound: parsed.intervalSound ?? 'Temple Bell',
+    };
   } catch {
     return null;
   }
@@ -54,4 +68,58 @@ export function loadSessionLogs(): SessionLog[] {
 
 export function saveSessionLogs(logs: SessionLog[]): void {
   localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(logs));
+}
+
+export function loadCustomPlays(): CustomPlay[] {
+  const raw = localStorage.getItem(CUSTOM_PLAYS_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as CustomPlay[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPlays(customPlays: CustomPlay[]): void {
+  localStorage.setItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays));
+}
+
+export function loadPlaylists(): Playlist[] {
+  const raw = localStorage.getItem(PLAYLISTS_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Playlist[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePlaylists(playlists: Playlist[]): void {
+  localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
+}
+
+export function loadSankalpas(): SankalpaGoal[] {
+  const raw = localStorage.getItem(SANKALPAS_KEY);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as SankalpaGoal[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSankalpas(sankalpas: SankalpaGoal[]): void {
+  localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
 }

@@ -19,6 +19,7 @@ export type TimerAction =
   | { type: 'PAUSE_SESSION'; nowMs: number }
   | { type: 'RESUME_SESSION'; nowMs: number }
   | { type: 'END_EARLY'; nowMs: number }
+  | { type: 'ADD_SESSION_LOG'; payload: SessionLog }
   | { type: 'CLEAR_OUTCOME' };
 
 export function createInitialTimerState(settings: TimerSettings, sessionLogs: SessionLog[]): TimerState {
@@ -71,6 +72,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           endSound: state.settings.endSound,
           intervalEnabled: state.settings.intervalEnabled,
           intervalMinutes: state.settings.intervalMinutes,
+          intervalSound: state.settings.intervalSound,
           endAtMs: action.nowMs + durationSeconds * 1000,
         },
       };
@@ -130,6 +132,12 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
 
       const remainingSeconds = Math.max(0, Math.ceil((state.activeSession.endAtMs - action.nowMs) / 1000));
       return finalizeSession(state, 'ended early', action.nowMs, remainingSeconds);
+    }
+    case 'ADD_SESSION_LOG': {
+      return {
+        ...state,
+        sessionLogs: [action.payload, ...state.sessionLogs].slice(0, 50),
+      };
     }
     case 'CLEAR_OUTCOME': {
       return {

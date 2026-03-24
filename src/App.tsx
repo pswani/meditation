@@ -4,6 +4,8 @@ import { TimerProvider } from './features/timer/TimerContext';
 import ActiveTimerPage from './pages/ActiveTimerPage';
 import HistoryPage from './pages/HistoryPage';
 import HomePage from './pages/HomePage';
+import PlaylistsPage from './pages/PlaylistsPage';
+import PlaylistRunPage from './pages/PlaylistRunPage';
 import PracticePage from './pages/PracticePage';
 import SankalpaPage from './pages/SankalpaPage';
 import SettingsPage from './pages/SettingsPage';
@@ -16,6 +18,8 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="practice" element={<PracticePage />} />
           <Route path="practice/active" element={<ActiveTimerPage />} />
+          <Route path="practice/playlists" element={<PlaylistsPage />} />
+          <Route path="practice/playlists/active" element={<PlaylistRunPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="goals" element={<SankalpaPage />} />
           <Route path="sankalpa" element={<Navigate to="/goals" replace />} />
