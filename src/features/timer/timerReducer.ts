@@ -12,6 +12,8 @@ export interface TimerState {
   readonly validation: TimerValidationResult;
 }
 
+const MAX_SESSION_LOGS = 50;
+
 export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'START_SESSION'; nowMs: number }
@@ -136,7 +138,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
     case 'ADD_SESSION_LOG': {
       return {
         ...state,
-        sessionLogs: [action.payload, ...state.sessionLogs].slice(0, 50),
+        sessionLogs: appendSessionLog(state.sessionLogs, action.payload),
       };
     }
     case 'CLEAR_OUTCOME': {
@@ -176,6 +178,17 @@ function finalizeSession(
       endedAt: new Date(nowMs).toISOString(),
       completedDurationSeconds: logEntry.completedDurationSeconds,
     },
-    sessionLogs: [logEntry, ...state.sessionLogs].slice(0, 50),
+    sessionLogs: appendSessionLog(state.sessionLogs, logEntry),
   };
+}
+
+function appendSessionLog(existing: readonly SessionLog[], next: SessionLog): readonly SessionLog[] {
+  return [...existing, next]
+    .sort((first, second) => parseSessionEndedAt(second.endedAt) - parseSessionEndedAt(first.endedAt))
+    .slice(0, MAX_SESSION_LOGS);
+}
+
+function parseSessionEndedAt(endedAt: string): number {
+  const parsed = Date.parse(endedAt);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }

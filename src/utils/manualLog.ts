@@ -16,6 +16,15 @@ export interface ManualLogValidationResult {
   };
 }
 
+function parseManualTimestamp(timestamp: string): number | null {
+  const parsedMs = new Date(timestamp).getTime();
+  if (Number.isNaN(parsedMs)) {
+    return null;
+  }
+
+  return parsedMs;
+}
+
 export function validateManualLogInput(input: ManualLogInput): ManualLogValidationResult {
   const errors: ManualLogValidationResult['errors'] = {};
 
@@ -29,6 +38,8 @@ export function validateManualLogInput(input: ManualLogInput): ManualLogValidati
 
   if (!input.sessionTimestamp) {
     errors.sessionTimestamp = 'Session timestamp is required.';
+  } else if (parseManualTimestamp(input.sessionTimestamp) === null) {
+    errors.sessionTimestamp = 'Session timestamp must be a valid date and time.';
   }
 
   return {
@@ -38,9 +49,13 @@ export function validateManualLogInput(input: ManualLogInput): ManualLogValidati
 }
 
 export function buildManualLogEntry(input: ManualLogInput, now: Date): SessionLog {
-  const startedAtMs = new Date(input.sessionTimestamp).getTime();
+  const endedAtMs = parseManualTimestamp(input.sessionTimestamp);
+  if (endedAtMs === null) {
+    throw new Error('Manual log timestamp is invalid.');
+  }
+
   const durationSeconds = Math.round(input.durationMinutes * 60);
-  const endedAtMs = startedAtMs + durationSeconds * 1000;
+  const startedAtMs = endedAtMs - durationSeconds * 1000;
 
   return {
     id: `manual-log-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,

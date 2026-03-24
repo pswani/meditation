@@ -15,7 +15,18 @@ describe('manual log helpers', () => {
     expect(result.errors.sessionTimestamp).toMatch(/required/i);
   });
 
-  it('builds a manual log entry', () => {
+  it('rejects malformed session timestamp values', () => {
+    const result = validateManualLogInput({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      sessionTimestamp: 'not-a-timestamp',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.sessionTimestamp).toMatch(/valid date and time/i);
+  });
+
+  it('builds a manual log entry using session end timestamp semantics', () => {
     const log = buildManualLogEntry(
       {
         durationMinutes: 30,
@@ -28,5 +39,7 @@ describe('manual log helpers', () => {
     expect(log.source).toBe('manual log');
     expect(log.status).toBe('completed');
     expect(log.completedDurationSeconds).toBe(1800);
+    expect(log.endedAt).toBe(new Date('2026-03-23T07:00').toISOString());
+    expect(log.startedAt).toBe(new Date('2026-03-23T06:30').toISOString());
   });
 });

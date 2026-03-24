@@ -1,61 +1,52 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-a-core-practice-engine/07-test-core-practice-engine.md` is complete.
+Prompt `prompts/milestone-b-practice-composition/03-fix-manual-logging-review-findings.md` is complete.
 
-Milestone A targeted QA hardening is now in place for timer, home/settings integration, route behavior, and persistence boundaries.
+Manual logging review remediation is now in place for timestamp correctness, validation safety, and recent-history ordering integrity.
 
 ## What was implemented
-- Added an ExecPlan for this testing slice:
-  - `requirements/execplan-core-practice-engine-testing-qa.md`
-- Strengthened timer and session-log correctness tests:
-  - `src/utils/timerValidation.test.ts`
+- Added missing manual logging review findings artifact:
+  - `docs/review-manual-logging.md`
+- Added and completed remediation ExecPlan:
+  - `requirements/execplan-manual-logging-review-remediation.md`
+- Fixed manual log timestamp semantics:
+  - `src/utils/manualLog.ts`
+  - `session timestamp` is now interpreted as session end time
+  - `startedAt` is now derived as `endedAt - duration`
+- Hardened manual log validation:
+  - `src/utils/manualLog.ts`
+  - malformed timestamp strings are now rejected with clear validation copy
+- Fixed history recency insertion behavior:
+  - `src/features/timer/timerReducer.ts`
+  - session logs are now ordered by `endedAt` descending in shared insertion flow
+- Added focused tests for changed behavior:
+  - `src/utils/manualLog.test.ts`
   - `src/features/timer/timerReducer.test.ts`
-  - `src/utils/sessionLog.test.ts`
-- Expanded Milestone A integration-level UX tests:
-  - `src/pages/HomePage.test.tsx`
-  - `src/pages/SettingsPage.test.tsx`
-  - `src/App.test.tsx`
-- Hardened local-first persistence boundary tests (current integration boundary until REST backend exists):
-  - `src/utils/storage.test.ts`
 
 ## QA coverage improved in this slice
-- Timer validation:
-  - valid configuration path
-  - interval > 0 enforcement when interval bells are enabled
-- Active session transitions:
-  - invalid start blocked by validation
-  - completion via reducer tick finalization with `completed` auto log
-  - ended-early completion duration correctness retained
-- Session-log creation:
-  - upper/lower clamp behavior for completed duration
-  - duration label formatting behavior
-- Home behavior:
-  - quick start now verified for both invalid defaults guidance and valid defaults navigation to active timer
-- Settings behavior:
-  - invalid defaults are blocked from persistence
-  - persisted defaults reflected in Timer Setup flow through app navigation
-- Critical route behavior:
-  - `/sankalpa` redirect to `/goals`
-  - wildcard unknown route redirect to `/`
-- Persistence/integration boundary:
-  - robust load/save behavior for malformed and valid timer/session-log payloads
+- Manual logging data integrity:
+  - malformed timestamp rejection
+  - end-time-based derivation of manual log window
+- History integration integrity:
+  - mixed `manual log` + `auto log` ordering by real session recency, not insertion order
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
   - 19 test files
-  - 68 tests passing
+  - 70 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Updated `requirements/decisions.md` with Milestone A QA hardening decisions.
-- Added and completed `requirements/execplan-core-practice-engine-testing-qa.md`.
+- Added `docs/review-manual-logging.md`.
+- Added and completed `requirements/execplan-manual-logging-review-remediation.md`.
+- Updated `requirements/decisions.md` with manual logging remediation decisions.
 
 ## Known limitations / assumptions
-- This workspace remains front-end only; REST backend integration is not present yet.
-- Local storage contracts are treated as the active integration boundary for this milestone.
+- Prompt dependency gap: `docs/review-manual-logging.md` was missing when this slice started, so it was created first and used as the remediation source.
+- Workspace remains front-end only; local storage persistence remains the active integration boundary.
 
 ## Exact recommended next prompt
 Read:
@@ -72,10 +63,10 @@ Read:
 
 Then:
 
-1. Execute prompt `prompts/milestone-b-practice-composition/01-implement-manual-logging.md`.
+1. Execute prompt `prompts/milestone-b-practice-composition/04-implement-custom-plays.md`.
 2. Create an ExecPlan before implementation.
-3. Keep scope bounded to manual log behavior, history integration, and required persistence boundaries.
-4. Add focused tests only for changed validation/state behavior.
+3. Keep scope bounded to `custom play` creation/edit/delete/favorite behavior and minimum required Practice integration.
+4. Add focused tests for changed validation/state logic and interaction-critical UI behavior.
 5. Run:
    - npm run typecheck
    - npm run lint
@@ -85,4 +76,4 @@ Then:
    - requirements/decisions.md
    - requirements/session-handoff.md
 7. Commit with a clear message:
-   feat(composition): add manual session logging
+   feat(composition): implement custom plays

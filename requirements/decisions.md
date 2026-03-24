@@ -165,3 +165,9 @@
 - Treat local storage persistence contracts as the current integration boundary for this workspace until backend REST services are introduced.
 - Prefer deterministic reducer/helper coverage for time-sensitive timer behavior, with route-level tests limited to user-visible navigation and persistence outcomes.
 - Reduce route-test fragility by favoring accessible role/name selectors over brittle exact-label assumptions when equivalent user intent is being validated.
+
+### 2026-03-24 manual logging review remediation decisions
+- Treat manual log `session timestamp` as the time the session ended, and derive `startedAt` by subtracting duration.
+- Harden manual log timestamp validation to reject malformed datetime values before entry construction.
+- Sort session logs by `endedAt` recency in shared reducer insertion flow so mixed `manual log` and `auto log` entries preserve true `Recent Session Logs` ordering.
+- Keep this remediation bounded to manual logging and minimum supporting history behavior; do not expand scope to unrelated custom play or playlist UX changes.

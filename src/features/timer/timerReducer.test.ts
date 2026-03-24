@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { SessionLog } from '../../types/sessionLog';
 import type { TimerSettings } from '../../types/timer';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 
@@ -11,6 +12,25 @@ const validSettings: TimerSettings = {
   intervalMinutes: 2,
   intervalSound: 'Temple Bell',
 };
+
+function createSessionLog(overrides: Partial<SessionLog> = {}): SessionLog {
+  return {
+    id: 'log-default',
+    startedAt: '2026-03-23T10:00:00.000Z',
+    endedAt: '2026-03-23T10:10:00.000Z',
+    meditationType: 'Vipassana',
+    intendedDurationSeconds: 600,
+    completedDurationSeconds: 600,
+    status: 'completed',
+    source: 'auto log',
+    startSound: 'None',
+    endSound: 'Temple Bell',
+    intervalEnabled: false,
+    intervalMinutes: 0,
+    intervalSound: 'None',
+    ...overrides,
+  };
+}
 
 describe('timerReducer', () => {
   it('does not start a session when settings are invalid', () => {
@@ -82,5 +102,28 @@ describe('timerReducer', () => {
     expect(completed.lastOutcome?.status).toBe('completed');
     expect(completed.sessionLogs[0].status).toBe('completed');
     expect(completed.sessionLogs[0].completedDurationSeconds).toBe(600);
+  });
+
+  it('keeps history ordered by endedAt recency when manual backfill is added', () => {
+    const newerAutoLog = createSessionLog({
+      id: 'log-newer',
+      endedAt: '2026-03-23T12:00:00.000Z',
+    });
+    const state = createInitialTimerState(validSettings, [newerAutoLog]);
+
+    const olderManualLog = createSessionLog({
+      id: 'log-older-manual',
+      startedAt: '2026-03-23T08:30:00.000Z',
+      endedAt: '2026-03-23T09:00:00.000Z',
+      source: 'manual log',
+      meditationType: 'Ajapa',
+    });
+
+    const next = timerReducer(state, {
+      type: 'ADD_SESSION_LOG',
+      payload: olderManualLog,
+    });
+
+    expect(next.sessionLogs.map((entry) => entry.id)).toEqual(['log-newer', 'log-older-manual']);
   });
 });
