@@ -17,6 +17,7 @@ export default function PracticePage() {
   const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
+  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
@@ -237,10 +238,21 @@ export default function PracticePage() {
       </section>
 
       <div className="timer-actions">
-        <button type="button" onClick={onStart}>
+        <button type="button" onClick={onStart} disabled={isTimerStartBlockedByPlaylistRun}>
           Start Session
         </button>
       </div>
+
+      {isTimerStartBlockedByPlaylistRun ? (
+        <div className="status-banner warn" role="status">
+          <p>
+            A playlist run is active. Resume or end the playlist run before starting a separate timer session.
+          </p>
+          <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
+            Resume Playlist Run
+          </button>
+        </div>
+      ) : null}
 
       <section className="practice-tools-panel" aria-label="Practice tools">
         <div className="practice-tools-header">

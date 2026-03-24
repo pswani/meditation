@@ -27,6 +27,7 @@ export interface TimerContextValue {
   readonly playlistRunOutcome: PlaylistRunOutcome | null;
   readonly isPaused: boolean;
   readonly isPlaylistRunPaused: boolean;
+  readonly recoveryMessage: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => CustomPlayValidationResult;
   readonly deleteCustomPlay: (playId: string) => void;
@@ -45,6 +46,7 @@ export interface TimerContextValue {
   readonly resumeSession: () => void;
   readonly endSessionEarly: () => void;
   readonly clearOutcome: () => void;
+  readonly clearRecoveryMessage: () => void;
 }
 
 export const TimerContext = createContext<TimerContextValue | null>(null);

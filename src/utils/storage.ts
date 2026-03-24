@@ -1,14 +1,16 @@
 import type { CustomPlay } from '../types/customPlay';
-import type { Playlist } from '../types/playlist';
+import type { ActivePlaylistRun, Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
-import type { TimerSettings } from '../types/timer';
+import type { ActiveSession, TimerSettings } from '../types/timer';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
+const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
+const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -36,12 +38,28 @@ function isMeditationType(value: unknown): value is CustomPlay['meditationType']
   return typeof value === 'string' && MEDITATION_TYPES.includes(value as (typeof MEDITATION_TYPES)[number]);
 }
 
-function isSessionLog(value: unknown): value is SessionLog {
-  if (!isObjectRecord(value)) {
+function isValidIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string') {
     return false;
   }
 
-  const candidate = value as Record<string, unknown>;
+  const parsed = Date.parse(value);
+  return !Number.isNaN(parsed);
+}
+
+function isFiniteNonNegativeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function isFinitePositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function isFiniteInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value);
+}
+
+function isValidPlaylistFields(candidate: Record<string, unknown>): boolean {
   const hasValidPlaylistFields =
     (typeof candidate.playlistId === 'string' || typeof candidate.playlistId === 'undefined') &&
     (typeof candidate.playlistName === 'string' || typeof candidate.playlistName === 'undefined') &&
@@ -50,22 +68,142 @@ function isSessionLog(value: unknown): value is SessionLog {
     (typeof candidate.playlistItemPosition === 'number' || typeof candidate.playlistItemPosition === 'undefined') &&
     (typeof candidate.playlistItemCount === 'number' || typeof candidate.playlistItemCount === 'undefined');
 
+  if (!hasValidPlaylistFields) {
+    return false;
+  }
+
+  if (typeof candidate.playlistRunStartedAt === 'string' && !isValidIsoDate(candidate.playlistRunStartedAt)) {
+    return false;
+  }
+
+  if (typeof candidate.playlistItemPosition === 'number' && (!Number.isInteger(candidate.playlistItemPosition) || candidate.playlistItemPosition <= 0)) {
+    return false;
+  }
+
+  if (typeof candidate.playlistItemCount === 'number' && (!Number.isInteger(candidate.playlistItemCount) || candidate.playlistItemCount <= 0)) {
+    return false;
+  }
+
+  if (
+    typeof candidate.playlistItemPosition === 'number' &&
+    typeof candidate.playlistItemCount === 'number' &&
+    candidate.playlistItemPosition > candidate.playlistItemCount
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function isSessionLog(value: unknown): value is SessionLog {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isMeditationType(candidate.meditationType) ||
+    !isValidIsoDate(candidate.startedAt) ||
+    !isValidIsoDate(candidate.endedAt) ||
+    !isFinitePositiveNumber(candidate.intendedDurationSeconds) ||
+    !isFiniteNonNegativeNumber(candidate.completedDurationSeconds)
+  ) {
+    return false;
+  }
+
+  if (candidate.completedDurationSeconds > candidate.intendedDurationSeconds) {
+    return false;
+  }
+
+  if (Date.parse(candidate.endedAt) < Date.parse(candidate.startedAt)) {
+    return false;
+  }
+
   return (
     typeof candidate.id === 'string' &&
-    typeof candidate.startedAt === 'string' &&
-    typeof candidate.endedAt === 'string' &&
-    typeof candidate.meditationType === 'string' &&
-    typeof candidate.intendedDurationSeconds === 'number' &&
-    typeof candidate.completedDurationSeconds === 'number' &&
     (candidate.status === 'completed' || candidate.status === 'ended early') &&
     (candidate.source === 'auto log' || candidate.source === 'manual log') &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&
-    typeof candidate.intervalMinutes === 'number' &&
+    isFiniteNonNegativeNumber(candidate.intervalMinutes) &&
     typeof candidate.intervalSound === 'string' &&
-    hasValidPlaylistFields
+    isValidPlaylistFields(candidate)
   );
+}
+
+function isActiveSession(value: unknown): value is ActiveSession {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isValidIsoDate(candidate.startedAt) ||
+    !isFiniteInteger(candidate.startedAtMs) ||
+    !isFinitePositiveNumber(candidate.intendedDurationSeconds) ||
+    !isFiniteNonNegativeNumber(candidate.remainingSeconds) ||
+    !isMeditationType(candidate.meditationType) ||
+    typeof candidate.startSound !== 'string' ||
+    typeof candidate.endSound !== 'string' ||
+    typeof candidate.intervalEnabled !== 'boolean' ||
+    !isFiniteNonNegativeNumber(candidate.intervalMinutes) ||
+    typeof candidate.intervalSound !== 'string' ||
+    !isFiniteInteger(candidate.endAtMs)
+  ) {
+    return false;
+  }
+
+  return candidate.remainingSeconds <= candidate.intendedDurationSeconds;
+}
+
+function isPlaylistRunItem(value: unknown): value is ActivePlaylistRun['items'][number] {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    isMeditationType(candidate.meditationType) &&
+    isFinitePositiveNumber(candidate.durationMinutes)
+  );
+}
+
+function isActivePlaylistRun(value: unknown): value is ActivePlaylistRun {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.runId !== 'string' ||
+    typeof candidate.playlistId !== 'string' ||
+    typeof candidate.playlistName !== 'string' ||
+    !isValidIsoDate(candidate.runStartedAt) ||
+    !Array.isArray(candidate.items) ||
+    !isFiniteInteger(candidate.currentIndex) ||
+    !isValidIsoDate(candidate.currentItemStartedAt) ||
+    !isFiniteInteger(candidate.currentItemStartedAtMs) ||
+    !isFiniteNonNegativeNumber(candidate.currentItemRemainingSeconds) ||
+    !isFiniteInteger(candidate.currentItemEndAtMs) ||
+    !isFiniteNonNegativeNumber(candidate.completedItems) ||
+    !isFiniteNonNegativeNumber(candidate.completedDurationSeconds) ||
+    !isFiniteNonNegativeNumber(candidate.totalIntendedDurationSeconds)
+  ) {
+    return false;
+  }
+
+  const validItems = candidate.items.every(isPlaylistRunItem);
+  if (!validItems || candidate.items.length === 0) {
+    return false;
+  }
+
+  if (candidate.currentIndex < 0 || candidate.currentIndex >= candidate.items.length) {
+    return false;
+  }
+
+  return candidate.completedItems <= candidate.items.length;
 }
 
 function normalizeCustomPlay(value: unknown): CustomPlay | null {
@@ -253,4 +391,96 @@ export function loadSankalpas(): SankalpaGoal[] {
 
 export function saveSankalpas(sankalpas: SankalpaGoal[]): void {
   localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
+}
+
+interface StoredActiveTimerState {
+  readonly activeSession: ActiveSession;
+  readonly isPaused: boolean;
+}
+
+interface StoredActivePlaylistRunState {
+  readonly activePlaylistRun: ActivePlaylistRun;
+  readonly isPaused: boolean;
+}
+
+export function loadActiveTimerState(): StoredActiveTimerState | null {
+  const raw = localStorage.getItem(ACTIVE_TIMER_STATE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isObjectRecord(parsed)) {
+      return null;
+    }
+
+    const candidate = parsed as Record<string, unknown>;
+    if (!isActiveSession(candidate.activeSession) || typeof candidate.isPaused !== 'boolean') {
+      return null;
+    }
+
+    return {
+      activeSession: candidate.activeSession,
+      isPaused: candidate.isPaused,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveActiveTimerState(activeSession: ActiveSession | null, isPaused: boolean): void {
+  if (!activeSession) {
+    localStorage.removeItem(ACTIVE_TIMER_STATE_KEY);
+    return;
+  }
+
+  localStorage.setItem(
+    ACTIVE_TIMER_STATE_KEY,
+    JSON.stringify({
+      activeSession,
+      isPaused,
+    } satisfies StoredActiveTimerState)
+  );
+}
+
+export function loadActivePlaylistRunState(): StoredActivePlaylistRunState | null {
+  const raw = localStorage.getItem(ACTIVE_PLAYLIST_RUN_STATE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isObjectRecord(parsed)) {
+      return null;
+    }
+
+    const candidate = parsed as Record<string, unknown>;
+    if (!isActivePlaylistRun(candidate.activePlaylistRun) || typeof candidate.isPaused !== 'boolean') {
+      return null;
+    }
+
+    return {
+      activePlaylistRun: candidate.activePlaylistRun,
+      isPaused: candidate.isPaused,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveActivePlaylistRunState(activePlaylistRun: ActivePlaylistRun | null, isPaused: boolean): void {
+  if (!activePlaylistRun) {
+    localStorage.removeItem(ACTIVE_PLAYLIST_RUN_STATE_KEY);
+    return;
+  }
+
+  localStorage.setItem(
+    ACTIVE_PLAYLIST_RUN_STATE_KEY,
+    JSON.stringify({
+      activePlaylistRun,
+      isPaused,
+    } satisfies StoredActivePlaylistRunState)
+  );
 }

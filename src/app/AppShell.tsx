@@ -5,7 +5,7 @@ import { getActiveNavItem, primaryNavItems } from './routes';
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeSession, activePlaylistRun } = useTimer();
+  const { activeSession, activePlaylistRun, recoveryMessage, clearRecoveryMessage } = useTimer();
   const activeNavItem = getActiveNavItem(location.pathname);
 
   return (
@@ -59,6 +59,14 @@ export default function AppShell() {
                 onClick={() => navigate('/practice/playlists/active')}
               >
                 Resume Playlist Run
+              </button>
+            </div>
+          ) : null}
+          {recoveryMessage ? (
+            <div className="status-banner warn" role="status" aria-live="polite">
+              <p>{recoveryMessage}</p>
+              <button type="button" className="link-button" onClick={clearRecoveryMessage}>
+                Dismiss
               </button>
             </div>
           ) : null}

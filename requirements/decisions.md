@@ -201,3 +201,24 @@
   - enforce supported `meditation type`
   - enforce `durationMinutes > 0`
   - drop malformed playlist records instead of admitting invalid runtime state.
+
+### 2026-03-24 practice composition review remediation decisions
+- Persist active runtime flows for interruption resilience:
+  - active timer session + pause state
+  - active playlist run + pause state
+- Rehydrate persisted active runtime flows on app load with safe guards:
+  - recover only valid snapshots
+  - clear stale/unrecoverable snapshots
+  - surface a dismissible shell-level recovery status message.
+- Make timer-start blocking explicit when a playlist run is active:
+  - disable `Start Session`
+  - show inline guidance with a `Resume Playlist Run` action.
+- Expand `history` usability while preserving calm layout:
+  - add lightweight filters (`source`, `status`)
+  - show filtered-count context
+  - add progressive reveal with `Show More Session Logs`.
+- Strengthen `session log` load integrity checks at storage boundary:
+  - require supported `meditation type`
+  - require parseable and ordered timestamps
+  - require non-negative and coherent duration values
+  - require coherent optional playlist metadata when present.

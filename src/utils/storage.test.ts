@@ -4,10 +4,14 @@ import type { Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
 import {
+  loadActivePlaylistRunState,
+  loadActiveTimerState,
   loadCustomPlays,
   loadPlaylists,
   loadSessionLogs,
   loadTimerSettings,
+  saveActivePlaylistRunState,
+  saveActiveTimerState,
   saveCustomPlays,
   savePlaylists,
   saveSessionLogs,
@@ -18,6 +22,8 @@ const rawTimerSettingsKey = 'meditation.timerSettings.v1';
 const rawSessionLogsKey = 'meditation.sessionLogs.v1';
 const rawCustomPlaysKey = 'meditation.customPlays.v1';
 const rawPlaylistsKey = 'meditation.playlists.v1';
+const rawActiveTimerStateKey = 'meditation.activeTimerState.v1';
+const rawActivePlaylistRunStateKey = 'meditation.activePlaylistRunState.v1';
 
 describe('storage timer settings', () => {
   beforeEach(() => {
@@ -156,6 +162,61 @@ describe('storage session logs', () => {
         intervalSound: 'None',
       },
     ]);
+  });
+
+  it('drops semantically invalid session logs (type/date/duration coherence)', () => {
+    localStorage.setItem(
+      rawSessionLogsKey,
+      JSON.stringify([
+        {
+          id: 'invalid-type',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Breathwork',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1200,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+        {
+          id: 'invalid-date-order',
+          startedAt: '2026-03-24T10:30:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Vipassana',
+          intendedDurationSeconds: 600,
+          completedDurationSeconds: 600,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+        {
+          id: 'invalid-duration-range',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Ajapa',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1400,
+          status: 'completed',
+          source: 'manual log',
+          startSound: 'None',
+          endSound: 'None',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+      ])
+    );
+
+    expect(loadSessionLogs()).toEqual([]);
   });
 });
 
@@ -329,5 +390,154 @@ describe('storage playlists', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('storage active runtime state', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads active timer state snapshot', () => {
+    saveActiveTimerState(
+      {
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        intendedDurationSeconds: 1200,
+        remainingSeconds: 900,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+      },
+      true
+    );
+
+    expect(loadActiveTimerState()).toEqual({
+      activeSession: {
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        intendedDurationSeconds: 1200,
+        remainingSeconds: 900,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+      },
+      isPaused: true,
+    });
+  });
+
+  it('removes active timer snapshot when there is no active session', () => {
+    saveActiveTimerState(
+      {
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        intendedDurationSeconds: 1200,
+        remainingSeconds: 900,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+      },
+      false
+    );
+    saveActiveTimerState(null, false);
+
+    expect(localStorage.getItem(rawActiveTimerStateKey)).toBeNull();
+    expect(loadActiveTimerState()).toBeNull();
+  });
+
+  it('persists and loads active playlist run state snapshot', () => {
+    saveActivePlaylistRunState(
+      {
+        runId: 'playlist-1-1000',
+        playlistId: 'playlist-1',
+        playlistName: 'Morning Sequence',
+        runStartedAt: '2026-03-24T10:00:00.000Z',
+        items: [
+          {
+            id: 'item-1',
+            meditationType: 'Ajapa',
+            durationMinutes: 10,
+          },
+        ],
+        currentIndex: 0,
+        currentItemStartedAt: '2026-03-24T10:00:00.000Z',
+        currentItemStartedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        currentItemRemainingSeconds: 500,
+        currentItemEndAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        completedItems: 0,
+        completedDurationSeconds: 0,
+        totalIntendedDurationSeconds: 600,
+      },
+      false
+    );
+
+    expect(loadActivePlaylistRunState()).toEqual({
+      activePlaylistRun: {
+        runId: 'playlist-1-1000',
+        playlistId: 'playlist-1',
+        playlistName: 'Morning Sequence',
+        runStartedAt: '2026-03-24T10:00:00.000Z',
+        items: [
+          {
+            id: 'item-1',
+            meditationType: 'Ajapa',
+            durationMinutes: 10,
+          },
+        ],
+        currentIndex: 0,
+        currentItemStartedAt: '2026-03-24T10:00:00.000Z',
+        currentItemStartedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        currentItemRemainingSeconds: 500,
+        currentItemEndAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        completedItems: 0,
+        completedDurationSeconds: 0,
+        totalIntendedDurationSeconds: 600,
+      },
+      isPaused: false,
+    });
+  });
+
+  it('drops malformed active playlist run snapshots', () => {
+    localStorage.setItem(
+      rawActivePlaylistRunStateKey,
+      JSON.stringify({
+        activePlaylistRun: {
+          runId: 'playlist-1-1000',
+          playlistId: 'playlist-1',
+          playlistName: 'Morning Sequence',
+          runStartedAt: '2026-03-24T10:00:00.000Z',
+          items: [
+            {
+              id: 'item-1',
+              meditationType: 'Breathwork',
+              durationMinutes: 10,
+            },
+          ],
+          currentIndex: 0,
+          currentItemStartedAt: '2026-03-24T10:00:00.000Z',
+          currentItemStartedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          currentItemRemainingSeconds: 500,
+          currentItemEndAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+          completedItems: 0,
+          completedDurationSeconds: 0,
+          totalIntendedDurationSeconds: 600,
+        },
+        isPaused: false,
+      })
+    );
+
+    expect(loadActivePlaylistRunState()).toBeNull();
   });
 });

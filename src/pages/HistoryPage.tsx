@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { meditationTypes } from '../features/timer/constants';
@@ -36,12 +36,32 @@ function getPlaylistRunClusterKey(entry: SessionLog): string | null {
 }
 
 export default function HistoryPage() {
-  const { recentLogs, addManualLog } = useTimer();
+  const { sessionLogs, addManualLog } = useTimer();
   const navigate = useNavigate();
   const [manualLog, setManualLog] = useState<ManualLogInput>(initialManualLog);
-  const [manualLogOpen, setManualLogOpen] = useState(() => recentLogs.length === 0);
+  const [manualLogOpen, setManualLogOpen] = useState(() => sessionLogs.length === 0);
   const [errors, setErrors] = useState<ManualLogValidationResult['errors']>({});
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<'all' | SessionLog['source']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | SessionLog['status']>('all');
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const filteredLogs = useMemo(
+    () =>
+      sessionLogs.filter((entry) => {
+        const sourceMatches = sourceFilter === 'all' || entry.source === sourceFilter;
+        const statusMatches = statusFilter === 'all' || entry.status === statusFilter;
+        return sourceMatches && statusMatches;
+      }),
+    [sessionLogs, sourceFilter, statusFilter]
+  );
+
+  const visibleLogs = useMemo(() => filteredLogs.slice(0, visibleCount), [filteredLogs, visibleCount]);
+  const canShowMore = filteredLogs.length > visibleLogs.length;
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [sourceFilter, statusFilter]);
 
   function submitManualLog(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,20 +88,52 @@ export default function HistoryPage() {
 
       <section className="history-log-panel">
         <h3 className="section-title">Recent Session Logs</h3>
+        <p className="section-subtitle">
+          Showing {visibleLogs.length} of {filteredLogs.length} filtered entries ({sessionLogs.length} stored).
+        </p>
 
-        {recentLogs.length === 0 ? (
+        <div className="form-grid history-filters">
+          <label>
+            <span>Source filter</span>
+            <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}>
+              <option value="all">All sources</option>
+              <option value="auto log">Auto log only</option>
+              <option value="manual log">Manual log only</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Status filter</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+              <option value="all">All statuses</option>
+              <option value="completed">Completed only</option>
+              <option value="ended early">Ended early only</option>
+            </select>
+          </label>
+        </div>
+
+        {filteredLogs.length === 0 ? (
           <div className="empty-state">
-            <p>No session log entries yet.</p>
-            <p>Start a timer session or save a manual log entry.</p>
-            <button type="button" className="link-button" onClick={() => navigate('/practice')}>
-              Start Session
-            </button>
+            {sessionLogs.length === 0 ? (
+              <>
+                <p>No session log entries yet.</p>
+                <p>Start a timer session or save a manual log entry.</p>
+                <button type="button" className="link-button" onClick={() => navigate('/practice')}>
+                  Start Session
+                </button>
+              </>
+            ) : (
+              <>
+                <p>No session log entries match the selected filters.</p>
+                <p>Adjust filters to view more entries.</p>
+              </>
+            )}
           </div>
         ) : (
           <ul className="history-list">
-            {recentLogs.map((entry, index) => {
+            {visibleLogs.map((entry, index) => {
               const runClusterKey = getPlaylistRunClusterKey(entry);
-              const previousRunClusterKey = index > 0 ? getPlaylistRunClusterKey(recentLogs[index - 1]) : null;
+              const previousRunClusterKey = index > 0 ? getPlaylistRunClusterKey(visibleLogs[index - 1]) : null;
               const showRunContext = Boolean(runClusterKey) && runClusterKey !== previousRunClusterKey;
               const runStartedAt = entry.playlistRunStartedAt ?? entry.startedAt;
 
@@ -119,6 +171,14 @@ export default function HistoryPage() {
             })}
           </ul>
         )}
+
+        {canShowMore ? (
+          <div className="timer-actions">
+            <button type="button" className="secondary" onClick={() => setVisibleCount((current) => current + 20)}>
+              Show More Session Logs
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="manual-log-panel">

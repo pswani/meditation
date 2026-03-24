@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { CustomPlay } from '../../types/customPlay';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome } from '../../types/playlist';
+import type { ActiveSession } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { buildManualLogEntry, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
@@ -9,10 +10,14 @@ import { persistPlaylistsToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
 import {
+  loadActivePlaylistRunState,
+  loadActiveTimerState,
   loadCustomPlays,
   loadPlaylists,
   loadSessionLogs,
   loadTimerSettings,
+  saveActivePlaylistRunState,
+  saveActiveTimerState,
   saveCustomPlays,
   saveSessionLogs,
   saveTimerSettings,
@@ -21,18 +26,126 @@ import { defaultTimerSettings } from './constants';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
 
+interface TimerHydration {
+  readonly activeSession: ActiveSession | null;
+  readonly isPaused: boolean;
+  readonly activePlaylistRun: ActivePlaylistRun | null;
+  readonly isPlaylistRunPaused: boolean;
+  readonly recoveryMessage: string | null;
+}
+
+function recoverActiveSession(
+  storedActiveSession: ActiveSession | null,
+  isPaused: boolean,
+  nowMs: number
+): { readonly activeSession: ActiveSession | null; readonly recoveryMessage: string | null } {
+  if (!storedActiveSession) {
+    return {
+      activeSession: null,
+      recoveryMessage: null,
+    };
+  }
+
+  if (isPaused) {
+    return {
+      activeSession: storedActiveSession,
+      recoveryMessage: 'Recovered an active timer from your previous app state.',
+    };
+  }
+
+  const remainingSeconds = Math.ceil((storedActiveSession.endAtMs - nowMs) / 1000);
+  if (remainingSeconds <= 0) {
+    return {
+      activeSession: null,
+      recoveryMessage: 'Your previous active timer was cleared because it could not be safely resumed.',
+    };
+  }
+
+  return {
+    activeSession: {
+      ...storedActiveSession,
+      remainingSeconds,
+    },
+    recoveryMessage: 'Recovered an active timer from your previous app state.',
+  };
+}
+
+function recoverActivePlaylistRun(
+  storedActivePlaylistRun: ActivePlaylistRun | null,
+  isPaused: boolean,
+  nowMs: number
+): { readonly activePlaylistRun: ActivePlaylistRun | null; readonly recoveryMessage: string | null } {
+  if (!storedActivePlaylistRun) {
+    return {
+      activePlaylistRun: null,
+      recoveryMessage: null,
+    };
+  }
+
+  if (isPaused) {
+    return {
+      activePlaylistRun: storedActivePlaylistRun,
+      recoveryMessage: 'Recovered an active playlist run from your previous app state.',
+    };
+  }
+
+  const remainingSeconds = Math.ceil((storedActivePlaylistRun.currentItemEndAtMs - nowMs) / 1000);
+  if (remainingSeconds <= 0) {
+    return {
+      activePlaylistRun: null,
+      recoveryMessage: 'Your previous playlist run was cleared because it could not be safely resumed.',
+    };
+  }
+
+  return {
+    activePlaylistRun: {
+      ...storedActivePlaylistRun,
+      currentItemRemainingSeconds: remainingSeconds,
+    },
+    recoveryMessage: 'Recovered an active playlist run from your previous app state.',
+  };
+}
+
+function createTimerHydration(nowMs: number): TimerHydration {
+  const storedTimerState = loadActiveTimerState();
+  const storedPlaylistRunState = loadActivePlaylistRunState();
+  const timerRecovery = recoverActiveSession(storedTimerState?.activeSession ?? null, storedTimerState?.isPaused ?? false, nowMs);
+  const playlistRecovery = recoverActivePlaylistRun(
+    storedPlaylistRunState?.activePlaylistRun ?? null,
+    storedPlaylistRunState?.isPaused ?? false,
+    nowMs
+  );
+
+  return {
+    activeSession: timerRecovery.activeSession,
+    isPaused: timerRecovery.activeSession ? (storedTimerState?.isPaused ?? false) : false,
+    activePlaylistRun: playlistRecovery.activePlaylistRun,
+    isPlaylistRunPaused: playlistRecovery.activePlaylistRun ? (storedPlaylistRunState?.isPaused ?? false) : false,
+    recoveryMessage: timerRecovery.recoveryMessage ?? playlistRecovery.recoveryMessage,
+  };
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
+  const [hydration] = useState<TimerHydration>(() => createTimerHydration(Date.now()));
   const [state, dispatch] = useReducer(
     timerReducer,
     undefined,
-    () => createInitialTimerState(loadTimerSettings() ?? defaultTimerSettings, loadSessionLogs())
+    () => {
+      const initialState = createInitialTimerState(loadTimerSettings() ?? defaultTimerSettings, loadSessionLogs());
+
+      return {
+        ...initialState,
+        activeSession: hydration.activeSession,
+      };
+    }
   );
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(hydration.isPaused);
   const [customPlays, setCustomPlays] = useState<CustomPlay[]>(() => loadCustomPlays());
   const [playlists, setPlaylists] = useState<Playlist[]>(() => loadPlaylists());
-  const [activePlaylistRun, setActivePlaylistRun] = useState<ActivePlaylistRun | null>(null);
+  const [activePlaylistRun, setActivePlaylistRun] = useState<ActivePlaylistRun | null>(hydration.activePlaylistRun);
   const [playlistRunOutcome, setPlaylistRunOutcome] = useState<PlaylistRunOutcome | null>(null);
-  const [isPlaylistRunPaused, setIsPlaylistRunPaused] = useState(false);
+  const [isPlaylistRunPaused, setIsPlaylistRunPaused] = useState(hydration.isPlaylistRunPaused);
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(hydration.recoveryMessage);
 
   useEffect(() => {
     if (!state.activeSession) {
@@ -61,6 +174,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   useEffect(() => {
     void persistPlaylistsToApi(playlists);
   }, [playlists]);
+
+  useEffect(() => {
+    saveActiveTimerState(state.activeSession, isPaused);
+  }, [isPaused, state.activeSession]);
+
+  useEffect(() => {
+    saveActivePlaylistRunState(activePlaylistRun, isPlaylistRunPaused);
+  }, [activePlaylistRun, isPlaylistRunPaused]);
 
   useEffect(() => {
     if (!state.activeSession || isPaused) {
@@ -172,6 +293,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       playlistRunOutcome,
       isPaused,
       isPlaylistRunPaused,
+      recoveryMessage,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: (draft, editId) => {
         const validation = validateCustomPlayDraft(draft);
@@ -403,8 +525,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         setIsPaused(false);
       },
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
+      clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
-    [activePlaylistRun, customPlays, isPaused, isPlaylistRunPaused, playlistRunOutcome, playlists, state]
+    [activePlaylistRun, customPlays, isPaused, isPlaylistRunPaused, playlistRunOutcome, playlists, recoveryMessage, state]
   );
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

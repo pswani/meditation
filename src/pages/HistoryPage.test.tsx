@@ -83,4 +83,50 @@ describe('HistoryPage UX', () => {
     expect(manualLogDisclosure).toHaveAttribute('open');
     expect(screen.getByText(/use your local date and time when the session ended/i)).toBeInTheDocument();
   });
+
+  it('supports source/status filtering and show-more progressive reveal', () => {
+    const logs = Array.from({ length: 25 }, (_, index) => {
+      const minute = String(index).padStart(2, '0');
+      return {
+        id: `log-${index}`,
+        startedAt: `2026-03-24T10:${minute}:00.000Z`,
+        endedAt: `2026-03-24T10:${minute}:30.000Z`,
+        meditationType: index % 2 === 0 ? 'Vipassana' : 'Ajapa',
+        intendedDurationSeconds: 600,
+        completedDurationSeconds: index % 2 === 0 ? 600 : 300,
+        status: index % 2 === 0 ? 'completed' : 'ended early',
+        source: index % 3 === 0 ? 'manual log' : 'auto log',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      };
+    });
+
+    localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(logs));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/history" element={<HistoryPage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/showing 20 of 25 filtered entries/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show more session logs/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /show more session logs/i }));
+    expect(screen.getByText(/showing 25 of 25 filtered entries/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /show more session logs/i })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/source filter/i), { target: { value: 'manual log' } });
+    expect(screen.getByText(/showing 9 of 9 filtered entries/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/status filter/i), { target: { value: 'ended early' } });
+    expect(screen.getByText(/showing 4 of 4 filtered entries/i)).toBeInTheDocument();
+  });
 });
