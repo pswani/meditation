@@ -3,50 +3,47 @@
 ## Current status
 Prompt `prompts/milestone-b-practice-composition/03-fix-manual-logging-review-findings.md` is complete.
 
-Manual logging review remediation is now in place for timestamp correctness, validation safety, and recent-history ordering integrity.
+Manual logging remediation pass 2 is now implemented for remaining important review findings.
 
 ## What was implemented
-- Added missing manual logging review findings artifact:
-  - `docs/review-manual-logging.md`
-- Added and completed remediation ExecPlan:
-  - `requirements/execplan-manual-logging-review-remediation.md`
-- Fixed manual log timestamp semantics:
+- Added and completed this ExecPlan:
+  - `requirements/execplan-manual-logging-review-remediation-pass2.md`
+- Fixed future-dated manual timestamp acceptance:
   - `src/utils/manualLog.ts`
-  - `session timestamp` is now interpreted as session end time
-  - `startedAt` is now derived as `endedAt - duration`
-- Hardened manual log validation:
-  - `src/utils/manualLog.ts`
-  - malformed timestamp strings are now rejected with clear validation copy
-- Fixed history recency insertion behavior:
-  - `src/features/timer/timerReducer.ts`
-  - session logs are now ordered by `endedAt` descending in shared insertion flow
+  - manual log validation now rejects timestamps later than `now` with clear copy:
+    - `Session timestamp cannot be in the future.`
+- Hardened session-log storage load boundary:
+  - `src/utils/storage.ts`
+  - added a minimal `session log` shape/type guard
+  - `loadSessionLogs()` now preserves valid entries and discards malformed entries
 - Added focused tests for changed behavior:
   - `src/utils/manualLog.test.ts`
-  - `src/features/timer/timerReducer.test.ts`
+  - `src/utils/storage.test.ts`
 
 ## QA coverage improved in this slice
-- Manual logging data integrity:
-  - malformed timestamp rejection
-  - end-time-based derivation of manual log window
-- History integration integrity:
-  - mixed `manual log` + `auto log` ordering by real session recency, not insertion order
+- Manual logging validation:
+  - future timestamp rejection
+- Persistence boundary integrity:
+  - malformed session-log entries are filtered out while valid entries still load
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
   - 19 test files
-  - 70 tests passing
+  - 72 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added `docs/review-manual-logging.md`.
-- Added and completed `requirements/execplan-manual-logging-review-remediation.md`.
-- Updated `requirements/decisions.md` with manual logging remediation decisions.
+- Updated `requirements/decisions.md` with pass-2 manual logging remediation decisions.
+- Added and completed `requirements/execplan-manual-logging-review-remediation-pass2.md`.
+- Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- Prompt dependency gap: `docs/review-manual-logging.md` was missing when this slice started, so it was created first and used as the remediation source.
-- Workspace remains front-end only; local storage persistence remains the active integration boundary.
+- This workspace remains front-end only; local storage remains the active integration boundary.
+- Nice-to-have review items remain intentionally out of scope for this remediation pass:
+  - history filtering by source/status
+  - post-save focus/scroll polish
 
 ## Exact recommended next prompt
 Read:

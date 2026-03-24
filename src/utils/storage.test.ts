@@ -88,4 +88,60 @@ describe('storage session logs', () => {
     localStorage.setItem(rawSessionLogsKey, JSON.stringify({ id: 'log-1' }));
     expect(loadSessionLogs()).toEqual([]);
   });
+
+  it('drops malformed log entries while keeping valid stored session logs', () => {
+    localStorage.setItem(
+      rawSessionLogsKey,
+      JSON.stringify([
+        {
+          id: 'log-valid',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Vipassana',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1200,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+        {
+          id: 'log-invalid-future-shape',
+          startedAt: '2026-03-24T11:00:00.000Z',
+          endedAt: '2026-03-24T11:15:00.000Z',
+          meditationType: 'Ajapa',
+          intendedDurationSeconds: 900,
+          completedDurationSeconds: 900,
+          status: 'done',
+          source: 'manual log',
+          startSound: 'None',
+          endSound: 'None',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+      ])
+    );
+
+    expect(loadSessionLogs()).toEqual([
+      {
+        id: 'log-valid',
+        startedAt: '2026-03-24T10:00:00.000Z',
+        endedAt: '2026-03-24T10:20:00.000Z',
+        meditationType: 'Vipassana',
+        intendedDurationSeconds: 1200,
+        completedDurationSeconds: 1200,
+        status: 'completed',
+        source: 'auto log',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      },
+    ]);
+  });
 });

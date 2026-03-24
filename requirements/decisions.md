@@ -171,3 +171,8 @@
 - Harden manual log timestamp validation to reject malformed datetime values before entry construction.
 - Sort session logs by `endedAt` recency in shared reducer insertion flow so mixed `manual log` and `auto log` entries preserve true `Recent Session Logs` ordering.
 - Keep this remediation bounded to manual logging and minimum supporting history behavior; do not expand scope to unrelated custom play or playlist UX changes.
+
+### 2026-03-24 manual logging review remediation pass-2 decisions
+- Reject future-dated manual log timestamps during validation to protect summary/sankalpa trustworthiness.
+- Strengthen session-log persistence boundary by validating loaded entry shape and enum values (`status`, `source`) before admitting items to runtime state.
+- Preserve valid stored session logs while dropping malformed entries, instead of failing the entire load when a subset is invalid.

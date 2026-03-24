@@ -25,7 +25,7 @@ function parseManualTimestamp(timestamp: string): number | null {
   return parsedMs;
 }
 
-export function validateManualLogInput(input: ManualLogInput): ManualLogValidationResult {
+export function validateManualLogInput(input: ManualLogInput, now: Date = new Date()): ManualLogValidationResult {
   const errors: ManualLogValidationResult['errors'] = {};
 
   if (Number.isNaN(input.durationMinutes) || input.durationMinutes <= 0) {
@@ -38,8 +38,13 @@ export function validateManualLogInput(input: ManualLogInput): ManualLogValidati
 
   if (!input.sessionTimestamp) {
     errors.sessionTimestamp = 'Session timestamp is required.';
-  } else if (parseManualTimestamp(input.sessionTimestamp) === null) {
-    errors.sessionTimestamp = 'Session timestamp must be a valid date and time.';
+  } else {
+    const parsedTimestamp = parseManualTimestamp(input.sessionTimestamp);
+    if (parsedTimestamp === null) {
+      errors.sessionTimestamp = 'Session timestamp must be a valid date and time.';
+    } else if (parsedTimestamp > now.getTime()) {
+      errors.sessionTimestamp = 'Session timestamp cannot be in the future.';
+    }
   }
 
   return {

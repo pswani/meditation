@@ -10,8 +10,12 @@ const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function isTimerSettings(value: unknown): value is TimerSettings {
-  if (typeof value !== 'object' || value === null) {
+  if (!isObjectRecord(value)) {
     return false;
   }
 
@@ -24,6 +28,38 @@ function isTimerSettings(value: unknown): value is TimerSettings {
     typeof candidate.intervalEnabled === 'boolean' &&
     typeof candidate.intervalMinutes === 'number' &&
     (typeof candidate.intervalSound === 'string' || typeof candidate.intervalSound === 'undefined')
+  );
+}
+
+function isSessionLog(value: unknown): value is SessionLog {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const hasValidPlaylistFields =
+    (typeof candidate.playlistId === 'string' || typeof candidate.playlistId === 'undefined') &&
+    (typeof candidate.playlistName === 'string' || typeof candidate.playlistName === 'undefined') &&
+    (typeof candidate.playlistRunId === 'string' || typeof candidate.playlistRunId === 'undefined') &&
+    (typeof candidate.playlistRunStartedAt === 'string' || typeof candidate.playlistRunStartedAt === 'undefined') &&
+    (typeof candidate.playlistItemPosition === 'number' || typeof candidate.playlistItemPosition === 'undefined') &&
+    (typeof candidate.playlistItemCount === 'number' || typeof candidate.playlistItemCount === 'undefined');
+
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.startedAt === 'string' &&
+    typeof candidate.endedAt === 'string' &&
+    typeof candidate.meditationType === 'string' &&
+    typeof candidate.intendedDurationSeconds === 'number' &&
+    typeof candidate.completedDurationSeconds === 'number' &&
+    (candidate.status === 'completed' || candidate.status === 'ended early') &&
+    (candidate.source === 'auto log' || candidate.source === 'manual log') &&
+    typeof candidate.startSound === 'string' &&
+    typeof candidate.endSound === 'string' &&
+    typeof candidate.intervalEnabled === 'boolean' &&
+    typeof candidate.intervalMinutes === 'number' &&
+    typeof candidate.intervalSound === 'string' &&
+    hasValidPlaylistFields
   );
 }
 
@@ -60,7 +96,7 @@ export function loadSessionLogs(): SessionLog[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as SessionLog[]) : [];
+    return Array.isArray(parsed) ? parsed.filter(isSessionLog) : [];
   } catch {
     return [];
   }

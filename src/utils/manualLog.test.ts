@@ -26,6 +26,20 @@ describe('manual log helpers', () => {
     expect(result.errors.sessionTimestamp).toMatch(/valid date and time/i);
   });
 
+  it('rejects future session timestamp values', () => {
+    const result = validateManualLogInput(
+      {
+        durationMinutes: 20,
+        meditationType: 'Vipassana',
+        sessionTimestamp: '2026-03-24T12:01',
+      },
+      new Date('2026-03-24T12:00:00.000Z')
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.sessionTimestamp).toMatch(/cannot be in the future/i);
+  });
+
   it('builds a manual log entry using session end timestamp semantics', () => {
     const log = buildManualLogEntry(
       {
