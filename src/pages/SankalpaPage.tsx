@@ -19,7 +19,7 @@ import {
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
-import { loadSankalpas, saveSankalpas } from '../utils/storage';
+import { listSankalpasFromApi, persistSankalpasToApi } from '../utils/sankalpaApi';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
@@ -149,13 +149,13 @@ export default function SankalpaPage() {
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [sankalpas, setSankalpas] = useState(() => loadSankalpas());
+  const [sankalpas, setSankalpas] = useState(() => listSankalpasFromApi());
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(todayDateInput);
 
   useEffect(() => {
-    saveSankalpas(sankalpas);
+    persistSankalpasToApi(sankalpas);
   }, [sankalpas]);
 
   const summaryRangeSelection = useMemo(() => {
@@ -387,6 +387,7 @@ export default function SankalpaPage() {
         <p className="section-subtitle">
           Counting rules: both <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count
           matching session log entries. Duration-based goals sum matching completed duration, including ended-early entries.
+          Matching also respects optional filters and the goal window from creation time through deadline.
         </p>
 
         {saveMessage ? (
@@ -419,6 +420,7 @@ export default function SankalpaPage() {
             <input
               type="number"
               min={1}
+              step={draft.goalType === 'session-count-based' ? 1 : 0.5}
               value={draft.targetValue}
               onChange={(event) => {
                 setSaveMessage(null);
@@ -436,6 +438,7 @@ export default function SankalpaPage() {
             <input
               type="number"
               min={1}
+              step={1}
               value={draft.days}
               onChange={(event) => {
                 setSaveMessage(null);

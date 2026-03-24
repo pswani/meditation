@@ -12,6 +12,7 @@ const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
+const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -36,6 +37,10 @@ function isTimerSettings(value: unknown): value is TimerSettings {
 
 function isMeditationType(value: unknown): value is CustomPlay['meditationType'] {
   return typeof value === 'string' && MEDITATION_TYPES.includes(value as (typeof MEDITATION_TYPES)[number]);
+}
+
+function isTimeOfDayBucket(value: unknown): value is SankalpaGoal['timeOfDayBucket'] {
+  return typeof value === 'string' && TIME_OF_DAY_BUCKETS.includes(value as (typeof TIME_OF_DAY_BUCKETS)[number]);
 }
 
 function isValidIsoDate(value: unknown): value is string {
@@ -296,6 +301,59 @@ function normalizePlaylist(value: unknown): Playlist | null {
   };
 }
 
+function normalizeSankalpa(value: unknown): SankalpaGoal | null {
+  if (!isObjectRecord(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    (candidate.goalType !== 'duration-based' && candidate.goalType !== 'session-count-based') ||
+    typeof candidate.targetValue !== 'number' ||
+    !Number.isFinite(candidate.targetValue) ||
+    candidate.targetValue <= 0 ||
+    typeof candidate.days !== 'number' ||
+    !Number.isInteger(candidate.days) ||
+    candidate.days <= 0 ||
+    !isValidIsoDate(candidate.createdAt)
+  ) {
+    return null;
+  }
+
+  if (
+    typeof candidate.meditationType !== 'undefined' &&
+    candidate.meditationType !== '' &&
+    !isMeditationType(candidate.meditationType)
+  ) {
+    return null;
+  }
+
+  if (
+    typeof candidate.timeOfDayBucket !== 'undefined' &&
+    candidate.timeOfDayBucket !== '' &&
+    !isTimeOfDayBucket(candidate.timeOfDayBucket)
+  ) {
+    return null;
+  }
+
+  if (candidate.goalType === 'session-count-based' && !Number.isInteger(candidate.targetValue)) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    goalType: candidate.goalType,
+    targetValue: candidate.targetValue,
+    days: candidate.days,
+    meditationType:
+      typeof candidate.meditationType === 'string' && candidate.meditationType !== '' ? candidate.meditationType : undefined,
+    timeOfDayBucket:
+      typeof candidate.timeOfDayBucket === 'string' && candidate.timeOfDayBucket !== '' ? candidate.timeOfDayBucket : undefined,
+    createdAt: candidate.createdAt,
+  };
+}
+
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
   if (!raw) {
@@ -383,7 +441,7 @@ export function loadSankalpas(): SankalpaGoal[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as SankalpaGoal[]) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeSankalpa).filter((entry): entry is SankalpaGoal => entry !== null) : [];
   } catch {
     return [];
   }

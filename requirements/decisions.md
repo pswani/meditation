@@ -267,3 +267,22 @@
   - `completed`
   - `ended early`
 - Keep remediation scope bounded to critical/important summary-review findings only; defer nice-to-have items.
+
+### 2026-03-24 sankalpa milestone-c implementation decisions
+- Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
+  - collection endpoint: `/api/sankalpas`
+  - detail endpoint: `/api/sankalpas/:id`
+- Harden sankalpa storage load boundaries by validating persisted records before admission:
+  - valid goal type
+  - valid positive target value
+  - integer `days > 0`
+  - valid optional `meditation type`
+  - valid optional `time-of-day` bucket
+  - parseable `createdAt`
+- Tighten sankalpa draft validation for clearer goal semantics:
+  - `session-count-based` targets must be whole numbers
+  - `days` must be a whole number
+- Clarify sankalpa progress counting rules in UI copy:
+  - both `auto log` and `manual log` entries count
+  - ended-early duration contributes to duration-based goals
+  - matching is constrained by optional filters and goal window boundaries.

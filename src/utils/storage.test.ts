@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CustomPlay } from '../types/customPlay';
 import type { Playlist } from '../types/playlist';
+import type { SankalpaGoal } from '../types/sankalpa';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
 import {
@@ -8,12 +9,14 @@ import {
   loadActiveTimerState,
   loadCustomPlays,
   loadPlaylists,
+  loadSankalpas,
   loadSessionLogs,
   loadTimerSettings,
   saveActivePlaylistRunState,
   saveActiveTimerState,
   saveCustomPlays,
   savePlaylists,
+  saveSankalpas,
   saveSessionLogs,
   saveTimerSettings,
 } from './storage';
@@ -22,6 +25,7 @@ const rawTimerSettingsKey = 'meditation.timerSettings.v1';
 const rawSessionLogsKey = 'meditation.sessionLogs.v1';
 const rawCustomPlaysKey = 'meditation.customPlays.v1';
 const rawPlaylistsKey = 'meditation.playlists.v1';
+const rawSankalpasKey = 'meditation.sankalpas.v1';
 const rawActiveTimerStateKey = 'meditation.activeTimerState.v1';
 const rawActivePlaylistRunStateKey = 'meditation.activePlaylistRunState.v1';
 
@@ -388,6 +392,87 @@ describe('storage playlists', () => {
             durationMinutes: 12,
           },
         ],
+      },
+    ]);
+  });
+});
+
+describe('storage sankalpas', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads valid sankalpas', () => {
+    const sankalpas: SankalpaGoal[] = [
+      {
+        id: 'goal-1',
+        goalType: 'duration-based',
+        targetValue: 120,
+        days: 7,
+        createdAt: '2026-03-24T08:00:00.000Z',
+      },
+      {
+        id: 'goal-2',
+        goalType: 'session-count-based',
+        targetValue: 5,
+        days: 10,
+        meditationType: 'Vipassana',
+        timeOfDayBucket: 'morning',
+        createdAt: '2026-03-24T08:30:00.000Z',
+      },
+    ];
+
+    saveSankalpas(sankalpas);
+    expect(loadSankalpas()).toEqual(sankalpas);
+  });
+
+  it('drops malformed sankalpa entries while preserving valid ones', () => {
+    localStorage.setItem(
+      rawSankalpasKey,
+      JSON.stringify([
+        {
+          id: 'goal-valid',
+          goalType: 'session-count-based',
+          targetValue: 3,
+          days: 5,
+          meditationType: 'Ajapa',
+          timeOfDayBucket: 'evening',
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+        {
+          id: 'goal-invalid-type',
+          goalType: 'duration-based',
+          targetValue: 30,
+          days: 7,
+          meditationType: 'Breathwork',
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+        {
+          id: 'goal-invalid-days',
+          goalType: 'session-count-based',
+          targetValue: 2,
+          days: 2.5,
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+        {
+          id: 'goal-invalid-created-at',
+          goalType: 'duration-based',
+          targetValue: 60,
+          days: 7,
+          createdAt: 'not-a-date',
+        },
+      ])
+    );
+
+    expect(loadSankalpas()).toEqual([
+      {
+        id: 'goal-valid',
+        goalType: 'session-count-based',
+        targetValue: 3,
+        days: 5,
+        meditationType: 'Ajapa',
+        timeOfDayBucket: 'evening',
+        createdAt: '2026-03-24T08:00:00.000Z',
       },
     ]);
   });

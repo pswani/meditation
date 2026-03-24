@@ -5,6 +5,7 @@ import App from '../App';
 import type { SessionLog } from '../types/sessionLog';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 
 function createSessionLog(
   id: string,
@@ -104,5 +105,41 @@ describe('Sankalpa summary UX', () => {
 
     expect(within(manualSourceRow).getByText(/completed: 0/i)).toBeInTheDocument();
     expect(within(manualSourceRow).getByText(/ended early: 1/i)).toBeInTheDocument();
+  });
+
+  it('shows sankalpa progress and remaining requirement with optional filters', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-1', new Date(2026, 2, 24, 6, 15, 0, 0).toISOString(), 'auto log', 'completed', 900),
+        createSessionLog('log-2', new Date(2026, 2, 25, 7, 5, 0, 0).toISOString(), 'manual log', 'completed', 1200),
+        createSessionLog('log-3', new Date(2026, 2, 25, 18, 10, 0, 0).toISOString(), 'auto log', 'completed', 600),
+      ])
+    );
+
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-1',
+          goalType: 'session-count-based',
+          targetValue: 3,
+          days: 10,
+          meditationType: 'Vipassana',
+          timeOfDayBucket: 'morning',
+          createdAt: '2026-03-23T00:00:00.000Z',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/3 session logs in 10 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/filters: meditation type: vipassana · time of day: morning/i)).toBeInTheDocument();
+    expect(screen.getByText(/progress: 2 \/ 3 session logs · 1 session log remaining/i)).toBeInTheDocument();
   });
 });

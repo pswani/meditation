@@ -47,6 +47,20 @@ describe('sankalpa helpers', () => {
     expect(result.errors.days).toMatch(/greater than 0/i);
   });
 
+  it('requires whole-number session-count targets and whole-number days', () => {
+    const result = validateSankalpaDraft({
+      goalType: 'session-count-based',
+      targetValue: 2.5,
+      days: 7.5,
+      meditationType: '',
+      timeOfDayBucket: '',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.targetValue).toMatch(/whole number/i);
+    expect(result.errors.days).toMatch(/whole number/i);
+  });
+
   it('counts matching session logs for session-count-based sankalpa with optional filters', () => {
     const goal: SankalpaGoal = {
       id: 'goal-1',
@@ -117,6 +131,54 @@ describe('sankalpa helpers', () => {
     expect(progress.matchedDurationSeconds).toBe(1800);
     expect(progress.targetDurationSeconds).toBe(1800);
     expect(progress.progressRatio).toBe(1);
+    expect(progress.status).toBe('completed');
+  });
+
+  it('counts both auto and manual logs when no source filter is applied', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-source-default',
+      goalType: 'session-count-based',
+      targetValue: 3,
+      days: 7,
+      createdAt: localIso(2026, 2, 20, 0, 0),
+    };
+
+    const logs = [
+      createSessionLog({
+        id: 'auto-1',
+        endedAt: localIso(2026, 2, 21, 7, 0),
+        source: 'auto log',
+      }),
+      createSessionLog({
+        id: 'manual-1',
+        endedAt: localIso(2026, 2, 21, 8, 0),
+        source: 'manual log',
+      }),
+    ];
+
+    const progress = deriveSankalpaProgress(goal, logs, new Date(localIso(2026, 2, 22, 9, 0)));
+    expect(progress.matchedSessionCount).toBe(2);
+    expect(progress.status).toBe('active');
+  });
+
+  it('counts only logs within the sankalpa window, inclusive of exact deadline', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-window',
+      goalType: 'session-count-based',
+      targetValue: 2,
+      days: 2,
+      createdAt: localIso(2026, 2, 20, 8, 0),
+    };
+
+    const logs = [
+      createSessionLog({ id: 'before-created', endedAt: localIso(2026, 2, 20, 7, 59) }),
+      createSessionLog({ id: 'within-window', endedAt: localIso(2026, 2, 20, 9, 0) }),
+      createSessionLog({ id: 'at-deadline', endedAt: localIso(2026, 2, 22, 8, 0) }),
+      createSessionLog({ id: 'after-deadline', endedAt: localIso(2026, 2, 22, 8, 1) }),
+    ];
+
+    const progress = deriveSankalpaProgress(goal, logs, new Date(localIso(2026, 2, 21, 10, 0)));
+    expect(progress.matchedSessionCount).toBe(2);
     expect(progress.status).toBe('completed');
   });
 
