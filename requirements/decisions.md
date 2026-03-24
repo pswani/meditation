@@ -139,3 +139,18 @@
 - Reorder History information hierarchy so recent `session log` content is first, and move `manual log` into a secondary collapsible section (`Add Manual Log`) that opens by default only when there are no logs.
 - Improve trust in short-session feedback by showing precise `mm:ss` completion duration text using `formatRemainingTime` in completion/last-outcome messaging.
 - Improve test reliability in touched routes by enforcing cleanup/localStorage reset patterns where multi-render leakage caused ambiguous UI queries.
+
+### 2026-03-24 QA build/test baseline decisions
+- Keep this baseline slice strictly operational:
+  - install
+  - typecheck
+  - lint
+  - test
+  - build
+  - local dev startup guidance
+- Strengthen test reliability at shared setup level by applying:
+  - `localStorage.clear()` before every test
+  - React Testing Library `cleanup()` after every test
+- Clarify README setup expectations explicitly:
+  - this workspace is currently front-end only
+  - back-end setup instructions are deferred until a back-end service is introduced
