@@ -107,6 +107,82 @@ describe('Sankalpa summary UX', () => {
     expect(within(manualSourceRow).getByText(/ended early: 1/i)).toBeInTheDocument();
   });
 
+  it('uses explicit completed and ended-early labels in overall summary card', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-1', new Date(2026, 2, 24, 6, 0, 0, 0).toISOString(), 'auto log', 'completed', 900),
+        createSessionLog('log-2', new Date(2026, 2, 24, 19, 0, 0, 0).toISOString(), 'manual log', 'ended early', 600),
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const overallSplitLabel = screen.getByText(/completed vs ended early/i);
+    const overallSplitCard = overallSplitLabel.closest('.summary-card');
+    expect(overallSplitCard).not.toBeNull();
+    if (!overallSplitCard) {
+      throw new Error('Expected overall split summary card to exist');
+    }
+
+    expect(within(overallSplitCard).getByText(/completed: 1/i)).toBeInTheDocument();
+    expect(within(overallSplitCard).getByText(/ended early: 1/i)).toBeInTheDocument();
+    expect(within(overallSplitCard).queryByText(/^1 \/ 1$/)).not.toBeInTheDocument();
+  });
+
+  it('hides inactive summary categories by default and reveals zero-duration rows when toggled', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([createSessionLog('log-1', new Date(2026, 2, 24, 6, 0, 0, 0).toISOString(), 'auto log', 'completed', 900)])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/inactive categories hidden/i)).toBeInTheDocument();
+
+    const byTypeHeading = screen.getByRole('heading', { name: /by meditation type/i });
+    const byTypeSection = byTypeHeading.closest('.summary-by-type');
+    expect(byTypeSection).not.toBeNull();
+    if (!byTypeSection) {
+      throw new Error('Expected by-meditation-type section to exist');
+    }
+
+    const byTimeOfDayHeading = screen.getByRole('heading', { name: /by time of day/i });
+    const byTimeOfDaySection = byTimeOfDayHeading.closest('.summary-by-type');
+    expect(byTimeOfDaySection).not.toBeNull();
+    if (!byTimeOfDaySection) {
+      throw new Error('Expected by-time-of-day section to exist');
+    }
+
+    expect(within(byTypeSection).queryByText(/^ajapa$/i)).not.toBeInTheDocument();
+    expect(within(byTimeOfDaySection).queryByText(/night/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/show inactive categories/i));
+
+    const ajapaRow = within(byTypeSection).getByText(/^ajapa$/i).closest('li');
+    expect(ajapaRow).not.toBeNull();
+    if (!ajapaRow) {
+      throw new Error('Expected Ajapa row to exist');
+    }
+
+    const nightRow = within(byTimeOfDaySection).getByText(/night/i).closest('li');
+    expect(nightRow).not.toBeNull();
+    if (!nightRow) {
+      throw new Error('Expected night row to exist');
+    }
+
+    expect(within(ajapaRow).getByText('0 min')).toBeInTheDocument();
+    expect(within(nightRow).getByText('0 min')).toBeInTheDocument();
+  });
+
   it('shows sankalpa progress and remaining requirement with optional filters', () => {
     localStorage.setItem(
       SESSION_LOGS_KEY,

@@ -153,6 +153,7 @@ export default function SankalpaPage() {
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(todayDateInput);
+  const [showInactiveSummaryCategories, setShowInactiveSummaryCategories] = useState(false);
 
   useEffect(() => {
     persistSankalpasToApi(sankalpas);
@@ -217,6 +218,37 @@ export default function SankalpaPage() {
 
     return deriveSummarySnapshot(sessionLogs, summaryRangeSelection.range);
   }, [sessionLogs, summaryRangeSelection.range]);
+  const inactiveSummaryCategoriesCount = useMemo(() => {
+    if (!summarySnapshot) {
+      return 0;
+    }
+
+    const byTypeInactiveCount = summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs === 0).length;
+    const byTimeOfDayInactiveCount = summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs === 0).length;
+    return byTypeInactiveCount + byTimeOfDayInactiveCount;
+  }, [summarySnapshot]);
+  const byTypeSummaryRows = useMemo(() => {
+    if (!summarySnapshot) {
+      return [];
+    }
+
+    if (showInactiveSummaryCategories) {
+      return summarySnapshot.byTypeSummary;
+    }
+
+    return summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs > 0);
+  }, [showInactiveSummaryCategories, summarySnapshot]);
+  const byTimeOfDaySummaryRows = useMemo(() => {
+    if (!summarySnapshot) {
+      return [];
+    }
+
+    if (showInactiveSummaryCategories) {
+      return summarySnapshot.byTimeOfDaySummary;
+    }
+
+    return summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs > 0);
+  }, [showInactiveSummaryCategories, summarySnapshot]);
   const progressByStatus = useMemo(() => {
     const now = new Date();
     const entries = sankalpas
@@ -326,8 +358,9 @@ export default function SankalpaPage() {
               </article>
               <article className="summary-card">
                 <p className="summary-label">Completed vs ended early</p>
-                <p className="summary-value">
-                  {summarySnapshot.overallSummary.completedSessionLogs} / {summarySnapshot.overallSummary.endedEarlySessionLogs}
+                <p className="summary-value summary-value-split">
+                  <span>completed: {summarySnapshot.overallSummary.completedSessionLogs}</span>
+                  <span>ended early: {summarySnapshot.overallSummary.endedEarlySessionLogs}</span>
                 </p>
                 <p className="section-subtitle">
                   auto log: {summarySnapshot.overallSummary.autoLogs} · manual log: {summarySnapshot.overallSummary.manualLogs}
@@ -335,29 +368,50 @@ export default function SankalpaPage() {
               </article>
             </div>
 
+            {inactiveSummaryCategoriesCount > 0 ? (
+              <div className="summary-visibility-controls">
+                <label className="summary-inactive-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showInactiveSummaryCategories}
+                    onChange={(event) => setShowInactiveSummaryCategories(event.target.checked)}
+                  />
+                  <span>Show inactive categories</span>
+                </label>
+                {!showInactiveSummaryCategories ? (
+                  <p className="section-subtitle">{inactiveSummaryCategoriesCount} inactive categories hidden.</p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="summary-sections-grid">
               <div className="summary-by-type">
                 <h4 className="section-title">By meditation type</h4>
-                <ul className="summary-by-type-list">
-                  {summarySnapshot.byTypeSummary.map((entry) => (
-                    <li key={entry.meditationType} className="summary-by-type-row">
-                      <span>{entry.meditationType}</span>
-                      <span>{entry.sessionLogs} session logs</span>
-                      <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
-                    </li>
-                  ))}
-                </ul>
+                {byTypeSummaryRows.length === 0 ? (
+                  <p className="section-subtitle">No active meditation type categories in this range.</p>
+                ) : (
+                  <ul className="summary-by-type-list">
+                    {byTypeSummaryRows.map((entry) => (
+                      <li key={entry.meditationType} className="summary-by-type-row">
+                        <span>{entry.meditationType}</span>
+                        <span>{entry.sessionLogs} session logs</span>
+                        <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="summary-by-type">
                 <h4 className="section-title">By source</h4>
                 <ul className="summary-by-type-list">
                   {summarySnapshot.bySourceSummary.map((entry) => (
-                    <li key={entry.source} className="summary-by-type-row">
+                    <li key={entry.source} className="summary-by-type-row summary-by-source-row">
                       <span>{entry.source}</span>
-                      <span className="summary-detail">
-                        {entry.sessionLogs} session logs · completed: {entry.completedSessionLogs} · ended early:{' '}
-                        {entry.endedEarlySessionLogs}
+                      <span className="summary-metric-list">
+                        <span className="summary-metric-pill">{entry.sessionLogs} session logs</span>
+                        <span className="summary-metric-pill">completed: {entry.completedSessionLogs}</span>
+                        <span className="summary-metric-pill">ended early: {entry.endedEarlySessionLogs}</span>
                       </span>
                       <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
                     </li>
@@ -367,15 +421,19 @@ export default function SankalpaPage() {
 
               <div className="summary-by-type">
                 <h4 className="section-title">By time of day</h4>
-                <ul className="summary-by-type-list">
-                  {summarySnapshot.byTimeOfDaySummary.map((entry) => (
-                    <li key={entry.timeOfDayBucket} className="summary-by-type-row">
-                      <span>{timeOfDayBucketLabels[entry.timeOfDayBucket]}</span>
-                      <span>{entry.sessionLogs} session logs</span>
-                      <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
-                    </li>
-                  ))}
-                </ul>
+                {byTimeOfDaySummaryRows.length === 0 ? (
+                  <p className="section-subtitle">No active time-of-day categories in this range.</p>
+                ) : (
+                  <ul className="summary-by-type-list">
+                    {byTimeOfDaySummaryRows.map((entry) => (
+                      <li key={entry.timeOfDayBucket} className="summary-by-type-row">
+                        <span>{timeOfDayBucketLabels[entry.timeOfDayBucket]}</span>
+                        <span>{entry.sessionLogs} session logs</span>
+                        <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </>

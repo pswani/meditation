@@ -377,6 +377,14 @@ button:disabled {
   color: var(--text);
 }
 
+.summary-value-split {
+  font-size: 0.96rem;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
+}
+
 .summary-by-type {
   display: grid;
   gap: 0.55rem;
@@ -385,6 +393,27 @@ button:disabled {
 .summary-sections-grid {
   display: grid;
   gap: 0.75rem;
+}
+
+.summary-visibility-controls {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.summary-inactive-toggle {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.summary-inactive-toggle input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
 }
 
 .summary-by-type-list {
@@ -408,10 +437,21 @@ button:disabled {
   min-width: 0;
 }
 
-.summary-detail {
+.summary-metric-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.summary-metric-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f6faf8;
   color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.35;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  padding: 0.1rem 0.45rem;
 }
 
 .sankalpa-list {
@@ -929,9 +969,13 @@ button:disabled {
   }
 
   .summary-by-type-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto;
+    align-items: start;
     column-gap: 0.7rem;
+  }
+
+  .summary-by-source-row .summary-metric-list {
+    justify-self: start;
   }
 
   .history-item {

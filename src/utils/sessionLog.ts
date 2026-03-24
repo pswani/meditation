@@ -27,6 +27,10 @@ export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, 
 }
 
 export function formatDurationLabel(totalSeconds: number): string {
+  if (totalSeconds <= 0) {
+    return '0 min';
+  }
+
   if (totalSeconds < 60) {
     return '< 1 min';
   }

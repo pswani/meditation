@@ -286,3 +286,15 @@
   - both `auto log` and `manual log` entries count
   - ended-early duration contributes to duration-based goals
   - matching is constrained by optional filters and goal window boundaries.
+
+### 2026-03-24 discipline-and-insight remediation decisions
+- Render exact zero durations as `0 min` and reserve `\< 1 min` for strictly positive sub-minute values to protect summary trust.
+- Reduce summary density on `/goals` by hiding inactive categories by default in:
+  - by meditation type
+  - by time of day
+  and exposing a lightweight `Show inactive categories` toggle.
+- Replace ambiguous overall split shorthand (`X / Y`) with explicit labels:
+  - `completed`
+  - `ended early`
+- Improve medium-breakpoint summary readability by making row metric columns more flexible and using compact metric pills in by-source rows.
+- Keep this remediation bounded to critical and important review findings; defer nice-to-have items.
