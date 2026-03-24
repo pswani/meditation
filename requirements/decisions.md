@@ -91,3 +91,14 @@
   - duration-based goals sum `completedDurationSeconds` (including partial ended-early logs)
   - session-count goals count matching `session log` entries
   - matching is constrained to the goal window (`createdAt` through `createdAt + days`)
+
+### 2026-03-24 local setup verification decisions
+- Keep setup verification scoped to operational readiness only:
+  - install
+  - typecheck
+  - lint
+  - test
+  - build
+  - local dev startup
+- Treat generated build/dev artifacts (`dist`, vite cache, tsbuildinfo) as non-functional output and exclude them from setup commits unless explicitly requested.
+- Document the observed local dev URL (`http://localhost:5173/`) as a typical startup target, while preserving that Vite may choose a different port when needed.

@@ -1,36 +1,30 @@
 # Session Handoff
 
 ## Current status
-Prompt 10 (`prompts/10-summaries-sankalpa.md`) is complete.
+Local setup verification and startup check are complete.
 
-Implemented `summary` + `sankalpa` vertical slice:
-- Route-level `Sankalpa` screen (`/goals`) now has working UX (no placeholder).
-- Summary features:
-  - overall summary from session logs
-  - by meditation type summary
-- Sankalpa features:
-  - create `duration-based` and `session-count-based` sankalpas
-  - optional meditation type filter
-  - optional time-of-day filter
-  - progress views for `active`, `completed`, and `expired`
-  - local persistence for sankalpa goals
-- Explicit counting rules shown in UI and implemented in utilities.
+Feature state remains:
+- Prompt 10 (`prompts/10-summaries-sankalpa.md`) is implemented.
+- No new feature behavior was added in this setup pass.
 
-Implemented counting rules:
-- Both `auto log` and `manual log` entries count.
-- `duration-based` sankalpa goals sum matching `completedDurationSeconds` (including ended-early entries).
-- `session-count-based` sankalpa goals count matching `session log` entries.
-- Goal progress includes only logs within the goal window (`createdAt` through `createdAt + days`).
+## Verification status
+- Install status: passed (`npm install`)
+- Typecheck status: passed (`npm run typecheck`)
+- Lint status: passed (`npm run lint`)
+- Test status: passed (`npm run test`)
+- Build status: passed (`npm run build`)
+- Local startup status: passed (`npm run dev`)
+- Verified local URL/port from dev output: `http://localhost:5173/`
 
-Focused tests added:
-- `src/utils/summary.test.ts`
-- `src/utils/sankalpa.test.ts`
-
-Verification completed:
-- `npm run typecheck`
-- `npm run lint`
-- `npm run test`
-- `npm run build`
+## Exact commands to run
+```bash
+npm install
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npm run dev
+```
 
 ## What the next Codex session should read first
 - AGENTS.md
@@ -43,21 +37,10 @@ Verification completed:
 - requirements/decisions.md
 - requirements/session-handoff.md
 
-## What remains for the next vertical slice
-- Run a principal UX review of the implemented summaries + sankalpa slice.
-- Identify friction and readability issues across mobile, tablet, and desktop.
-- Propose prioritized UX refinements before further implementation.
-
 ## Known limitations
-- Sankalpa goals are create-and-track only in this slice (no edit/delete UX yet).
-- Time-of-day filtering uses fixed local buckets:
-  - morning (5:00-11:59)
-  - afternoon (12:00-16:59)
-  - evening (17:00-20:59)
-  - night (21:00-4:59)
-- Summary scope is intentionally bounded to:
-  - overall
-  - by meditation type
+- The app is local-first and uses localStorage-backed data.
+- Vite dev URL is typically `http://localhost:5173/` but may use a different port if 5173 is unavailable.
+- Sankalpa goals remain create-and-track only (no edit/delete UX yet).
 
 ## Exact recommended next prompt
 Read:
