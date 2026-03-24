@@ -1,175 +1,101 @@
 # Session Handoff
 
 ## Current status
-Prompt 13 (`prompts/13-fix-ux-home-settings-and-test.md`) is complete.
+Prompt 14 (`prompts/14-ux-review-full-app.md`) is complete.
 
-This step implemented the critical and important Home/Settings UX fixes from `docs/ux-review-home-settings.md`, added focused test coverage, and passed the full verification commands.
+This was a review-only step.
+No application behavior code was changed.
 
-## UX issues fixed
-- Critical fix:
-  - Home quick-start failure guidance is now visible in real use via route-state handoff to Practice with an entry status banner.
-- Important fixes:
-  - Added Home `sankalpa` snapshot (top active item, progress, and direct Sankalpa link).
-  - Removed redundant Home `Next Actions` block that duplicated shell navigation.
-  - Added Settings unsaved-edits cue and disabled `Save Defaults` until changes exist.
-  - Improved mobile favorite shortcut row behavior for long names on narrow screens.
+## Review outputs written
+- `docs/ux-review-full-app.md`
+- `requirements/session-handoff.md`
 
-## Tests added or improved
-- Added: `src/pages/HomePage.test.tsx`
-  - Home empty state coverage
-  - Home populated state coverage
-  - quick-start failure handoff to Practice coverage
-- Added: `src/pages/SettingsPage.test.tsx`
-  - unsaved-edits state and disabled/enabled save behavior
-  - settings persistence verification to localStorage after save
-- Updated: `src/pages/PracticePage.test.tsx`
-  - route-state entry banner render + dismiss behavior
-- Updated: `src/utils/home.test.ts`
-  - active sankalpa selection helper coverage
+## Concise top UX findings
+- Critical:
+  - Practice (`/practice`) is overloaded with timer setup + management-heavy sections, which weakens the fast-start meditation path.
+  - Active timer/playlist continuity is not globally visible in the shell when navigating non-Practice screens.
+  - History prioritizes manual-entry UI ahead of recent log review, slowing the common “did my session log?” check.
+- Important:
+  - completion messages can over-round short ended-early sessions
+  - Home sankalpa snapshot can become stale while mounted
+  - dialog accessibility behavior (focus/keyboard) needs strengthening
+  - action density in custom play/playlist rows is high on phones
 
-## Verification status
-- `npm run typecheck`: passed
-- `npm run lint`: passed
-- `npm run test`: passed
-- `npm run build`: passed
-
-## Current status of Home and Settings
-- Home now provides:
-  - quick start
-  - today summary
-  - sankalpa snapshot
-  - recent activity
-  - favorites shortcuts with improved small-screen behavior
-- Settings now provides:
-  - explicit dirty/saved state feedback
-  - save action enabled only when edits exist
-  - existing validation and persistence behavior unchanged
-
-## Known limitations
-- Home `sankalpa` snapshot reads stored goals on page load and does not react to cross-tab storage events while the page stays mounted.
-- Relative-time labels for Recent Activity are still not implemented.
-- Settings does not yet show a "last saved" timestamp.
+## Highest-priority recommended next implementation slice
+Implement Phase 1 remediation from `docs/ux-review-full-app.md` only:
+1. rebalance Practice IA for faster timer-start focus
+2. add global active-session/playlist-run resume affordance in the app shell
+3. reorder History so recent `session log` content leads and manual log is secondary/collapsible
 
 ## What the next Codex session should read first
 - AGENTS.md
+- PLANS.md
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-full-app.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
 
-## Highest-priority recommended next implementation slice
-Run a full-application UX review pass to identify cross-screen usability and responsive consistency issues before further implementation slices.
-
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
+- PLANS.md
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-full-app.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
 
 Then:
 
-1. Review the entire currently implemented application from a UX, usability, and responsive product-design perspective.
+1. Create an ExecPlan.
 
-2. Act as a principal UX reviewer for a calm, minimal meditation app that must work well across:
-   - mobile
-   - tablet
-   - desktop
+2. Implement the critical and important UX/usability improvements from docs/ux-review-full-app.md.
 
-3. Evaluate the full application experience, including:
-   - app shell
+3. Keep scope bounded to the highest-priority UX/usability issues only.
+   Do not try to redesign the whole app if that would make the slice too large.
+   Focus on the changes that most improve:
+   - clarity
    - navigation
-   - Home
-   - Practice / Timer Setup
-   - Active Timer
-   - History
-   - Settings
-   - any implemented Custom Plays screens
-   - any implemented Playlist screens
-   - any implemented Sankalpa / summary screens
-   - all currently accessible routes and major flows
+   - responsiveness
+   - usability
+   - user flow continuity
 
-4. Review the product as an integrated user experience, not as isolated screens.
+4. Preserve existing functionality unless a reviewed issue requires a behavior fix.
 
-5. Assess the following dimensions in detail:
-   - clarity of information architecture
-   - discoverability of key actions
-   - navigation consistency
-   - route naming and user understanding
-   - terminology consistency
-   - interaction friction
-   - form usability
-   - validation clarity
-   - empty states
-   - error states
-   - success states
-   - feedback for user actions
-   - visual hierarchy
-   - scanability
-   - spacing and density
-   - calmness and focus of the design
-   - consistency with a meditation product
-   - responsiveness across breakpoints
-   - tablet usability
-   - desktop usability
-   - mobile usability
-   - accessibility-minded usability issues that are visible from the implementation
-   - whether the product feels like a functioning prototype with coherent user journeys
+5. Improve responsive behavior across mobile, tablet, and desktop where called out in the review.
 
-6. Specifically review the major user journeys that are currently possible in the app, such as:
-   - entering the app and understanding where to go
-   - starting a meditation
-   - configuring timer options
-   - running, pausing, resuming, and ending a session
-   - seeing a session reflected in history
-   - using Home as a meaningful launch surface
-   - using Settings effectively
-   - navigating between screens across device sizes
+6. Add or update focused tests where behavior changes, especially for:
+   - navigation behavior
+   - form validation behavior
+   - screen states and empty states where practical
+   - route rendering
+   - critical interaction logic affected by UX fixes
 
-7. Identify and explain:
-   - critical UX/usability issues
-   - important UX/usability issues
-   - nice-to-have improvements
+7. Run a thorough verification pass:
+   - npm run typecheck
+   - npm run lint
+   - npm run test
+   - npm run build
 
-8. For every major issue, include:
-   - where it appears
-   - why it is a problem
-   - how it affects the user
-   - recommended fix
-   - whether it is primarily a mobile, tablet, desktop, or all-device issue
+8. If test reliability is weak in the areas touched, improve it with focused maintainable tests only.
 
-9. Provide a prioritized remediation plan:
-   - Phase 1: must fix now
-   - Phase 2: should fix soon
-   - Phase 3: polish later
-
-10. Keep recommendations aligned with the product principles:
-   - calm
-   - minimal
-   - serious
-   - focused
-   - not bulky
-   - not over-gamified
-   - not cluttered
-
-11. Do not implement code changes in this step.
-
-12. Write findings into:
-   - docs/ux-review-full-app.md
+9. Update:
+   - requirements/decisions.md
    - requirements/session-handoff.md
 
-13. In session-handoff, include:
-   - a concise summary of the top UX findings
-   - the highest-priority recommended next implementation slice
-   - the exact recommended next prompt to fix the most important UX/usability issues
+10. In session-handoff, include:
+   - UX/usability issues fixed
+   - tests added or improved
+   - remaining high-priority issues
+   - known limitations
+   - exact recommended next prompt
 
-14. Do not commit application code in this review-only step.
-    If you choose to commit documentation-only review artifacts, use:
-    docs(ux): review full application usability and experience
+11. Commit with a clear message, for example:
+   feat(ux): address high-priority full-app usability issues
