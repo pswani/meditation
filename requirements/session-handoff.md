@@ -1,69 +1,40 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-b-practice-composition/07-implement-playlists.md` is complete.
+Prompt `prompts/milestone-b-practice-composition/08-review-practice-composition.md` is complete.
 
-Playlist management and run behavior remain intact, with a new REST-style playlist persistence boundary and stronger playlist load integrity checks added.
+Milestone B practice composition was reviewed from UX/usability/end-to-end and data-integrity perspectives with no product code changes in this pass.
 
 ## What was implemented
-- Added and completed ExecPlan:
-  - `requirements/execplan-playlists-implementation-pass3.md`
-- Added playlist REST-style API boundary utility:
-  - `src/utils/playlistApi.ts`
-  - contract constants/functions:
-    - `PLAYLISTS_COLLECTION_ENDPOINT` (`/api/playlists`)
-    - `buildPlaylistDetailEndpoint(...)`
-    - `listPlaylistsFromApi(...)`
-    - `persistPlaylistsToApi(...)`
-- Integrated playlist persistence writes through API boundary:
-  - `src/features/timer/TimerContext.tsx`
-  - playlist persistence effect now calls `persistPlaylistsToApi(playlists)`
-- Strengthened playlist storage/load boundary:
-  - `src/utils/storage.ts`
-  - added playlist/item normalization with validation:
-    - supported meditation type enum
-    - positive item duration
-    - malformed playlists dropped
-- Added focused tests for contract and persistence boundaries:
-  - `src/utils/playlistApi.test.ts`
-  - `src/utils/storage.test.ts` (playlist persistence + malformed filtering)
+- Added review findings document:
+  - `docs/review-practice-composition.md`
+- Updated handoff documentation:
+  - `requirements/session-handoff.md`
 
-## Existing playlist scope confirmed in-app
-- create/edit/delete playlists
-- item reorder and total duration derivation
-- favorite playlists
-- lightweight playlist run flow
-- per-item playlist logging behavior
-- playlist context in history entries
+## Review findings summary
+### Critical
+- Active timer and active playlist run state are not resilient to reload/refresh interruptions.
 
-## QA coverage improved in this slice
-- Contract boundaries:
-  - playlist collection/detail endpoint contract assertions
-  - API-boundary save/list roundtrip tests
-- Persistence boundaries:
-  - valid playlist load behavior
-  - malformed playlist filtering behavior
-- Existing rules/logging coverage remains in place:
-  - `src/utils/playlist.test.ts`
-  - `src/utils/playlistLog.test.ts`
-  - `src/utils/playlistRunPolicy.test.ts`
+### Important
+- `Start Session` can fail without explicit feedback when a playlist run is already active.
+- History is limited to recent entries and currently lacks filter controls expected by screen inventory.
+- Session-log load validation remains structurally permissive and can admit semantically invalid data.
+
+### Nice to have
+- Add explicit success feedback for playlist create/update actions.
+- Improve playlist-management discoverability for repeat users.
+- Better communicate history retention window context (`recent` subset vs stored total).
 
 ## Verification status
-- `npm run typecheck` passed
-- `npm run lint` passed
-- `npm run test` passed
-  - 21 test files
-  - 83 tests passing
-- `npm run build` passed
+- No typecheck/lint/test/build run in this pass (documentation-only review task; no behavior/code changes made).
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-playlists-implementation-pass3.md`.
-- Updated `requirements/decisions.md` with playlists implementation pass-3 decisions.
+- Added `docs/review-practice-composition.md`.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This workspace remains front-end only; backend REST transport/database/file services are not present here.
-- Playlist API utility defines clean REST contracts while using local-first persistence as the current backing store.
+- Findings are based on current front-end implementation and local-first persistence boundaries in this repository.
+- No remediation changes were applied in this review pass by design.
 
 ## Exact recommended next prompt
 Read:
@@ -77,14 +48,19 @@ Read:
 - requirements/decisions.md
 - requirements/session-handoff.md
 
+- docs/review-practice-composition.md
 
 Then:
 
-1. Execute prompt `prompts/milestone-b-practice-composition/08-review-practice-composition.md`.
-2. Review the integrated practice composition experience (timer + custom play + playlists + history touchpoints) from UX, usability, and data-integrity perspectives.
-3. Identify critical, important, and nice-to-have issues.
-4. Do not implement code changes in this review pass.
-5. Write findings into:
-   - `docs/review-practice-composition.md`
-   - `requirements/session-handoff.md`
-6. Include an exact recommended next prompt for remediation and commit.
+1. Create an ExecPlan.
+2. Fix the critical and important issues from docs/review-practice-composition.md.
+3. Keep scope bounded to Milestone B functionality.
+4. Add or update focused tests where behavior changes.
+5. Run:
+   - npm run typecheck
+   - npm run lint
+   - npm run test
+   - npm run build
+6. Update decisions and session-handoff.
+7. Commit with a clear message:
+   feat(ux): refine practice composition usability
