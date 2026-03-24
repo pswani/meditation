@@ -1,31 +1,49 @@
 # Session Handoff
 
 ## Current status
-Prompt 14 (`prompts/14-ux-review-full-app.md`) is complete.
+Prompt 15 (`prompts/15-fix-ux-full-app-and-test.md`) is complete.
 
-This was a review-only step.
-No application behavior code was changed.
+Phase-1 UX remediation from `docs/ux-review-full-app.md` was implemented with bounded scope.
 
-## Review outputs written
-- `docs/ux-review-full-app.md`
-- `requirements/session-handoff.md`
+## UX/usability issues fixed
+- Added global active-state continuity in app shell topbar:
+  - active timer banner with `Resume Active Timer`
+  - active playlist run banner with `Resume Playlist Run`
+- Rebalanced Practice information architecture:
+  - timer setup remains primary
+  - management-heavy sections are now inside collapsed `Practice Tools`
+- Reordered History for common post-session flow:
+  - recent `session log` list now appears first
+  - `manual log` moved into secondary collapsible `Add Manual Log` section
+- Improved completion-message precision:
+  - short sessions now show exact `mm:ss` duration text in outcome messaging
 
-## Concise top UX findings
-- Critical:
-  - Practice (`/practice`) is overloaded with timer setup + management-heavy sections, which weakens the fast-start meditation path.
-  - Active timer/playlist continuity is not globally visible in the shell when navigating non-Practice screens.
-  - History prioritizes manual-entry UI ahead of recent log review, slowing the common “did my session log?” check.
-- Important:
-  - completion messages can over-round short ended-early sessions
-  - Home sankalpa snapshot can become stale while mounted
-  - dialog accessibility behavior (focus/keyboard) needs strengthening
-  - action density in custom play/playlist rows is high on phones
+## Tests added or improved
+- `src/App.test.tsx`
+  - verifies global active timer banner outside Practice and resume navigation
+  - improved test reliability with `cleanup()` and `localStorage.clear()`
+- `src/pages/PracticePage.test.tsx`
+  - verifies `Practice Tools` is collapsed by default and expands on demand
+  - added cleanup to prevent cross-test render leakage
+- `src/features/customPlays/CustomPlayManager.test.tsx`
+  - updated flow to open `Practice Tools` before custom play interactions
+- `src/pages/HistoryPage.test.tsx`
+  - verifies logs-first layout with manual-log disclosure behavior
+  - updated disclosure assertions to target `<details>/<summary>` semantics
 
-## Highest-priority recommended next implementation slice
-Implement Phase 1 remediation from `docs/ux-review-full-app.md` only:
-1. rebalance Practice IA for faster timer-start focus
-2. add global active-session/playlist-run resume affordance in the app shell
-3. reorder History so recent `session log` content leads and manual log is secondary/collapsible
+## Verification status
+- `npm run typecheck` passed
+- `npm run lint` passed
+- `npm run test` passed
+- `npm run build` passed
+
+## Remaining high-priority issues
+- No unresolved Critical findings remain from Phase 1 in `docs/ux-review-full-app.md`.
+- Remaining Important items (Phase 2 candidates):
+  - make Home `sankalpa` snapshot reactive while mounted
+  - improve dialog accessibility behavior (focus management + keyboard dismiss)
+  - reduce mobile action density for custom play and playlist rows
+  - add relative-time helpers in Home and History
 
 ## What the next Codex session should read first
 - AGENTS.md
@@ -38,6 +56,11 @@ Implement Phase 1 remediation from `docs/ux-review-full-app.md` only:
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
+
+## Known limitations
+- Dialog-style confirmation sheets still do not implement full focus trap / `Esc` handling.
+- Home `sankalpa` snapshot is not yet reactive to in-session updates without remount/refresh.
+- Custom play and playlist row actions are still relatively dense on narrow phones.
 
 ## Exact recommended next prompt
 Read:
@@ -56,46 +79,39 @@ Then:
 
 1. Create an ExecPlan.
 
-2. Implement the critical and important UX/usability improvements from docs/ux-review-full-app.md.
+2. Implement a bounded Phase-2 UX slice from docs/ux-review-full-app.md:
+   - Home sankalpa snapshot reactive updates
+   - dialog accessibility improvements for confirmation sheets
+   - reduce action density for custom play and playlist rows on phones
 
-3. Keep scope bounded to the highest-priority UX/usability issues only.
-   Do not try to redesign the whole app if that would make the slice too large.
-   Focus on the changes that most improve:
-   - clarity
-   - navigation
-   - responsiveness
-   - usability
-   - user flow continuity
+3. Keep scope intentionally bounded to only these items.
+   Avoid unrelated refactors and avoid broad visual redesign.
 
-4. Preserve existing functionality unless a reviewed issue requires a behavior fix.
+4. Preserve existing behavior unless required by the reviewed UX/accessibility issues.
 
-5. Improve responsive behavior across mobile, tablet, and desktop where called out in the review.
+5. Ensure responsive behavior remains strong across mobile, tablet, and desktop.
 
-6. Add or update focused tests where behavior changes, especially for:
-   - navigation behavior
-   - form validation behavior
-   - screen states and empty states where practical
-   - route rendering
-   - critical interaction logic affected by UX fixes
+6. Add focused tests for the touched behavior:
+   - reactive Home sankalpa snapshot updates
+   - dialog keyboard/focus behavior
+   - mobile action density interaction patterns
 
-7. Run a thorough verification pass:
+7. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
 
-8. If test reliability is weak in the areas touched, improve it with focused maintainable tests only.
-
-9. Update:
+8. Update:
    - requirements/decisions.md
    - requirements/session-handoff.md
 
-10. In session-handoff, include:
+9. In session-handoff, include:
    - UX/usability issues fixed
    - tests added or improved
    - remaining high-priority issues
    - known limitations
    - exact recommended next prompt
 
-11. Commit with a clear message, for example:
-   feat(ux): address high-priority full-app usability issues
+10. Commit with a clear message, for example:
+   feat(ux): implement phase-2 usability and accessibility refinements

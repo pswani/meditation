@@ -1,8 +1,11 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTimer } from '../features/timer/useTimer';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
 export default function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { activeSession, activePlaylistRun } = useTimer();
   const activeNavItem = getActiveNavItem(location.pathname);
 
   return (
@@ -34,6 +37,31 @@ export default function AppShell() {
         <header className="topbar">
           <p className="eyebrow">{activeNavItem.eyebrow}</p>
           <h1 className="topbar-title">{activeNavItem.title}</h1>
+          {activeSession ? (
+            <div className="shell-active-banner" role="status" aria-live="polite">
+              <p>
+                Active timer: {activeSession.meditationType} · {activeSession.remainingSeconds > 0 ? 'in session' : 'ending'}
+              </p>
+              <button type="button" className="secondary shell-active-action" onClick={() => navigate('/practice/active')}>
+                Resume Active Timer
+              </button>
+            </div>
+          ) : null}
+          {!activeSession && activePlaylistRun ? (
+            <div className="shell-active-banner" role="status" aria-live="polite">
+              <p>
+                Active playlist run: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/
+                {activePlaylistRun.items.length}
+              </p>
+              <button
+                type="button"
+                className="secondary shell-active-action"
+                onClick={() => navigate('/practice/playlists/active')}
+              >
+                Resume Playlist Run
+              </button>
+            </div>
+          ) : null}
         </header>
 
         <main className="content">

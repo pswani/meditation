@@ -78,6 +78,29 @@ a {
   line-height: 1.2;
 }
 
+.shell-active-banner {
+  margin-top: 0.75rem;
+  border: 1px solid #bfd8cf;
+  border-radius: var(--radius-sm);
+  background: #f3f9f6;
+  padding: 0.55rem 0.65rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shell-active-banner p {
+  margin: 0;
+  color: #1f5b4d;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.shell-active-action {
+  justify-self: start;
+  padding: 0.42rem 0.66rem;
+  font-size: 0.82rem;
+}
+
 .content {
   width: min(100%, var(--max-content));
   margin: 0 auto;
@@ -301,6 +324,7 @@ button:disabled {
 
 .custom-play-panel,
 .manual-log-panel,
+.history-log-panel,
 .playlist-panel,
 .playlist-entry-panel,
 .summary-panel,
@@ -568,6 +592,32 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.practice-tools-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #f7faf8;
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.practice-tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.practice-tools-header button {
+  padding: 0.48rem 0.72rem;
+  font-size: 0.84rem;
+}
+
+.practice-tools-content {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .status-banner {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -731,6 +781,25 @@ button:disabled {
   color: var(--muted);
   display: grid;
   gap: 0.45rem;
+}
+
+.manual-log-disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.7rem 0.75rem;
+}
+
+.manual-log-disclosure > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.manual-log-disclosure-body {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.8rem;
 }
 
 .custom-play-list {

@@ -130,3 +130,12 @@
   - Home quick-start failure handoff to Practice
   - Practice route-state status banner dismissal
   - Settings dirty-state + persistence behavior
+
+### 2026-03-24 full-app UX phase-1 remediation decisions
+- Add a global shell-level active-state banner in the top bar when a timer session or playlist run is active, with one-tap resume actions:
+  - `Resume Active Timer`
+  - `Resume Playlist Run`
+- Keep Practice as the single setup route for this slice, but reduce cognitive load by collapsing management-heavy controls (`custom play`, playlists) behind a secondary `Practice Tools` disclosure by default.
+- Reorder History information hierarchy so recent `session log` content is first, and move `manual log` into a secondary collapsible section (`Add Manual Log`) that opens by default only when there are no logs.
+- Improve trust in short-session feedback by showing precise `mm:ss` completion duration text using `formatRemainingTime` in completion/last-outcome messaging.
+- Improve test reliability in touched routes by enforcing cleanup/localStorage reset patterns where multi-render leakage caused ambiguous UI queries.

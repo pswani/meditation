@@ -22,7 +22,7 @@ export default function ActiveTimerPage() {
         <section className="page-card active-timer">
           <h2 className="page-title">{completionTitle}</h2>
           <p className="page-description">
-            You completed {Math.max(1, Math.round(lastOutcome.completedDurationSeconds / 60))} min. An auto log was added to history.
+            You completed {formatRemainingTime(lastOutcome.completedDurationSeconds)}. An auto log was added to history.
           </p>
           <div className="timer-actions">
             <button

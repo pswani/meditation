@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import CustomPlayManager from '../features/customPlays/CustomPlayManager';
 import { meditationTypes, soundOptions } from '../features/timer/constants';
+import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
 import type { MeditationType, TimerSettings } from '../types/timer';
 import { getIntervalBellCount } from '../utils/timerValidation';
@@ -17,6 +18,7 @@ export default function PracticePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
   const [entryMessage, setEntryMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<SetupField, boolean>>({
@@ -95,8 +97,7 @@ export default function PracticePage() {
       {lastOutcome ? (
         <div className={`status-banner ${lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
           <p>
-            Last session {lastOutcome.status}. An auto log was created for{' '}
-            {Math.max(1, Math.round(lastOutcome.completedDurationSeconds / 60))} min.
+            Last session {lastOutcome.status}. An auto log was created for {formatRemainingTime(lastOutcome.completedDurationSeconds)}.
           </p>
           <button type="button" className="link-button" onClick={clearOutcome}>
             Dismiss
@@ -241,21 +242,44 @@ export default function PracticePage() {
         </button>
       </div>
 
-      <CustomPlayManager />
-
-      <section className="playlist-entry-panel">
-        <h3 className="section-title">Playlists</h3>
-        <p className="section-subtitle">Manage ordered playlist flows and run them with automatic session log tracking.</p>
-        <div className="timer-actions">
-          <button type="button" onClick={() => navigate('/practice/playlists')}>
-            Open Playlists
+      <section className="practice-tools-panel" aria-label="Practice tools">
+        <div className="practice-tools-header">
+          <h3 className="section-title">Practice Tools</h3>
+          <button type="button" className="secondary" onClick={() => setToolsOpen((current) => !current)}>
+            {toolsOpen ? 'Hide Tools' : 'Show Tools'}
           </button>
-          {activePlaylistRun ? (
-            <button type="button" className="secondary" onClick={() => navigate('/practice/playlists/active')}>
+        </div>
+        <p className="section-subtitle">
+          Keep timer setup focused. Open tools when you want to manage custom play or playlists.
+        </p>
+
+        {activePlaylistRun ? (
+          <div className="status-banner">
+            <p>
+              Playlist run active: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/
+              {activePlaylistRun.items.length}
+            </p>
+            <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
               Resume Playlist Run
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
+
+        {toolsOpen ? (
+          <div className="practice-tools-content">
+            <CustomPlayManager />
+
+            <section className="playlist-entry-panel">
+              <h3 className="section-title">Playlists</h3>
+              <p className="section-subtitle">Manage ordered playlist flows and run them with automatic session log tracking.</p>
+              <div className="timer-actions">
+                <button type="button" onClick={() => navigate('/practice/playlists')}>
+                  Open Playlists
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </section>
     </section>
   );
