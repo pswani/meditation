@@ -37,8 +37,10 @@ export interface PlaylistValidationResult {
 }
 
 export interface ActivePlaylistRun {
+  readonly runId: string;
   readonly playlistId: string;
   readonly playlistName: string;
+  readonly runStartedAt: string;
   readonly items: readonly PlaylistItem[];
   readonly currentIndex: number;
   readonly currentItemStartedAt: string;
@@ -57,4 +59,22 @@ export interface PlaylistRunOutcome {
   readonly totalItems: number;
   readonly completedDurationSeconds: number;
   readonly endedAt: string;
+}
+
+export type PlaylistRunStartBlockReason =
+  | 'timer session active'
+  | 'playlist run active'
+  | 'playlist not found'
+  | 'playlist has no items';
+
+export interface PlaylistRunStartResult {
+  readonly started: boolean;
+  readonly reason?: PlaylistRunStartBlockReason;
+}
+
+export type PlaylistDeleteBlockReason = 'playlist run active';
+
+export interface PlaylistDeleteResult {
+  readonly deleted: boolean;
+  readonly reason?: PlaylistDeleteBlockReason;
 }

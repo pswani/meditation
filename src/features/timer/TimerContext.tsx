@@ -6,6 +6,7 @@ import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../
 import { buildManualLogEntry, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
+import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
 import {
   loadCustomPlays,
   loadPlaylists,
@@ -103,6 +104,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       const completedLog = buildPlaylistItemLogEntry({
         playlistId: activePlaylistRun.playlistId,
         playlistName: activePlaylistRun.playlistName,
+        playlistRunId: activePlaylistRun.runId,
+        playlistRunStartedAt: activePlaylistRun.runStartedAt,
         item: currentItem,
         itemPosition: activePlaylistRun.currentIndex + 1,
         itemCount: activePlaylistRun.items.length,
@@ -133,6 +136,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       }
 
       const nextItem = activePlaylistRun.items[nextIndex];
+      if (!nextItem) {
+        return;
+      }
       const nextDurationSeconds = Math.round(nextItem.durationMinutes * 60);
 
       setActivePlaylistRun({
@@ -212,7 +218,15 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
         return validation;
       },
-      deletePlaylist: (playlistId) => setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId)),
+      deletePlaylist: (playlistId) => {
+        const result = evaluatePlaylistDelete(playlistId, activePlaylistRun);
+        if (!result.deleted) {
+          return result;
+        }
+
+        setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
+        return result;
+      },
       toggleFavoritePlaylist: (playlistId) =>
         setPlaylists((current) =>
           current.map((playlist) =>
@@ -226,27 +240,46 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           )
         ),
       startPlaylistRun: (playlistId) => {
-        if (state.activeSession) {
-          return false;
+        const startResult = evaluatePlaylistRunStart({
+          playlistId,
+          playlists,
+          activeTimerSession: Boolean(state.activeSession),
+          activePlaylistRun,
+        });
+
+        if (!startResult.started) {
+          return startResult;
         }
 
         const playlist = playlists.find((entry) => entry.id === playlistId);
-        if (!playlist || playlist.items.length === 0) {
-          return false;
+        if (!playlist) {
+          return {
+            started: false,
+            reason: 'playlist not found',
+          };
         }
 
         const nowMs = Date.now();
+        const runStartedAt = new Date(nowMs).toISOString();
         const firstItem = playlist.items[0];
+        if (!firstItem) {
+          return {
+            started: false,
+            reason: 'playlist has no items',
+          };
+        }
         const firstDurationSeconds = Math.round(firstItem.durationMinutes * 60);
 
         setPlaylistRunOutcome(null);
         setIsPlaylistRunPaused(false);
         setActivePlaylistRun({
+          runId: `${playlist.id}-${nowMs}`,
           playlistId: playlist.id,
           playlistName: playlist.name,
+          runStartedAt,
           items: playlist.items,
           currentIndex: 0,
-          currentItemStartedAt: new Date(nowMs).toISOString(),
+          currentItemStartedAt: runStartedAt,
           currentItemStartedAtMs: nowMs,
           currentItemRemainingSeconds: firstDurationSeconds,
           currentItemEndAtMs: nowMs + firstDurationSeconds * 1000,
@@ -257,7 +290,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           ),
         });
 
-        return true;
+        return startResult;
       },
       pausePlaylistRun: () => {
         if (!activePlaylistRun) {
@@ -304,6 +337,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         const endedEarlyLog = buildPlaylistItemLogEntry({
           playlistId: activePlaylistRun.playlistId,
           playlistName: activePlaylistRun.playlistName,
+          playlistRunId: activePlaylistRun.runId,
+          playlistRunStartedAt: activePlaylistRun.runStartedAt,
           item: currentItem,
           itemPosition: activePlaylistRun.currentIndex + 1,
           itemCount: activePlaylistRun.items.length,

@@ -64,3 +64,12 @@
   - unstarted future items do not log
 - Store playlist metadata on session logs (`playlistName`, item position/count) to improve history context.
 - Keep timer session and playlist run mutually exclusive to avoid overlapping active flows.
+
+### 2026-03-23 playlists UX refinement decisions
+- Enforce run safety by blocking playlist-run start while another playlist run is active; do not silently replace active run state.
+- Return structured run-start outcomes with explicit block reasons so UI can show clear guidance (`timer session active`, `playlist run active`, etc.).
+- Prevent deletion of the currently active playlist by guarding both context behavior and UI affordances.
+- Add run-level playlist metadata (`playlistRunId`, `playlistRunStartedAt`) to playlist-generated auto logs for clearer history interpretation.
+- Surface lightweight run-context lines in `history` using run metadata to reduce cognitive fragmentation of per-item playlist logs.
+- Reduce phone control density in playlist item ordering by switching move/remove actions to compact touch-friendly controls.
+- Add explicit `Up next` context on the active playlist run screen to improve flow predictability.

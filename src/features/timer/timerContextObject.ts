@@ -2,8 +2,10 @@ import { createContext } from 'react';
 import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type {
   ActivePlaylistRun,
+  PlaylistDeleteResult,
   Playlist,
   PlaylistDraft,
+  PlaylistRunStartResult,
   PlaylistRunOutcome,
   PlaylistValidationResult,
 } from '../../types/playlist';
@@ -29,9 +31,9 @@ export interface TimerContextValue {
   readonly deleteCustomPlay: (playId: string) => void;
   readonly toggleFavoriteCustomPlay: (playId: string) => void;
   readonly savePlaylist: (draft: PlaylistDraft, editId?: string) => PlaylistValidationResult;
-  readonly deletePlaylist: (playlistId: string) => void;
+  readonly deletePlaylist: (playlistId: string) => PlaylistDeleteResult;
   readonly toggleFavoritePlaylist: (playlistId: string) => void;
-  readonly startPlaylistRun: (playlistId: string) => boolean;
+  readonly startPlaylistRun: (playlistId: string) => PlaylistRunStartResult;
   readonly pausePlaylistRun: () => void;
   readonly resumePlaylistRun: () => void;
   readonly endPlaylistRunEarly: () => void;

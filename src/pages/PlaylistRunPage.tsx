@@ -66,6 +66,7 @@ export default function PlaylistRunPage() {
   }
 
   const currentItem = activePlaylistRun.items[activePlaylistRun.currentIndex];
+  const nextItem = activePlaylistRun.items[activePlaylistRun.currentIndex + 1];
 
   return (
     <section className="page-card playlist-run-screen">
@@ -76,6 +77,13 @@ export default function PlaylistRunPage() {
         Item {activePlaylistRun.currentIndex + 1} of {activePlaylistRun.items.length}
       </p>
       <p className="section-subtitle">Current meditation type: {currentItem.meditationType}</p>
+      {nextItem ? (
+        <p className="section-subtitle">
+          Up next: {nextItem.meditationType} ({nextItem.durationMinutes} min)
+        </p>
+      ) : (
+        <p className="section-subtitle">Up next: Final item in this playlist run.</p>
+      )}
       <h3 className="timer-clock">{formatRemainingTime(activePlaylistRun.currentItemRemainingSeconds)}</h3>
 
       <p className="section-subtitle">

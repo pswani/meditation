@@ -4,6 +4,8 @@ import type { SessionLog, SessionLogStatus } from '../types/sessionLog';
 interface BuildPlaylistItemLogEntryParams {
   readonly playlistId: string;
   readonly playlistName: string;
+  readonly playlistRunId: string;
+  readonly playlistRunStartedAt: string;
   readonly item: PlaylistItem;
   readonly itemPosition: number;
   readonly itemCount: number;
@@ -16,6 +18,8 @@ interface BuildPlaylistItemLogEntryParams {
 export function buildPlaylistItemLogEntry({
   playlistId,
   playlistName,
+  playlistRunId,
+  playlistRunStartedAt,
   item,
   itemPosition,
   itemCount,
@@ -42,6 +46,8 @@ export function buildPlaylistItemLogEntry({
     intervalSound: 'None',
     playlistId,
     playlistName,
+    playlistRunId,
+    playlistRunStartedAt,
     playlistItemPosition: itemPosition,
     playlistItemCount: itemCount,
   };

@@ -6,6 +6,8 @@ describe('playlist logging helpers', () => {
     const entry = buildPlaylistItemLogEntry({
       playlistId: 'playlist-1',
       playlistName: 'Morning Sequence',
+      playlistRunId: 'run-123',
+      playlistRunStartedAt: '2026-03-23T10:00:00.000Z',
       item: {
         id: 'item-1',
         meditationType: 'Vipassana',
@@ -22,6 +24,8 @@ describe('playlist logging helpers', () => {
     expect(entry.source).toBe('auto log');
     expect(entry.status).toBe('completed');
     expect(entry.playlistName).toBe('Morning Sequence');
+    expect(entry.playlistRunId).toBe('run-123');
+    expect(entry.playlistRunStartedAt).toBe('2026-03-23T10:00:00.000Z');
     expect(entry.playlistItemPosition).toBe(1);
     expect(entry.playlistItemCount).toBe(3);
     expect(entry.completedDurationSeconds).toBe(600);
@@ -31,6 +35,8 @@ describe('playlist logging helpers', () => {
     const entry = buildPlaylistItemLogEntry({
       playlistId: 'playlist-1',
       playlistName: 'Morning Sequence',
+      playlistRunId: 'run-123',
+      playlistRunStartedAt: '2026-03-23T10:00:00.000Z',
       item: {
         id: 'item-2',
         meditationType: 'Ajapa',

@@ -259,6 +259,11 @@ button.secondary {
   border-color: var(--accent);
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .link-button {
   border: 0;
   background: transparent;
@@ -335,6 +340,12 @@ button.secondary {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.compact-control {
+  min-width: 2.35rem;
+  padding: 0.55rem 0.72rem;
+  font-size: 0.88rem;
 }
 
 .playlist-list {
@@ -504,6 +515,13 @@ button.secondary {
   margin: 0.2rem 0 0;
   color: var(--text);
   font-size: 0.86rem;
+}
+
+.history-run-context {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  letter-spacing: 0.01em;
 }
 
 .pill {

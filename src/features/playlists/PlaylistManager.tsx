@@ -29,6 +29,7 @@ export default function PlaylistManager() {
   const [errors, setErrors] = useState<PlaylistValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [playlistFeedback, setPlaylistFeedback] = useState<string | null>(null);
 
   function updateDraft(next: PlaylistDraft) {
     setDraft(next);
@@ -42,6 +43,7 @@ export default function PlaylistManager() {
     if (result.isValid) {
       setDraft(createInitialPlaylistDraft());
       setEditId(null);
+      setPlaylistFeedback(null);
     }
   }
 
@@ -53,6 +55,7 @@ export default function PlaylistManager() {
 
     setEditId(match.id);
     setErrors(initialErrors);
+    setPlaylistFeedback(null);
     setDraft({
       name: match.name,
       items: match.items.map((item) => ({
@@ -67,6 +70,7 @@ export default function PlaylistManager() {
     setDraft(createInitialPlaylistDraft());
     setEditId(null);
     setErrors(initialErrors);
+    setPlaylistFeedback(null);
   }
 
   function removeDraftItem(itemId: string) {
@@ -78,9 +82,28 @@ export default function PlaylistManager() {
   }
 
   function runPlaylist(playlistId: string) {
-    const started = startPlaylistRun(playlistId);
-    if (started) {
+    if (activePlaylistRun?.playlistId === playlistId) {
+      setPlaylistFeedback(null);
       navigate('/practice/playlists/active');
+      return;
+    }
+
+    const result = startPlaylistRun(playlistId);
+    if (result.started) {
+      setPlaylistFeedback(null);
+      navigate('/practice/playlists/active');
+      return;
+    }
+
+    const reasonToMessage: Record<NonNullable<typeof result.reason>, string> = {
+      'timer session active': 'Finish or end the active timer session before starting a playlist run.',
+      'playlist run active': 'A playlist run is already active. Open it to continue before starting another.',
+      'playlist not found': 'That playlist is no longer available. Refresh and try again.',
+      'playlist has no items': 'Add at least one item before starting this playlist run.',
+    };
+
+    if (result.reason) {
+      setPlaylistFeedback(reasonToMessage[result.reason]);
     }
   }
 
@@ -88,6 +111,12 @@ export default function PlaylistManager() {
     <section className="playlist-panel">
       <h3 className="section-title">Playlists</h3>
       <p className="section-subtitle">Create ordered playlist flows and run them in sequence.</p>
+
+      {playlistFeedback ? (
+        <div className="status-banner warn" role="status">
+          <p>{playlistFeedback}</p>
+        </div>
+      ) : null}
 
       <form className="playlist-form" onSubmit={onSubmit}>
         <label>
@@ -171,7 +200,7 @@ export default function PlaylistManager() {
                 <div className="playlist-item-controls">
                   <button
                     type="button"
-                    className="secondary"
+                    className="secondary compact-control"
                     onClick={() =>
                       updateDraft({
                         ...draft,
@@ -179,12 +208,14 @@ export default function PlaylistManager() {
                       })
                     }
                     disabled={index === 0}
+                    aria-label={`Move item ${index + 1} up`}
+                    title="Move up"
                   >
-                    Move Up
+                    ↑
                   </button>
                   <button
                     type="button"
-                    className="secondary"
+                    className="secondary compact-control"
                     onClick={() =>
                       updateDraft({
                         ...draft,
@@ -192,11 +223,19 @@ export default function PlaylistManager() {
                       })
                     }
                     disabled={index === draft.items.length - 1}
+                    aria-label={`Move item ${index + 1} down`}
+                    title="Move down"
                   >
-                    Move Down
+                    ↓
                   </button>
-                  <button type="button" className="secondary" onClick={() => removeDraftItem(item.id)}>
-                    Remove
+                  <button
+                    type="button"
+                    className="secondary compact-control"
+                    onClick={() => removeDraftItem(item.id)}
+                    aria-label={`Remove item ${index + 1}`}
+                    title="Remove item"
+                  >
+                    ×
                   </button>
                 </div>
               </div>
@@ -225,66 +264,87 @@ export default function PlaylistManager() {
         </div>
       ) : (
         <ul className="playlist-list">
-          {playlists.map((playlist) => (
-            <li key={playlist.id} className="playlist-item-card">
-              <div className="history-row">
-                <div>
-                  <strong>{playlist.name}</strong>
-                  <p className="history-time">
-                    {playlist.items.length} items · {computePlaylistTotalDurationMinutes(playlist.items)} min total
-                  </p>
-                </div>
-                {playlist.favorite ? <span className="pill ok">favorite</span> : null}
-              </div>
+          {playlists.map((playlist) => {
+            const isActivePlaylist = activePlaylistRun?.playlistId === playlist.id;
 
-              <div className="playlist-inline-items">
-                {playlist.items.map((item, index) => (
-                  <span key={item.id}>
-                    {index + 1}. {item.meditationType} ({item.durationMinutes}m)
-                  </span>
-                ))}
-              </div>
-
-              {activePlaylistRun?.playlistId === playlist.id ? (
-                <p className="section-subtitle">Active run in progress for this playlist.</p>
-              ) : null}
-
-              <div className="timer-actions">
-                <button type="button" onClick={() => runPlaylist(playlist.id)}>
-                  Run Playlist
-                </button>
-                <button type="button" className="secondary" onClick={() => startEdit(playlist.id)}>
-                  Edit
-                </button>
-                <button type="button" className="secondary" onClick={() => toggleFavoritePlaylist(playlist.id)}>
-                  {playlist.favorite ? 'Unfavorite' : 'Favorite'}
-                </button>
-                <button type="button" className="secondary" onClick={() => setPendingDeleteId(playlist.id)}>
-                  Delete
-                </button>
-              </div>
-
-              {pendingDeleteId === playlist.id ? (
-                <div className="confirm-sheet" role="dialog" aria-label={`Delete playlist ${playlist.name} confirmation`}>
-                  <p>Delete playlist "{playlist.name}"?</p>
-                  <div className="timer-actions">
-                    <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
-                      Keep Playlist
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        deletePlaylist(playlist.id);
-                        setPendingDeleteId(null);
-                      }}
-                    >
-                      Delete Playlist
-                    </button>
+            return (
+              <li key={playlist.id} className="playlist-item-card">
+                <div className="history-row">
+                  <div>
+                    <strong>{playlist.name}</strong>
+                    <p className="history-time">
+                      {playlist.items.length} items · {computePlaylistTotalDurationMinutes(playlist.items)} min total
+                    </p>
                   </div>
+                  {playlist.favorite ? <span className="pill ok">favorite</span> : null}
                 </div>
-              ) : null}
-            </li>
-          ))}
+
+                <div className="playlist-inline-items">
+                  {playlist.items.map((item, index) => (
+                    <span key={item.id}>
+                      {index + 1}. {item.meditationType} ({item.durationMinutes}m)
+                    </span>
+                  ))}
+                </div>
+
+                {isActivePlaylist ? (
+                  <p className="section-subtitle">Active run in progress for this playlist.</p>
+                ) : null}
+
+                <div className="timer-actions">
+                  {isActivePlaylist ? (
+                    <button type="button" onClick={() => navigate('/practice/playlists/active')}>
+                      Open Active Run
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => runPlaylist(playlist.id)}>
+                      Run Playlist
+                    </button>
+                  )}
+                  <button type="button" className="secondary" onClick={() => startEdit(playlist.id)}>
+                    Edit
+                  </button>
+                  <button type="button" className="secondary" onClick={() => toggleFavoritePlaylist(playlist.id)}>
+                    {playlist.favorite ? 'Unfavorite' : 'Favorite'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setPendingDeleteId(playlist.id)}
+                    disabled={isActivePlaylist}
+                    title={isActivePlaylist ? 'Cannot delete an actively running playlist' : 'Delete playlist'}
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                {pendingDeleteId === playlist.id ? (
+                  <div className="confirm-sheet" role="dialog" aria-label={`Delete playlist ${playlist.name} confirmation`}>
+                    <p>Delete playlist "{playlist.name}"?</p>
+                    <div className="timer-actions">
+                      <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
+                        Keep Playlist
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const deleteResult = deletePlaylist(playlist.id);
+                          if (!deleteResult.deleted) {
+                            setPlaylistFeedback('This playlist is currently running. End the run before deleting it.');
+                          } else {
+                            setPlaylistFeedback(null);
+                          }
+                          setPendingDeleteId(null);
+                        }}
+                      >
+                        Delete Playlist
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
