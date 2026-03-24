@@ -2,6 +2,12 @@
 
 A focused meditation practice app built with React, TypeScript, and Vite.
 
+## Repository status
+
+- This repository currently contains the React front end.
+- A dedicated back-end service is not yet present in this workspace.
+- Local persistence is used as the current baseline storage approach.
+
 ## Product focus
 
 This app is designed as a disciplined meditation practice tool, not a broad wellness marketplace.
@@ -70,6 +76,26 @@ npm run build
 ```bash
 npm run preview
 ```
+
+## Local run baseline checklist
+
+Run these commands to verify the current baseline in order:
+
+```bash
+npm install
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+After checks pass, start local development:
+
+```bash
+npm run dev
+```
+
+Vite prints the local URL in the terminal (typically `http://localhost:5173/`).
 
 ## Quality commands
 
