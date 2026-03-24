@@ -118,3 +118,15 @@
   - favorite playlist shortcut attempts run with existing run-block safeguards
 - Use explicit `Save Defaults` and `Reset To App Defaults` behavior in Settings for predictable preference control.
 - Persist Settings through existing timer settings state pipeline (local-first storage), with validation aligned to timer rules.
+
+### 2026-03-24 home/settings UX refinement decisions
+- Pass Home quick-start validation failures to Practice through route state and render an entry status banner in timer setup, then clear route state after first display.
+- Add a lightweight Home `sankalpa` snapshot using locally stored goals and derived progress, selecting the top active item by nearest deadline.
+- Remove Home `Next Actions` buttons that duplicated shell navigation to reduce visual noise and keep Home focused on meaningful launch content.
+- Add explicit Settings unsaved-edits affordance and disable `Save Defaults` until the draft differs from persisted defaults.
+- Improve favorite shortcut row behavior on narrow phones by allowing long-label wrapping and stacking the action button when space is constrained.
+- Strengthen UX coverage with focused tests for:
+  - Home empty/populated states
+  - Home quick-start failure handoff to Practice
+  - Practice route-state status banner dismissal
+  - Settings dirty-state + persistence behavior

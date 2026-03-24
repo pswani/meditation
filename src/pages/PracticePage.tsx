@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import CustomPlayManager from '../features/customPlays/CustomPlayManager';
 import { meditationTypes, soundOptions } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
@@ -8,11 +8,17 @@ import { getIntervalBellCount } from '../utils/timerValidation';
 
 type SetupField = 'durationMinutes' | 'meditationType' | 'intervalMinutes';
 
+interface PracticeRouteState {
+  readonly entryMessage?: string;
+}
+
 export default function PracticePage() {
   const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
   const navigate = useNavigate();
+  const location = useLocation();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
+  const [entryMessage, setEntryMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<SetupField, boolean>>({
     durationMinutes: false,
     meditationType: false,
@@ -40,6 +46,16 @@ export default function PracticePage() {
     }
   }, [visibleErrors.intervalMinutes]);
 
+  useEffect(() => {
+    const state = location.state as PracticeRouteState | null;
+    if (!state?.entryMessage) {
+      return;
+    }
+
+    setEntryMessage(state.entryMessage);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
   function update<K extends keyof TimerSettings>(key: K, value: TimerSettings[K]) {
     setSettings({
       ...settings,
@@ -66,6 +82,15 @@ export default function PracticePage() {
     <section className="page-card timer-setup">
       <h2 className="page-title">Timer Setup</h2>
       <p className="page-description">Set duration and meditation type, then start a calm, focused session.</p>
+
+      {entryMessage ? (
+        <div className="status-banner warn" role="status">
+          <p>{entryMessage}</p>
+          <button type="button" className="link-button" onClick={() => setEntryMessage(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       {lastOutcome ? (
         <div className={`status-banner ${lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>

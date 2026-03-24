@@ -21,4 +21,29 @@ describe('PracticePage UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     expect(screen.getByText(/meditation type is required/i)).toBeInTheDocument();
   });
+
+  it('renders and dismisses entry guidance passed from route state', () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/practice',
+            state: {
+              entryMessage: 'Quick start needs valid defaults.',
+            },
+          },
+        ]}
+      >
+        <TimerProvider>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/quick start needs valid defaults/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^dismiss$/i }));
+    expect(screen.queryByText(/quick start needs valid defaults/i)).not.toBeInTheDocument();
+  });
 });

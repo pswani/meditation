@@ -4,11 +4,24 @@ import { useTimer } from '../features/timer/useTimer';
 import type { TimerSettings } from '../types/timer';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 
+function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings): boolean {
+  return (
+    current.durationMinutes !== baseline.durationMinutes ||
+    current.meditationType !== baseline.meditationType ||
+    current.startSound !== baseline.startSound ||
+    current.endSound !== baseline.endSound ||
+    current.intervalEnabled !== baseline.intervalEnabled ||
+    current.intervalMinutes !== baseline.intervalMinutes ||
+    current.intervalSound !== baseline.intervalSound
+  );
+}
+
 export default function SettingsPage() {
   const { settings, setSettings } = useTimer();
   const [draft, setDraft] = useState<TimerSettings>(settings);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
+  const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
 
   const intervalCount = useMemo(
     () => (draft.intervalEnabled ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
@@ -24,6 +37,11 @@ export default function SettingsPage() {
   }
 
   function saveDefaults() {
+    if (!hasUnsavedChanges) {
+      setSaveMessage(null);
+      return;
+    }
+
     const validation = validateTimerSettings(draft);
     setErrors(validation.errors);
 
@@ -56,6 +74,10 @@ export default function SettingsPage() {
           <p>{saveMessage}</p>
         </div>
       ) : null}
+
+      <p className={`settings-draft-state ${hasUnsavedChanges ? 'warn' : 'saved'}`}>
+        {hasUnsavedChanges ? 'You have unsaved changes.' : 'All timer defaults are saved.'}
+      </p>
 
       <section className="settings-panel">
         <h3 className="section-title">Default Timer Preferences</h3>
@@ -156,7 +178,7 @@ export default function SettingsPage() {
         </form>
 
         <div className="timer-actions">
-          <button type="button" onClick={saveDefaults}>
+          <button type="button" onClick={saveDefaults} disabled={!hasUnsavedChanges}>
             Save Defaults
           </button>
           <button type="button" className="secondary" onClick={resetDefaults}>

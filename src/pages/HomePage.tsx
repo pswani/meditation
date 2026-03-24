@@ -4,7 +4,8 @@ import { useTimer } from '../features/timer/useTimer';
 import type { CustomPlay } from '../types/customPlay';
 import type { PlaylistRunStartResult } from '../types/playlist';
 import { formatDurationLabel } from '../utils/sessionLog';
-import { deriveTodayActivitySummary, selectRecentSessionLogs } from '../utils/home';
+import { loadSankalpas } from '../utils/storage';
+import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
 
 function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
   if (!result.reason) {
@@ -35,9 +36,14 @@ export default function HomePage() {
     startPlaylistRun,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const sankalpas = useMemo(() => loadSankalpas(), []);
 
   const todaySummary = useMemo(() => deriveTodayActivitySummary(sessionLogs), [sessionLogs]);
   const recentLogs = useMemo(() => selectRecentSessionLogs(sessionLogs, 5), [sessionLogs]);
+  const topActiveSankalpa = useMemo(
+    () => selectTopActiveSankalpaProgress(sankalpas, sessionLogs),
+    [sankalpas, sessionLogs]
+  );
   const favoriteCustomPlays = useMemo(() => customPlays.filter((entry) => entry.favorite).slice(0, 3), [customPlays]);
   const favoritePlaylists = useMemo(() => playlists.filter((entry) => entry.favorite).slice(0, 3), [playlists]);
 
@@ -58,8 +64,11 @@ export default function HomePage() {
       return;
     }
 
-    setFeedbackMessage('Timer defaults need attention before quick start. Open Practice to review settings.');
-    navigate('/practice');
+    navigate('/practice', {
+      state: {
+        entryMessage: 'Quick start needs valid defaults. Review duration and meditation type in timer setup.',
+      },
+    });
   }
 
   function applyCustomPlayShortcut(play: CustomPlay) {
@@ -114,32 +123,75 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-panel">
-        <h3 className="section-title">Today</h3>
-        {todaySummary.sessionLogCount === 0 ? (
-          <div className="empty-state">
-            <p>No session log entries yet today.</p>
-            <p>Start a timer session or add a manual log in History.</p>
+      <div className="home-layout-grid">
+        <section className="home-panel">
+          <h3 className="section-title">Today</h3>
+          {todaySummary.sessionLogCount === 0 ? (
+            <div className="empty-state">
+              <p>No session log entries yet today.</p>
+              <p>Start a timer session or add a manual log in History.</p>
+            </div>
+          ) : (
+            <div className="home-summary-grid">
+              <article className="summary-card">
+                <p className="summary-label">Session logs</p>
+                <p className="summary-value">{todaySummary.sessionLogCount}</p>
+              </article>
+              <article className="summary-card">
+                <p className="summary-label">Completed duration</p>
+                <p className="summary-value">{formatDurationLabel(todaySummary.totalDurationSeconds)}</p>
+              </article>
+              <article className="summary-card">
+                <p className="summary-label">Completed vs ended early</p>
+                <p className="summary-value">
+                  {todaySummary.completedCount} / {todaySummary.endedEarlyCount}
+                </p>
+              </article>
+            </div>
+          )}
+        </section>
+
+        <section className="home-panel">
+          <div className="history-row">
+            <h3 className="section-title">Sankalpa Snapshot</h3>
+            <button type="button" className="link-button" onClick={() => navigate('/goals')}>
+              Open Sankalpa
+            </button>
           </div>
-        ) : (
-          <div className="home-summary-grid">
-            <article className="summary-card">
-              <p className="summary-label">Session logs</p>
-              <p className="summary-value">{todaySummary.sessionLogCount}</p>
-            </article>
-            <article className="summary-card">
-              <p className="summary-label">Completed duration</p>
-              <p className="summary-value">{formatDurationLabel(todaySummary.totalDurationSeconds)}</p>
-            </article>
-            <article className="summary-card">
-              <p className="summary-label">Completed vs ended early</p>
-              <p className="summary-value">
-                {todaySummary.completedCount} / {todaySummary.endedEarlyCount}
+          {topActiveSankalpa ? (
+            <>
+              <div className="history-row">
+                <strong>{topActiveSankalpa.goal.goalType}</strong>
+                <span className="pill active">{topActiveSankalpa.status}</span>
+              </div>
+              <p className="section-subtitle">
+                Deadline: {new Date(topActiveSankalpa.deadlineAt).toLocaleDateString()} · Target:{' '}
+                {topActiveSankalpa.goal.targetValue}{' '}
+                {topActiveSankalpa.goal.goalType === 'duration-based' ? 'min' : 'session logs'}
               </p>
-            </article>
-          </div>
-        )}
-      </section>
+              <div className="sankalpa-progress-track" aria-hidden="true">
+                <span
+                  className="sankalpa-progress-fill"
+                  style={{ width: `${Math.min(100, topActiveSankalpa.progressRatio * 100)}%` }}
+                />
+              </div>
+              <p className="section-subtitle">
+                Progress:{' '}
+                {topActiveSankalpa.goal.goalType === 'duration-based'
+                  ? `${formatDurationLabel(topActiveSankalpa.matchedDurationSeconds)} / ${formatDurationLabel(
+                      topActiveSankalpa.targetDurationSeconds
+                    )}`
+                  : `${topActiveSankalpa.matchedSessionCount} / ${topActiveSankalpa.targetSessionCount} session logs`}
+              </p>
+            </>
+          ) : (
+            <div className="empty-state">
+              <p>No active sankalpa right now.</p>
+              <p>Create one in Sankalpa to track your current intent.</p>
+            </div>
+          )}
+        </section>
+      </div>
 
       <section className="home-panel">
         <div className="history-row">
@@ -185,7 +237,7 @@ export default function HomePage() {
                 <ul className="home-shortcut-list">
                   {favoriteCustomPlays.map((play) => (
                     <li key={play.id} className="home-shortcut-item">
-                      <span>
+                      <span className="home-shortcut-label">
                         {play.name} · {play.durationMinutes} min
                       </span>
                       <button type="button" className="secondary" onClick={() => applyCustomPlayShortcut(play)}>
@@ -205,7 +257,7 @@ export default function HomePage() {
                 <ul className="home-shortcut-list">
                   {favoritePlaylists.map((playlist) => (
                     <li key={playlist.id} className="home-shortcut-item">
-                      <span>{playlist.name}</span>
+                      <span className="home-shortcut-label">{playlist.name}</span>
                       <button type="button" className="secondary" onClick={() => runFavoritePlaylist(playlist.id)}>
                         Run
                       </button>
@@ -218,23 +270,6 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="home-panel">
-        <h3 className="section-title">Next Actions</h3>
-        <div className="timer-actions">
-          <button type="button" className="secondary" onClick={() => navigate('/practice')}>
-            Practice
-          </button>
-          <button type="button" className="secondary" onClick={() => navigate('/history')}>
-            History
-          </button>
-          <button type="button" className="secondary" onClick={() => navigate('/goals')}>
-            Sankalpa
-          </button>
-          <button type="button" className="secondary" onClick={() => navigate('/settings')}>
-            Settings
-          </button>
-        </div>
-      </section>
     </section>
   );
 }
