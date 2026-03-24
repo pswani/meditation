@@ -102,3 +102,19 @@
   - local dev startup
 - Treat generated build/dev artifacts (`dist`, vite cache, tsbuildinfo) as non-functional output and exclude them from setup commits unless explicitly requested.
 - Document the observed local dev URL (`http://localhost:5173/`) as a typical startup target, while preserving that Vite may choose a different port when needed.
+
+### 2026-03-24 home and settings functional slice decisions
+- Implement `Home` and `Settings` as route-level functional screens within the existing app shell, without adding new feature areas.
+- Define Home “today” summary from local `session log` data using local-date boundaries and include:
+  - session log count
+  - completed vs ended-early count
+  - total completed duration
+- Keep Home quick-start behavior explicit:
+  - resume active timer if present
+  - otherwise attempt timer quick start
+  - if quick start cannot run, route to Practice with guidance
+- Surface favorite shortcuts only for currently supported state:
+  - favorite custom play shortcut loads timer defaults and opens Practice
+  - favorite playlist shortcut attempts run with existing run-block safeguards
+- Use explicit `Save Defaults` and `Reset To App Defaults` behavior in Settings for predictable preference control.
+- Persist Settings through existing timer settings state pipeline (local-first storage), with validation aligned to timer rules.

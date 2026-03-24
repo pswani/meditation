@@ -1,17 +1,30 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('App shell', () => {
-  it('renders calm shell navigation with Sankalpa label', () => {
+  it('renders home route with functional quick-start content and Sankalpa navigation label', () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={['/']}>
         <App />
-      </BrowserRouter>
+      </MemoryRouter>
     );
+
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
     expect(screen.getAllByText('Sankalpa').length).toBeGreaterThan(0);
-    expect(screen.getByText(/quickly start a timer/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start timer now/i })).toBeInTheDocument();
+  });
+
+  it('renders settings route with functional defaults form', () => {
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save defaults/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/default duration \(minutes\)/i)).toBeInTheDocument();
   });
 });
