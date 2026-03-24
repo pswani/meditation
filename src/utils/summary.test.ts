@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionLog } from '../types/sessionLog';
-import { deriveOverallSummary, deriveSummaryByType } from './summary';
+import {
+  deriveDateInputForDayOffset,
+  deriveDateRangeFromInputs,
+  deriveOverallSummary,
+  deriveSummaryBySource,
+  deriveSummaryByType,
+  deriveSummarySnapshot,
+  filterSessionLogsByDateRange,
+} from './summary';
 
 const sampleLogs: SessionLog[] = [
   {
     id: '1',
-    startedAt: '2026-03-20T05:00:00.000Z',
-    endedAt: '2026-03-20T05:20:00.000Z',
+    startedAt: new Date(2026, 2, 10, 6, 0, 0, 0).toISOString(),
+    endedAt: new Date(2026, 2, 10, 6, 20, 0, 0).toISOString(),
     meditationType: 'Vipassana',
     intendedDurationSeconds: 1200,
     completedDurationSeconds: 1200,
@@ -20,8 +28,8 @@ const sampleLogs: SessionLog[] = [
   },
   {
     id: '2',
-    startedAt: '2026-03-21T13:00:00.000Z',
-    endedAt: '2026-03-21T13:15:00.000Z',
+    startedAt: new Date(2026, 2, 20, 14, 0, 0, 0).toISOString(),
+    endedAt: new Date(2026, 2, 20, 14, 15, 0, 0).toISOString(),
     meditationType: 'Ajapa',
     intendedDurationSeconds: 1200,
     completedDurationSeconds: 900,
@@ -35,13 +43,28 @@ const sampleLogs: SessionLog[] = [
   },
   {
     id: '3',
-    startedAt: '2026-03-22T19:00:00.000Z',
-    endedAt: '2026-03-22T19:10:00.000Z',
+    startedAt: new Date(2026, 2, 23, 19, 0, 0, 0).toISOString(),
+    endedAt: new Date(2026, 2, 23, 19, 10, 0, 0).toISOString(),
     meditationType: 'Vipassana',
     intendedDurationSeconds: 600,
     completedDurationSeconds: 600,
     status: 'completed',
     source: 'auto log',
+    startSound: 'None',
+    endSound: 'None',
+    intervalEnabled: false,
+    intervalMinutes: 0,
+    intervalSound: 'None',
+  },
+  {
+    id: '4',
+    startedAt: new Date(2026, 2, 24, 7, 0, 0, 0).toISOString(),
+    endedAt: new Date(2026, 2, 24, 7, 30, 0, 0).toISOString(),
+    meditationType: 'Sahaj',
+    intendedDurationSeconds: 1800,
+    completedDurationSeconds: 1800,
+    status: 'completed',
+    source: 'manual log',
     startSound: 'None',
     endSound: 'None',
     intervalEnabled: false,
@@ -54,13 +77,13 @@ describe('summary helpers', () => {
   it('derives overall summary metrics from session logs', () => {
     const summary = deriveOverallSummary(sampleLogs);
 
-    expect(summary.totalSessionLogs).toBe(3);
-    expect(summary.completedSessionLogs).toBe(2);
+    expect(summary.totalSessionLogs).toBe(4);
+    expect(summary.completedSessionLogs).toBe(3);
     expect(summary.endedEarlySessionLogs).toBe(1);
-    expect(summary.totalDurationSeconds).toBe(2700);
-    expect(summary.averageDurationSeconds).toBe(900);
+    expect(summary.totalDurationSeconds).toBe(4500);
+    expect(summary.averageDurationSeconds).toBe(1125);
     expect(summary.autoLogs).toBe(2);
-    expect(summary.manualLogs).toBe(1);
+    expect(summary.manualLogs).toBe(2);
   });
 
   it('derives by-type summary rows while preserving meditation type coverage', () => {
@@ -79,5 +102,71 @@ describe('summary helpers', () => {
       sessionLogs: 0,
       totalDurationSeconds: 0,
     });
+    expect(byType.find((row) => row.meditationType === 'Sahaj')).toMatchObject({
+      sessionLogs: 1,
+      totalDurationSeconds: 1800,
+    });
+  });
+
+  it('derives by-source summary rows with stable source coverage', () => {
+    const bySource = deriveSummaryBySource(sampleLogs);
+
+    expect(bySource).toHaveLength(2);
+    expect(bySource[0]).toMatchObject({
+      source: 'auto log',
+      sessionLogs: 2,
+      completedSessionLogs: 2,
+      endedEarlySessionLogs: 0,
+      totalDurationSeconds: 1800,
+    });
+    expect(bySource[1]).toMatchObject({
+      source: 'manual log',
+      sessionLogs: 2,
+      completedSessionLogs: 1,
+      endedEarlySessionLogs: 1,
+      totalDurationSeconds: 2700,
+    });
+  });
+
+  it('derives an input-safe date range and rejects malformed ranges', () => {
+    expect(deriveDateRangeFromInputs('2026-03-20', '2026-03-24')).toMatchObject({
+      startAtMs: expect.any(Number),
+      endAtMs: expect.any(Number),
+    });
+    expect(deriveDateRangeFromInputs('2026-03-24', '2026-03-20')).toBeNull();
+    expect(deriveDateRangeFromInputs('bad-input', '2026-03-20')).toBeNull();
+  });
+
+  it('filters summary logs by inclusive date-range boundaries', () => {
+    const range = deriveDateRangeFromInputs('2026-03-20', '2026-03-23');
+    if (!range) {
+      throw new Error('Expected valid range');
+    }
+
+    const filtered = filterSessionLogsByDateRange(sampleLogs, range);
+    expect(filtered.map((entry) => entry.id)).toEqual(['2', '3']);
+  });
+
+  it('builds a summary snapshot from a filtered date-range subset', () => {
+    const range = deriveDateRangeFromInputs('2026-03-20', '2026-03-24');
+    if (!range) {
+      throw new Error('Expected valid range');
+    }
+
+    const snapshot = deriveSummarySnapshot(sampleLogs, range);
+    expect(snapshot.sessionLogs.map((entry) => entry.id)).toEqual(['2', '3', '4']);
+    expect(snapshot.overallSummary.totalSessionLogs).toBe(3);
+    expect(snapshot.overallSummary.totalDurationSeconds).toBe(3300);
+    expect(snapshot.byTypeSummary.find((entry) => entry.meditationType === 'Vipassana')?.sessionLogs).toBe(1);
+    expect(snapshot.bySourceSummary.find((entry) => entry.source === 'manual log')).toMatchObject({
+      sessionLogs: 2,
+      totalDurationSeconds: 2700,
+    });
+  });
+
+  it('derives date-input labels from day offsets', () => {
+    const now = new Date(2026, 2, 24, 10, 0, 0, 0);
+    expect(deriveDateInputForDayOffset(now, 0)).toBe('2026-03-24');
+    expect(deriveDateInputForDayOffset(now, -7)).toBe('2026-03-17');
   });
 });

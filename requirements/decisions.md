@@ -236,3 +236,20 @@
 - Extend playlist logging helper coverage for negative-duration clamp behavior (`0` floor).
 - Extend playlist REST-boundary tests to verify list-path normalization behavior against mixed valid/malformed stored payloads.
 - Improve touched custom-play UI test reliability with explicit `localStorage` and DOM cleanup between tests.
+
+### 2026-03-24 summaries milestone-c implementation decisions
+- Keep summaries on the existing `Sankalpa` route (`/goals`) and expand insight depth without introducing new navigation.
+- Add bounded date-range summary controls with calm defaults:
+  - `All time`
+  - `Last 7 days`
+  - `Last 30 days`
+  - `Custom range`
+- Define date-range filtering against `session log` `endedAt` timestamps with inclusive day boundaries.
+- Derive summary sections from one shared filtered dataset to preserve consistency between:
+  - overall summary
+  - by meditation type summary
+  - by source summary
+- Keep summary source segmentation aligned to existing domain values and ordering:
+  - `auto log`
+  - `manual log`
+- Keep this slice local-first; do not add backend summary fetching in this front-end-only workspace.
