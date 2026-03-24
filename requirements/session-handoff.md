@@ -1,59 +1,35 @@
 # Session Handoff
 
 ## Current status
-Prompt 11 (`prompts/11-home-settings.md`) is complete.
+Prompt 12 (`prompts/12-ux-review-home-settings.md`) is complete.
 
-Implemented functional `Home` and `Settings` route-level screens in the current responsive shell.
+This was a review-only step.
+No product code changes were made.
 
-### What was implemented for Home
-- Replaced placeholder with a functional Home screen.
-- Added quick start behavior:
-  - resumes active timer if present
-  - resumes active playlist run if present
-  - otherwise attempts quick-start timer
-  - routes to Practice with guidance if quick start cannot run
-- Added today summary derived from available app data (`session log`):
-  - session log count
-  - completed vs ended-early count
-  - total completed duration
-- Added recent activity list using recent session logs.
-- Added favorite shortcuts where supported by current state:
-  - favorite custom play shortcuts (`Use`) to prefill timer setup and open Practice
-  - favorite playlist shortcuts (`Run`) with existing run-block safeguards
-- Added useful empty states and clear next-action navigation buttons.
+## Review outputs written
+- `docs/ux-review-home-settings.md`
+- `requirements/session-handoff.md`
 
-### What was implemented for Settings
-- Replaced placeholder with a functional Settings screen.
-- Added editable default preferences for:
-  - default duration
-  - default meditation type
-  - default start sound
-  - default end sound
-  - default interval bell enable/interval/sound
-- Implemented explicit save/apply behavior (`Save Defaults`).
-- Implemented reset behavior (`Reset To App Defaults`).
-- Kept validation aligned to timer validation rules.
-- Persisted settings through existing local timer settings storage flow.
+## Prioritized UX findings summary
+- Critical:
+  - quick-start failure guidance is not visible in practice use because Home feedback is lost during immediate navigation
+- Important:
+  - Home lacks a sankalpa snapshot
+  - Home has action-density competition (`Next Actions` duplicates shell navigation)
+  - Settings lacks unsaved-edits state clarity
+  - mobile favorite shortcut rows can feel cramped with long labels
+- Nice to have:
+  - relative-time helper in recent activity
+  - modest tablet/desktop grouping refinement for Home
+  - subtle settings last-saved cue
 
-### Additional implementation details
-- Added Home helper utilities for derived display logic:
-  - `deriveTodayActivitySummary`
-  - `selectRecentSessionLogs`
-- Added focused tests for:
-  - Home derived display logic
-  - timer settings persistence/default fallback behavior
-  - practical Home/Settings route rendering behavior
-
-## Verification status
-- `npm run typecheck`: passed
-- `npm run lint`: passed
-- `npm run test`: passed
-- `npm run build`: passed
-
-## Known limitations
-- Home quick-start falls back to Practice when settings are invalid instead of showing an in-place correction form.
-- Home shortcuts are intentionally bounded to favorites and recent activity already supported by current local state.
-- Settings scope remains timer-default focused and does not include non-timer app preferences.
+## Specific review coverage completed
+- Home
+- Settings
+- navigation/shell integration
+- mobile layout
+- tablet layout
+- desktop layout
 
 ## What the next Codex session should read first
 - AGENTS.md
@@ -62,6 +38,7 @@ Implemented functional `Home` and `Settings` route-level screens in the current 
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-home-settings.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
@@ -74,23 +51,51 @@ Read:
 - docs/architecture.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
+- docs/ux-review-home-settings.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
 
 Then:
-1. review the currently implemented Home + Settings slice
-2. act as a principal UX reviewer for responsive behavior across mobile, tablet, and desktop
-3. identify friction, clarity gaps, missing states, and information-density issues in:
-   - Home quick start and activity summary
-   - Home favorites/recent shortcuts
-   - Settings defaults flow and save/reset behavior
-4. produce prioritized recommendations:
-   - critical
-   - important
-   - nice to have
-5. do not implement code changes in this step
-6. write findings into:
-   - docs/ux-review-home-settings.md
+
+1. Create an ExecPlan.
+
+2. Implement the critical and important UX improvements from docs/ux-review-home-settings.md for:
+   - Home
+   - Settings
+   - route/shell integration for those screens
+
+3. Keep scope bounded to Home + Settings UX and the minimum supporting behavior needed to make those screens feel polished and functional.
+
+4. Preserve existing functionality unless a reviewed issue requires a behavior fix.
+
+5. Improve responsive behavior across mobile, tablet, and desktop.
+
+6. Add a strong round of testing for this slice:
+   - update/add focused unit tests for new logic
+   - add screen-level tests where practical
+   - add navigation/render tests where practical
+   - ensure settings persistence behavior is covered
+   - ensure Home empty states and populated states are covered where practical
+
+7. Run a thorough verification pass:
+   - npm run typecheck
+   - npm run lint
+   - npm run test
+   - npm run build
+
+8. If test coverage or test reliability is weak in this area, improve it with focused, maintainable tests only. Avoid meaningless tests.
+
+9. Update:
+   - requirements/decisions.md
    - requirements/session-handoff.md
-7. include the exact recommended next prompt in session-handoff
+
+10. In session-handoff, include:
+   - UX issues fixed
+   - tests added or improved
+   - current status of Home and Settings
+   - known limitations
+   - exact recommended next prompt
+
+11. Commit with a clear message:
+   feat(ux): refine home and settings experience and strengthen tests
