@@ -1,0 +1,108 @@
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import App from '../App';
+import type { SessionLog } from '../types/sessionLog';
+
+const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+
+function createSessionLog(
+  id: string,
+  endedAt: string,
+  source: SessionLog['source'],
+  status: SessionLog['status'],
+  completedDurationSeconds: number
+): SessionLog {
+  const endedAtMs = Date.parse(endedAt);
+  const startedAt = new Date(endedAtMs - completedDurationSeconds * 1000).toISOString();
+
+  return {
+    id,
+    startedAt,
+    endedAt,
+    meditationType: 'Vipassana',
+    intendedDurationSeconds: Math.max(300, completedDurationSeconds),
+    completedDurationSeconds,
+    status,
+    source,
+    startSound: 'None',
+    endSound: 'Temple Bell',
+    intervalEnabled: false,
+    intervalMinutes: 0,
+    intervalSound: 'None',
+  };
+}
+
+describe('Sankalpa summary UX', () => {
+  it('does not render summary metrics for an invalid custom date range', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-1', new Date(2026, 2, 24, 7, 30, 0, 0).toISOString(), 'auto log', 'completed', 1200),
+        createSessionLog('log-2', new Date(2026, 2, 23, 18, 15, 0, 0).toISOString(), 'manual log', 'ended early', 600),
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/total completed duration/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/summary range/i), { target: { value: 'custom' } });
+    fireEvent.change(screen.getByLabelText(/^start date$/i), { target: { value: '2026-03-24' } });
+    fireEvent.change(screen.getByLabelText(/^end date$/i), { target: { value: '2026-03-20' } });
+
+    expect(screen.getByText(/custom date range is invalid/i)).toBeInTheDocument();
+    expect(screen.getByText(/fix custom range to view summary/i)).toBeInTheDocument();
+    expect(screen.queryByText(/total completed duration/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/by meditation type/i)).not.toBeInTheDocument();
+  });
+
+  it('shows by-time-of-day summary and explicit by-source labels', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-1', new Date(2026, 2, 24, 6, 0, 0, 0).toISOString(), 'auto log', 'completed', 900),
+        createSessionLog('log-2', new Date(2026, 2, 24, 19, 0, 0, 0).toISOString(), 'manual log', 'ended early', 600),
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const timeOfDayHeading = screen.getByRole('heading', { name: /by time of day/i });
+    expect(timeOfDayHeading).toBeInTheDocument();
+
+    const timeOfDaySection = timeOfDayHeading.closest('.summary-by-type');
+    expect(timeOfDaySection).not.toBeNull();
+    if (!timeOfDaySection) {
+      throw new Error('Expected by-time-of-day section to exist');
+    }
+
+    expect(within(timeOfDaySection).getByText(/morning \(5:00-11:59\)/i)).toBeInTheDocument();
+    expect(within(timeOfDaySection).getByText(/evening \(17:00-20:59\)/i)).toBeInTheDocument();
+
+    const bySourceHeading = screen.getByRole('heading', { name: /by source/i });
+    const bySourceSection = bySourceHeading.closest('.summary-by-type');
+    expect(bySourceSection).not.toBeNull();
+    if (!bySourceSection) {
+      throw new Error('Expected by-source section to exist');
+    }
+
+    const manualSourceRow = within(bySourceSection).getByText(/^manual log$/i).closest('li');
+    expect(manualSourceRow).not.toBeNull();
+
+    if (!manualSourceRow) {
+      throw new Error('Expected manual source row to exist');
+    }
+
+    expect(within(manualSourceRow).getByText(/completed: 0/i)).toBeInTheDocument();
+    expect(within(manualSourceRow).getByText(/ended early: 1/i)).toBeInTheDocument();
+  });
+});

@@ -1,5 +1,7 @@
 import type { SessionLog, SessionLogSource } from '../types/sessionLog';
+import type { TimeOfDayBucket } from '../types/sankalpa';
 import type { MeditationType } from '../types/timer';
+import { getTimeOfDayBucket, timeOfDayBuckets } from './sankalpa';
 
 const meditationTypeOrder: readonly MeditationType[] = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'];
 const summarySourceOrder: readonly SessionLogSource[] = ['auto log', 'manual log'];
@@ -28,6 +30,14 @@ export interface SummaryBySource {
   readonly totalDurationSeconds: number;
 }
 
+export interface SummaryByTimeOfDay {
+  readonly timeOfDayBucket: TimeOfDayBucket;
+  readonly sessionLogs: number;
+  readonly completedSessionLogs: number;
+  readonly endedEarlySessionLogs: number;
+  readonly totalDurationSeconds: number;
+}
+
 export interface SummaryDateRange {
   readonly startAtMs: number | null;
   readonly endAtMs: number | null;
@@ -38,6 +48,7 @@ export interface SummarySnapshot {
   readonly overallSummary: OverallSummary;
   readonly byTypeSummary: SummaryByType[];
   readonly bySourceSummary: SummaryBySource[];
+  readonly byTimeOfDaySummary: SummaryByTimeOfDay[];
 }
 
 function parseDateInputToBoundaryMs(value: string, boundary: 'start' | 'end'): number | null {
@@ -168,6 +179,21 @@ export function deriveSummaryBySource(sessionLogs: readonly SessionLog[]): Summa
   });
 }
 
+export function deriveSummaryByTimeOfDay(sessionLogs: readonly SessionLog[]): SummaryByTimeOfDay[] {
+  return timeOfDayBuckets.map((timeOfDayBucket) => {
+    const bucketLogs = sessionLogs.filter((entry) => getTimeOfDayBucket(new Date(entry.endedAt)) === timeOfDayBucket);
+    const completedSessionLogs = bucketLogs.filter((entry) => entry.status === 'completed').length;
+
+    return {
+      timeOfDayBucket,
+      sessionLogs: bucketLogs.length,
+      completedSessionLogs,
+      endedEarlySessionLogs: bucketLogs.length - completedSessionLogs,
+      totalDurationSeconds: bucketLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0),
+    };
+  });
+}
+
 export function deriveSummarySnapshot(
   sessionLogs: readonly SessionLog[],
   dateRange: SummaryDateRange = { startAtMs: null, endAtMs: null }
@@ -179,5 +205,6 @@ export function deriveSummarySnapshot(
     overallSummary: deriveOverallSummary(filteredLogs),
     byTypeSummary: deriveSummaryByType(filteredLogs),
     bySourceSummary: deriveSummaryBySource(filteredLogs),
+    byTimeOfDaySummary: deriveSummaryByTimeOfDay(filteredLogs),
   };
 }

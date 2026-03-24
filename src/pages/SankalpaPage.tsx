@@ -188,7 +188,7 @@ export default function SankalpaPage() {
 
     if (!customStartDate || !customEndDate) {
       return {
-        range: { startAtMs: null, endAtMs: null },
+        range: null,
         error: 'Select both start and end dates for a custom range.',
         label: 'Custom range',
       };
@@ -197,7 +197,7 @@ export default function SankalpaPage() {
     const range = deriveDateRangeFromInputs(customStartDate, customEndDate);
     if (!range) {
       return {
-        range: { startAtMs: null, endAtMs: null },
+        range: null,
         error: 'Custom date range is invalid. Ensure start is on or before end.',
         label: 'Custom range',
       };
@@ -210,10 +210,13 @@ export default function SankalpaPage() {
     };
   }, [customEndDate, customStartDate, last30StartInput, last7StartInput, summaryRangePreset, todayDateInput]);
 
-  const summarySnapshot = useMemo(
-    () => deriveSummarySnapshot(sessionLogs, summaryRangeSelection.range),
-    [sessionLogs, summaryRangeSelection.range]
-  );
+  const summarySnapshot = useMemo(() => {
+    if (!summaryRangeSelection.range) {
+      return null;
+    }
+
+    return deriveSummarySnapshot(sessionLogs, summaryRangeSelection.range);
+  }, [sessionLogs, summaryRangeSelection.range]);
   const progressByStatus = useMemo(() => {
     const now = new Date();
     const entries = sankalpas
@@ -240,7 +243,6 @@ export default function SankalpaPage() {
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
-  const hasSummaryEntries = summarySnapshot.sessionLogs.length > 0;
 
   return (
     <section className="page-card sankalpa-screen">
@@ -297,7 +299,12 @@ export default function SankalpaPage() {
             <p>No session log entries yet.</p>
             <p>Start sessions in Practice or add a manual log in History to unlock summaries.</p>
           </div>
-        ) : !hasSummaryEntries ? (
+        ) : summaryRangeSelection.error || !summarySnapshot ? (
+          <div className="empty-state">
+            <p>Fix custom range to view summary.</p>
+            <p>Choose a start date on or before the end date.</p>
+          </div>
+        ) : summarySnapshot.sessionLogs.length === 0 ? (
           <div className="empty-state">
             <p>No session log entries in this date range.</p>
             <p>Try a wider range to review your meditation summary.</p>
@@ -348,19 +355,29 @@ export default function SankalpaPage() {
                   {summarySnapshot.bySourceSummary.map((entry) => (
                     <li key={entry.source} className="summary-by-type-row">
                       <span>{entry.source}</span>
-                      <span>
-                        {entry.sessionLogs} session logs ({entry.completedSessionLogs}/{entry.endedEarlySessionLogs})
+                      <span className="summary-detail">
+                        {entry.sessionLogs} session logs · completed: {entry.completedSessionLogs} · ended early:{' '}
+                        {entry.endedEarlySessionLogs}
                       </span>
                       <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </div>
 
-            <p className="section-subtitle">
-              Source detail format: <code>total (completed/ended early)</code>.
-            </p>
+              <div className="summary-by-type">
+                <h4 className="section-title">By time of day</h4>
+                <ul className="summary-by-type-list">
+                  {summarySnapshot.byTimeOfDaySummary.map((entry) => (
+                    <li key={entry.timeOfDayBucket} className="summary-by-type-row">
+                      <span>{timeOfDayBucketLabels[entry.timeOfDayBucket]}</span>
+                      <span>{entry.sessionLogs} session logs</span>
+                      <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </>
         )}
       </section>

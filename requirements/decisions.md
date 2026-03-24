@@ -253,3 +253,17 @@
   - `auto log`
   - `manual log`
 - Keep this slice local-first; do not add backend summary fetching in this front-end-only workspace.
+
+### 2026-03-24 summaries review-remediation decisions
+- Fix trust-critical custom-range behavior by treating invalid custom input as `no valid summary window`:
+  - show correction guidance
+  - do not render summary metric sections until range is valid
+- Extend summaries to include required `by time of day` insight using existing shared bucket semantics:
+  - `morning`
+  - `afternoon`
+  - `evening`
+  - `night`
+- Improve by-source comprehension with explicit in-row metric labels:
+  - `completed`
+  - `ended early`
+- Keep remediation scope bounded to critical/important summary-review findings only; defer nice-to-have items.

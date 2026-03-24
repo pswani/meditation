@@ -5,6 +5,7 @@ import {
   deriveDateRangeFromInputs,
   deriveOverallSummary,
   deriveSummaryBySource,
+  deriveSummaryByTimeOfDay,
   deriveSummaryByType,
   deriveSummarySnapshot,
   filterSessionLogsByDateRange,
@@ -128,6 +129,36 @@ describe('summary helpers', () => {
     });
   });
 
+  it('derives by-time-of-day summary rows with stable bucket coverage', () => {
+    const byTimeOfDay = deriveSummaryByTimeOfDay(sampleLogs);
+
+    expect(byTimeOfDay).toHaveLength(4);
+    expect(byTimeOfDay.find((entry) => entry.timeOfDayBucket === 'morning')).toMatchObject({
+      sessionLogs: 2,
+      completedSessionLogs: 2,
+      endedEarlySessionLogs: 0,
+      totalDurationSeconds: 3000,
+    });
+    expect(byTimeOfDay.find((entry) => entry.timeOfDayBucket === 'afternoon')).toMatchObject({
+      sessionLogs: 1,
+      completedSessionLogs: 0,
+      endedEarlySessionLogs: 1,
+      totalDurationSeconds: 900,
+    });
+    expect(byTimeOfDay.find((entry) => entry.timeOfDayBucket === 'evening')).toMatchObject({
+      sessionLogs: 1,
+      completedSessionLogs: 1,
+      endedEarlySessionLogs: 0,
+      totalDurationSeconds: 600,
+    });
+    expect(byTimeOfDay.find((entry) => entry.timeOfDayBucket === 'night')).toMatchObject({
+      sessionLogs: 0,
+      completedSessionLogs: 0,
+      endedEarlySessionLogs: 0,
+      totalDurationSeconds: 0,
+    });
+  });
+
   it('derives an input-safe date range and rejects malformed ranges', () => {
     expect(deriveDateRangeFromInputs('2026-03-20', '2026-03-24')).toMatchObject({
       startAtMs: expect.any(Number),
@@ -161,6 +192,10 @@ describe('summary helpers', () => {
     expect(snapshot.bySourceSummary.find((entry) => entry.source === 'manual log')).toMatchObject({
       sessionLogs: 2,
       totalDurationSeconds: 2700,
+    });
+    expect(snapshot.byTimeOfDaySummary.find((entry) => entry.timeOfDayBucket === 'morning')).toMatchObject({
+      sessionLogs: 1,
+      totalDurationSeconds: 1800,
     });
   });
 
