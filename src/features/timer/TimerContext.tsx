@@ -164,6 +164,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       validation: state.validation,
       activeSession: state.activeSession,
       lastOutcome: state.lastOutcome,
+      sessionLogs: state.sessionLogs,
       recentLogs: state.sessionLogs.slice(0, 20),
       customPlays,
       playlists,

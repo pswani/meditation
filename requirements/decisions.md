@@ -73,3 +73,21 @@
 - Surface lightweight run-context lines in `history` using run metadata to reduce cognitive fragmentation of per-item playlist logs.
 - Reduce phone control density in playlist item ordering by switching move/remove actions to compact touch-friendly controls.
 - Add explicit `Up next` context on the active playlist run screen to improve flow predictability.
+
+### 2026-03-23 summaries and sankalpa vertical slice decisions
+- Implement summaries and sankalpa on the existing route-level `Sankalpa` screen (`/goals`) to keep navigation calm and bounded.
+- Derive summaries from the full local `session log` set (not just `recent` entries):
+  - overall summary
+  - by meditation type summary
+- Add a dedicated local `sankalpa` model with localStorage persistence.
+- Support two sankalpa goal types:
+  - `duration-based`
+  - `session-count-based`
+- Apply optional sankalpa filters:
+  - meditation type
+  - time-of-day bucket
+- Define progress counting rules explicitly:
+  - both `auto log` and `manual log` entries count
+  - duration-based goals sum `completedDurationSeconds` (including partial ended-early logs)
+  - session-count goals count matching `session log` entries
+  - matching is constrained to the goal window (`createdAt` through `createdAt + days`)

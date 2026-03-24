@@ -19,6 +19,7 @@ export interface TimerContextValue {
   readonly validation: ReturnType<typeof createInitialTimerState>['validation'];
   readonly activeSession: ReturnType<typeof createInitialTimerState>['activeSession'];
   readonly lastOutcome: ReturnType<typeof createInitialTimerState>['lastOutcome'];
+  readonly sessionLogs: readonly SessionLog[];
   readonly recentLogs: readonly SessionLog[];
   readonly customPlays: readonly CustomPlay[];
   readonly playlists: readonly Playlist[];
