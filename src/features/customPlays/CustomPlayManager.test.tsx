@@ -1,10 +1,18 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TimerProvider } from '../timer/TimerContext';
 import PracticePage from '../../pages/PracticePage';
 
 describe('CustomPlayManager UX', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   it('applies custom play values to timer setup and confirms deletion', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
@@ -23,6 +31,7 @@ describe('CustomPlayManager UX', () => {
     fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });
     fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Soft Chime' } });
     fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Wood Block' } });
+    expect(screen.getByText(/choose a linked media session from managed metadata/i)).toBeInTheDocument();
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
     fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));

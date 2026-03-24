@@ -49,4 +49,26 @@ describe('playlist helpers', () => {
 
     expect(total).toBe(45);
   });
+
+  it('ignores non-finite durations in derived total', () => {
+    const total = computePlaylistTotalDurationMinutes([
+      { durationMinutes: 10 },
+      { durationMinutes: Number.NaN },
+      { durationMinutes: Number.POSITIVE_INFINITY },
+      { durationMinutes: 5 },
+    ]);
+
+    expect(total).toBe(15);
+  });
+
+  it('keeps draft order unchanged when move indices are out of bounds', () => {
+    const draft = createInitialPlaylistDraft();
+    const items = [
+      { ...draft.items[0], id: 'a', meditationType: 'Vipassana' as const, durationMinutes: 10 },
+      { ...draft.items[0], id: 'b', meditationType: 'Ajapa' as const, durationMinutes: 20 },
+    ];
+
+    expect(movePlaylistDraftItem(items, -1, 1).map((item) => item.id)).toEqual(['a', 'b']);
+    expect(movePlaylistDraftItem(items, 1, 1).map((item) => item.id)).toEqual(['a', 'b']);
+  });
 });

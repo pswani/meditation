@@ -20,4 +20,18 @@ describe('media asset api boundary', () => {
     const asset = findCustomPlayMediaAssetById('media-vipassana-sit-20');
     expect(asset?.label).toMatch(/vipassana sit/i);
   });
+
+  it('returns undefined for unknown media ids', () => {
+    expect(findCustomPlayMediaAssetById('missing-media-id')).toBeNull();
+  });
+
+  it('returns metadata entries with required selection fields', async () => {
+    const assets = await listCustomPlayMediaAssets();
+    const first = assets[0];
+
+    expect(first?.id).toBeTruthy();
+    expect(first?.label).toBeTruthy();
+    expect(first?.durationSeconds).toBeGreaterThan(0);
+    expect(first?.filePath).toContain('/media/custom-plays/');
+  });
 });

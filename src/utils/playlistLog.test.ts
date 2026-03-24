@@ -54,4 +54,26 @@ describe('playlist logging helpers', () => {
     expect(entry.intendedDurationSeconds).toBe(720);
     expect(entry.completedDurationSeconds).toBe(720);
   });
+
+  it('clamps negative completed duration to zero', () => {
+    const entry = buildPlaylistItemLogEntry({
+      playlistId: 'playlist-1',
+      playlistName: 'Morning Sequence',
+      playlistRunId: 'run-123',
+      playlistRunStartedAt: '2026-03-23T10:00:00.000Z',
+      item: {
+        id: 'item-3',
+        meditationType: 'Tratak',
+        durationMinutes: 8,
+      },
+      itemPosition: 3,
+      itemCount: 3,
+      startedAt: '2026-03-23T10:22:00.000Z',
+      endedAt: new Date('2026-03-23T10:23:00.000Z'),
+      completedDurationSeconds: -42,
+      status: 'ended early',
+    });
+
+    expect(entry.completedDurationSeconds).toBe(0);
+  });
 });

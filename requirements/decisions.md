@@ -222,3 +222,17 @@
   - require parseable and ordered timestamps
   - require non-negative and coherent duration values
   - require coherent optional playlist metadata when present.
+
+### 2026-03-24 practice composition testing hardening decisions
+- Keep this slice QA-only and avoid product-behavior changes while increasing coverage for Milestone B load-bearing rules.
+- Strengthen manual-log coverage with boundary semantics:
+  - allow `session timestamp` exactly equal to `now`
+  - assert invalid timestamp rejection during manual log construction
+- Strengthen manual-vs-auto differentiation confidence at route-level history rendering/filter behavior.
+- Extend playlist rule coverage for less-traveled branches:
+  - `playlist not found`
+  - `playlist has no items`
+  - delete-allowed path when no active run.
+- Extend playlist logging helper coverage for negative-duration clamp behavior (`0` floor).
+- Extend playlist REST-boundary tests to verify list-path normalization behavior against mixed valid/malformed stored payloads.
+- Improve touched custom-play UI test reliability with explicit `localStorage` and DOM cleanup between tests.

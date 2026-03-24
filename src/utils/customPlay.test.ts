@@ -97,4 +97,25 @@ describe('custom play helpers', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.mediaAssetId).toMatch(/no longer available/i);
   });
+
+  it('trims labels and clears media metadata when media id is not present', () => {
+    const created = createCustomPlay(
+      {
+        name: '  Evening Winddown  ',
+        meditationType: 'Sahaj',
+        durationMinutes: 18,
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        mediaAssetId: '',
+        recordingLabel: '  gentle close  ',
+      },
+      new Date('2026-03-24T10:00:00.000Z')
+    );
+
+    expect(created.name).toBe('Evening Winddown');
+    expect(created.recordingLabel).toBe('gentle close');
+    expect(created.mediaAssetId).toBe('');
+    expect(created.mediaAssetLabel).toBe('');
+    expect(created.mediaAssetPath).toBe('');
+  });
 });

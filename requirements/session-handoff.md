@@ -1,56 +1,49 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-b-practice-composition/09-fix-practice-composition-review-findings.md` is complete.
+Prompt `prompts/milestone-b-practice-composition/10-test-practice-composition.md` is complete.
 
-Critical and important Milestone B review findings were remediated across timer/playlist continuity, practice start clarity, history filtering/usability, and session-log storage integrity.
+Milestone B QA coverage was hardened across manual logging, custom plays/media behavior, playlist logic/run rules, and REST boundary integration checks.
 
 ## What was implemented
 - Added and completed ExecPlan:
-  - `requirements/execplan-practice-composition-remediation.md`
-- Added active runtime persistence and load boundaries:
-  - `src/utils/storage.ts`
-  - persisted snapshots for active timer + playlist run (with pause state)
-  - stricter semantic validation for loaded `session log` entries
-- Added focused storage tests:
-  - `src/utils/storage.test.ts`
-- Added safe active-state hydration and recovery messaging:
-  - `src/features/timer/TimerContext.tsx`
-  - `src/features/timer/timerContextObject.ts`
-  - `src/app/AppShell.tsx`
-- Improved timer-start UX when playlist run is active:
-  - `src/pages/PracticePage.tsx`
-  - `src/pages/PracticePage.test.tsx`
-- Improved History integration with filters and progressive reveal:
-  - `src/pages/HistoryPage.tsx`
+  - `requirements/execplan-practice-composition-testing-qa.md`
+- Strengthened manual logging tests:
+  - `src/utils/manualLog.test.ts`
+  - added boundary acceptance (`session timestamp == now`) and invalid-build rejection coverage
+- Strengthened manual vs auto differentiation coverage:
   - `src/pages/HistoryPage.test.tsx`
-  - `src/index.css` (history filter layout support)
-
-## Review findings addressed
-### Critical
-- Active timer and playlist run state now persist and recover safely across refresh/reload interruptions.
-
-### Important
-- `Start Session` no longer fails silently while a playlist run is active (explicitly blocked in UI with guidance).
-- History now includes lightweight filters (`source`, `status`) and `Show More` progressive reveal over full stored logs.
-- Session-log load path now rejects semantically invalid entries (meditation type/date/duration/playlist metadata coherence checks).
+  - explicit source-badge rendering and source filter behavior checks
+- Strengthened custom play/media QA coverage:
+  - `src/utils/customPlay.test.ts`
+  - `src/features/customPlays/CustomPlayManager.test.tsx`
+  - `src/utils/mediaAssetApi.test.ts`
+- Strengthened playlist helper/run/logging QA coverage:
+  - `src/utils/playlist.test.ts`
+  - `src/utils/playlistRunPolicy.test.ts`
+  - `src/utils/playlistLog.test.ts`
+- Strengthened REST integration boundary coverage for playlists:
+  - `src/utils/playlistApi.test.ts`
+  - added list-boundary normalization assertion for mixed valid/malformed payloads
+- Improved fragile test reliability in touched UI tests:
+  - explicit localStorage and cleanup usage in custom-play manager tests
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
   - 21 test files
-  - 90 tests passing
+  - 103 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-practice-composition-remediation.md`.
-- Updated `requirements/decisions.md` with remediation decisions.
+- Added and completed `requirements/execplan-practice-composition-testing-qa.md`.
+- Updated `requirements/decisions.md` with QA hardening decisions.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- Recovery messaging currently surfaces one consolidated timer-or-playlist message at app load time.
-- Persisted active-state recovery remains local-first; backend synchronization for in-progress sessions is out of scope in this repository.
+- This pass intentionally focused on Milestone B test hardening only and did not change runtime product behavior.
+- QA coverage is still local-first and front-end scoped; backend service behavior remains out of scope in this workspace.
 
 ## Exact recommended next prompt
 Read:
@@ -67,21 +60,21 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for targeted Milestone B testing and QA.
-2. Strengthen testing for:
-   - manual log validation
-   - manual vs auto log differentiation
-   - custom play validation and persistence
-   - media asset selection behavior
-   - playlist ordering and total duration logic
-   - playlist run/logging rules
-   - relevant REST integration boundaries for this milestone
-3. Improve fragile tests if needed.
-4. Run:
+1. Create an ExecPlan for summaries.
+2. Implement:
+   - overall summaries
+   - by-type summaries
+   - by-source summaries if supported
+   - date-range summary views
+3. Keep the UX calm and readable, not dashboard-heavy.
+4. Use clean REST integration if summaries are derived or fetched from the back end.
+5. Make it responsive across mobile, tablet, and desktop.
+6. Add focused tests for summary derivation logic and any relevant API behavior.
+7. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-5. Update decisions and session-handoff.
-6. Commit with a clear message:
-   test(composition): harden milestone b flows and integration points
+8. Update decisions and session-handoff.
+9. Commit with a clear message:
+   feat(insight): add meditation summaries

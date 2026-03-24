@@ -129,4 +129,61 @@ describe('HistoryPage UX', () => {
     fireEvent.change(screen.getByLabelText(/status filter/i), { target: { value: 'ended early' } });
     expect(screen.getByText(/showing 4 of 4 filtered entries/i)).toBeInTheDocument();
   });
+
+  it('differentiates manual vs auto logs and allows filtering by source', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        {
+          id: 'auto-log-1',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Vipassana',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1200,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+        {
+          id: 'manual-log-1',
+          startedAt: '2026-03-24T09:30:00.000Z',
+          endedAt: '2026-03-24T09:45:00.000Z',
+          meditationType: 'Ajapa',
+          intendedDurationSeconds: 900,
+          completedDurationSeconds: 900,
+          status: 'completed',
+          source: 'manual log',
+          startSound: 'None',
+          endSound: 'None',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/history" element={<HistoryPage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/^auto log$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/source filter/i), { target: { value: 'manual log' } });
+
+    expect(screen.queryByText(/^auto log$/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+  });
 });

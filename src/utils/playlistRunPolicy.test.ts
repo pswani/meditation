@@ -70,6 +70,40 @@ describe('playlist run policy', () => {
     expect(result).toEqual({ started: true });
   });
 
+  it('blocks playlist start when playlist is missing', () => {
+    const result = evaluatePlaylistRunStart({
+      playlistId: 'missing-playlist',
+      playlists: [samplePlaylist],
+      activeTimerSession: false,
+      activePlaylistRun: null,
+    });
+
+    expect(result).toEqual({
+      started: false,
+      reason: 'playlist not found',
+    });
+  });
+
+  it('blocks playlist start when selected playlist has no items', () => {
+    const result = evaluatePlaylistRunStart({
+      playlistId: 'empty-playlist',
+      playlists: [
+        {
+          ...samplePlaylist,
+          id: 'empty-playlist',
+          items: [],
+        },
+      ],
+      activeTimerSession: false,
+      activePlaylistRun: null,
+    });
+
+    expect(result).toEqual({
+      started: false,
+      reason: 'playlist has no items',
+    });
+  });
+
   it('blocks deleting the actively running playlist', () => {
     const result = evaluatePlaylistDelete(samplePlaylist.id, {
       runId: 'run-1',
@@ -90,6 +124,12 @@ describe('playlist run policy', () => {
     expect(result).toEqual({
       deleted: false,
       reason: 'playlist run active',
+    });
+  });
+
+  it('allows deleting playlist when no active run blocks it', () => {
+    expect(evaluatePlaylistDelete(samplePlaylist.id, null)).toEqual({
+      deleted: true,
     });
   });
 });
