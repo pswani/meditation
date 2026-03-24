@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
+import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
-import { meditationTypes } from '../timer/constants';
+import { listCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
+import { meditationTypes, soundOptions } from '../timer/constants';
 import { useTimer } from '../timer/useTimer';
 
 const initialDraft: CustomPlayDraft = {
   name: '',
   meditationType: '',
   durationMinutes: 20,
+  startSound: 'None',
+  endSound: 'Temple Bell',
+  mediaAssetId: '',
   recordingLabel: '',
 };
 
@@ -21,6 +26,30 @@ export default function CustomPlayManager() {
   const [editId, setEditId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [appliedPlayId, setAppliedPlayId] = useState<string | null>(null);
+  const [mediaAssets, setMediaAssets] = useState<MediaAssetMetadata[]>([]);
+  const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    listCustomPlayMediaAssets()
+      .then((assets) => {
+        if (!mounted) {
+          return;
+        }
+        setMediaAssets(assets);
+      })
+      .catch(() => {
+        if (!mounted) {
+          return;
+        }
+        setMediaLoadError('Unable to load media session options right now.');
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,9 +103,14 @@ export default function CustomPlayManager() {
       name: match.name,
       meditationType: match.meditationType,
       durationMinutes: match.durationMinutes,
+      startSound: match.startSound,
+      endSound: match.endSound,
+      mediaAssetId: match.mediaAssetId,
       recordingLabel: match.recordingLabel,
     });
   }
+
+  const selectedMediaAsset = mediaAssets.find((asset) => asset.id === draft.mediaAssetId) ?? null;
 
   return (
     <section className="custom-play-panel">
@@ -132,11 +166,80 @@ export default function CustomPlayManager() {
         </label>
 
         <label>
-          <span>Recording label (optional)</span>
+          <span>Custom play start sound (optional)</span>
+          <select
+            value={draft.startSound}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                startSound: event.target.value,
+              }))
+            }
+          >
+            {soundOptions.map((sound) => (
+              <option key={sound} value={sound}>
+                {sound}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          <span>Custom play end sound (optional)</span>
+          <select
+            value={draft.endSound}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                endSound: event.target.value,
+              }))
+            }
+          >
+            {soundOptions.map((sound) => (
+              <option key={sound} value={sound}>
+                {sound}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          <span>Media session (optional)</span>
+          <select
+            value={draft.mediaAssetId}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                mediaAssetId: event.target.value,
+              }))
+            }
+          >
+            <option value="">No linked media session</option>
+            {mediaAssets.map((asset) => (
+              <option key={asset.id} value={asset.id}>
+                {asset.label}
+              </option>
+            ))}
+          </select>
+          {errors.mediaAssetId ? (
+            <small className="error-text">{errors.mediaAssetId}</small>
+          ) : selectedMediaAsset ? (
+            <small className="hint-text">
+              Path: {selectedMediaAsset.filePath} · {(selectedMediaAsset.durationSeconds / 60).toFixed(0)} min
+            </small>
+          ) : mediaLoadError ? (
+            <small className="error-text">{mediaLoadError}</small>
+          ) : (
+            <small className="hint-text">Choose an existing media session metadata entry.</small>
+          )}
+        </label>
+
+        <label>
+          <span>Session note (optional)</span>
           <input
             value={draft.recordingLabel}
             onChange={(event) => setDraft((current) => ({ ...current, recordingLabel: event.target.value }))}
-            placeholder="Session A"
+            placeholder="Breath emphasis"
           />
         </label>
 
@@ -179,7 +282,15 @@ export default function CustomPlayManager() {
                     {play.favorite ? <span className="pill ok">favorite</span> : null}
                   </div>
 
-                  {play.recordingLabel ? <p className="section-subtitle">Recording: {play.recordingLabel}</p> : null}
+                  {play.recordingLabel ? <p className="section-subtitle">Session note: {play.recordingLabel}</p> : null}
+                  <p className="section-subtitle">
+                    Sounds: {play.startSound} start · {play.endSound} end
+                  </p>
+                  {play.mediaAssetLabel ? (
+                    <p className="section-subtitle">
+                      Media: {play.mediaAssetLabel} · {play.mediaAssetPath}
+                    </p>
+                  ) : null}
                   {appliedPlayId === play.id ? (
                     <p className="section-subtitle" role="status">
                       Custom play "{play.name}" applied to timer setup.

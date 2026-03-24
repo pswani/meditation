@@ -8,6 +8,9 @@ describe('custom play helpers', () => {
       name: '',
       meditationType: '',
       durationMinutes: 0,
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      mediaAssetId: '',
       recordingLabel: '',
     });
 
@@ -23,6 +26,9 @@ describe('custom play helpers', () => {
         name: 'Morning Focus',
         meditationType: 'Vipassana',
         durationMinutes: 20,
+        startSound: 'Soft Chime',
+        endSound: 'Wood Block',
+        mediaAssetId: 'media-vipassana-sit-20',
         recordingLabel: 'Session A',
       },
       new Date('2026-03-23T10:00:00.000Z')
@@ -34,6 +40,9 @@ describe('custom play helpers', () => {
         name: 'Morning Focus Updated',
         meditationType: 'Ajapa',
         durationMinutes: 25,
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        mediaAssetId: 'media-ajapa-breath-15',
         recordingLabel: 'Session B',
       },
       new Date('2026-03-23T11:00:00.000Z')
@@ -42,6 +51,10 @@ describe('custom play helpers', () => {
     expect(updated.name).toBe('Morning Focus Updated');
     expect(updated.meditationType).toBe('Ajapa');
     expect(updated.durationMinutes).toBe(25);
+    expect(updated.startSound).toBe('None');
+    expect(updated.endSound).toBe('Temple Bell');
+    expect(updated.mediaAssetLabel).toBe('Ajapa Breath Cycle (15 min)');
+    expect(updated.mediaAssetPath).toContain('/media/custom-plays/');
     expect(updated.updatedAt).toBe('2026-03-23T11:00:00.000Z');
   });
 
@@ -59,11 +72,29 @@ describe('custom play helpers', () => {
     const next = applyCustomPlayToTimerSettings(settings, {
       durationMinutes: 30,
       meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Wood Block',
     });
 
     expect(next.durationMinutes).toBe(30);
     expect(next.meditationType).toBe('Vipassana');
-    expect(next.startSound).toBe('Soft Chime');
+    expect(next.startSound).toBe('None');
+    expect(next.endSound).toBe('Wood Block');
     expect(next.intervalEnabled).toBe(true);
+  });
+
+  it('flags unknown media-session selections', () => {
+    const result = validateCustomPlayDraft({
+      name: 'Evening Winddown',
+      meditationType: 'Sahaj',
+      durationMinutes: 18,
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      mediaAssetId: 'missing-asset-id',
+      recordingLabel: '',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.mediaAssetId).toMatch(/no longer available/i);
   });
 });

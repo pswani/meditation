@@ -63,6 +63,41 @@ function isSessionLog(value: unknown): value is SessionLog {
   );
 }
 
+function normalizeCustomPlay(value: unknown): CustomPlay | null {
+  if (!isObjectRecord(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.name !== 'string' ||
+    typeof candidate.meditationType !== 'string' ||
+    typeof candidate.durationMinutes !== 'number' ||
+    typeof candidate.favorite !== 'boolean' ||
+    typeof candidate.createdAt !== 'string' ||
+    typeof candidate.updatedAt !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    name: candidate.name,
+    meditationType: candidate.meditationType as CustomPlay['meditationType'],
+    durationMinutes: candidate.durationMinutes,
+    startSound: typeof candidate.startSound === 'string' ? candidate.startSound : 'None',
+    endSound: typeof candidate.endSound === 'string' ? candidate.endSound : 'Temple Bell',
+    mediaAssetId: typeof candidate.mediaAssetId === 'string' ? candidate.mediaAssetId : '',
+    mediaAssetLabel: typeof candidate.mediaAssetLabel === 'string' ? candidate.mediaAssetLabel : '',
+    mediaAssetPath: typeof candidate.mediaAssetPath === 'string' ? candidate.mediaAssetPath : '',
+    recordingLabel: typeof candidate.recordingLabel === 'string' ? candidate.recordingLabel : '',
+    favorite: candidate.favorite,
+    createdAt: candidate.createdAt,
+    updatedAt: candidate.updatedAt,
+  };
+}
+
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
   if (!raw) {
@@ -114,7 +149,7 @@ export function loadCustomPlays(): CustomPlay[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as CustomPlay[]) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeCustomPlay).filter((entry): entry is CustomPlay => entry !== null) : [];
   } catch {
     return [];
   }

@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { CustomPlay } from '../types/customPlay';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
-import { loadSessionLogs, loadTimerSettings, saveSessionLogs, saveTimerSettings } from './storage';
+import { loadCustomPlays, loadSessionLogs, loadTimerSettings, saveCustomPlays, saveSessionLogs, saveTimerSettings } from './storage';
 
 const rawTimerSettingsKey = 'meditation.timerSettings.v1';
 const rawSessionLogsKey = 'meditation.sessionLogs.v1';
+const rawCustomPlaysKey = 'meditation.customPlays.v1';
 
 describe('storage timer settings', () => {
   beforeEach(() => {
@@ -141,6 +143,70 @@ describe('storage session logs', () => {
         intervalEnabled: false,
         intervalMinutes: 0,
         intervalSound: 'None',
+      },
+    ]);
+  });
+});
+
+describe('storage custom plays', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads extended custom-play fields', () => {
+    const customPlays: CustomPlay[] = [
+      {
+        id: 'play-1',
+        name: 'Morning Focus',
+        meditationType: 'Vipassana',
+        durationMinutes: 20,
+        startSound: 'Soft Chime',
+        endSound: 'Temple Bell',
+        mediaAssetId: 'media-vipassana-sit-20',
+        mediaAssetLabel: 'Vipassana Sit (20 min)',
+        mediaAssetPath: '/media/custom-plays/vipassana-sit-20.mp3',
+        recordingLabel: 'Session A',
+        favorite: true,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+      },
+    ];
+
+    saveCustomPlays(customPlays);
+    expect(loadCustomPlays()).toEqual(customPlays);
+  });
+
+  it('applies defaults for legacy custom-play entries while preserving valid shape', () => {
+    localStorage.setItem(
+      rawCustomPlaysKey,
+      JSON.stringify([
+        {
+          id: 'legacy-play-1',
+          name: 'Legacy Custom Play',
+          meditationType: 'Ajapa',
+          durationMinutes: 25,
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    expect(loadCustomPlays()).toEqual([
+      {
+        id: 'legacy-play-1',
+        name: 'Legacy Custom Play',
+        meditationType: 'Ajapa',
+        durationMinutes: 25,
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        mediaAssetId: '',
+        mediaAssetLabel: '',
+        mediaAssetPath: '',
+        recordingLabel: '',
+        favorite: false,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
       },
     ]);
   });

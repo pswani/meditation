@@ -1,5 +1,9 @@
 import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../types/customPlay';
 import type { TimerSettings } from '../types/timer';
+import { findCustomPlayMediaAssetById } from './mediaAssetApi';
+
+const DEFAULT_CUSTOM_PLAY_START_SOUND = 'None';
+const DEFAULT_CUSTOM_PLAY_END_SOUND = 'Temple Bell';
 
 export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValidationResult {
   const errors: CustomPlayValidationResult['errors'] = {};
@@ -16,6 +20,10 @@ export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValid
     errors.durationMinutes = 'Duration must be greater than 0.';
   }
 
+  if (draft.mediaAssetId && !findCustomPlayMediaAssetById(draft.mediaAssetId)) {
+    errors.mediaAssetId = 'Selected media session is no longer available.';
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -24,12 +32,18 @@ export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValid
 
 export function createCustomPlay(draft: CustomPlayDraft, now: Date): CustomPlay {
   const timestamp = now.toISOString();
+  const selectedAsset = draft.mediaAssetId ? findCustomPlayMediaAssetById(draft.mediaAssetId) : null;
 
   return {
     id: `custom-play-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
     name: draft.name.trim(),
     meditationType: draft.meditationType as CustomPlay['meditationType'],
     durationMinutes: draft.durationMinutes,
+    startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
+    endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
+    mediaAssetId: selectedAsset?.id ?? '',
+    mediaAssetLabel: selectedAsset?.label ?? '',
+    mediaAssetPath: selectedAsset?.filePath ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     favorite: false,
     createdAt: timestamp,
@@ -38,20 +52,32 @@ export function createCustomPlay(draft: CustomPlayDraft, now: Date): CustomPlay 
 }
 
 export function updateCustomPlay(existing: CustomPlay, draft: CustomPlayDraft, now: Date): CustomPlay {
+  const selectedAsset = draft.mediaAssetId ? findCustomPlayMediaAssetById(draft.mediaAssetId) : null;
+
   return {
     ...existing,
     name: draft.name.trim(),
     meditationType: draft.meditationType as CustomPlay['meditationType'],
     durationMinutes: draft.durationMinutes,
+    startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
+    endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
+    mediaAssetId: selectedAsset?.id ?? '',
+    mediaAssetLabel: selectedAsset?.label ?? '',
+    mediaAssetPath: selectedAsset?.filePath ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     updatedAt: now.toISOString(),
   };
 }
 
-export function applyCustomPlayToTimerSettings(settings: TimerSettings, play: Pick<CustomPlay, 'durationMinutes' | 'meditationType'>): TimerSettings {
+export function applyCustomPlayToTimerSettings(
+  settings: TimerSettings,
+  play: Pick<CustomPlay, 'durationMinutes' | 'meditationType' | 'startSound' | 'endSound'>
+): TimerSettings {
   return {
     ...settings,
     durationMinutes: play.durationMinutes,
     meditationType: play.meditationType,
+    startSound: play.startSound,
+    endSound: play.endSound,
   };
 }

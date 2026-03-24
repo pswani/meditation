@@ -176,3 +176,9 @@
 - Reject future-dated manual log timestamps during validation to protect summary/sankalpa trustworthiness.
 - Strengthen session-log persistence boundary by validating loaded entry shape and enum values (`status`, `source`) before admitting items to runtime state.
 - Preserve valid stored session logs while dropping malformed entries, instead of failing the entire load when a subset is invalid.
+
+### 2026-03-24 custom plays implementation pass-2 decisions
+- Extend `custom play` model to include optional preset sounds (`startSound`, `endSound`) so `Use Custom Play` can apply a fuller setup profile.
+- Introduce a local media/session metadata catalog and API-boundary utility with an explicit list endpoint contract (`/api/media/custom-plays`) for future backend compatibility.
+- Store media/session path references and metadata identifiers directly on `custom play` entries in local persistence, while backend/database implementation remains out of scope in this front-end-only workspace.
+- Normalize legacy stored custom-play entries with safe defaults to preserve backward compatibility during model expansion.

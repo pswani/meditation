@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTimer } from '../features/timer/useTimer';
 import type { CustomPlay } from '../types/customPlay';
 import type { PlaylistRunStartResult } from '../types/playlist';
+import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { formatDurationLabel } from '../utils/sessionLog';
 import { loadSankalpas } from '../utils/storage';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
@@ -72,11 +73,7 @@ export default function HomePage() {
   }
 
   function applyCustomPlayShortcut(play: CustomPlay) {
-    setSettings({
-      ...settings,
-      durationMinutes: play.durationMinutes,
-      meditationType: play.meditationType,
-    });
+    setSettings(applyCustomPlayToTimerSettings(settings, play));
     setFeedbackMessage(`Loaded ${play.name} into timer setup.`);
     navigate('/practice');
   }
