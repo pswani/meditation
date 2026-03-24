@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from '../App';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
@@ -127,5 +128,30 @@ describe('HomePage UX', () => {
 
     expect(screen.getByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
     expect(screen.getByText(/quick start needs valid defaults/i)).toBeInTheDocument();
+  });
+
+  it('starts and routes to the active timer when quick-start defaults are valid', () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        durationMinutes: 15,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
+    expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+    expect(screen.getByText(/stay present/i)).toBeInTheDocument();
   });
 });

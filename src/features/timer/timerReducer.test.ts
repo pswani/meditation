@@ -13,6 +13,15 @@ const validSettings: TimerSettings = {
 };
 
 describe('timerReducer', () => {
+  it('does not start a session when settings are invalid', () => {
+    const state = createInitialTimerState({ ...validSettings, meditationType: '' }, []);
+    const next = timerReducer(state, { type: 'START_SESSION', nowMs: Date.parse('2026-03-23T10:00:00.000Z') });
+
+    expect(next.activeSession).toBeNull();
+    expect(next.validation.isValid).toBe(false);
+    expect(next.validation.errors.meditationType).toMatch(/required/i);
+  });
+
   it('starts a session when settings are valid', () => {
     const state = createInitialTimerState(validSettings, []);
     const next = timerReducer(state, { type: 'START_SESSION', nowMs: Date.parse('2026-03-23T10:00:00.000Z') });
@@ -56,5 +65,22 @@ describe('timerReducer', () => {
     expect(ended.activeSession).toBeNull();
     expect(ended.sessionLogs[0].status).toBe('ended early');
     expect(ended.sessionLogs[0].completedDurationSeconds).toBe(240);
+  });
+
+  it('finalizes a completed auto log when sync tick reaches end', () => {
+    const started = timerReducer(createInitialTimerState(validSettings, []), {
+      type: 'START_SESSION',
+      nowMs: Date.parse('2026-03-23T10:00:00.000Z'),
+    });
+
+    const completed = timerReducer(started, {
+      type: 'SYNC_TICK',
+      nowMs: Date.parse('2026-03-23T10:10:00.000Z'),
+    });
+
+    expect(completed.activeSession).toBeNull();
+    expect(completed.lastOutcome?.status).toBe('completed');
+    expect(completed.sessionLogs[0].status).toBe('completed');
+    expect(completed.sessionLogs[0].completedDurationSeconds).toBe(600);
   });
 });

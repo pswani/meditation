@@ -67,4 +67,21 @@ describe('SettingsPage UX', () => {
       meditationType: 'Vipassana',
     });
   });
+
+  it('blocks persistence when draft defaults are invalid', () => {
+    renderSettingsPage();
+
+    fireEvent.click(screen.getByLabelText(/enable interval bell by default/i));
+    fireEvent.change(screen.getByLabelText(/default interval \(minutes\)/i), { target: { value: '20' } });
+    fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
+
+    expect(screen.getByText(/less than total duration/i)).toBeInTheDocument();
+    expect(screen.queryByText(/settings saved/i)).not.toBeInTheDocument();
+
+    const persisted = localStorage.getItem(TIMER_SETTINGS_KEY);
+    expect(JSON.parse(persisted ?? '{}')).toMatchObject({
+      intervalEnabled: false,
+      intervalMinutes: 5,
+    });
+  });
 });

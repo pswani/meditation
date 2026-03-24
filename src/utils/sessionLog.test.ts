@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAutoLogEntry } from './sessionLog';
+import { buildAutoLogEntry, formatDurationLabel } from './sessionLog';
 import type { ActiveSession } from '../types/timer';
 
 const activeSession: ActiveSession = {
@@ -40,5 +40,26 @@ describe('buildAutoLogEntry', () => {
 
     expect(log.status).toBe('ended early');
     expect(log.completedDurationSeconds).toBe(1200);
+  });
+
+  it('clamps completed duration to 0 when calculated value is negative', () => {
+    const log = buildAutoLogEntry({
+      session: activeSession,
+      endedAt: new Date('2026-03-23T10:01:00.000Z'),
+      completedDurationSeconds: -30,
+      status: 'ended early',
+    });
+
+    expect(log.completedDurationSeconds).toBe(0);
+  });
+});
+
+describe('formatDurationLabel', () => {
+  it('formats sub-minute durations as less than one minute', () => {
+    expect(formatDurationLabel(59)).toBe('< 1 min');
+  });
+
+  it('formats non-integer minute durations with one decimal', () => {
+    expect(formatDurationLabel(90)).toBe('1.5 min');
   });
 });
