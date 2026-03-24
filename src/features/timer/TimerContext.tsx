@@ -5,6 +5,7 @@ import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome } from '../../type
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { buildManualLogEntry, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
+import { persistPlaylistsToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
 import {
@@ -13,7 +14,6 @@ import {
   loadSessionLogs,
   loadTimerSettings,
   saveCustomPlays,
-  savePlaylists,
   saveSessionLogs,
   saveTimerSettings,
 } from '../../utils/storage';
@@ -59,7 +59,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [customPlays]);
 
   useEffect(() => {
-    savePlaylists(playlists);
+    void persistPlaylistsToApi(playlists);
   }, [playlists]);
 
   useEffect(() => {

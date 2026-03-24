@@ -190,3 +190,14 @@
   - invalid entries are dropped during load
 - Improve media-model UX clarity by prioritizing human-readable metadata (label, duration, type) and keeping filesystem path as secondary managed detail.
 - Add explicit inline success feedback for custom-play create/update actions to reduce save-state ambiguity.
+
+### 2026-03-24 playlists implementation pass-3 decisions
+- Keep the existing playlist UX/rules/logging flow intact and layer persistence integration through an explicit REST-style API boundary utility:
+  - collection endpoint: `/api/playlists`
+  - detail endpoint: `/api/playlists/:id`
+- Route playlist persistence writes from timer context through the playlist API boundary while preserving local-first behavior in this front-end-only workspace.
+- Tighten playlist load normalization at storage boundaries:
+  - require valid playlist/item shape
+  - enforce supported `meditation type`
+  - enforce `durationMinutes > 0`
+  - drop malformed playlist records instead of admitting invalid runtime state.

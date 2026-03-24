@@ -1,61 +1,69 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-b-practice-composition/06-fix-custom-plays-review-findings.md` is complete.
+Prompt `prompts/milestone-b-practice-composition/07-implement-playlists.md` is complete.
 
-Custom-play review remediation pass 3 is now implemented for all important findings.
+Playlist management and run behavior remain intact, with a new REST-style playlist persistence boundary and stronger playlist load integrity checks added.
 
 ## What was implemented
 - Added and completed ExecPlan:
-  - `requirements/execplan-custom-plays-review-remediation-pass3.md`
-- Tightened custom-play persistence validation:
+  - `requirements/execplan-playlists-implementation-pass3.md`
+- Added playlist REST-style API boundary utility:
+  - `src/utils/playlistApi.ts`
+  - contract constants/functions:
+    - `PLAYLISTS_COLLECTION_ENDPOINT` (`/api/playlists`)
+    - `buildPlaylistDetailEndpoint(...)`
+    - `listPlaylistsFromApi(...)`
+    - `persistPlaylistsToApi(...)`
+- Integrated playlist persistence writes through API boundary:
+  - `src/features/timer/TimerContext.tsx`
+  - playlist persistence effect now calls `persistPlaylistsToApi(playlists)`
+- Strengthened playlist storage/load boundary:
   - `src/utils/storage.ts`
-  - custom-play load normalization now enforces:
-    - valid `meditationType` enum
-    - `durationMinutes > 0`
-  - malformed custom-play entries are dropped during load
-- Improved file-backed media model clarity in custom-play UI:
-  - `src/features/customPlays/CustomPlayManager.tsx`
-  - media presentation now leads with human-readable metadata (label/duration/type)
-  - managed path remains visible as secondary metadata
-  - helper copy now clarifies path is managed metadata, not manual input
-- Added explicit create/update success feedback:
-  - `src/features/customPlays/CustomPlayManager.tsx`
-  - calm inline status confirms save outcome
-- Updated focused tests:
-  - `src/utils/storage.test.ts`
-    - added invalid custom-play drop coverage
-  - `src/features/customPlays/CustomPlayManager.test.tsx`
-    - added explicit save/update feedback coverage
-- Retained review artifact for traceability:
-  - `docs/review-custom-plays.md`
+  - added playlist/item normalization with validation:
+    - supported meditation type enum
+    - positive item duration
+    - malformed playlists dropped
+- Added focused tests for contract and persistence boundaries:
+  - `src/utils/playlistApi.test.ts`
+  - `src/utils/storage.test.ts` (playlist persistence + malformed filtering)
+
+## Existing playlist scope confirmed in-app
+- create/edit/delete playlists
+- item reorder and total duration derivation
+- favorite playlists
+- lightweight playlist run flow
+- per-item playlist logging behavior
+- playlist context in history entries
 
 ## QA coverage improved in this slice
-- Custom-play persistence boundary:
-  - invalid domain entries are filtered on load
-- Custom-play UX:
-  - explicit save feedback after update
-  - media metadata clarity in row/form presentation
+- Contract boundaries:
+  - playlist collection/detail endpoint contract assertions
+  - API-boundary save/list roundtrip tests
+- Persistence boundaries:
+  - valid playlist load behavior
+  - malformed playlist filtering behavior
+- Existing rules/logging coverage remains in place:
+  - `src/utils/playlist.test.ts`
+  - `src/utils/playlistLog.test.ts`
+  - `src/utils/playlistRunPolicy.test.ts`
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
-  - 20 test files
-  - 79 tests passing
+  - 21 test files
+  - 83 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-custom-plays-review-remediation-pass3.md`.
-- Updated `requirements/decisions.md` with custom-play remediation pass-3 decisions.
+- Added and completed `requirements/execplan-playlists-implementation-pass3.md`.
+- Updated `requirements/decisions.md` with playlists implementation pass-3 decisions.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This workspace remains front-end only; backend media/file/database endpoints are still out of scope.
-- Nice-to-have review items remain intentionally deferred:
-  - media filtering/grouping in selection
-  - favorite-first sorting
-  - reduced action density on narrow phones
+- This workspace remains front-end only; backend REST transport/database/file services are not present here.
+- Playlist API utility defines clean REST contracts while using local-first persistence as the current backing store.
 
 ## Exact recommended next prompt
 Read:
@@ -72,17 +80,11 @@ Read:
 
 Then:
 
-1. Execute prompt `prompts/milestone-b-practice-composition/07-implement-playlists.md`.
-2. Create an ExecPlan for playlists.
-3. Keep scope bounded to playlist management, playlist run flow, and minimum history integration.
-4. Add focused tests for playlist validation, run behavior, and logging boundaries.
-5. Run:
-   - npm run typecheck
-   - npm run lint
-   - npm run test
-   - npm run build
-6. Update:
-   - requirements/decisions.md
-   - requirements/session-handoff.md
-7. Commit with a clear message:
-   feat(composition): add playlists and playlist run flow
+1. Execute prompt `prompts/milestone-b-practice-composition/08-review-practice-composition.md`.
+2. Review the integrated practice composition experience (timer + custom play + playlists + history touchpoints) from UX, usability, and data-integrity perspectives.
+3. Identify critical, important, and nice-to-have issues.
+4. Do not implement code changes in this review pass.
+5. Write findings into:
+   - `docs/review-practice-composition.md`
+   - `requirements/session-handoff.md`
+6. Include an exact recommended next prompt for remediation and commit.

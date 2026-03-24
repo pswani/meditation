@@ -1,12 +1,23 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CustomPlay } from '../types/customPlay';
+import type { Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
-import { loadCustomPlays, loadSessionLogs, loadTimerSettings, saveCustomPlays, saveSessionLogs, saveTimerSettings } from './storage';
+import {
+  loadCustomPlays,
+  loadPlaylists,
+  loadSessionLogs,
+  loadTimerSettings,
+  saveCustomPlays,
+  savePlaylists,
+  saveSessionLogs,
+  saveTimerSettings,
+} from './storage';
 
 const rawTimerSettingsKey = 'meditation.timerSettings.v1';
 const rawSessionLogsKey = 'meditation.sessionLogs.v1';
 const rawCustomPlaysKey = 'meditation.customPlays.v1';
+const rawPlaylistsKey = 'meditation.playlists.v1';
 
 describe('storage timer settings', () => {
   beforeEach(() => {
@@ -237,5 +248,86 @@ describe('storage custom plays', () => {
     );
 
     expect(loadCustomPlays()).toEqual([]);
+  });
+});
+
+describe('storage playlists', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads playlists', () => {
+    const playlists: Playlist[] = [
+      {
+        id: 'playlist-1',
+        name: 'Morning Sequence',
+        favorite: true,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+        items: [
+          {
+            id: 'item-1',
+            meditationType: 'Vipassana',
+            durationMinutes: 10,
+          },
+        ],
+      },
+    ];
+
+    savePlaylists(playlists);
+    expect(loadPlaylists()).toEqual(playlists);
+  });
+
+  it('drops malformed playlist entries while preserving valid ones', () => {
+    localStorage.setItem(
+      rawPlaylistsKey,
+      JSON.stringify([
+        {
+          id: 'playlist-valid',
+          name: 'Valid Sequence',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+          items: [
+            {
+              id: 'item-1',
+              meditationType: 'Ajapa',
+              durationMinutes: 12,
+            },
+          ],
+        },
+        {
+          id: 'playlist-invalid',
+          name: 'Invalid Sequence',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+          items: [
+            {
+              id: 'item-2',
+              meditationType: 'Breathwork',
+              durationMinutes: 0,
+            },
+          ],
+        },
+      ])
+    );
+
+    expect(loadPlaylists()).toEqual([
+      {
+        id: 'playlist-valid',
+        name: 'Valid Sequence',
+        favorite: false,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+        items: [
+          {
+            id: 'item-1',
+            meditationType: 'Ajapa',
+            durationMinutes: 12,
+          },
+        ],
+      },
+    ]);
   });
 });

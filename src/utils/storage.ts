@@ -104,6 +104,60 @@ function normalizeCustomPlay(value: unknown): CustomPlay | null {
   };
 }
 
+function normalizePlaylistItem(value: unknown): Playlist['items'][number] | null {
+  if (!isObjectRecord(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    !isMeditationType(candidate.meditationType) ||
+    typeof candidate.durationMinutes !== 'number' ||
+    candidate.durationMinutes <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    meditationType: candidate.meditationType,
+    durationMinutes: candidate.durationMinutes,
+  };
+}
+
+function normalizePlaylist(value: unknown): Playlist | null {
+  if (!isObjectRecord(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.name !== 'string' ||
+    typeof candidate.favorite !== 'boolean' ||
+    typeof candidate.createdAt !== 'string' ||
+    typeof candidate.updatedAt !== 'string' ||
+    !Array.isArray(candidate.items)
+  ) {
+    return null;
+  }
+
+  const normalizedItems = candidate.items.map(normalizePlaylistItem).filter((entry): entry is Playlist['items'][number] => entry !== null);
+  if (normalizedItems.length === 0) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    name: candidate.name,
+    items: normalizedItems,
+    favorite: candidate.favorite,
+    createdAt: candidate.createdAt,
+    updatedAt: candidate.updatedAt,
+  };
+}
+
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
   if (!raw) {
@@ -173,7 +227,7 @@ export function loadPlaylists(): Playlist[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Playlist[]) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizePlaylist).filter((entry): entry is Playlist => entry !== null) : [];
   } catch {
     return [];
   }
