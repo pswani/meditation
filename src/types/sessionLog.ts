@@ -17,4 +17,8 @@ export interface SessionLog {
   readonly intervalEnabled: boolean;
   readonly intervalMinutes: number;
   readonly intervalSound: string;
+  readonly playlistId?: string;
+  readonly playlistName?: string;
+  readonly playlistItemPosition?: number;
+  readonly playlistItemCount?: number;
 }

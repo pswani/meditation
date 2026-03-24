@@ -9,7 +9,7 @@ import { getIntervalBellCount } from '../utils/timerValidation';
 type SetupField = 'durationMinutes' | 'meditationType' | 'intervalMinutes';
 
 export default function PracticePage() {
-  const { settings, validation, activeSession, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
+  const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
   const navigate = useNavigate();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
@@ -217,6 +217,21 @@ export default function PracticePage() {
       </div>
 
       <CustomPlayManager />
+
+      <section className="playlist-entry-panel">
+        <h3 className="section-title">Playlists</h3>
+        <p className="section-subtitle">Manage ordered playlist flows and run them with automatic session log tracking.</p>
+        <div className="timer-actions">
+          <button type="button" onClick={() => navigate('/practice/playlists')}>
+            Open Playlists
+          </button>
+          {activePlaylistRun ? (
+            <button type="button" className="secondary" onClick={() => navigate('/practice/playlists/active')}>
+              Resume Playlist Run
+            </button>
+          ) : null}
+        </div>
+      </section>
     </section>
   );
 }

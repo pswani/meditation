@@ -51,3 +51,16 @@
 - Add explicit post-save confirmation for manual log creation with inline success status.
 - Add helper guidance for `session timestamp` to clarify local-time intent.
 - Refine list row structure for `custom play` and `history` items to improve tablet/desktop scanability without introducing dense table UI.
+
+### 2026-03-23 playlists vertical slice decisions
+- Introduce route-level playlist screens at:
+  - `/practice/playlists`
+  - `/practice/playlists/active`
+- Keep playlists local-only with persistence in localStorage.
+- Define playlist logging at per-item granularity:
+  - each reached playlist item creates an `auto log` session log entry
+  - completed items log with status `completed`
+  - ending early logs the active item with status `ended early` and actual completed duration
+  - unstarted future items do not log
+- Store playlist metadata on session logs (`playlistName`, item position/count) to improve history context.
+- Keep timer session and playlist run mutually exclusive to avoid overlapping active flows.

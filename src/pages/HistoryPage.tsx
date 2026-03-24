@@ -134,6 +134,11 @@ export default function HistoryPage() {
               <div className="history-item-main">
                 <strong>{entry.meditationType}</strong>
                 <p className="history-time">{new Date(entry.endedAt).toLocaleString()}</p>
+                {entry.playlistName ? (
+                  <p className="section-subtitle">
+                    Playlist: {entry.playlistName} · item {entry.playlistItemPosition}/{entry.playlistItemCount}
+                  </p>
+                ) : null}
 
                 <div className="history-meta">
                   <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
@@ -145,6 +150,7 @@ export default function HistoryPage() {
                 <div className="badge-row">
                   <span className={`pill ${entry.status === 'completed' ? 'ok' : 'warn'}`}>{entry.status}</span>
                   <span className={`pill source ${entry.source === 'manual log' ? 'manual' : 'auto'}`}>{entry.source}</span>
+                  {entry.playlistName ? <span className="pill playlist">playlist</span> : null}
                 </div>
               </div>
             </li>

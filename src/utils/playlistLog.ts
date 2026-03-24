@@ -1,0 +1,48 @@
+import type { PlaylistItem } from '../types/playlist';
+import type { SessionLog, SessionLogStatus } from '../types/sessionLog';
+
+interface BuildPlaylistItemLogEntryParams {
+  readonly playlistId: string;
+  readonly playlistName: string;
+  readonly item: PlaylistItem;
+  readonly itemPosition: number;
+  readonly itemCount: number;
+  readonly startedAt: string;
+  readonly endedAt: Date;
+  readonly completedDurationSeconds: number;
+  readonly status: SessionLogStatus;
+}
+
+export function buildPlaylistItemLogEntry({
+  playlistId,
+  playlistName,
+  item,
+  itemPosition,
+  itemCount,
+  startedAt,
+  endedAt,
+  completedDurationSeconds,
+  status,
+}: BuildPlaylistItemLogEntryParams): SessionLog {
+  const intendedDurationSeconds = Math.round(item.durationMinutes * 60);
+
+  return {
+    id: `${playlistId}-${item.id}-${endedAt.getTime()}-${status}`,
+    startedAt,
+    endedAt: endedAt.toISOString(),
+    meditationType: item.meditationType,
+    intendedDurationSeconds,
+    completedDurationSeconds: Math.max(0, Math.min(intendedDurationSeconds, completedDurationSeconds)),
+    status,
+    source: 'auto log',
+    startSound: 'None',
+    endSound: 'None',
+    intervalEnabled: false,
+    intervalMinutes: 0,
+    intervalSound: 'None',
+    playlistId,
+    playlistName,
+    playlistItemPosition: itemPosition,
+    playlistItemCount: itemCount,
+  };
+}
