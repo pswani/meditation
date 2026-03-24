@@ -154,3 +154,14 @@
 - Clarify README setup expectations explicitly:
   - this workspace is currently front-end only
   - back-end setup instructions are deferred until a back-end service is introduced
+
+### 2026-03-24 milestone-a targeted QA hardening decisions
+- Keep Milestone A QA improvements focused on load-bearing correctness areas only:
+  - timer validation
+  - active-session transitions
+  - session-log creation constraints
+  - Home and Settings integration flow continuity
+  - critical route redirects and rendering behavior
+- Treat local storage persistence contracts as the current integration boundary for this workspace until backend REST services are introduced.
+- Prefer deterministic reducer/helper coverage for time-sensitive timer behavior, with route-level tests limited to user-visible navigation and persistence outcomes.
+- Reduce route-test fragility by favoring accessible role/name selectors over brittle exact-label assumptions when equivalent user intent is being validated.

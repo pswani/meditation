@@ -13,6 +13,12 @@ const base: TimerSettings = {
 };
 
 describe('validateTimerSettings', () => {
+  it('accepts a valid timer setup with interval bells enabled', () => {
+    const result = validateTimerSettings({ ...base, intervalEnabled: true, intervalMinutes: 5 });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual({});
+  });
+
   it('requires duration > 0', () => {
     const result = validateTimerSettings({ ...base, durationMinutes: 0 });
     expect(result.isValid).toBe(false);
@@ -29,6 +35,12 @@ describe('validateTimerSettings', () => {
     const result = validateTimerSettings({ ...base, intervalEnabled: true, intervalMinutes: 20 });
     expect(result.isValid).toBe(false);
     expect(result.errors.intervalMinutes).toMatch(/less than total duration/i);
+  });
+
+  it('requires interval bell value greater than 0 when enabled', () => {
+    const result = validateTimerSettings({ ...base, intervalEnabled: true, intervalMinutes: 0 });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.intervalMinutes).toMatch(/greater than 0/i);
   });
 });
 
