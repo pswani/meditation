@@ -309,3 +309,12 @@
   - time-of-day bucket boundaries used by optional filters
   - status precedence that keeps `completed` goals completed after deadline.
 - Add explicit sankalpa API-boundary coverage for malformed persisted payload handling (`invalid JSON`, `non-array payload`).
+
+### 2026-03-24 milestone-d production-readiness testing hardening decisions
+- Keep this slice QA-only and focus on cross-app continuity/risk surfaces rather than broad test-count growth.
+- Prefer route-level integration coverage for persisted recovery behavior so tests exercise storage normalization, provider hydration, shell messaging, and navigation together.
+- Use fixed system time in new recovery and playlist-run tests to make time-sensitive assertions deterministic and less flaky.
+- Strengthen production-readiness confidence in playlist behavior through targeted tests for:
+  - timer-blocked playlist starts
+  - persisted active playlist continuation
+  - ended-early playlist logging and history continuity
