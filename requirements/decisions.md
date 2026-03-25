@@ -385,3 +385,25 @@
   - timer setup -> active session -> pause/resume -> completion -> History auto log
   - playlist run -> item progression -> completion -> History playlist auto logs
 - Validate local startup with the documented `npm run dev` path and browser navigation against the running app, while treating loopback-shell connectivity quirks as environment-specific rather than application failures.
+
+### 2026-03-25 README operational rewrite decisions
+- Rewrite `README.md` as a repo-truthful operational guide rather than a brief product summary.
+- Document the workspace explicitly as front-end only:
+  - no backend service in repo
+  - no H2 configuration or schema in repo
+  - no live REST transport wiring in repo
+- Treat the REST-style utilities as current integration seams, not active network clients:
+  - `src/utils/playlistApi.ts`
+  - `src/utils/sankalpaApi.ts`
+  - `src/utils/mediaAssetApi.ts`
+- Document browser `localStorage` as the only implemented persistence layer and list the concrete storage keys contributors/operators need to know.
+- Document custom-play media paths truthfully:
+  - current catalog is fixed source code metadata
+  - persisted custom plays store root-relative media paths such as `/media/custom-plays/...`
+  - actual files are not checked in
+- Recommend `public/media/custom-plays/` as the compatible local static-file directory for any real custom-play media assets because the existing catalog already targets `/media/custom-plays/...`.
+- Call out that timer sound options are currently labels only:
+  - selectable in UI
+  - persisted in settings/logs/custom plays
+  - not yet mapped to actual files or playback behavior
+- Document deployment for the current repo as static front-end deployment only, with SPA history fallback and no backend/database rollout steps.

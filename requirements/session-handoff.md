@@ -1,103 +1,95 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/reviews/06-end-to-end-testing-and-verification.md` is complete.
+README operational rewrite is complete.
 
-Completed a thorough front-end verification pass for the current local-first application, strengthened high-value end-to-end journey coverage, and confirmed the live startup path.
+This pass was documentation-focused and did not change application behavior. The repo now has an operational README that matches the current implementation instead of implying backend, REST, H2, or media-runtime support that does not exist in this workspace.
 
 ## What was implemented
-- Added the ExecPlan:
-  - `requirements/execplan-e2e-verification-pass1.md`
-- Added high-value App-level journey coverage for:
-  - timer setup -> active timer -> pause/resume -> completion -> History auto log
-  - playlist run -> item progression -> completion -> History playlist auto logs
-- Re-ran the full verification sequence including dependency install, quality commands, build, and local dev startup.
-- Confirmed the live app loads and navigates locally via the running Vite dev server.
+- Rewrote `README.md` into a repo-grounded setup/run/configuration/deployment guide.
+- Updated `requirements/decisions.md` with the documentation and operational-boundary decisions from this pass.
+- Updated `requirements/session-handoff.md` with the verified state of the repo and the next recommended slice.
 
-## Tested journeys
-- app startup via `npm run dev`
-- shell navigation and route loading:
-  - Home
-  - Practice
-  - History
-  - Sankalpa redirect
-  - Settings
-- Home quick-start and favorite/snapshot rendering
-- Settings defaults persistence into Practice
-- timer setup validation and start behavior
-- active timer flow
-- pause/resume behavior
-- completed-session behavior and auto logging into History
-- ended-early behavior through existing route/provider coverage
-- manual logging and History filtering
-- custom play creation, update, apply-to-timer, and deletion
-- playlist active-run blocking, continuation, item progression, completion, and History logging
-- summaries and sankalpa rendering plus key summary-range behavior
-- local persistence and active-flow recovery behavior
-- startup recovery messaging and stale active-state clearing
+## README gaps that were fixed
+- Documented what the app currently does and which routes/screens are implemented.
+- Documented the actual high-level architecture:
+  - React SPA
+  - `BrowserRouter`
+  - `TimerProvider`
+  - feature/page/type/util layout
+- Documented the real front-end/back-end split:
+  - front end is implemented here
+  - backend is absent from this workspace
+- Documented the technology stack and available npm scripts.
+- Documented the current REST integration reality:
+  - `playlistApi`, `sankalpaApi`, and `mediaAssetApi` are local-first seams
+  - no live HTTP calls are made today
+  - no Vite proxy or `VITE_*` API base URL exists
+- Documented the current persistence model:
+  - browser `localStorage`
+  - concrete key names
+  - clean-start workflow by clearing `meditation.*` keys
+- Documented H2 truthfully:
+  - no H2 config
+  - no schema
+  - no seed SQL
+  - no DB-clean/reset flow because no DB exists here
+- Documented custom-play media storage and path handling:
+  - fixed metadata catalog in `src/utils/mediaAssetApi.ts`
+  - root-relative stored paths like `/media/custom-plays/...`
+  - intended compatible static-file location `public/media/custom-plays/`
+- Documented the difference between:
+  - timer sound options
+  - custom-play media metadata
+- Added concrete examples for:
+  - local startup
+  - adding a new custom-play media file
+  - adding a new sound option
+  - extending meditation types / enum-backed options
+- Documented testing, verification, build, preview, and deployment assumptions for the current front-end-only repo.
+- Documented current limitations explicitly instead of implying missing infrastructure is already present.
 
-## Test gaps that still remain
-- No real backend service exists in this workspace, so there is still no live verification of:
-  - front-end/back-end integration
-  - REST transport behavior over HTTP
-  - H2-backed persistence
-- Sound playback remains unimplemented, so there is no runtime audio verification yet.
-- Custom-play media verification is still limited to the fixed local metadata catalog; there is no user-managed import flow or real media backend to validate.
-- Browser-driven multi-page e2e automation is still lightweight; confidence remains strongest in App-level integration tests plus local startup checks.
-
-## Issues fixed
-- Added missing end-to-end coverage for the two highest-value untested journeys:
-  - timer completion into History
-  - playlist completion into History
-- No additional product code changes were required beyond test-strengthening in this pass.
+## Still-missing operational details in the codebase
+- No backend service exists in the repo, so there is still no runnable guidance for:
+  - server startup
+  - REST deployment
+  - H2 configuration
+  - schema migration
+  - DB seeding
+- Timer and playlist sound selections still do not trigger actual playback.
+- There is still no checked-in `public/` media tree or real audio asset set.
+- The custom-play media catalog is still hard-coded in source instead of being managed by a backend or user import flow.
+- There is still no live frontend/backend connectivity path to verify because the frontend does not perform HTTP requests for those API seams yet.
 
 ## Issues intentionally deferred
-- Actual audio playback for selected timer and playlist sounds remains unimplemented.
-- Optional playlist transition gaps remain unimplemented.
-- Confirmation sheets/dialogs still need stronger accessibility behavior polish.
-- `TimerContext` is still broader than ideal; this slice avoided a large state-architecture refactor.
-- Custom-play media metadata is still denormalized in local persistence.
-
-## Tests added or improved
-- Added App-level timer journey coverage for:
-  - setup
-  - pause/resume
-  - completion
-  - auto-log persistence
-  - History rendering
-- Added App-level playlist journey coverage for:
-  - run start
-  - item progression
-  - completion
-  - per-item auto-log persistence
-  - History playlist rendering
+- Actual sound playback for selected timer and playlist sounds.
+- Optional small gaps between playlist items.
+- Backend implementation for playlists, sankalpas, media, or session persistence.
+- H2-backed schema/configuration/migration work.
+- User-managed media import or media-library administration.
 
 ## Verification status
-- Passed `npm install`
+- Passed `npm ci`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Passed local startup verification with `npm run dev`
-- Confirmed local app rendering and navigation in a live browser session at `http://127.0.0.1:5173/`
+- Started local dev server successfully with `npm run dev -- --host 127.0.0.1`
+- Vite reported `http://127.0.0.1:5173/` as the local URL
+- Direct `curl` loopback verification from this sandbox returned code `7`, so startup confirmation is based on Vite server output rather than an in-sandbox HTTP fetch
 
 ## Documentation updates made
-- Added `requirements/execplan-e2e-verification-pass1.md`.
-- Updated `requirements/decisions.md`.
-- Updated `requirements/session-handoff.md`.
+- Updated `README.md`
+- Updated `requirements/decisions.md`
+- Updated `requirements/session-handoff.md`
 
 ## Known limitations / assumptions
-- This workspace remains front-end only; backend services and deployment flows are still out of scope here.
-- Local-first persistence is still the current product baseline.
-- Sound selectors still represent fixed choices only; playback runtime behavior is still deferred.
-- Full history retention is local-only and may grow storage usage over time until a retention/export strategy is defined.
-
-## Current end-to-end confidence level
-- High for the current front-end-only, local-first product baseline:
-  - major implemented routes load
-  - core timer and playlist journeys now have direct App-level integration coverage
-  - local startup, build, and persistence behavior were re-verified
-- Medium overall against the full original product vision because backend, H2, and real audio playback are still absent from this workspace.
+- This repo remains front-end only.
+- Browser `localStorage` is still the only implemented persistence layer.
+- REST endpoint constants exist as future seams, not live integrations.
+- H2 is still part of the intended wider architecture only; it is not implemented in this workspace.
+- Custom-play media paths are modeled as root-relative URLs, not absolute filesystem paths.
+- Timer sound options are still label-only choices until playback work is implemented.
 
 ## Exact recommended next prompt
 Read:
@@ -107,8 +99,6 @@ Read:
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
-- docs/review-usability-full-app.md
-- docs/review-performance.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
@@ -116,28 +106,27 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for actual sound playback in timer and playlist runs.
-2. Keep the implementation bounded to one meaningful vertical slice:
-   - implement real playback for selected start, end, and interval sounds in timer sessions
-   - implement real playback for playlist item boundaries using the same sound catalog
-   - preserve the current local-first architecture and fixed sound option list
-   - make failure behavior quiet and safe if playback cannot start
+1. Create an ExecPlan for real timer and playlist sound playback.
+2. Keep the implementation to one meaningful vertical slice:
+   - implement browser-based playback for selected timer start, end, and interval sounds
+   - implement playlist boundary playback using the same sound catalog
+   - add one canonical sound-to-file mapping layer instead of scattering file paths through UI code
+   - keep the app local-first and front-end only
 3. Include:
-   - one shared audio utility/service layer instead of duplicating playback logic across pages
-   - any minimal state wiring needed so timer and playlist run flows trigger sounds at the correct moments
-   - doc updates in `README.md`, `requirements/decisions.md`, and `requirements/session-handoff.md`
+   - a checked-in static media directory for the existing sound options
+   - a shared audio utility/service
+   - minimal timer and playlist wiring so sounds trigger at the correct moments
+   - README updates describing the real sound file locations and mapping rules
+   - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - new sound libraries unless clearly necessary
    - backend media management
+   - H2 work
    - playlist gap feature work
-   - unrelated timer-context refactors
+   - unrelated `TimerContext` refactors
 5. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-6. Update:
-   - requirements/decisions.md
-   - requirements/session-handoff.md
-7. Commit with a clear message:
+6. Commit with a clear message:
    feat(audio): implement timer and playlist sound playback
