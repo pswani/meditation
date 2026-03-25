@@ -10,6 +10,8 @@
   --accent: #255d4f;
   --accent-soft: #d6e7df;
   --border: #cfddd5;
+  --focus-ring: #143f35;
+  --focus-shadow: 0 0 0 3px rgba(37, 93, 79, 0.18);
   --shadow: 0 12px 30px rgba(19, 32, 27, 0.08);
   --radius-lg: 22px;
   --radius-md: 14px;
@@ -33,11 +35,22 @@ body,
   margin: 0;
 }
 
+html {
+  scroll-padding-top: 5.5rem;
+}
+
 body {
   color: var(--text);
   background:
     radial-gradient(circle at top right, #f4f8f5 0%, transparent 44%),
     linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 28%, var(--bg) 100%);
+}
+
+body,
+input,
+select,
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -47,6 +60,26 @@ a {
 
 .app-shell {
   min-height: 100vh;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.8rem;
+  left: 0.9rem;
+  z-index: 120;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--accent);
+  padding: 0.7rem 0.9rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  transform: translateY(-160%);
+  transition: transform 0.18s ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .app-sidebar {
@@ -104,7 +137,7 @@ a {
 .content {
   width: min(100%, var(--max-content));
   margin: 0 auto;
-  padding: 1rem 1rem 6rem;
+  padding: 1rem 1rem 7rem;
 }
 
 .page-card {
@@ -136,6 +169,7 @@ a {
   margin: 0;
   max-width: 64ch;
   color: var(--muted);
+  line-height: 1.6;
 }
 
 .placeholder-list {
@@ -235,6 +269,7 @@ a {
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .form-grid {
@@ -267,6 +302,7 @@ select {
   background: #fff;
   color: var(--text);
   padding: 0.68rem 0.72rem;
+  min-height: 2.85rem;
 }
 
 button {
@@ -277,6 +313,7 @@ button {
   font-weight: 700;
   padding: 0.7rem 1rem;
   cursor: pointer;
+  min-height: 2.85rem;
 }
 
 button.secondary {
@@ -297,6 +334,17 @@ button:disabled {
   text-decoration: underline;
   padding: 0;
   justify-self: start;
+  min-height: auto;
+}
+
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  box-shadow: var(--focus-shadow);
+}
+
+:where(.nav-link, .bottom-link, .link-button):focus-visible {
+  border-radius: var(--radius-sm);
 }
 
 .advanced-panel {
@@ -353,6 +401,14 @@ button:disabled {
 
 .summary-range-grid {
   align-items: end;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .summary-card {
@@ -649,6 +705,7 @@ button:disabled {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .practice-tools-panel {
@@ -665,6 +722,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .practice-tools-header button {
@@ -769,6 +827,7 @@ button:disabled {
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .history-meta {
@@ -857,6 +916,7 @@ button:disabled {
   cursor: pointer;
   font-weight: 700;
   color: var(--text);
+  list-style: none;
 }
 
 .manual-log-disclosure-body {
@@ -923,6 +983,7 @@ button:disabled {
   }
 
   .content {
+    padding-top: 1.25rem;
     padding-bottom: 2rem;
   }
 
@@ -961,7 +1022,7 @@ button:disabled {
   }
 
   .home-layout-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   }
 
   .home-favorites-grid {
@@ -1013,6 +1074,31 @@ button:disabled {
   }
 }
 
+@media (max-width: 40rem) {
+  .topbar {
+    padding-top: 0.9rem;
+  }
+
+  .page-card {
+    padding: 1.1rem;
+  }
+
+  .timer-actions > button:not(.link-button) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .compact-control {
+    width: auto;
+  }
+
+  .bottom-link {
+    padding-top: 0.68rem;
+    padding-bottom: 0.68rem;
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 30rem) {
   .home-shortcut-item {
     flex-direction: column;
@@ -1037,6 +1123,19 @@ button:disabled {
 
   .page-card {
     padding: 1.8rem;
+  }
+
+  .custom-play-panel,
+  .manual-log-panel,
+  .history-log-panel,
+  .playlist-panel,
+  .playlist-entry-panel,
+  .summary-panel,
+  .sankalpa-panel,
+  .sankalpa-section,
+  .home-panel,
+  .settings-panel {
+    padding: 1.1rem;
   }
 
   .history-meta {

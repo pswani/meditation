@@ -318,3 +318,13 @@
   - timer-blocked playlist starts
   - persisted active playlist continuation
   - ended-early playlist logging and history continuity
+
+### 2026-03-24 milestone-d accessibility and responsive polish decisions
+- Add a shell-level `Skip to content` affordance and focus target on the main content region to reduce repeated keyboard navigation cost.
+- Keep disclosure interactions lightweight but explicit by wiring existing toggle buttons with `aria-expanded` and `aria-controls` rather than replacing them with heavier components.
+- Use one shared focus-visible treatment across links, buttons, inputs, selects, summaries, and tabbable containers to improve accessibility without breaking the calm visual language.
+- Improve small-screen readability/touch comfort through:
+  - slightly larger bottom spacing above mobile navigation
+  - full-width primary action stacking in narrow timer action groups
+  - reduced wrapping friction in panel headers and tool rows
+- Improve tablet/desktop balance with modest spacing adjustments and a more intentional Home two-column split instead of a fully even grid.

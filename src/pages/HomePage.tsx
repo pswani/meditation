@@ -102,6 +102,9 @@ export default function HomePage() {
       {feedbackMessage ? (
         <div className="status-banner" role="status">
           <p>{feedbackMessage}</p>
+          <button type="button" className="link-button" onClick={() => setFeedbackMessage(null)}>
+            Dismiss
+          </button>
         </div>
       ) : null}
 
@@ -149,7 +152,7 @@ export default function HomePage() {
         </section>
 
         <section className="home-panel">
-          <div className="history-row">
+          <div className="panel-header">
             <h3 className="section-title">Sankalpa Snapshot</h3>
             <button type="button" className="link-button" onClick={() => navigate('/goals')}>
               Open Sankalpa
@@ -191,7 +194,7 @@ export default function HomePage() {
       </div>
 
       <section className="home-panel">
-        <div className="history-row">
+        <div className="panel-header">
           <h3 className="section-title">Recent Activity</h3>
           <button type="button" className="link-button" onClick={() => navigate('/history')}>
             View History

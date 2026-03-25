@@ -18,6 +18,9 @@ export default function PracticePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
+  const advancedContentId = 'advanced-timer-settings';
+  const practiceToolsContentId = 'practice-tools-content';
+  const timerStartBlockedMessageId = 'timer-start-blocked-message';
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
@@ -159,13 +162,14 @@ export default function PracticePage() {
           type="button"
           className="advanced-toggle"
           aria-expanded={advancedOpen}
+          aria-controls={advancedContentId}
           onClick={() => setAdvancedOpen((current) => !current)}
         >
           {advancedOpen ? 'Hide Advanced Options' : 'Show Advanced Options'}
         </button>
 
         {advancedOpen ? (
-          <div className="advanced-content">
+          <div id={advancedContentId} className="advanced-content">
             <div className="form-grid">
               <label>
                 <span>Start sound (optional)</span>
@@ -238,13 +242,18 @@ export default function PracticePage() {
       </section>
 
       <div className="timer-actions">
-        <button type="button" onClick={onStart} disabled={isTimerStartBlockedByPlaylistRun}>
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={isTimerStartBlockedByPlaylistRun}
+          aria-describedby={isTimerStartBlockedByPlaylistRun ? timerStartBlockedMessageId : undefined}
+        >
           Start Session
         </button>
       </div>
 
       {isTimerStartBlockedByPlaylistRun ? (
-        <div className="status-banner warn" role="status">
+        <div id={timerStartBlockedMessageId} className="status-banner warn" role="status">
           <p>
             A playlist run is active. Resume or end the playlist run before starting a separate timer session.
           </p>
@@ -257,7 +266,13 @@ export default function PracticePage() {
       <section className="practice-tools-panel" aria-label="Practice tools">
         <div className="practice-tools-header">
           <h3 className="section-title">Practice Tools</h3>
-          <button type="button" className="secondary" onClick={() => setToolsOpen((current) => !current)}>
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={toolsOpen}
+            aria-controls={practiceToolsContentId}
+            onClick={() => setToolsOpen((current) => !current)}
+          >
             {toolsOpen ? 'Hide Tools' : 'Show Tools'}
           </button>
         </div>
@@ -278,7 +293,7 @@ export default function PracticePage() {
         ) : null}
 
         {toolsOpen ? (
-          <div className="practice-tools-content">
+          <div id={practiceToolsContentId} className="practice-tools-content">
             <CustomPlayManager />
 
             <section className="playlist-entry-panel">

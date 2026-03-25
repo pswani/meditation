@@ -22,6 +22,8 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
+    expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
     expect(screen.getAllByText('Sankalpa').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /start timer now/i })).toBeInTheDocument();

@@ -68,12 +68,37 @@ describe('PracticePage UX', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('button', { name: /show tools/i })).toBeInTheDocument();
+    const toolsToggle = screen.getByRole('button', { name: /show tools/i });
+    expect(toolsToggle).toBeInTheDocument();
+    expect(toolsToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toolsToggle).toHaveAttribute('aria-controls', 'practice-tools-content');
     expect(screen.queryByRole('heading', { name: /custom plays/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    fireEvent.click(toolsToggle);
+    expect(screen.getByRole('button', { name: /hide tools/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('heading', { name: /custom plays/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open playlists/i })).toBeInTheDocument();
+  });
+
+  it('exposes explicit expanded state for advanced timer settings', () => {
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    const advancedToggle = screen.getByRole('button', { name: /show advanced options/i });
+    expect(advancedToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(advancedToggle).toHaveAttribute('aria-controls', 'advanced-timer-settings');
+
+    fireEvent.click(advancedToggle);
+
+    expect(screen.getByRole('button', { name: /hide advanced options/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText(/^start sound \(optional\)$/i)).toBeInTheDocument();
   });
 
   it('disables timer start and shows guidance when playlist run is active', () => {
@@ -115,12 +140,14 @@ describe('PracticePage UX', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('button', { name: /start session/i })).toBeDisabled();
+    const startButton = screen.getByRole('button', { name: /start session/i });
+    expect(startButton).toBeDisabled();
     const guidanceText = screen.getByText(/resume or end the playlist run before starting a separate timer session/i);
     expect(guidanceText).toBeInTheDocument();
 
     const guidanceBanner = guidanceText.closest('.status-banner');
     expect(guidanceBanner).not.toBeNull();
+    expect(startButton).toHaveAttribute('aria-describedby', 'timer-start-blocked-message');
     expect(within(guidanceBanner ?? document.body).getByRole('button', { name: /resume playlist run/i })).toBeInTheDocument();
   });
 });

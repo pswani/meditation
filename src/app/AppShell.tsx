@@ -10,6 +10,10 @@ export default function AppShell() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
       <aside className="app-sidebar" aria-label="Primary navigation">
         <div className="brand">
           <div className="brand-mark">M</div>
@@ -72,7 +76,7 @@ export default function AppShell() {
           ) : null}
         </header>
 
-        <main className="content">
+        <main id="main-content" className="content" tabIndex={-1}>
           <Outlet />
         </main>
 

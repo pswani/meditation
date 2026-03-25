@@ -92,7 +92,7 @@ export default function HistoryPage() {
           Showing {visibleLogs.length} of {filteredLogs.length} filtered entries ({sessionLogs.length} stored).
         </p>
 
-        <div className="form-grid history-filters">
+        <div className="form-grid history-filters" role="group" aria-label="Filter session logs">
           <label>
             <span>Source filter</span>
             <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}>
