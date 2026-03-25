@@ -340,3 +340,16 @@
   - sankalpas
 - Preserve first-render persistence for active runtime recovery only when hydration changed the stored snapshot (for example, corrected remaining time or clearing stale active state).
 - Broaden storage save helpers to accept `readonly` arrays so unchanged data can be persisted without unnecessary array copying at call sites.
+
+### 2026-03-24 milestone-d release readiness decisions
+- Keep the final Milestone D pass documentation-first:
+  - verify setup/run/build/test guidance
+  - verify quality commands
+  - inventory remaining product gaps
+  - avoid behavior changes during handoff
+- Treat the current front-end-only, local-first architecture as the repository baseline for handoff rather than a defect to "fix" in this slice.
+- Call out only concrete remaining v1 product gaps that are visible from the current requirements and implementation audit:
+  - actual sound playback is still unimplemented
+  - optional playlist item gaps are still unimplemented
+  - custom-play media remains backed by a fixed local metadata catalog rather than user-managed import or a real backend media source
+- Mark the Milestone D prompt set complete and shift the next recommended work toward bounded release-candidate gap closure instead of more general readiness cleanup.
