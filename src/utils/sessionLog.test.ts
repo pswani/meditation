@@ -55,6 +55,10 @@ describe('buildAutoLogEntry', () => {
 });
 
 describe('formatDurationLabel', () => {
+  it('formats zero duration as zero minutes', () => {
+    expect(formatDurationLabel(0)).toBe('0 min');
+  });
+
   it('formats sub-minute durations as less than one minute', () => {
     expect(formatDurationLabel(59)).toBe('< 1 min');
   });

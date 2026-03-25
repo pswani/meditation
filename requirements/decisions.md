@@ -236,3 +236,76 @@
 - Extend playlist logging helper coverage for negative-duration clamp behavior (`0` floor).
 - Extend playlist REST-boundary tests to verify list-path normalization behavior against mixed valid/malformed stored payloads.
 - Improve touched custom-play UI test reliability with explicit `localStorage` and DOM cleanup between tests.
+
+### 2026-03-24 summaries milestone-c implementation decisions
+- Keep summaries on the existing `Sankalpa` route (`/goals`) and expand insight depth without introducing new navigation.
+- Add bounded date-range summary controls with calm defaults:
+  - `All time`
+  - `Last 7 days`
+  - `Last 30 days`
+  - `Custom range`
+- Define date-range filtering against `session log` `endedAt` timestamps with inclusive day boundaries.
+- Derive summary sections from one shared filtered dataset to preserve consistency between:
+  - overall summary
+  - by meditation type summary
+  - by source summary
+- Keep summary source segmentation aligned to existing domain values and ordering:
+  - `auto log`
+  - `manual log`
+- Keep this slice local-first; do not add backend summary fetching in this front-end-only workspace.
+
+### 2026-03-24 summaries review-remediation decisions
+- Fix trust-critical custom-range behavior by treating invalid custom input as `no valid summary window`:
+  - show correction guidance
+  - do not render summary metric sections until range is valid
+- Extend summaries to include required `by time of day` insight using existing shared bucket semantics:
+  - `morning`
+  - `afternoon`
+  - `evening`
+  - `night`
+- Improve by-source comprehension with explicit in-row metric labels:
+  - `completed`
+  - `ended early`
+- Keep remediation scope bounded to critical/important summary-review findings only; defer nice-to-have items.
+
+### 2026-03-24 sankalpa milestone-c implementation decisions
+- Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
+  - collection endpoint: `/api/sankalpas`
+  - detail endpoint: `/api/sankalpas/:id`
+- Harden sankalpa storage load boundaries by validating persisted records before admission:
+  - valid goal type
+  - valid positive target value
+  - integer `days > 0`
+  - valid optional `meditation type`
+  - valid optional `time-of-day` bucket
+  - parseable `createdAt`
+- Tighten sankalpa draft validation for clearer goal semantics:
+  - `session-count-based` targets must be whole numbers
+  - `days` must be a whole number
+- Clarify sankalpa progress counting rules in UI copy:
+  - both `auto log` and `manual log` entries count
+  - ended-early duration contributes to duration-based goals
+  - matching is constrained by optional filters and goal window boundaries.
+
+### 2026-03-24 discipline-and-insight remediation decisions
+- Render exact zero durations as `0 min` and reserve `\< 1 min` for strictly positive sub-minute values to protect summary trust.
+- Reduce summary density on `/goals` by hiding inactive categories by default in:
+  - by meditation type
+  - by time of day
+  and exposing a lightweight `Show inactive categories` toggle.
+- Replace ambiguous overall split shorthand (`X / Y`) with explicit labels:
+  - `completed`
+  - `ended early`
+- Improve medium-breakpoint summary readability by making row metric columns more flexible and using compact metric pills in by-source rows.
+- Keep this remediation bounded to critical and important review findings; defer nice-to-have items.
+
+### 2026-03-24 discipline-and-insight testing hardening decisions
+- Keep this slice QA-only and avoid product behavior changes; strengthen Milestone C confidence through targeted utility/API tests.
+- Add explicit summary edge coverage for:
+  - inclusive same-day range boundaries
+  - by-type counts constrained by date-range filtering
+  - malformed `endedAt` exclusion in snapshot derivation.
+- Add explicit sankalpa edge coverage for:
+  - time-of-day bucket boundaries used by optional filters
+  - status precedence that keeps `completed` goals completed after deadline.
+- Add explicit sankalpa API-boundary coverage for malformed persisted payload handling (`invalid JSON`, `non-array payload`).

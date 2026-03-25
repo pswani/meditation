@@ -4,7 +4,12 @@ import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { SankalpaGoal, SankalpaProgress, SankalpaValidationResult } from '../types/sankalpa';
 import { formatDurationLabel } from '../utils/sessionLog';
-import { deriveOverallSummary, deriveSummaryByType } from '../utils/summary';
+import {
+  deriveDateInputForDayOffset,
+  deriveDateRangeFromInputs,
+  deriveSummarySnapshot,
+  type SummaryDateRange,
+} from '../utils/summary';
 import {
   createInitialSankalpaDraft,
   createSankalpaGoal,
@@ -14,9 +19,10 @@ import {
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
-import { loadSankalpas, saveSankalpas } from '../utils/storage';
+import { listSankalpasFromApi, persistSankalpasToApi } from '../utils/sankalpaApi';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
+type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 
 function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'duration-based') {
@@ -56,6 +62,40 @@ function filterDetail(goal: SankalpaGoal): string {
   }
 
   return filters.length > 0 ? filters.join(' · ') : 'No filters';
+}
+
+function formatDateInputLabel(dateInput: string): string {
+  const parsed = deriveDateRangeFromInputs(dateInput, dateInput);
+  if (!parsed?.startAtMs) {
+    return dateInput;
+  }
+
+  return new Date(parsed.startAtMs).toLocaleDateString();
+}
+
+function describeSummaryRangeLabel(
+  preset: SummaryRangePreset,
+  range: SummaryDateRange,
+  customStartDate: string,
+  customEndDate: string
+): string {
+  if (preset === 'all-time') {
+    return 'All time';
+  }
+
+  if (preset === 'last-7-days') {
+    return 'Last 7 days';
+  }
+
+  if (preset === 'last-30-days') {
+    return 'Last 30 days';
+  }
+
+  if (range.startAtMs === null || range.endAtMs === null) {
+    return 'Custom range';
+  }
+
+  return `${formatDateInputLabel(customStartDate)} - ${formatDateInputLabel(customEndDate)}`;
 }
 
 interface SankalpaSectionProps {
@@ -103,17 +143,112 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
+  const todayDateInput = deriveDateInputForDayOffset(new Date(), 0);
+  const last7StartInput = deriveDateInputForDayOffset(new Date(), -6);
+  const last30StartInput = deriveDateInputForDayOffset(new Date(), -29);
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [sankalpas, setSankalpas] = useState(() => loadSankalpas());
+  const [sankalpas, setSankalpas] = useState(() => listSankalpasFromApi());
+  const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
+  const [customStartDate, setCustomStartDate] = useState(last7StartInput);
+  const [customEndDate, setCustomEndDate] = useState(todayDateInput);
+  const [showInactiveSummaryCategories, setShowInactiveSummaryCategories] = useState(false);
 
   useEffect(() => {
-    saveSankalpas(sankalpas);
+    persistSankalpasToApi(sankalpas);
   }, [sankalpas]);
 
-  const overallSummary = useMemo(() => deriveOverallSummary(sessionLogs), [sessionLogs]);
-  const byTypeSummary = useMemo(() => deriveSummaryByType(sessionLogs), [sessionLogs]);
+  const summaryRangeSelection = useMemo(() => {
+    if (summaryRangePreset === 'all-time') {
+      const range = { startAtMs: null, endAtMs: null };
+      return {
+        range,
+        error: null as string | null,
+        label: describeSummaryRangeLabel(summaryRangePreset, range, customStartDate, customEndDate),
+      };
+    }
+
+    if (summaryRangePreset === 'last-7-days') {
+      const range = deriveDateRangeFromInputs(last7StartInput, todayDateInput) ?? { startAtMs: null, endAtMs: null };
+      return {
+        range,
+        error: null as string | null,
+        label: describeSummaryRangeLabel(summaryRangePreset, range, customStartDate, customEndDate),
+      };
+    }
+
+    if (summaryRangePreset === 'last-30-days') {
+      const range = deriveDateRangeFromInputs(last30StartInput, todayDateInput) ?? { startAtMs: null, endAtMs: null };
+      return {
+        range,
+        error: null as string | null,
+        label: describeSummaryRangeLabel(summaryRangePreset, range, customStartDate, customEndDate),
+      };
+    }
+
+    if (!customStartDate || !customEndDate) {
+      return {
+        range: null,
+        error: 'Select both start and end dates for a custom range.',
+        label: 'Custom range',
+      };
+    }
+
+    const range = deriveDateRangeFromInputs(customStartDate, customEndDate);
+    if (!range) {
+      return {
+        range: null,
+        error: 'Custom date range is invalid. Ensure start is on or before end.',
+        label: 'Custom range',
+      };
+    }
+
+    return {
+      range,
+      error: null as string | null,
+      label: describeSummaryRangeLabel(summaryRangePreset, range, customStartDate, customEndDate),
+    };
+  }, [customEndDate, customStartDate, last30StartInput, last7StartInput, summaryRangePreset, todayDateInput]);
+
+  const summarySnapshot = useMemo(() => {
+    if (!summaryRangeSelection.range) {
+      return null;
+    }
+
+    return deriveSummarySnapshot(sessionLogs, summaryRangeSelection.range);
+  }, [sessionLogs, summaryRangeSelection.range]);
+  const inactiveSummaryCategoriesCount = useMemo(() => {
+    if (!summarySnapshot) {
+      return 0;
+    }
+
+    const byTypeInactiveCount = summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs === 0).length;
+    const byTimeOfDayInactiveCount = summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs === 0).length;
+    return byTypeInactiveCount + byTimeOfDayInactiveCount;
+  }, [summarySnapshot]);
+  const byTypeSummaryRows = useMemo(() => {
+    if (!summarySnapshot) {
+      return [];
+    }
+
+    if (showInactiveSummaryCategories) {
+      return summarySnapshot.byTypeSummary;
+    }
+
+    return summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs > 0);
+  }, [showInactiveSummaryCategories, summarySnapshot]);
+  const byTimeOfDaySummaryRows = useMemo(() => {
+    if (!summarySnapshot) {
+      return [];
+    }
+
+    if (showInactiveSummaryCategories) {
+      return summarySnapshot.byTimeOfDaySummary;
+    }
+
+    return summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs > 0);
+  }, [showInactiveSummaryCategories, summarySnapshot]);
   const progressByStatus = useMemo(() => {
     const now = new Date();
     const entries = sankalpas
@@ -139,6 +274,8 @@ export default function SankalpaPage() {
     setSaveMessage('Sankalpa saved.');
   }
 
+  const hasAnySessionLogs = sessionLogs.length > 0;
+
   return (
     <section className="page-card sankalpa-screen">
       <h2 className="page-title">Sankalpa</h2>
@@ -148,46 +285,156 @@ export default function SankalpaPage() {
 
       <section className="summary-panel">
         <h3 className="section-title">Summary</h3>
-        {sessionLogs.length === 0 ? (
+        <p className="section-subtitle">Date range applies to session log end time.</p>
+
+        <div className="form-grid summary-range-grid">
+          <label>
+            <span>Summary range</span>
+            <select
+              value={summaryRangePreset}
+              onChange={(event) => {
+                const nextPreset = event.target.value as SummaryRangePreset;
+                setSummaryRangePreset(nextPreset);
+                if (nextPreset === 'custom' && (!customStartDate || !customEndDate)) {
+                  setCustomStartDate(last7StartInput);
+                  setCustomEndDate(todayDateInput);
+                }
+              }}
+            >
+              <option value="all-time">All time</option>
+              <option value="last-7-days">Last 7 days</option>
+              <option value="last-30-days">Last 30 days</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </label>
+
+          {summaryRangePreset === 'custom' ? (
+            <>
+              <label>
+                <span>Start date</span>
+                <input type="date" value={customStartDate} onChange={(event) => setCustomStartDate(event.target.value)} />
+              </label>
+
+              <label>
+                <span>End date</span>
+                <input type="date" value={customEndDate} onChange={(event) => setCustomEndDate(event.target.value)} />
+              </label>
+            </>
+          ) : null}
+        </div>
+
+        <p className="section-subtitle">Showing: {summaryRangeSelection.label}</p>
+        {summaryRangeSelection.error ? <small className="error-text">{summaryRangeSelection.error}</small> : null}
+
+        {!hasAnySessionLogs ? (
           <div className="empty-state">
             <p>No session log entries yet.</p>
             <p>Start sessions in Practice or add a manual log in History to unlock summaries.</p>
+          </div>
+        ) : summaryRangeSelection.error || !summarySnapshot ? (
+          <div className="empty-state">
+            <p>Fix custom range to view summary.</p>
+            <p>Choose a start date on or before the end date.</p>
+          </div>
+        ) : summarySnapshot.sessionLogs.length === 0 ? (
+          <div className="empty-state">
+            <p>No session log entries in this date range.</p>
+            <p>Try a wider range to review your meditation summary.</p>
           </div>
         ) : (
           <>
             <div className="summary-grid">
               <article className="summary-card">
                 <p className="summary-label">Total session logs</p>
-                <p className="summary-value">{overallSummary.totalSessionLogs}</p>
+                <p className="summary-value">{summarySnapshot.overallSummary.totalSessionLogs}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Total completed duration</p>
-                <p className="summary-value">{formatDurationLabel(overallSummary.totalDurationSeconds)}</p>
+                <p className="summary-value">{formatDurationLabel(summarySnapshot.overallSummary.totalDurationSeconds)}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Average duration</p>
-                <p className="summary-value">{formatDurationLabel(overallSummary.averageDurationSeconds)}</p>
+                <p className="summary-value">{formatDurationLabel(summarySnapshot.overallSummary.averageDurationSeconds)}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Completed vs ended early</p>
-                <p className="summary-value">
-                  {overallSummary.completedSessionLogs} / {overallSummary.endedEarlySessionLogs}
+                <p className="summary-value summary-value-split">
+                  <span>completed: {summarySnapshot.overallSummary.completedSessionLogs}</span>
+                  <span>ended early: {summarySnapshot.overallSummary.endedEarlySessionLogs}</span>
                 </p>
-                <p className="section-subtitle">auto log: {overallSummary.autoLogs} · manual log: {overallSummary.manualLogs}</p>
+                <p className="section-subtitle">
+                  auto log: {summarySnapshot.overallSummary.autoLogs} · manual log: {summarySnapshot.overallSummary.manualLogs}
+                </p>
               </article>
             </div>
 
-            <div className="summary-by-type">
-              <h4 className="section-title">By meditation type</h4>
-              <ul className="summary-by-type-list">
-                {byTypeSummary.map((entry) => (
-                  <li key={entry.meditationType} className="summary-by-type-row">
-                    <span>{entry.meditationType}</span>
-                    <span>{entry.sessionLogs} session logs</span>
-                    <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
-                  </li>
-                ))}
-              </ul>
+            {inactiveSummaryCategoriesCount > 0 ? (
+              <div className="summary-visibility-controls">
+                <label className="summary-inactive-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showInactiveSummaryCategories}
+                    onChange={(event) => setShowInactiveSummaryCategories(event.target.checked)}
+                  />
+                  <span>Show inactive categories</span>
+                </label>
+                {!showInactiveSummaryCategories ? (
+                  <p className="section-subtitle">{inactiveSummaryCategoriesCount} inactive categories hidden.</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="summary-sections-grid">
+              <div className="summary-by-type">
+                <h4 className="section-title">By meditation type</h4>
+                {byTypeSummaryRows.length === 0 ? (
+                  <p className="section-subtitle">No active meditation type categories in this range.</p>
+                ) : (
+                  <ul className="summary-by-type-list">
+                    {byTypeSummaryRows.map((entry) => (
+                      <li key={entry.meditationType} className="summary-by-type-row">
+                        <span>{entry.meditationType}</span>
+                        <span>{entry.sessionLogs} session logs</span>
+                        <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="summary-by-type">
+                <h4 className="section-title">By source</h4>
+                <ul className="summary-by-type-list">
+                  {summarySnapshot.bySourceSummary.map((entry) => (
+                    <li key={entry.source} className="summary-by-type-row summary-by-source-row">
+                      <span>{entry.source}</span>
+                      <span className="summary-metric-list">
+                        <span className="summary-metric-pill">{entry.sessionLogs} session logs</span>
+                        <span className="summary-metric-pill">completed: {entry.completedSessionLogs}</span>
+                        <span className="summary-metric-pill">ended early: {entry.endedEarlySessionLogs}</span>
+                      </span>
+                      <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="summary-by-type">
+                <h4 className="section-title">By time of day</h4>
+                {byTimeOfDaySummaryRows.length === 0 ? (
+                  <p className="section-subtitle">No active time-of-day categories in this range.</p>
+                ) : (
+                  <ul className="summary-by-type-list">
+                    {byTimeOfDaySummaryRows.map((entry) => (
+                      <li key={entry.timeOfDayBucket} className="summary-by-type-row">
+                        <span>{timeOfDayBucketLabels[entry.timeOfDayBucket]}</span>
+                        <span>{entry.sessionLogs} session logs</span>
+                        <span>{formatDurationLabel(entry.totalDurationSeconds)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -198,6 +445,7 @@ export default function SankalpaPage() {
         <p className="section-subtitle">
           Counting rules: both <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count
           matching session log entries. Duration-based goals sum matching completed duration, including ended-early entries.
+          Matching also respects optional filters and the goal window from creation time through deadline.
         </p>
 
         {saveMessage ? (
@@ -230,6 +478,7 @@ export default function SankalpaPage() {
             <input
               type="number"
               min={1}
+              step={draft.goalType === 'session-count-based' ? 1 : 0.5}
               value={draft.targetValue}
               onChange={(event) => {
                 setSaveMessage(null);
@@ -247,6 +496,7 @@ export default function SankalpaPage() {
             <input
               type="number"
               min={1}
+              step={1}
               value={draft.days}
               onChange={(event) => {
                 setSaveMessage(null);

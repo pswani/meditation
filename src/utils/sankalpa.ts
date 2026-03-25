@@ -49,9 +49,15 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
   if (!Number.isFinite(draft.targetValue) || draft.targetValue <= 0) {
     errors.targetValue = 'Target value must be greater than 0.';
   }
+  if (draft.goalType === 'session-count-based' && Number.isFinite(draft.targetValue) && !Number.isInteger(draft.targetValue)) {
+    errors.targetValue = 'Target session logs must be a whole number.';
+  }
 
   if (!Number.isFinite(draft.days) || draft.days <= 0) {
     errors.days = 'Days must be greater than 0.';
+  }
+  if (Number.isFinite(draft.days) && !Number.isInteger(draft.days)) {
+    errors.days = 'Days must be a whole number.';
   }
 
   return {
