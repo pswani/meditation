@@ -8,6 +8,22 @@ A focused meditation practice app built with React, TypeScript, and Vite.
 - A dedicated back-end service is not yet present in this workspace.
 - Local persistence is used as the current baseline storage approach.
 
+## Release readiness snapshot
+
+As of March 24, 2026, this workspace is handoff-ready for a front-end-only release candidate review.
+
+Verified in this repository:
+- `npm run dev` starts Vite successfully and prints a local URL (observed: `http://localhost:5173/`)
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+
+Current release-candidate gaps relative to the product requirements:
+- playlist runs do not yet support an optional small gap between items
+- summaries do not yet provide views by source, date range, or time-of-day bucket
+- persistence remains local-first and front-end-only; no dedicated backend service is included in this workspace
+
 ## Product focus
 
 This app is designed as a disciplined meditation practice tool, not a broad wellness marketplace.
@@ -65,7 +81,7 @@ npm install
 ```bash
 npm run dev
 ```
-Vite prints the local dev URL in the terminal (typically `http://localhost:5173/`).
+Vite prints the local dev URL in the terminal (observed on March 24, 2026: `http://localhost:5173/`).
 
 ### 4. Build for production
 ```bash

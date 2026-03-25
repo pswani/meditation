@@ -265,3 +265,12 @@
 - Preserve active timer and playlist recovery safety by comparing recovered runtime state against the originally stored snapshot, so mount-time cleanup still runs when stale active state must be corrected or cleared.
 - Move `sankalpa` collection ownership into shared provider state so Home and Sankalpa stop reading storage independently and Home reflects newly created goals immediately within the same app session.
 - Keep this slice bounded to obvious inefficiencies only; do not split the large timer context or add speculative memoization without a user-visible or correctness-backed need.
+
+### 2026-03-24 release readiness decisions
+- Treat this release-readiness pass as an audit-and-handoff slice, not a silent scope expansion into new product behavior.
+- Define the current release candidate honestly as:
+  - front-end only
+  - local-first persistence
+  - quality-gated by `dev`, `typecheck`, `lint`, `test`, and `build`
+- Document remaining requirement gaps explicitly in release-facing docs instead of implying full parity with every product-requirement bullet.
+- Keep generated verification artifacts (`dist/`, `tsconfig.app.tsbuildinfo`) out of the release-readiness commit.
