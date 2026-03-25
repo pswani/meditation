@@ -12,6 +12,8 @@ const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
+const SANKALPA_GOAL_TYPES = ['duration-based', 'session-count-based'] as const;
+const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -296,6 +298,26 @@ function normalizePlaylist(value: unknown): Playlist | null {
   };
 }
 
+function isValidSankalpaGoal(value: unknown): value is SankalpaGoal {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.goalType === 'string' &&
+    SANKALPA_GOAL_TYPES.includes(candidate.goalType as (typeof SANKALPA_GOAL_TYPES)[number]) &&
+    isFinitePositiveNumber(candidate.targetValue) &&
+    isFinitePositiveNumber(candidate.days) &&
+    (typeof candidate.meditationType === 'undefined' || isMeditationType(candidate.meditationType)) &&
+    (typeof candidate.timeOfDayBucket === 'undefined' ||
+      (typeof candidate.timeOfDayBucket === 'string' &&
+        TIME_OF_DAY_BUCKETS.includes(candidate.timeOfDayBucket as (typeof TIME_OF_DAY_BUCKETS)[number]))) &&
+    isValidIsoDate(candidate.createdAt)
+  );
+}
+
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
   if (!raw) {
@@ -383,7 +405,7 @@ export function loadSankalpas(): SankalpaGoal[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as SankalpaGoal[]) : [];
+    return Array.isArray(parsed) ? parsed.filter(isValidSankalpaGoal) : [];
   } catch {
     return [];
   }

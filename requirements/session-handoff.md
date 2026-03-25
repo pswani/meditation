@@ -1,49 +1,49 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-b-practice-composition/10-test-practice-composition.md` is complete.
+Prompt `prompts/milestone-d-production-readiness/01-testing-hardening.md` is complete.
 
-Milestone B QA coverage was hardened across manual logging, custom plays/media behavior, playlist logic/run rules, and REST boundary integration checks.
+Milestone D testing hardening is complete for the most regression-prone runtime and persistence seams across the app.
 
 ## What was implemented
 - Added and completed ExecPlan:
-  - `requirements/execplan-practice-composition-testing-qa.md`
-- Strengthened manual logging tests:
-  - `src/utils/manualLog.test.ts`
-  - added boundary acceptance (`session timestamp == now`) and invalid-build rejection coverage
-- Strengthened manual vs auto differentiation coverage:
-  - `src/pages/HistoryPage.test.tsx`
-  - explicit source-badge rendering and source filter behavior checks
-- Strengthened custom play/media QA coverage:
-  - `src/utils/customPlay.test.ts`
-  - `src/features/customPlays/CustomPlayManager.test.tsx`
-  - `src/utils/mediaAssetApi.test.ts`
-- Strengthened playlist helper/run/logging QA coverage:
-  - `src/utils/playlist.test.ts`
-  - `src/utils/playlistRunPolicy.test.ts`
-  - `src/utils/playlistLog.test.ts`
-- Strengthened REST integration boundary coverage for playlists:
-  - `src/utils/playlistApi.test.ts`
-  - added list-boundary normalization assertion for mixed valid/malformed payloads
-- Improved fragile test reliability in touched UI tests:
-  - explicit localStorage and cleanup usage in custom-play manager tests
+  - `requirements/execplan-production-readiness-testing-hardening.md`
+- Hardened `sankalpa` storage loading:
+  - `src/utils/storage.ts`
+  - invalid persisted goals are now dropped while valid goals are preserved
+- Added storage QA coverage for `sankalpa` persistence and normalization:
+  - `src/utils/storage.test.ts`
+- Added app-shell recovery coverage for persisted active runtime state:
+  - `src/App.test.tsx`
+  - recovered active timer snapshot
+  - recovered active playlist-run snapshot
+- Added route-level Sankalpa coverage:
+  - `src/pages/SankalpaPage.test.tsx`
+  - empty-state validation flow
+  - populated summary rendering
+  - persisted sankalpa creation flow
+- Added route-level playlist run coverage:
+  - `src/pages/PlaylistRunPage.test.tsx`
+  - paused recovered run resume flow
+  - end-early confirmation and logged outcome flow
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
-  - 21 test files
-  - 103 tests passing
+  - 23 test files
+  - 111 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-practice-composition-testing-qa.md`.
-- Updated `requirements/decisions.md` with QA hardening decisions.
+- Added and completed `requirements/execplan-production-readiness-testing-hardening.md`.
+- Updated `requirements/decisions.md` with production-readiness testing hardening decisions.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This pass intentionally focused on Milestone B test hardening only and did not change runtime product behavior.
-- QA coverage is still local-first and front-end scoped; backend service behavior remains out of scope in this workspace.
+- This pass stayed intentionally narrow and did not attempt broad UI polish or accessibility remediation.
+- Runtime hardening in this slice is limited to the `sankalpa` persistence boundary; broader storage normalization opportunities may still remain for later production-readiness work.
+- QA coverage remains local-first and front-end scoped; backend service behavior remains out of scope in this workspace.
 
 ## Exact recommended next prompt
 Read:
@@ -60,21 +60,21 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for summaries.
-2. Implement:
-   - overall summaries
-   - by-type summaries
-   - by-source summaries if supported
-   - date-range summary views
-3. Keep the UX calm and readable, not dashboard-heavy.
-4. Use clean REST integration if summaries are derived or fetched from the back end.
-5. Make it responsive across mobile, tablet, and desktop.
-6. Add focused tests for summary derivation logic and any relevant API behavior.
-7. Run:
+1. Create an ExecPlan for accessibility and responsive polish.
+2. Improve:
+   - keyboard usability where applicable
+   - labels and semantics
+   - focus states
+   - breakpoint behavior
+   - desktop/tablet spacing and density
+   - mobile readability
+3. Keep the design calm and minimal.
+4. Add focused tests where appropriate.
+5. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-8. Update decisions and session-handoff.
-9. Commit with a clear message:
-   feat(insight): add meditation summaries
+6. Update decisions and session-handoff.
+7. Commit with a clear message:
+   feat(polish): improve accessibility and responsive usability

@@ -236,3 +236,12 @@
 - Extend playlist logging helper coverage for negative-duration clamp behavior (`0` floor).
 - Extend playlist REST-boundary tests to verify list-path normalization behavior against mixed valid/malformed stored payloads.
 - Improve touched custom-play UI test reliability with explicit `localStorage` and DOM cleanup between tests.
+
+### 2026-03-24 production-readiness testing hardening decisions
+- Focus this Milestone D QA slice on regression-prone runtime seams rather than broad coverage expansion:
+  - persisted active timer recovery
+  - persisted active playlist-run recovery
+  - sankalpa page summary/create behavior
+  - playlist-run early-end outcome flow
+- Harden `sankalpa` persistence at the storage boundary by validating loaded records and dropping malformed entries while preserving valid goals.
+- Prefer route-level tests for cross-screen recovery and outcome flows, with helper/storage tests covering normalization logic.
