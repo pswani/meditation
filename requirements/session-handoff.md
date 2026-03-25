@@ -1,31 +1,55 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/reviews/05-remediate-review-findings.md` is complete.
+Prompt `prompts/reviews/06-end-to-end-testing-and-verification.md` is complete.
 
-Completed a bounded remediation slice that addressed the highest-priority review findings across correctness, performance, consistency, and repo hygiene without widening into a larger refactor.
+Completed a thorough front-end verification pass for the current local-first application, strengthened high-value end-to-end journey coverage, and confirmed the live startup path.
 
 ## What was implemented
-- Fixed critical session-log retention correctness by removing shared history truncation from the timer reducer.
-- Fixed critical active-session persistence churn by saving recoverable timer and playlist snapshots only when recovery-relevant state changes, not on every countdown tick.
-- Preserved recovery behavior for rehydrated active timer and playlist state, including corrected remaining-time snapshots on first load.
-- Tightened sankalpa consistency by:
-  - routing Home reads through the sankalpa API boundary instead of direct storage access
-  - replacing raw goal-type enum text with human-readable labels in Home and Sankalpa UI
-- Completed the highest-value hygiene cleanup from the review:
-  - updated `prompts/README.md` to match the front-end-only workspace
-  - updated `docs/architecture.md` route guidance to match implemented routes
-  - removed unused `src/components/PlaceholderScreen.tsx`
-  - removed duplicate tracked `vite.config.js` and `vite.config.d.ts`
 - Added the ExecPlan:
-  - `requirements/execplan-review-remediation-pass1.md`
+  - `requirements/execplan-e2e-verification-pass1.md`
+- Added high-value App-level journey coverage for:
+  - timer setup -> active timer -> pause/resume -> completion -> History auto log
+  - playlist run -> item progression -> completion -> History playlist auto logs
+- Re-ran the full verification sequence including dependency install, quality commands, build, and local dev startup.
+- Confirmed the live app loads and navigates locally via the running Vite dev server.
+
+## Tested journeys
+- app startup via `npm run dev`
+- shell navigation and route loading:
+  - Home
+  - Practice
+  - History
+  - Sankalpa redirect
+  - Settings
+- Home quick-start and favorite/snapshot rendering
+- Settings defaults persistence into Practice
+- timer setup validation and start behavior
+- active timer flow
+- pause/resume behavior
+- completed-session behavior and auto logging into History
+- ended-early behavior through existing route/provider coverage
+- manual logging and History filtering
+- custom play creation, update, apply-to-timer, and deletion
+- playlist active-run blocking, continuation, item progression, completion, and History logging
+- summaries and sankalpa rendering plus key summary-range behavior
+- local persistence and active-flow recovery behavior
+- startup recovery messaging and stale active-state clearing
+
+## Test gaps that still remain
+- No real backend service exists in this workspace, so there is still no live verification of:
+  - front-end/back-end integration
+  - REST transport behavior over HTTP
+  - H2-backed persistence
+- Sound playback remains unimplemented, so there is no runtime audio verification yet.
+- Custom-play media verification is still limited to the fixed local metadata catalog; there is no user-managed import flow or real media backend to validate.
+- Browser-driven multi-page e2e automation is still lightweight; confidence remains strongest in App-level integration tests plus local startup checks.
 
 ## Issues fixed
-- Full `session log` history is now retained instead of silently dropping older entries.
-- Active timer and playlist persistence no longer rewrite localStorage on every 500ms tick.
-- Home now uses the same sankalpa boundary utility pattern as the Sankalpa screen.
-- Sankalpa goal-type UI copy now reads as `Duration goal` / `Session-count goal` instead of internal enum strings.
-- Repo docs/config cleanup removed the biggest drift called out in the hygiene review.
+- Added missing end-to-end coverage for the two highest-value untested journeys:
+  - timer completion into History
+  - playlist completion into History
+- No additional product code changes were required beyond test-strengthening in this pass.
 
 ## Issues intentionally deferred
 - Actual audio playback for selected timer and playlist sounds remains unimplemented.
@@ -35,28 +59,45 @@ Completed a bounded remediation slice that addressed the highest-priority review
 - Custom-play media metadata is still denormalized in local persistence.
 
 ## Tests added or improved
-- Added reducer coverage proving older `session log` entries are retained.
-- Added provider-level persistence tests proving active timer and playlist snapshots are not rewritten on every tick and still persist paused-state remaining time.
-- Added UI assertions for human-readable sankalpa goal-type labels in Home and Sankalpa.
+- Added App-level timer journey coverage for:
+  - setup
+  - pause/resume
+  - completion
+  - auto-log persistence
+  - History rendering
+- Added App-level playlist journey coverage for:
+  - run start
+  - item progression
+  - completion
+  - per-item auto-log persistence
+  - History playlist rendering
 
 ## Verification status
+- Passed `npm install`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
+- Passed local startup verification with `npm run dev`
+- Confirmed local app rendering and navigation in a live browser session at `http://127.0.0.1:5173/`
 
 ## Documentation updates made
-- Added `requirements/execplan-review-remediation-pass1.md`.
+- Added `requirements/execplan-e2e-verification-pass1.md`.
 - Updated `requirements/decisions.md`.
 - Updated `requirements/session-handoff.md`.
-- Updated `prompts/README.md`.
-- Updated `docs/architecture.md`.
 
 ## Known limitations / assumptions
 - This workspace remains front-end only; backend services and deployment flows are still out of scope here.
 - Local-first persistence is still the current product baseline.
 - Sound selectors still represent fixed choices only; playback runtime behavior is still deferred.
 - Full history retention is local-only and may grow storage usage over time until a retention/export strategy is defined.
+
+## Current end-to-end confidence level
+- High for the current front-end-only, local-first product baseline:
+  - major implemented routes load
+  - core timer and playlist journeys now have direct App-level integration coverage
+  - local startup, build, and persistence behavior were re-verified
+- Medium overall against the full original product vision because backend, H2, and real audio playback are still absent from this workspace.
 
 ## Exact recommended next prompt
 Read:

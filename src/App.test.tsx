@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
@@ -288,5 +288,120 @@ describe('App shell', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /quick start/i })).toBeInTheDocument();
+  });
+
+  it('completes a timer journey through pause, resume, auto log, and History', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-25T09:00:00.000Z'));
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    expect(screen.getByRole('heading', { level: 2, name: '01:00' })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^pause$/i }));
+    expect(screen.getByText(/^paused$/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '00:40' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^resume$/i }));
+    act(() => {
+      vi.advanceTimersByTime(40_000);
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: /session completed/i })).toBeInTheDocument();
+    expect(screen.getByText(/an auto log was added to history/i)).toBeInTheDocument();
+
+    const storedLogs = JSON.parse(localStorage.getItem(SESSION_LOGS_KEY) ?? '[]');
+    expect(storedLogs).toHaveLength(1);
+    expect(storedLogs[0].status).toBe('completed');
+    expect(storedLogs[0].source).toBe('auto log');
+    expect(storedLogs[0].completedDurationSeconds).toBe(60);
+
+    fireEvent.click(screen.getByRole('button', { name: /view history/i }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
+    expect(screen.getAllByText(/^vipassana$/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/^completed$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^auto log$/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+  });
+
+  it('completes a playlist journey and records per-item auto logs in History', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-25T11:00:00.000Z'));
+
+    localStorage.setItem(
+      PLAYLISTS_KEY,
+      JSON.stringify([
+        {
+          id: 'playlist-1',
+          name: 'Lunch Reset',
+          favorite: false,
+          createdAt: '2026-03-25T08:00:00.000Z',
+          updatedAt: '2026-03-25T08:00:00.000Z',
+          items: [
+            {
+              id: 'item-1',
+              meditationType: 'Vipassana',
+              durationMinutes: 1,
+            },
+            {
+              id: 'item-2',
+              meditationType: 'Ajapa',
+              durationMinutes: 1,
+            },
+          ],
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice/playlists']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /run playlist/i }));
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Lunch Reset' })).toBeInTheDocument();
+    expect(screen.getByText(/current meditation type: vipassana/i)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText(/current meditation type: ajapa/i)).toBeInTheDocument();
+    expect(screen.getByText(/completed so far: 1\/2 items/i)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: /playlist completed/i })).toBeInTheDocument();
+    expect(screen.getByText(/lunch reset · 2\/2 items logged/i)).toBeInTheDocument();
+
+    const storedLogs = JSON.parse(localStorage.getItem(SESSION_LOGS_KEY) ?? '[]');
+    expect(storedLogs).toHaveLength(2);
+    expect(storedLogs.every((entry: { source: string; status: string; playlistName?: string }) => entry.source === 'auto log')).toBe(true);
+    expect(storedLogs.every((entry: { status: string }) => entry.status === 'completed')).toBe(true);
+    expect(storedLogs.every((entry: { playlistName?: string }) => entry.playlistName === 'Lunch Reset')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /view history/i }));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
+    expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);
+    expect(screen.getAllByText(/^auto log$/i)).toHaveLength(2);
   });
 });

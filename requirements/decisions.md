@@ -374,3 +374,14 @@
   - optional playlist item gaps
   - dialog accessibility rework
   - larger `TimerContext` decomposition
+
+### 2026-03-25 end-to-end verification pass-1 decisions
+- Treat this repository as front-end only for verification purposes:
+  - no backend service is present in the workspace
+  - no H2 persistence layer is present in the workspace
+  - REST-style API utilities remain local-first boundary seams rather than live network integrations
+- Prefer high-value App-level integration tests over adding a new e2e framework in this pass, because the biggest remaining confidence gaps are full user journeys across routing, provider state, timing, and local persistence.
+- Add explicit end-to-end-style integration coverage for:
+  - timer setup -> active session -> pause/resume -> completion -> History auto log
+  - playlist run -> item progression -> completion -> History playlist auto logs
+- Validate local startup with the documented `npm run dev` path and browser navigation against the running app, while treating loopback-shell connectivity quirks as environment-specific rather than application failures.
