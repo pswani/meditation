@@ -10,6 +10,7 @@ import type {
   PlaylistValidationResult,
 } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
+import type { SankalpaGoal } from '../../types/sankalpa';
 import type { TimerSettings } from '../../types/timer';
 import type { createInitialTimerState } from './timerReducer';
 import type { ManualLogInput, ManualLogValidationResult } from '../../utils/manualLog';
@@ -23,6 +24,7 @@ export interface TimerContextValue {
   readonly recentLogs: readonly SessionLog[];
   readonly customPlays: readonly CustomPlay[];
   readonly playlists: readonly Playlist[];
+  readonly sankalpas: readonly SankalpaGoal[];
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly playlistRunOutcome: PlaylistRunOutcome | null;
   readonly isPaused: boolean;
@@ -41,6 +43,7 @@ export interface TimerContextValue {
   readonly endPlaylistRunEarly: () => void;
   readonly clearPlaylistRunOutcome: () => void;
   readonly addManualLog: (input: ManualLogInput) => ManualLogValidationResult;
+  readonly addSankalpa: (goal: SankalpaGoal) => void;
   readonly startSession: () => boolean;
   readonly pauseSession: () => void;
   readonly resumeSession: () => void;

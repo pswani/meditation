@@ -259,3 +259,9 @@
   - better phone action stacking
   - more breathable playlist chips and dense panels
   - additional large-screen space for summary and sankalpa lists
+
+### 2026-03-24 performance cleanup decisions
+- Dedupe local-first persistence in `TimerProvider` by tracking serialized snapshots and skipping writes when the runtime payload already matches the last persisted value.
+- Preserve active timer and playlist recovery safety by comparing recovered runtime state against the originally stored snapshot, so mount-time cleanup still runs when stale active state must be corrected or cleared.
+- Move `sankalpa` collection ownership into shared provider state so Home and Sankalpa stop reading storage independently and Home reflects newly created goals immediately within the same app session.
+- Keep this slice bounded to obvious inefficiencies only; do not split the large timer context or add speculative memoization without a user-visible or correctness-backed need.

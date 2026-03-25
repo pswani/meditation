@@ -5,7 +5,6 @@ import type { CustomPlay } from '../types/customPlay';
 import type { PlaylistRunStartResult } from '../types/playlist';
 import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { formatDurationLabel } from '../utils/sessionLog';
-import { loadSankalpas } from '../utils/storage';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
 
 function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
@@ -30,6 +29,7 @@ export default function HomePage() {
     sessionLogs,
     customPlays,
     playlists,
+    sankalpas,
     activeSession,
     activePlaylistRun,
     startSession,
@@ -37,7 +37,6 @@ export default function HomePage() {
     startPlaylistRun,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const sankalpas = useMemo(() => loadSankalpas(), []);
 
   const todaySummary = useMemo(() => deriveTodayActivitySummary(sessionLogs), [sessionLogs]);
   const recentLogs = useMemo(() => selectRecentSessionLogs(sessionLogs, 5), [sessionLogs]);

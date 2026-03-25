@@ -154,4 +154,19 @@ describe('HomePage UX', () => {
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
     expect(screen.getByText(/stay present/i)).toBeInTheDocument();
   });
+
+  it('updates the home sankalpa snapshot after creating a goal in the same app session', () => {
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
+    fireEvent.click(screen.getAllByRole('link', { name: /^Home$/i })[0]);
+
+    expect(screen.queryByText(/no active sankalpa right now/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/target: 120 min/i)).toBeInTheDocument();
+    expect(screen.getByText(/progress:/i)).toBeInTheDocument();
+  });
 });

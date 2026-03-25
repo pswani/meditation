@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { CustomPlay } from '../../types/customPlay';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome } from '../../types/playlist';
+import type { SankalpaGoal } from '../../types/sankalpa';
 import type { ActiveSession } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { buildManualLogEntry, validateManualLogInput } from '../../utils/manualLog';
@@ -14,11 +15,13 @@ import {
   loadActiveTimerState,
   loadCustomPlays,
   loadPlaylists,
+  loadSankalpas,
   loadSessionLogs,
   loadTimerSettings,
   saveActivePlaylistRunState,
   saveActiveTimerState,
   saveCustomPlays,
+  saveSankalpas,
   saveSessionLogs,
   saveTimerSettings,
 } from '../../utils/storage';
@@ -32,6 +35,34 @@ interface TimerHydration {
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly isPlaylistRunPaused: boolean;
   readonly recoveryMessage: string | null;
+  readonly activeTimerPersistedSnapshot: string;
+  readonly activePlaylistRunPersistedSnapshot: string;
+}
+
+function buildPersistedSnapshot(value: unknown): string {
+  return JSON.stringify(value ?? null);
+}
+
+function buildActiveTimerStateSnapshot(activeSession: ActiveSession | null, isPaused: boolean): string {
+  if (!activeSession) {
+    return 'null';
+  }
+
+  return JSON.stringify({
+    activeSession,
+    isPaused,
+  });
+}
+
+function buildActivePlaylistRunStateSnapshot(activePlaylistRun: ActivePlaylistRun | null, isPaused: boolean): string {
+  if (!activePlaylistRun) {
+    return 'null';
+  }
+
+  return JSON.stringify({
+    activePlaylistRun,
+    isPaused,
+  });
 }
 
 function recoverActiveSession(
@@ -122,16 +153,23 @@ function createTimerHydration(nowMs: number): TimerHydration {
     activePlaylistRun: playlistRecovery.activePlaylistRun,
     isPlaylistRunPaused: playlistRecovery.activePlaylistRun ? (storedPlaylistRunState?.isPaused ?? false) : false,
     recoveryMessage: timerRecovery.recoveryMessage ?? playlistRecovery.recoveryMessage,
+    activeTimerPersistedSnapshot: buildPersistedSnapshot(storedTimerState),
+    activePlaylistRunPersistedSnapshot: buildPersistedSnapshot(storedPlaylistRunState),
   };
 }
 
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
+  const [initialTimerSettings] = useState(() => loadTimerSettings() ?? defaultTimerSettings);
+  const [initialSessionLogs] = useState(() => loadSessionLogs());
   const [hydration] = useState<TimerHydration>(() => createTimerHydration(Date.now()));
+  const [initialCustomPlays] = useState(() => loadCustomPlays());
+  const [initialPlaylists] = useState(() => loadPlaylists());
+  const [initialSankalpas] = useState(() => loadSankalpas());
   const [state, dispatch] = useReducer(
     timerReducer,
     undefined,
     () => {
-      const initialState = createInitialTimerState(loadTimerSettings() ?? defaultTimerSettings, loadSessionLogs());
+      const initialState = createInitialTimerState(initialTimerSettings, initialSessionLogs);
 
       return {
         ...initialState,
@@ -140,12 +178,20 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     }
   );
   const [isPaused, setIsPaused] = useState(hydration.isPaused);
-  const [customPlays, setCustomPlays] = useState<CustomPlay[]>(() => loadCustomPlays());
-  const [playlists, setPlaylists] = useState<Playlist[]>(() => loadPlaylists());
+  const [customPlays, setCustomPlays] = useState<CustomPlay[]>(initialCustomPlays);
+  const [playlists, setPlaylists] = useState<Playlist[]>(initialPlaylists);
+  const [sankalpas, setSankalpas] = useState<SankalpaGoal[]>(initialSankalpas);
   const [activePlaylistRun, setActivePlaylistRun] = useState<ActivePlaylistRun | null>(hydration.activePlaylistRun);
   const [playlistRunOutcome, setPlaylistRunOutcome] = useState<PlaylistRunOutcome | null>(null);
   const [isPlaylistRunPaused, setIsPlaylistRunPaused] = useState(hydration.isPlaylistRunPaused);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(hydration.recoveryMessage);
+  const timerSettingsSnapshotRef = useRef(buildPersistedSnapshot(initialTimerSettings));
+  const sessionLogsSnapshotRef = useRef(buildPersistedSnapshot(initialSessionLogs));
+  const customPlaysSnapshotRef = useRef(buildPersistedSnapshot(initialCustomPlays));
+  const playlistsSnapshotRef = useRef(buildPersistedSnapshot(initialPlaylists));
+  const sankalpasSnapshotRef = useRef(buildPersistedSnapshot(initialSankalpas));
+  const activeTimerSnapshotRef = useRef(hydration.activeTimerPersistedSnapshot);
+  const activePlaylistRunSnapshotRef = useRef(hydration.activePlaylistRunPersistedSnapshot);
 
   useEffect(() => {
     if (!state.activeSession) {
@@ -160,28 +206,74 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [activePlaylistRun]);
 
   useEffect(() => {
+    const snapshot = buildPersistedSnapshot(state.settings);
+    if (timerSettingsSnapshotRef.current === snapshot) {
+      return;
+    }
+
     saveTimerSettings(state.settings);
+    timerSettingsSnapshotRef.current = snapshot;
   }, [state.settings]);
 
   useEffect(() => {
+    const snapshot = buildPersistedSnapshot(state.sessionLogs);
+    if (sessionLogsSnapshotRef.current === snapshot) {
+      return;
+    }
+
     saveSessionLogs([...state.sessionLogs]);
+    sessionLogsSnapshotRef.current = snapshot;
   }, [state.sessionLogs]);
 
   useEffect(() => {
+    const snapshot = buildPersistedSnapshot(customPlays);
+    if (customPlaysSnapshotRef.current === snapshot) {
+      return;
+    }
+
     saveCustomPlays(customPlays);
+    customPlaysSnapshotRef.current = snapshot;
   }, [customPlays]);
 
   useEffect(() => {
+    const snapshot = buildPersistedSnapshot(playlists);
+    if (playlistsSnapshotRef.current === snapshot) {
+      return;
+    }
+
+    playlistsSnapshotRef.current = snapshot;
     void persistPlaylistsToApi(playlists);
   }, [playlists]);
 
   useEffect(() => {
+    const snapshot = buildActiveTimerStateSnapshot(state.activeSession, isPaused);
+    if (activeTimerSnapshotRef.current === snapshot) {
+      return;
+    }
+
     saveActiveTimerState(state.activeSession, isPaused);
+    activeTimerSnapshotRef.current = snapshot;
   }, [isPaused, state.activeSession]);
 
   useEffect(() => {
+    const snapshot = buildActivePlaylistRunStateSnapshot(activePlaylistRun, isPlaylistRunPaused);
+    if (activePlaylistRunSnapshotRef.current === snapshot) {
+      return;
+    }
+
     saveActivePlaylistRunState(activePlaylistRun, isPlaylistRunPaused);
+    activePlaylistRunSnapshotRef.current = snapshot;
   }, [activePlaylistRun, isPlaylistRunPaused]);
+
+  useEffect(() => {
+    const snapshot = buildPersistedSnapshot(sankalpas);
+    if (sankalpasSnapshotRef.current === snapshot) {
+      return;
+    }
+
+    saveSankalpas(sankalpas);
+    sankalpasSnapshotRef.current = snapshot;
+  }, [sankalpas]);
 
   useEffect(() => {
     if (!state.activeSession || isPaused) {
@@ -289,6 +381,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       recentLogs: state.sessionLogs.slice(0, 20),
       customPlays,
       playlists,
+      sankalpas,
       activePlaylistRun,
       playlistRunOutcome,
       isPaused,
@@ -498,6 +591,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
         return validation;
       },
+      addSankalpa: (goal) => setSankalpas((current) => [goal, ...current]),
       startSession: () => {
         if (activePlaylistRun) {
           return false;
@@ -527,7 +621,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
       clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
-    [activePlaylistRun, customPlays, isPaused, isPlaylistRunPaused, playlistRunOutcome, playlists, recoveryMessage, state]
+    [activePlaylistRun, customPlays, isPaused, isPlaylistRunPaused, playlistRunOutcome, playlists, recoveryMessage, sankalpas, state]
   );
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

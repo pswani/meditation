@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
@@ -14,7 +14,6 @@ import {
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
-import { loadSankalpas, saveSankalpas } from '../utils/storage';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
 
@@ -102,16 +101,11 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 }
 
 export default function SankalpaPage() {
-  const { sessionLogs } = useTimer();
+  const { sessionLogs, sankalpas, addSankalpa } = useTimer();
   const sankalpaRulesId = 'sankalpa-counting-rules';
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [sankalpas, setSankalpas] = useState(() => loadSankalpas());
-
-  useEffect(() => {
-    saveSankalpas(sankalpas);
-  }, [sankalpas]);
 
   const overallSummary = useMemo(() => deriveOverallSummary(sessionLogs), [sessionLogs]);
   const byTypeSummary = useMemo(() => deriveSummaryByType(sessionLogs), [sessionLogs]);
@@ -134,7 +128,7 @@ export default function SankalpaPage() {
     }
 
     const nextGoal = createSankalpaGoal(draft, new Date());
-    setSankalpas((current) => [nextGoal, ...current]);
+    addSankalpa(nextGoal);
     setDraft(createInitialSankalpaDraft());
     setErrors(initialErrors);
     setSaveMessage('Sankalpa saved.');
