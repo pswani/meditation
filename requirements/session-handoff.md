@@ -1,28 +1,24 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-d-production-readiness/02-accessibility-responsive-polish.md` is complete.
+Prompt `prompts/milestone-d-production-readiness/03-performance-cleanup.md` is complete.
 
-Milestone D accessibility and responsive polish is complete for shared keyboard navigation, focus visibility, disclosure semantics, and breakpoint spacing/density refinement.
+Milestone D performance cleanup is complete for provider bootstrapping, startup persistence behavior, and no-op local-first write reduction.
 
 ## What was implemented
-- Added polish ExecPlan for this slice:
-  - `requirements/execplan-milestone-d-accessibility-responsive-polish.md`
-- Improved shared shell accessibility in `src/app/AppShell.tsx` and `src/index.css`:
-  - added a keyboard `Skip to content` link
-  - made the main content region a stable skip target
-  - added a shared calm `:focus-visible` treatment for major interactive elements
-- Improved route-level interaction semantics in `src/pages/PracticePage.tsx`:
-  - wired `Advanced` and `Practice Tools` toggles with explicit `aria-expanded` and `aria-controls`
-  - connected blocked timer start state to its explanatory banner through `aria-describedby`
-- Improved responsive readability and spacing in `src/index.css`:
-  - added more breathing room above the mobile bottom navigation
-  - stacked narrow-screen action groups more safely
-  - allowed panel headers and tool rows to wrap more gracefully
-  - refined tablet/desktop content balance, especially on Home
-- Added focused UX/accessibility tests:
-  - `src/App.test.tsx` verifies skip-link and main-content target presence
-  - `src/pages/PracticePage.test.tsx` verifies explicit disclosure semantics and blocked-state description wiring
+- Added performance ExecPlan for this slice:
+  - `requirements/execplan-milestone-d-performance-cleanup.md`
+- Improved timer provider startup behavior in `src/features/timer/TimerContext.tsx`:
+  - consolidated persisted bootstrap loading into one startup pass
+  - skipped redundant first-render persistence for unchanged settings, session logs, custom plays, and playlists
+  - preserved corrective first-render persistence when active runtime recovery changed the stored snapshot
+- Improved sankalpa page startup behavior in `src/pages/SankalpaPage.tsx`:
+  - skipped redundant initial sankalpa persistence writes
+  - memoized summary date defaults instead of recomputing them every render
+- Relaxed storage save helper signatures in `src/utils/storage.ts` to accept `readonly` arrays and avoid unnecessary array copying at call sites
+- Added focused regression tests:
+  - `src/App.test.tsx` verifies stable initial app mount avoids redundant persistence writes
+  - `src/pages/SankalpaPage.test.tsx` verifies stored sankalpas are not rewritten on first mount when unchanged
 
 ## Verification status
 - `npm run typecheck` ✅
@@ -31,14 +27,14 @@ Milestone D accessibility and responsive polish is complete for shared keyboard 
 - `npm run build` ✅
 
 ## Documentation updates made
-- Added `requirements/execplan-milestone-d-accessibility-responsive-polish.md`.
+- Added `requirements/execplan-milestone-d-performance-cleanup.md`.
 - Updated `requirements/decisions.md`.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This pass intentionally focuses on shared shell behavior and the most interaction-heavy route rather than reworking every screen individually.
-- Focus styling and responsive behavior were refined through shared CSS and targeted markup changes; no dependency additions were introduced.
-- More advanced accessibility review work such as full keyboard-trap audits, screen-reader copy tuning, and motion preferences can still be expanded later if needed.
+- This pass intentionally focuses on startup and persistence inefficiencies rather than large render-tree refactors.
+- Timer context still uses one broad context value, so large-scale rerender isolation work remains available if future profiling shows it is necessary.
+- No product behavior or persistence format changes were introduced in this cleanup pass.
 
 ## Exact recommended next prompt
 Read:
@@ -55,20 +51,22 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for performance cleanup.
-2. Review and improve obvious performance issues in the current front end and any directly related back-end paths:
-   - unnecessary re-renders
-   - duplicated expensive derivations
-   - overly large components
-   - wasteful persistence/update patterns
-   - obvious N+1 or wasteful query patterns if present
-3. Keep changes bounded and safe.
-4. Avoid speculative micro-optimizations.
-5. Run:
+1. Create an ExecPlan for release readiness.
+2. Prepare the repo for a clean handoff/release-ready state:
+   - verify setup instructions
+   - verify run/build/test instructions
+   - verify app behavior against requirements
+   - identify remaining gaps for a v1 release candidate
+3. Update docs as needed:
+   - README.md
+   - requirements/roadmap.md
+   - requirements/decisions.md
+   - requirements/session-handoff.md
+4. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-6. Update decisions and session-handoff.
-7. Commit with a clear message:
-   perf(app): clean up obvious front-end and integration inefficiencies
+5. Produce a concise release-readiness summary in session-handoff.
+6. Commit with a clear message:
+   chore(release): prepare repo for release candidate handoff

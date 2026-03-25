@@ -328,3 +328,15 @@
   - full-width primary action stacking in narrow timer action groups
   - reduced wrapping friction in panel headers and tool rows
 - Improve tablet/desktop balance with modest spacing adjustments and a more intentional Home two-column split instead of a fully even grid.
+
+### 2026-03-24 milestone-d performance cleanup decisions
+- Focus this slice on obvious startup and persistence inefficiencies instead of speculative render memoization.
+- Consolidate timer provider bootstrapping so persisted timer data is loaded once and reused across hydration/state initialization.
+- Skip first-render persistence writes for unchanged local-first data sets:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- Preserve first-render persistence for active runtime recovery only when hydration changed the stored snapshot (for example, corrected remaining time or clearing stale active state).
+- Broaden storage save helpers to accept `readonly` arrays so unchanged data can be persisted without unnecessary array copying at call sites.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
@@ -143,19 +143,30 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
-  const todayDateInput = deriveDateInputForDayOffset(new Date(), 0);
-  const last7StartInput = deriveDateInputForDayOffset(new Date(), -6);
-  const last30StartInput = deriveDateInputForDayOffset(new Date(), -29);
+  const summaryDateDefaults = useMemo(() => {
+    const today = new Date();
+    return {
+      todayDateInput: deriveDateInputForDayOffset(today, 0),
+      last7StartInput: deriveDateInputForDayOffset(today, -6),
+      last30StartInput: deriveDateInputForDayOffset(today, -29),
+    };
+  }, []);
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [sankalpas, setSankalpas] = useState(() => listSankalpasFromApi());
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
-  const [customStartDate, setCustomStartDate] = useState(last7StartInput);
-  const [customEndDate, setCustomEndDate] = useState(todayDateInput);
+  const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
+  const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
   const [showInactiveSummaryCategories, setShowInactiveSummaryCategories] = useState(false);
+  const skipInitialSankalpaPersistRef = useRef(true);
 
   useEffect(() => {
+    if (skipInitialSankalpaPersistRef.current) {
+      skipInitialSankalpaPersistRef.current = false;
+      return;
+    }
+
     persistSankalpasToApi(sankalpas);
   }, [sankalpas]);
 
@@ -170,7 +181,11 @@ export default function SankalpaPage() {
     }
 
     if (summaryRangePreset === 'last-7-days') {
-      const range = deriveDateRangeFromInputs(last7StartInput, todayDateInput) ?? { startAtMs: null, endAtMs: null };
+      const range =
+        deriveDateRangeFromInputs(summaryDateDefaults.last7StartInput, summaryDateDefaults.todayDateInput) ?? {
+          startAtMs: null,
+          endAtMs: null,
+        };
       return {
         range,
         error: null as string | null,
@@ -179,7 +194,11 @@ export default function SankalpaPage() {
     }
 
     if (summaryRangePreset === 'last-30-days') {
-      const range = deriveDateRangeFromInputs(last30StartInput, todayDateInput) ?? { startAtMs: null, endAtMs: null };
+      const range =
+        deriveDateRangeFromInputs(summaryDateDefaults.last30StartInput, summaryDateDefaults.todayDateInput) ?? {
+          startAtMs: null,
+          endAtMs: null,
+        };
       return {
         range,
         error: null as string | null,
@@ -209,7 +228,7 @@ export default function SankalpaPage() {
       error: null as string | null,
       label: describeSummaryRangeLabel(summaryRangePreset, range, customStartDate, customEndDate),
     };
-  }, [customEndDate, customStartDate, last30StartInput, last7StartInput, summaryRangePreset, todayDateInput]);
+  }, [customEndDate, customStartDate, summaryDateDefaults, summaryRangePreset]);
 
   const summarySnapshot = useMemo(() => {
     if (!summaryRangeSelection.range) {
@@ -296,8 +315,8 @@ export default function SankalpaPage() {
                 const nextPreset = event.target.value as SummaryRangePreset;
                 setSummaryRangePreset(nextPreset);
                 if (nextPreset === 'custom' && (!customStartDate || !customEndDate)) {
-                  setCustomStartDate(last7StartInput);
-                  setCustomEndDate(todayDateInput);
+                  setCustomStartDate(summaryDateDefaults.last7StartInput);
+                  setCustomEndDate(summaryDateDefaults.todayDateInput);
                 }
               }}
             >

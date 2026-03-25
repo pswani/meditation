@@ -393,7 +393,7 @@ export function loadSessionLogs(): SessionLog[] {
   }
 }
 
-export function saveSessionLogs(logs: SessionLog[]): void {
+export function saveSessionLogs(logs: readonly SessionLog[]): void {
   localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(logs));
 }
 
@@ -411,7 +411,7 @@ export function loadCustomPlays(): CustomPlay[] {
   }
 }
 
-export function saveCustomPlays(customPlays: CustomPlay[]): void {
+export function saveCustomPlays(customPlays: readonly CustomPlay[]): void {
   localStorage.setItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays));
 }
 
@@ -429,7 +429,7 @@ export function loadPlaylists(): Playlist[] {
   }
 }
 
-export function savePlaylists(playlists: Playlist[]): void {
+export function savePlaylists(playlists: readonly Playlist[]): void {
   localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
 }
 
@@ -447,7 +447,7 @@ export function loadSankalpas(): SankalpaGoal[] {
   }
 }
 
-export function saveSankalpas(sankalpas: SankalpaGoal[]): void {
+export function saveSankalpas(sankalpas: readonly SankalpaGoal[]): void {
   localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
 }
 

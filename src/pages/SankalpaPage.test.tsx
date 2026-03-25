@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import type { SessionLog } from '../types/sessionLog';
 
@@ -35,6 +35,41 @@ function createSessionLog(
 }
 
 describe('Sankalpa summary UX', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not repersist sankalpas on initial mount when stored data is already current', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([createSessionLog('log-1', new Date(2026, 2, 24, 7, 30, 0, 0).toISOString(), 'auto log', 'completed', 1200)])
+    );
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-1',
+          goalType: 'duration-based',
+          targetValue: 180,
+          days: 7,
+          createdAt: '2026-03-23T08:00:00.000Z',
+        },
+      ])
+    );
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    setItemSpy.mockClear();
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/180 min in 7 days/i)).toBeInTheDocument();
+    expect(setItemSpy).not.toHaveBeenCalledWith(SANKALPAS_KEY, expect.any(String));
+  });
+
   it('does not render summary metrics for an invalid custom date range', () => {
     localStorage.setItem(
       SESSION_LOGS_KEY,

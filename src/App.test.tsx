@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
+const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
+const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
+const PLAYLISTS_KEY = 'meditation.playlists.v1';
 
 describe('App shell', () => {
   beforeEach(() => {
@@ -12,6 +16,7 @@ describe('App shell', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -75,6 +80,114 @@ describe('App shell', () => {
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /resume active timer/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+  });
+
+  it('avoids redundant persistence writes on a stable initial mount', () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        durationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        {
+          id: 'log-1',
+          startedAt: '2026-03-24T09:40:00.000Z',
+          endedAt: '2026-03-24T10:00:00.000Z',
+          meditationType: 'Vipassana',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1200,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+      ])
+    );
+    localStorage.setItem(
+      CUSTOM_PLAYS_KEY,
+      JSON.stringify([
+        {
+          id: 'play-1',
+          name: 'Morning Focus',
+          meditationType: 'Ajapa',
+          durationMinutes: 25,
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          mediaAssetId: '',
+          mediaAssetLabel: '',
+          mediaAssetPath: '',
+          recordingLabel: '',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+    localStorage.setItem(
+      PLAYLISTS_KEY,
+      JSON.stringify([
+        {
+          id: 'playlist-1',
+          name: 'Morning Sequence',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+          items: [
+            {
+              id: 'item-1',
+              meditationType: 'Vipassana',
+              durationMinutes: 10,
+            },
+          ],
+        },
+      ])
+    );
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        activeSession: {
+          startedAt: '2026-03-24T10:00:00.000Z',
+          startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          intendedDurationSeconds: 1200,
+          remainingSeconds: 600,
+          meditationType: 'Vipassana',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+          endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+        },
+        isPaused: true,
+      })
+    );
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem');
+    setItemSpy.mockClear();
+    removeItemSpy.mockClear();
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
+    expect(setItemSpy).not.toHaveBeenCalled();
+    expect(removeItemSpy).not.toHaveBeenCalled();
   });
 
   it('rehydrates a persisted active timer and lets the user resume it from the shell', () => {
