@@ -353,3 +353,24 @@
   - optional playlist item gaps are still unimplemented
   - custom-play media remains backed by a fixed local metadata catalog rather than user-managed import or a real backend media source
 - Mark the Milestone D prompt set complete and shift the next recommended work toward bounded release-candidate gap closure instead of more general readiness cleanup.
+
+### 2026-03-25 review remediation pass-1 decisions
+- Remove shared `session log` truncation from timer-state updates so History, summary, and sankalpa continue to use the full local log set.
+- Keep active timer and active playlist recovery local-first, but persist only recovery-relevant snapshot changes:
+  - run start
+  - pause / resume
+  - item transitions
+  - run end
+  - corrected first-load recovery snapshots
+- Preserve corrected remaining-time persistence on first-load recovery for already-running timer or playlist state, while avoiding repeated writes during normal countdown ticks.
+- Route Home sankalpa reads through the existing sankalpa API boundary and replace raw sankalpa goal-type enum text with human-readable labels in UI controls and snapshot content.
+- Align repo hygiene with the current workspace by:
+  - updating prompt-bundle docs to front-end-only reality
+  - updating architecture route docs to match implemented routes
+  - removing stale duplicate Vite config artifacts
+  - removing unused placeholder-screen scaffolding
+- Keep this remediation slice bounded and explicitly defer:
+  - actual sound playback
+  - optional playlist item gaps
+  - dialog accessibility rework
+  - larger `TimerContext` decomposition

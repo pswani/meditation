@@ -12,8 +12,6 @@ export interface TimerState {
   readonly validation: TimerValidationResult;
 }
 
-const MAX_SESSION_LOGS = 50;
-
 export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'START_SESSION'; nowMs: number }
@@ -183,9 +181,7 @@ function finalizeSession(
 }
 
 function appendSessionLog(existing: readonly SessionLog[], next: SessionLog): readonly SessionLog[] {
-  return [...existing, next]
-    .sort((first, second) => parseSessionEndedAt(second.endedAt) - parseSessionEndedAt(first.endedAt))
-    .slice(0, MAX_SESSION_LOGS);
+  return [...existing, next].sort((first, second) => parseSessionEndedAt(second.endedAt) - parseSessionEndedAt(first.endedAt));
 }
 
 function parseSessionEndedAt(endedAt: string): number {

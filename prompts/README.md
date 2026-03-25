@@ -1,57 +1,46 @@
-# Codex milestone prompt bundle
+# Codex prompt bundle
 
-This bundle sets up a foundation phase and milestone-by-milestone implementation flow for a full-stack meditation app:
+This repository currently contains a front-end-only React meditation app. The prompts in this folder are meant to be run one at a time inside the existing workspace, with local-first behavior unless a prompt explicitly widens scope.
 
-- React front end
-- clean REST APIs between front end and back end
-- H2 database for back end persistence
-- static sound/media files stored on disk, with file paths referenced in the database
+## Repo shape
 
-## Expected repo shape
+The prompt bundle assumes the current repo already contains:
 
-Place these folders at the repo root:
-
-- `.codex/`
 - `prompts/`
-- `scripts/`
+- `requirements/`
+- `docs/`
+- `src/`
 
-## High-level execution order
+Additional helper folders such as `.codex/` may exist, but the prompts should not assume missing runner scripts or backend services are present.
 
-1. `prompts/foundation/01-lock-ux-baseline.md`
-2. `prompts/foundation/02-solidify-fullstack-architecture.md`
-3. `prompts/foundation/03-qa-build-test-baseline.md`
+## Execution style
 
-Then run Milestone A, then B, then C, then D.
+Use the prompt files directly rather than relying on a wrapper script. Typical flow:
 
-## Milestone structure
+1. read the requested prompt file
+2. read the required product and architecture docs listed in that prompt
+3. implement or review the bounded slice
+4. run the required verification commands
+5. update `requirements/decisions.md` and `requirements/session-handoff.md`
 
-Each milestone includes:
+## Prompt structure
+
+The bundle intentionally alternates between:
+
 - implementation prompts
 - review prompts
-- fix prompts
-- test / QA prompts
+- remediation prompts
+- QA / verification prompts
 
-This is intentional so quality does not get deferred until the end.
+That cadence keeps quality work close to the feature slices instead of deferring it until the end.
 
-## Backend preferences encoded into the prompts
+## Current workspace assumptions
 
-The milestone prompts explicitly assume:
-- H2 database for persistence
-- media/sound files stored in a server-side directory with filesystem paths stored in the database
-- REST-style API contracts between front end and back end
-- responsive UX across mobile, tablet, and desktop
+- front-end only
+- local-first persistence
+- responsive behavior across phone, tablet, and desktop
+- fixed mock sound selections unless a prompt explicitly introduces playback behavior
 
-## Reasoning profile
+## Running prompts
 
-This bundle includes a `.codex/config.toml` profile named `deep-build` with high reasoning effort.
-
-## Runner
-
-Use:
-
-```bash
-chmod +x scripts/run-milestones.sh
-./scripts/run-milestones.sh
-```
-
-Or run prompts one by one.
+Run prompts one by one in the order you choose. Prefer the recommended next prompt recorded in `requirements/session-handoff.md` when continuing a multi-step implementation sequence.

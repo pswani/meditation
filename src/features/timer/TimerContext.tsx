@@ -209,6 +209,146 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const skipInitialPlaylistsPersistRef = useRef(true);
   const skipInitialActiveTimerPersistRef = useRef(bootstrap.skipInitialActiveTimerPersist);
   const skipInitialActivePlaylistPersistRef = useRef(bootstrap.skipInitialActivePlaylistPersist);
+  const activeSessionStartedAt = state.activeSession?.startedAt ?? null;
+  const activeSessionStartedAtMs = state.activeSession?.startedAtMs ?? null;
+  const activeSessionIntendedDurationSeconds = state.activeSession?.intendedDurationSeconds ?? null;
+  const activeSessionMeditationType = state.activeSession?.meditationType ?? null;
+  const activeSessionStartSound = state.activeSession?.startSound ?? null;
+  const activeSessionEndSound = state.activeSession?.endSound ?? null;
+  const activeSessionIntervalEnabled = state.activeSession?.intervalEnabled ?? null;
+  const activeSessionIntervalMinutes = state.activeSession?.intervalMinutes ?? null;
+  const activeSessionIntervalSound = state.activeSession?.intervalSound ?? null;
+  const activeSessionRemainingSeconds = state.activeSession?.remainingSeconds ?? null;
+  const activeSessionEndAtMs = state.activeSession?.endAtMs ?? null;
+  const isRecoveredRunningTimer =
+    !isPaused &&
+    activeSessionStartedAt !== null &&
+    bootstrap.hydration.activeSession?.startedAt === activeSessionStartedAt &&
+    bootstrap.hydration.activeSession?.endAtMs === activeSessionEndAtMs;
+  const persistedTimerRemainingSeconds = activeSessionStartedAt
+    ? isPaused || isRecoveredRunningTimer
+      ? activeSessionRemainingSeconds
+      : activeSessionIntendedDurationSeconds
+    : null;
+  const activeTimerPersistence = useMemo(
+    () =>
+      activeSessionStartedAt &&
+      activeSessionStartedAtMs !== null &&
+      activeSessionIntendedDurationSeconds !== null &&
+      activeSessionMeditationType !== null &&
+      activeSessionStartSound !== null &&
+      activeSessionEndSound !== null &&
+      activeSessionIntervalEnabled !== null &&
+      activeSessionIntervalMinutes !== null &&
+      activeSessionIntervalSound !== null &&
+      activeSessionEndAtMs !== null &&
+      persistedTimerRemainingSeconds !== null
+        ? {
+            activeSession: {
+              startedAt: activeSessionStartedAt,
+              startedAtMs: activeSessionStartedAtMs,
+              intendedDurationSeconds: activeSessionIntendedDurationSeconds,
+              remainingSeconds: persistedTimerRemainingSeconds,
+              meditationType: activeSessionMeditationType,
+              startSound: activeSessionStartSound,
+              endSound: activeSessionEndSound,
+              intervalEnabled: activeSessionIntervalEnabled,
+              intervalMinutes: activeSessionIntervalMinutes,
+              intervalSound: activeSessionIntervalSound,
+              endAtMs: activeSessionEndAtMs,
+            } satisfies ActiveSession,
+            isPaused,
+          }
+        : null,
+    [
+      isPaused,
+      activeSessionStartedAt,
+      activeSessionStartedAtMs,
+      activeSessionIntendedDurationSeconds,
+      activeSessionMeditationType,
+      activeSessionStartSound,
+      activeSessionEndSound,
+      activeSessionIntervalEnabled,
+      activeSessionIntervalMinutes,
+      activeSessionIntervalSound,
+      persistedTimerRemainingSeconds,
+      activeSessionEndAtMs,
+    ]
+  );
+  const activePlaylistRunId = activePlaylistRun?.runId ?? null;
+  const activePlaylistId = activePlaylistRun?.playlistId ?? null;
+  const activePlaylistName = activePlaylistRun?.playlistName ?? null;
+  const activePlaylistRunStartedAt = activePlaylistRun?.runStartedAt ?? null;
+  const activePlaylistItems = activePlaylistRun?.items ?? null;
+  const activePlaylistCurrentIndex = activePlaylistRun?.currentIndex ?? null;
+  const activePlaylistCurrentItemStartedAt = activePlaylistRun?.currentItemStartedAt ?? null;
+  const activePlaylistCurrentItemStartedAtMs = activePlaylistRun?.currentItemStartedAtMs ?? null;
+  const activePlaylistCurrentItemRemainingSeconds = activePlaylistRun?.currentItemRemainingSeconds ?? null;
+  const activePlaylistCurrentItemEndAtMs = activePlaylistRun?.currentItemEndAtMs ?? null;
+  const activePlaylistCompletedItems = activePlaylistRun?.completedItems ?? null;
+  const activePlaylistCompletedDurationSeconds = activePlaylistRun?.completedDurationSeconds ?? null;
+  const activePlaylistTotalIntendedDurationSeconds = activePlaylistRun?.totalIntendedDurationSeconds ?? null;
+  const isRecoveredRunningPlaylist =
+    !isPlaylistRunPaused &&
+    activePlaylistRunId !== null &&
+    bootstrap.hydration.activePlaylistRun?.runId === activePlaylistRunId &&
+    bootstrap.hydration.activePlaylistRun?.currentItemEndAtMs === activePlaylistCurrentItemEndAtMs;
+  const persistedPlaylistRemainingSeconds = activePlaylistRunId
+    ? isPlaylistRunPaused || isRecoveredRunningPlaylist
+      ? activePlaylistCurrentItemRemainingSeconds
+      : Math.round(((activePlaylistItems?.[activePlaylistCurrentIndex ?? 0]?.durationMinutes) ?? 0) * 60)
+    : null;
+  const activePlaylistPersistence = useMemo(
+    () =>
+      activePlaylistRunId &&
+      activePlaylistId !== null &&
+      activePlaylistName !== null &&
+      activePlaylistRunStartedAt !== null &&
+      activePlaylistItems !== null &&
+      activePlaylistCurrentIndex !== null &&
+      activePlaylistCurrentItemStartedAt !== null &&
+      activePlaylistCurrentItemStartedAtMs !== null &&
+      persistedPlaylistRemainingSeconds !== null &&
+      activePlaylistCurrentItemEndAtMs !== null &&
+      activePlaylistCompletedItems !== null &&
+      activePlaylistCompletedDurationSeconds !== null &&
+      activePlaylistTotalIntendedDurationSeconds !== null
+        ? {
+            activePlaylistRun: {
+              runId: activePlaylistRunId,
+              playlistId: activePlaylistId,
+              playlistName: activePlaylistName,
+              runStartedAt: activePlaylistRunStartedAt,
+              items: activePlaylistItems,
+              currentIndex: activePlaylistCurrentIndex,
+              currentItemStartedAt: activePlaylistCurrentItemStartedAt,
+              currentItemStartedAtMs: activePlaylistCurrentItemStartedAtMs,
+              currentItemRemainingSeconds: persistedPlaylistRemainingSeconds,
+              currentItemEndAtMs: activePlaylistCurrentItemEndAtMs,
+              completedItems: activePlaylistCompletedItems,
+              completedDurationSeconds: activePlaylistCompletedDurationSeconds,
+              totalIntendedDurationSeconds: activePlaylistTotalIntendedDurationSeconds,
+            } satisfies ActivePlaylistRun,
+            isPaused: isPlaylistRunPaused,
+          }
+        : null,
+    [
+      activePlaylistRunId,
+      activePlaylistId,
+      activePlaylistName,
+      activePlaylistRunStartedAt,
+      activePlaylistItems,
+      activePlaylistCurrentIndex,
+      activePlaylistCurrentItemStartedAt,
+      activePlaylistCurrentItemStartedAtMs,
+      persistedPlaylistRemainingSeconds,
+      activePlaylistCurrentItemEndAtMs,
+      activePlaylistCompletedItems,
+      activePlaylistCompletedDurationSeconds,
+      activePlaylistTotalIntendedDurationSeconds,
+      isPlaylistRunPaused,
+    ]
+  );
 
   useEffect(() => {
     if (!state.activeSession) {
@@ -264,8 +404,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
-    saveActiveTimerState(state.activeSession, isPaused);
-  }, [isPaused, state.activeSession]);
+    saveActiveTimerState(activeTimerPersistence?.activeSession ?? null, activeTimerPersistence?.isPaused ?? false);
+  }, [activeTimerPersistence]);
 
   useEffect(() => {
     if (skipInitialActivePlaylistPersistRef.current) {
@@ -273,8 +413,11 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
-    saveActivePlaylistRunState(activePlaylistRun, isPlaylistRunPaused);
-  }, [activePlaylistRun, isPlaylistRunPaused]);
+    saveActivePlaylistRunState(
+      activePlaylistPersistence?.activePlaylistRun ?? null,
+      activePlaylistPersistence?.isPaused ?? false
+    );
+  }, [activePlaylistPersistence]);
 
   useEffect(() => {
     if (!state.activeSession || isPaused) {

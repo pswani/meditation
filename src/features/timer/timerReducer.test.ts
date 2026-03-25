@@ -126,4 +126,28 @@ describe('timerReducer', () => {
 
     expect(next.sessionLogs.map((entry) => entry.id)).toEqual(['log-newer', 'log-older-manual']);
   });
+
+  it('retains the full session log history instead of truncating older entries', () => {
+    const existingLogs = Array.from({ length: 55 }, (_, index) =>
+      createSessionLog({
+        id: `log-${index + 1}`,
+        startedAt: new Date(Date.parse('2026-03-23T10:00:00.000Z') - index * 60_000).toISOString(),
+        endedAt: new Date(Date.parse('2026-03-23T10:10:00.000Z') - index * 60_000).toISOString(),
+      })
+    );
+    const state = createInitialTimerState(validSettings, existingLogs);
+
+    const next = timerReducer(state, {
+      type: 'ADD_SESSION_LOG',
+      payload: createSessionLog({
+        id: 'log-older-manual',
+        startedAt: '2026-03-23T07:50:00.000Z',
+        endedAt: '2026-03-23T08:00:00.000Z',
+        source: 'manual log',
+      }),
+    });
+
+    expect(next.sessionLogs).toHaveLength(56);
+    expect(next.sessionLogs.at(-1)?.id).toBe('log-older-manual');
+  });
 });

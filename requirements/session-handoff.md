@@ -1,48 +1,62 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-d-production-readiness/04-release-readiness.md` is complete.
+Prompt `prompts/reviews/05-remediate-review-findings.md` is complete.
 
-Milestone D production-readiness is complete. The repository is in a clean front-end release-candidate handoff state with setup guidance, quality commands, and release-gap inventory updated to match the current implementation.
+Completed a bounded remediation slice that addressed the highest-priority review findings across correctness, performance, consistency, and repo hygiene without widening into a larger refactor.
 
 ## What was implemented
-- Added release-readiness ExecPlan for this slice:
-  - `requirements/execplan-milestone-d-release-readiness.md`
-- Audited current setup and local run guidance against the actual workspace and package scripts:
-  - `npm ci`
-  - `npm run dev`
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run test`
-  - `npm run build`
-  - `npm run preview`
-- Updated release-facing docs:
-  - `README.md`
-  - `requirements/roadmap.md`
-  - `requirements/decisions.md`
-  - `requirements/session-handoff.md`
-- Recorded a concise release-candidate summary and explicit remaining v1 gaps based on the current implementation audit:
-  - sound selections still use mocked behavior rather than actual playback
-  - playlists still lack optional inter-item gap support
-  - custom-play media still relies on a fixed local metadata catalog instead of user-managed import or a real backend media source
+- Fixed critical session-log retention correctness by removing shared history truncation from the timer reducer.
+- Fixed critical active-session persistence churn by saving recoverable timer and playlist snapshots only when recovery-relevant state changes, not on every countdown tick.
+- Preserved recovery behavior for rehydrated active timer and playlist state, including corrected remaining-time snapshots on first load.
+- Tightened sankalpa consistency by:
+  - routing Home reads through the sankalpa API boundary instead of direct storage access
+  - replacing raw goal-type enum text with human-readable labels in Home and Sankalpa UI
+- Completed the highest-value hygiene cleanup from the review:
+  - updated `prompts/README.md` to match the front-end-only workspace
+  - updated `docs/architecture.md` route guidance to match implemented routes
+  - removed unused `src/components/PlaceholderScreen.tsx`
+  - removed duplicate tracked `vite.config.js` and `vite.config.d.ts`
+- Added the ExecPlan:
+  - `requirements/execplan-review-remediation-pass1.md`
+
+## Issues fixed
+- Full `session log` history is now retained instead of silently dropping older entries.
+- Active timer and playlist persistence no longer rewrite localStorage on every 500ms tick.
+- Home now uses the same sankalpa boundary utility pattern as the Sankalpa screen.
+- Sankalpa goal-type UI copy now reads as `Duration goal` / `Session-count goal` instead of internal enum strings.
+- Repo docs/config cleanup removed the biggest drift called out in the hygiene review.
+
+## Issues intentionally deferred
+- Actual audio playback for selected timer and playlist sounds remains unimplemented.
+- Optional playlist transition gaps remain unimplemented.
+- Confirmation sheets/dialogs still need stronger accessibility behavior polish.
+- `TimerContext` is still broader than ideal; this slice avoided a large state-architecture refactor.
+- Custom-play media metadata is still denormalized in local persistence.
+
+## Tests added or improved
+- Added reducer coverage proving older `session log` entries are retained.
+- Added provider-level persistence tests proving active timer and playlist snapshots are not rewritten on every tick and still persist paused-state remaining time.
+- Added UI assertions for human-readable sankalpa goal-type labels in Home and Sankalpa.
 
 ## Verification status
-- `npm run typecheck` ✅
-- `npm run lint` ✅
-- `npm run test` ✅
-- `npm run build` ✅
+- Passed `npm run typecheck`
+- Passed `npm run lint`
+- Passed `npm run test`
+- Passed `npm run build`
 
 ## Documentation updates made
-- Added `requirements/execplan-milestone-d-release-readiness.md`.
-- Updated `README.md`.
-- Updated `requirements/roadmap.md`.
+- Added `requirements/execplan-review-remediation-pass1.md`.
 - Updated `requirements/decisions.md`.
 - Updated `requirements/session-handoff.md`.
+- Updated `prompts/README.md`.
+- Updated `docs/architecture.md`.
 
 ## Known limitations / assumptions
 - This workspace remains front-end only; backend services and deployment flows are still out of scope here.
 - Local-first persistence is still the current product baseline.
-- The release-ready handoff is honest about remaining product gaps rather than treating the repository as fully feature-complete for every documented requirement.
+- Sound selectors still represent fixed choices only; playback runtime behavior is still deferred.
+- Full history retention is local-only and may grow storage usage over time until a retention/export strategy is defined.
 
 ## Exact recommended next prompt
 Read:
@@ -52,7 +66,8 @@ Read:
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
-- docs/screen-inventory.md
+- docs/review-usability-full-app.md
+- docs/review-performance.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
@@ -60,24 +75,27 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for release-candidate audio cues.
-2. Replace mocked timer and playlist sound behavior with actual browser-based playback for:
-   - start sound
-   - end sound
-   - interval sound
-3. Keep the implementation bounded:
-   - include user-visible playback feedback and failure-safe behavior when audio cannot play
-   - include timer-session and playlist-run coverage
-   - exclude backend media management
-   - exclude new nonessential sound catalogs or design overhauls
-4. Add or update focused tests for playback-triggering logic and failure-safe behavior.
+1. Create an ExecPlan for actual sound playback in timer and playlist runs.
+2. Keep the implementation bounded to one meaningful vertical slice:
+   - implement real playback for selected start, end, and interval sounds in timer sessions
+   - implement real playback for playlist item boundaries using the same sound catalog
+   - preserve the current local-first architecture and fixed sound option list
+   - make failure behavior quiet and safe if playback cannot start
+3. Include:
+   - one shared audio utility/service layer instead of duplicating playback logic across pages
+   - any minimal state wiring needed so timer and playlist run flows trigger sounds at the correct moments
+   - doc updates in `README.md`, `requirements/decisions.md`, and `requirements/session-handoff.md`
+4. Exclude:
+   - new sound libraries unless clearly necessary
+   - backend media management
+   - playlist gap feature work
+   - unrelated timer-context refactors
 5. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
 6. Update:
-   - README.md if setup/runtime notes change
    - requirements/decisions.md
    - requirements/session-handoff.md
 7. Commit with a clear message:

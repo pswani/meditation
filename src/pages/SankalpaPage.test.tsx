@@ -67,6 +67,9 @@ describe('Sankalpa summary UX', () => {
     );
 
     expect(screen.getByText(/180 min in 7 days/i)).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /duration goal/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /session-count goal/i })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /^duration-based$/i })).not.toBeInTheDocument();
     expect(setItemSpy).not.toHaveBeenCalledWith(SANKALPAS_KEY, expect.any(String));
   });
 

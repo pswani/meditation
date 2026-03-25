@@ -19,13 +19,15 @@ Single-page React application with route-based screens and feature-oriented modu
 - utils
 
 ## Routing
-Suggested primary routes:
+Current primary routes:
 - /
-- /practice/timer
-- /practice/plays
+- /practice
+- /practice/active
 - /practice/playlists
+- /practice/playlists/active
 - /history
 - /goals
+- /sankalpa (redirects to `/goals` for compatibility)
 - /settings
 
 ## Responsive shell guidance

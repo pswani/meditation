@@ -2,6 +2,7 @@ import type { SessionLog } from '../types/sessionLog';
 import type {
   SankalpaDraft,
   SankalpaGoal,
+  SankalpaGoalType,
   SankalpaProgress,
   SankalpaStatus,
   SankalpaValidationResult,
@@ -19,6 +20,11 @@ export const timeOfDayBucketLabels: Record<TimeOfDayBucket, string> = {
   night: 'Night (21:00-4:59)',
 };
 
+export const sankalpaGoalTypeLabels: Record<SankalpaGoalType, string> = {
+  'duration-based': 'Duration goal',
+  'session-count-based': 'Session-count goal',
+};
+
 export interface SankalpaProgressByStatus {
   readonly active: SankalpaProgress[];
   readonly completed: SankalpaProgress[];
@@ -33,6 +39,10 @@ export function createInitialSankalpaDraft(): SankalpaDraft {
     meditationType: '',
     timeOfDayBucket: '',
   };
+}
+
+export function getSankalpaGoalTypeLabel(goalType: SankalpaGoalType): string {
+  return sankalpaGoalTypeLabels[goalType];
 }
 
 export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationResult {

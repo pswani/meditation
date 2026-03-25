@@ -112,6 +112,7 @@ describe('HomePage UX', () => {
     );
 
     expect(screen.getByRole('heading', { name: /sankalpa snapshot/i })).toBeInTheDocument();
+    expect(screen.getByText(/duration goal/i)).toBeInTheDocument();
     expect(screen.getByText(/progress:/i)).toBeInTheDocument();
     expect(screen.getByText(/morning breath focus/i)).toBeInTheDocument();
     expect(screen.getByText(/evening sequence/i)).toBeInTheDocument();

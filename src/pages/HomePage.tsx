@@ -5,7 +5,8 @@ import type { CustomPlay } from '../types/customPlay';
 import type { PlaylistRunStartResult } from '../types/playlist';
 import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { formatDurationLabel } from '../utils/sessionLog';
-import { loadSankalpas } from '../utils/storage';
+import { getSankalpaGoalTypeLabel } from '../utils/sankalpa';
+import { listSankalpasFromApi } from '../utils/sankalpaApi';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
 
 function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
@@ -37,7 +38,7 @@ export default function HomePage() {
     startPlaylistRun,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const sankalpas = useMemo(() => loadSankalpas(), []);
+  const sankalpas = useMemo(() => listSankalpasFromApi(), []);
 
   const todaySummary = useMemo(() => deriveTodayActivitySummary(sessionLogs), [sessionLogs]);
   const recentLogs = useMemo(() => selectRecentSessionLogs(sessionLogs, 5), [sessionLogs]);
@@ -161,7 +162,7 @@ export default function HomePage() {
           {topActiveSankalpa ? (
             <>
               <div className="history-row">
-                <strong>{topActiveSankalpa.goal.goalType}</strong>
+                <strong>{getSankalpaGoalTypeLabel(topActiveSankalpa.goal.goalType)}</strong>
                 <span className="pill active">{topActiveSankalpa.status}</span>
               </div>
               <p className="section-subtitle">

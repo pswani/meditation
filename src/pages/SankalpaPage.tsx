@@ -14,6 +14,7 @@ import {
   createInitialSankalpaDraft,
   createSankalpaGoal,
   deriveSankalpaProgress,
+  getSankalpaGoalTypeLabel,
   partitionSankalpaProgress,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
@@ -486,8 +487,8 @@ export default function SankalpaPage() {
                 }));
               }}
             >
-              <option value="duration-based">duration-based</option>
-              <option value="session-count-based">session-count-based</option>
+              <option value="duration-based">{getSankalpaGoalTypeLabel('duration-based')}</option>
+              <option value="session-count-based">{getSankalpaGoalTypeLabel('session-count-based')}</option>
             </select>
             {errors.goalType ? <small className="error-text">{errors.goalType}</small> : null}
           </label>
