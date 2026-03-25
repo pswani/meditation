@@ -68,12 +68,44 @@ describe('PracticePage UX', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('button', { name: /show tools/i })).toBeInTheDocument();
+    const toolsButton = screen.getByRole('button', { name: /show tools/i });
+    expect(toolsButton).toBeInTheDocument();
+    expect(toolsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(toolsButton).toHaveAttribute('aria-controls', 'practice-tools-panel');
     expect(screen.queryByRole('heading', { name: /custom plays/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    fireEvent.click(toolsButton);
+    expect(screen.getByRole('button', { name: /hide tools/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('heading', { name: /custom plays/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open playlists/i })).toBeInTheDocument();
+  });
+
+  it('exposes expanded state and invalid-field semantics in timer setup controls', () => {
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    const advancedButton = screen.getByRole('button', { name: /show advanced options/i });
+    expect(advancedButton).toHaveAttribute('aria-expanded', 'false');
+    expect(advancedButton).toHaveAttribute('aria-controls', 'practice-advanced-options');
+
+    fireEvent.click(advancedButton);
+
+    const intervalCheckbox = screen.getByRole('checkbox', { name: /enable interval bell/i });
+    expect(intervalCheckbox).toHaveAttribute('aria-controls', 'practice-interval-options');
+    expect(intervalCheckbox).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    const meditationTypeSelect = screen.getByRole('combobox', { name: /meditation type/i });
+    expect(meditationTypeSelect).toHaveAttribute('aria-invalid', 'true');
+    expect(meditationTypeSelect).toHaveAttribute('aria-describedby', 'practice-meditation-type-error');
   });
 
   it('disables timer start and shows guidance when playlist run is active', () => {

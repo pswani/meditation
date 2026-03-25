@@ -245,3 +245,17 @@
   - playlist-run early-end outcome flow
 - Harden `sankalpa` persistence at the storage boundary by validating loaded records and dropping malformed entries while preserving valid goals.
 - Prefer route-level tests for cross-screen recovery and outcome flows, with helper/storage tests covering normalization logic.
+
+### 2026-03-24 accessibility and responsive polish decisions
+- Add a shared shell skip link targeting the main content region to improve keyboard navigation across the app.
+- Standardize visible focus treatment for interactive elements (`links`, `buttons`, `inputs`, `selects`, `summary`) instead of relying on browser-default inconsistency.
+- Keep existing collapsible interaction patterns, but expose expanded/collapsed state explicitly with `aria-controls` and `aria-expanded` for:
+  - Practice advanced options
+  - Practice tools
+  - timer/settings interval option groups
+- Improve form semantics in high-traffic flows by wiring validation and helper copy through `aria-invalid` and `aria-describedby` rather than changing the form structure.
+- Use responsive polish to improve readability and action density without changing information architecture:
+  - cleaner top-bar width alignment
+  - better phone action stacking
+  - more breathable playlist chips and dense panels
+  - additional large-screen space for summary and sankalpa lists

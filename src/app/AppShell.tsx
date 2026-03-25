@@ -10,6 +10,9 @@ export default function AppShell() {
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <aside className="app-sidebar" aria-label="Primary navigation">
         <div className="brand">
           <div className="brand-mark">M</div>
@@ -35,44 +38,48 @@ export default function AppShell() {
 
       <div className="app-main">
         <header className="topbar">
-          <p className="eyebrow">{activeNavItem.eyebrow}</p>
-          <h1 className="topbar-title">{activeNavItem.title}</h1>
-          {activeSession ? (
-            <div className="shell-active-banner" role="status" aria-live="polite">
-              <p>
-                Active timer: {activeSession.meditationType} · {activeSession.remainingSeconds > 0 ? 'in session' : 'ending'}
-              </p>
-              <button type="button" className="secondary shell-active-action" onClick={() => navigate('/practice/active')}>
-                Resume Active Timer
-              </button>
+          <div className="topbar-inner">
+            <div className="topbar-heading">
+              <p className="eyebrow">{activeNavItem.eyebrow}</p>
+              <h1 className="topbar-title">{activeNavItem.title}</h1>
             </div>
-          ) : null}
-          {!activeSession && activePlaylistRun ? (
-            <div className="shell-active-banner" role="status" aria-live="polite">
-              <p>
-                Active playlist run: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/
-                {activePlaylistRun.items.length}
-              </p>
-              <button
-                type="button"
-                className="secondary shell-active-action"
-                onClick={() => navigate('/practice/playlists/active')}
-              >
-                Resume Playlist Run
-              </button>
-            </div>
-          ) : null}
-          {recoveryMessage ? (
-            <div className="status-banner warn" role="status" aria-live="polite">
-              <p>{recoveryMessage}</p>
-              <button type="button" className="link-button" onClick={clearRecoveryMessage}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
+            {activeSession ? (
+              <div className="shell-active-banner" role="status" aria-live="polite">
+                <p>
+                  Active timer: {activeSession.meditationType} · {activeSession.remainingSeconds > 0 ? 'in session' : 'ending'}
+                </p>
+                <button type="button" className="secondary shell-active-action" onClick={() => navigate('/practice/active')}>
+                  Resume Active Timer
+                </button>
+              </div>
+            ) : null}
+            {!activeSession && activePlaylistRun ? (
+              <div className="shell-active-banner" role="status" aria-live="polite">
+                <p>
+                  Active playlist run: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/
+                  {activePlaylistRun.items.length}
+                </p>
+                <button
+                  type="button"
+                  className="secondary shell-active-action"
+                  onClick={() => navigate('/practice/playlists/active')}
+                >
+                  Resume Playlist Run
+                </button>
+              </div>
+            ) : null}
+            {recoveryMessage ? (
+              <div className="status-banner warn" role="status" aria-live="polite">
+                <p>{recoveryMessage}</p>
+                <button type="button" className="link-button" onClick={clearRecoveryMessage}>
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
 
-        <main className="content">
+        <main id="main-content" className="content" tabIndex={-1}>
           <Outlet />
         </main>
 

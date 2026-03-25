@@ -84,4 +84,22 @@ describe('SettingsPage UX', () => {
       intervalMinutes: 5,
     });
   });
+
+  it('exposes interval default controls with accessible expanded state and invalid semantics', () => {
+    renderSettingsPage();
+
+    const intervalToggle = screen.getByLabelText(/enable interval bell by default/i);
+    expect(intervalToggle).toHaveAttribute('aria-controls', 'settings-interval-defaults');
+    expect(intervalToggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(intervalToggle);
+    expect(intervalToggle).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.change(screen.getByLabelText(/default interval \(minutes\)/i), { target: { value: '20' } });
+    fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
+
+    const intervalInput = screen.getByLabelText(/default interval \(minutes\)/i);
+    expect(intervalInput).toHaveAttribute('aria-invalid', 'true');
+    expect(intervalInput).toHaveAttribute('aria-describedby', 'settings-interval-error');
+  });
 });

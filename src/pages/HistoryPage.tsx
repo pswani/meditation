@@ -204,8 +204,14 @@ export default function HistoryPage() {
                       durationMinutes: Number(event.target.value),
                     }));
                   }}
+                  aria-invalid={Boolean(errors.durationMinutes)}
+                  aria-describedby={errors.durationMinutes ? 'manual-log-duration-error' : undefined}
                 />
-                {errors.durationMinutes ? <small className="error-text">{errors.durationMinutes}</small> : null}
+                {errors.durationMinutes ? (
+                  <small id="manual-log-duration-error" className="error-text">
+                    {errors.durationMinutes}
+                  </small>
+                ) : null}
               </label>
 
               <label>
@@ -219,6 +225,8 @@ export default function HistoryPage() {
                       meditationType: event.target.value as ManualLogInput['meditationType'],
                     }));
                   }}
+                  aria-invalid={Boolean(errors.meditationType)}
+                  aria-describedby={errors.meditationType ? 'manual-log-meditation-type-error' : undefined}
                 >
                   <option value="">Select meditation type</option>
                   {meditationTypes.map((meditationType) => (
@@ -227,7 +235,11 @@ export default function HistoryPage() {
                     </option>
                   ))}
                 </select>
-                {errors.meditationType ? <small className="error-text">{errors.meditationType}</small> : null}
+                {errors.meditationType ? (
+                  <small id="manual-log-meditation-type-error" className="error-text">
+                    {errors.meditationType}
+                  </small>
+                ) : null}
               </label>
 
               <label>
@@ -242,11 +254,17 @@ export default function HistoryPage() {
                       sessionTimestamp: event.target.value,
                     }));
                   }}
+                  aria-invalid={Boolean(errors.sessionTimestamp)}
+                  aria-describedby={errors.sessionTimestamp ? 'manual-log-session-timestamp-error' : 'manual-log-session-timestamp-hint'}
                 />
                 {errors.sessionTimestamp ? (
-                  <small className="error-text">{errors.sessionTimestamp}</small>
+                  <small id="manual-log-session-timestamp-error" className="error-text">
+                    {errors.sessionTimestamp}
+                  </small>
                 ) : (
-                  <small className="hint-text">Use your local date and time when the session ended.</small>
+                  <small id="manual-log-session-timestamp-hint" className="hint-text">
+                    Use your local date and time when the session ended.
+                  </small>
                 )}
               </label>
 

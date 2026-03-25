@@ -103,6 +103,7 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
+  const sankalpaRulesId = 'sankalpa-counting-rules';
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -195,7 +196,7 @@ export default function SankalpaPage() {
 
       <section className="sankalpa-panel">
         <h3 className="section-title">Create Sankalpa</h3>
-        <p className="section-subtitle">
+        <p id={sankalpaRulesId} className="section-subtitle">
           Counting rules: both <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count
           matching session log entries. Duration-based goals sum matching completed duration, including ended-early entries.
         </p>
@@ -218,11 +219,17 @@ export default function SankalpaPage() {
                   goalType: event.target.value as typeof current.goalType,
                 }));
               }}
+              aria-invalid={Boolean(errors.goalType)}
+              aria-describedby={errors.goalType ? 'sankalpa-goal-type-error' : sankalpaRulesId}
             >
               <option value="duration-based">duration-based</option>
               <option value="session-count-based">session-count-based</option>
             </select>
-            {errors.goalType ? <small className="error-text">{errors.goalType}</small> : null}
+            {errors.goalType ? (
+              <small id="sankalpa-goal-type-error" className="error-text">
+                {errors.goalType}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -238,8 +245,14 @@ export default function SankalpaPage() {
                   targetValue: Number(event.target.value),
                 }));
               }}
+              aria-invalid={Boolean(errors.targetValue)}
+              aria-describedby={errors.targetValue ? 'sankalpa-target-value-error' : sankalpaRulesId}
             />
-            {errors.targetValue ? <small className="error-text">{errors.targetValue}</small> : null}
+            {errors.targetValue ? (
+              <small id="sankalpa-target-value-error" className="error-text">
+                {errors.targetValue}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -255,8 +268,14 @@ export default function SankalpaPage() {
                   days: Number(event.target.value),
                 }));
               }}
+              aria-invalid={Boolean(errors.days)}
+              aria-describedby={errors.days ? 'sankalpa-days-error' : sankalpaRulesId}
             />
-            {errors.days ? <small className="error-text">{errors.days}</small> : null}
+            {errors.days ? (
+              <small id="sankalpa-days-error" className="error-text">
+                {errors.days}
+              </small>
+            ) : null}
           </label>
 
           <label>

@@ -10,6 +10,8 @@
   --accent: #255d4f;
   --accent-soft: #d6e7df;
   --border: #cfddd5;
+  --focus-ring: #17493e;
+  --focus-shadow: 0 0 0 0.2rem rgba(37, 93, 79, 0.18);
   --shadow: 0 12px 30px rgba(19, 32, 27, 0.08);
   --radius-lg: 22px;
   --radius-md: 14px;
@@ -33,6 +35,10 @@ body,
   margin: 0;
 }
 
+html {
+  scroll-padding-top: 5rem;
+}
+
 body {
   color: var(--text);
   background:
@@ -45,8 +51,44 @@ a {
   text-decoration: none;
 }
 
+a,
+button,
+input,
+select,
+summary {
+  transition:
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+:where(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: var(--focus-shadow);
+}
+
 .app-shell {
   min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  z-index: 100;
+  border: 1px solid var(--focus-ring);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  padding: 0.65rem 0.85rem;
+  font-weight: 700;
+  transform: translateY(-180%);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .app-sidebar {
@@ -67,6 +109,18 @@ a {
   background: rgba(247, 249, 247, 0.88);
   backdrop-filter: blur(12px);
   padding: 1rem 1rem 0.9rem;
+}
+
+.topbar-inner {
+  width: min(100%, var(--max-content));
+  margin: 0 auto;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.topbar-heading {
+  display: grid;
+  gap: 0.12rem;
 }
 
 .topbar-title {
@@ -104,7 +158,7 @@ a {
 .content {
   width: min(100%, var(--max-content));
   margin: 0 auto;
-  padding: 1rem 1rem 6rem;
+  padding: 1.15rem 1rem 6.25rem;
 }
 
 .page-card {
@@ -163,6 +217,9 @@ a {
 
 .bottom-link,
 .nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
@@ -170,6 +227,7 @@ a {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 700;
+  min-height: 2.9rem;
 }
 
 .bottom-link.active,
@@ -267,6 +325,7 @@ select {
   background: #fff;
   color: var(--text);
   padding: 0.68rem 0.72rem;
+  min-height: 2.85rem;
 }
 
 button {
@@ -277,6 +336,7 @@ button {
   font-weight: 700;
   padding: 0.7rem 1rem;
   cursor: pointer;
+  min-height: 2.85rem;
 }
 
 button.secondary {
@@ -297,6 +357,7 @@ button:disabled {
   text-decoration: underline;
   padding: 0;
   justify-self: start;
+  min-height: auto;
 }
 
 .advanced-panel {
@@ -625,6 +686,12 @@ button:disabled {
   padding: 0.75rem 0.85rem;
   display: grid;
   gap: 0.35rem;
+  align-items: start;
+}
+
+.status-banner p {
+  margin: 0;
+  line-height: 1.45;
 }
 
 .status-banner.ok {
@@ -710,6 +777,7 @@ button:disabled {
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .history-meta {
@@ -798,6 +866,11 @@ button:disabled {
   cursor: pointer;
   font-weight: 700;
   color: var(--text);
+  list-style: none;
+}
+
+.manual-log-disclosure > summary::-webkit-details-marker {
+  display: none;
 }
 
 .manual-log-disclosure-body {
@@ -840,6 +913,27 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.playlist-inline-items span {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f6faf7;
+  padding: 0.28rem 0.6rem;
+}
+
+.settings-interval-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-column: 1 / -1;
+}
+
+.practice-tools-content[hidden],
+.advanced-content[hidden],
+.settings-interval-grid[hidden] {
+  display: none;
+}
+
 @media (min-width: 48rem) {
   .app-shell {
     display: grid;
@@ -863,7 +957,12 @@ button:disabled {
     padding-right: 1.5rem;
   }
 
+  .topbar-inner {
+    gap: 1rem;
+  }
+
   .content {
+    padding-top: 1.4rem;
     padding-bottom: 2rem;
   }
 
@@ -877,6 +976,7 @@ button:disabled {
 
   .nav-link {
     text-align: left;
+    justify-content: flex-start;
     padding: 0.72rem 0.78rem;
     font-size: 0.92rem;
   }
@@ -890,6 +990,10 @@ button:disabled {
   }
 
   .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-interval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -944,9 +1048,56 @@ button:disabled {
     grid-column: 1 / -1;
     justify-content: flex-end;
   }
+
+  .shell-active-banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.8rem;
+  }
+
+  .shell-active-action {
+    justify-self: end;
+  }
 }
 
 @media (max-width: 30rem) {
+  .content {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .page-card {
+    padding: 1rem;
+  }
+
+  .timer-actions,
+  .custom-play-actions,
+  .playlist-item-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timer-actions > button,
+  .custom-play-actions > button,
+  .playlist-item-controls > button {
+    width: 100%;
+  }
+
+  .history-row,
+  .practice-tools-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .shell-active-action,
+  .practice-tools-header button {
+    justify-self: stretch;
+  }
+
+  .playlist-inline-items {
+    display: grid;
+  }
+
   .home-shortcut-item {
     flex-direction: column;
     align-items: stretch;
@@ -978,5 +1129,10 @@ button:disabled {
 
   .summary-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .summary-by-type-list,
+  .sankalpa-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

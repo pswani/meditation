@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
@@ -22,6 +22,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
+    expect(screen.getByRole('link', { name: /skip to main content/i })).toHaveAttribute('href', '#main-content');
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
     expect(screen.getAllByText('Sankalpa').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /start timer now/i })).toBeInTheDocument();
@@ -52,9 +53,10 @@ describe('App shell', () => {
 
     fireEvent.click(screen.getAllByRole('link', { name: /^Practice$/i })[0]);
 
-    expect(screen.getByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/duration \(minutes\)/i)).toHaveValue(32);
-    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Sahaj');
+    const timerSetup = screen.getByRole('heading', { name: /timer setup/i }).closest('section');
+    expect(timerSetup).not.toBeNull();
+    expect(within(timerSetup ?? document.body).getByDisplayValue('32')).toBeInTheDocument();
+    expect(within(timerSetup ?? document.body).getByRole('combobox')).toHaveValue('Sahaj');
   });
 
   it('shows a global active timer resume banner outside Practice', () => {

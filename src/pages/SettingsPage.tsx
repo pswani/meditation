@@ -18,6 +18,7 @@ function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings
 
 export default function SettingsPage() {
   const { settings, setSettings } = useTimer();
+  const intervalDefaultsId = 'settings-interval-defaults';
   const [draft, setDraft] = useState<TimerSettings>(settings);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
@@ -89,11 +90,17 @@ export default function SettingsPage() {
               min={1}
               value={draft.durationMinutes}
               onChange={(event) => update('durationMinutes', Number(event.target.value))}
+              aria-invalid={Boolean(errors.durationMinutes)}
+              aria-describedby={errors.durationMinutes ? 'settings-duration-error' : 'settings-duration-hint'}
             />
             {errors.durationMinutes ? (
-              <small className="error-text">{errors.durationMinutes}</small>
+              <small id="settings-duration-error" className="error-text">
+                {errors.durationMinutes}
+              </small>
             ) : (
-              <small className="hint-text">Used when opening timer setup.</small>
+              <small id="settings-duration-hint" className="hint-text">
+                Used when opening timer setup.
+              </small>
             )}
           </label>
 
@@ -102,6 +109,8 @@ export default function SettingsPage() {
             <select
               value={draft.meditationType}
               onChange={(event) => update('meditationType', event.target.value as TimerSettings['meditationType'])}
+              aria-invalid={Boolean(errors.meditationType)}
+              aria-describedby={errors.meditationType ? 'settings-meditation-type-error' : undefined}
             >
               <option value="">Select meditation type</option>
               {meditationTypes.map((meditationType) => (
@@ -110,7 +119,11 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            {errors.meditationType ? <small className="error-text">{errors.meditationType}</small> : null}
+            {errors.meditationType ? (
+              <small id="settings-meditation-type-error" className="error-text">
+                {errors.meditationType}
+              </small>
+            ) : null}
           </label>
 
           <label>
@@ -140,41 +153,45 @@ export default function SettingsPage() {
               type="checkbox"
               checked={draft.intervalEnabled}
               onChange={(event) => update('intervalEnabled', event.target.checked)}
+              aria-controls={intervalDefaultsId}
+              aria-expanded={draft.intervalEnabled}
             />
             <span>Enable interval bell by default</span>
           </label>
 
-          {draft.intervalEnabled ? (
-            <>
-              <label>
-                <span>Default interval (minutes)</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={draft.intervalMinutes}
-                  onChange={(event) => update('intervalMinutes', Number(event.target.value))}
-                />
-                {errors.intervalMinutes ? (
-                  <small className="error-text">{errors.intervalMinutes}</small>
-                ) : (
-                  <small className="hint-text">
-                    {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} within the default session.
-                  </small>
-                )}
-              </label>
+          <div id={intervalDefaultsId} className="settings-interval-grid" hidden={!draft.intervalEnabled}>
+            <label>
+              <span>Default interval (minutes)</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.intervalMinutes}
+                onChange={(event) => update('intervalMinutes', Number(event.target.value))}
+                aria-invalid={Boolean(errors.intervalMinutes)}
+                aria-describedby={errors.intervalMinutes ? 'settings-interval-error' : 'settings-interval-hint'}
+              />
+              {errors.intervalMinutes ? (
+                <small id="settings-interval-error" className="error-text">
+                  {errors.intervalMinutes}
+                </small>
+              ) : (
+                <small id="settings-interval-hint" className="hint-text">
+                  {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} within the default session.
+                </small>
+              )}
+            </label>
 
-              <label>
-                <span>Default interval sound</span>
-                <select value={draft.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
-                  {soundOptions.map((sound) => (
-                    <option key={sound} value={sound}>
-                      {sound}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
+            <label>
+              <span>Default interval sound</span>
+              <select value={draft.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
+                {soundOptions.map((sound) => (
+                  <option key={sound} value={sound}>
+                    {sound}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </form>
 
         <div className="timer-actions">

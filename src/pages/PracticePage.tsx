@@ -17,6 +17,9 @@ export default function PracticePage() {
   const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
+  const advancedSectionId = 'practice-advanced-options';
+  const toolsSectionId = 'practice-tools-panel';
+  const intervalPanelId = 'practice-interval-options';
   const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -124,11 +127,17 @@ export default function PracticePage() {
             value={settings.durationMinutes}
             onChange={(event) => update('durationMinutes', Number(event.target.value))}
             onBlur={() => markTouched('durationMinutes')}
+            aria-invalid={Boolean(visibleErrors.durationMinutes)}
+            aria-describedby={visibleErrors.durationMinutes ? 'practice-duration-error' : 'practice-duration-hint'}
           />
           {visibleErrors.durationMinutes ? (
-            <small className="error-text">{visibleErrors.durationMinutes}</small>
+            <small id="practice-duration-error" className="error-text">
+              {visibleErrors.durationMinutes}
+            </small>
           ) : (
-            <small className="hint-text">Choose total session duration.</small>
+            <small id="practice-duration-hint" className="hint-text">
+              Choose total session duration.
+            </small>
           )}
         </label>
 
@@ -138,6 +147,8 @@ export default function PracticePage() {
             value={settings.meditationType}
             onChange={(event) => update('meditationType', event.target.value as MeditationType | '')}
             onBlur={() => markTouched('meditationType')}
+            aria-invalid={Boolean(visibleErrors.meditationType)}
+            aria-describedby={visibleErrors.meditationType ? 'practice-meditation-type-error' : 'practice-meditation-type-hint'}
           >
             <option value="">Select meditation type</option>
             {meditationTypes.map((meditationType) => (
@@ -147,9 +158,13 @@ export default function PracticePage() {
             ))}
           </select>
           {visibleErrors.meditationType ? (
-            <small className="error-text">{visibleErrors.meditationType}</small>
+            <small id="practice-meditation-type-error" className="error-text">
+              {visibleErrors.meditationType}
+            </small>
           ) : (
-            <small className="hint-text">Select meditation type before starting.</small>
+            <small id="practice-meditation-type-hint" className="hint-text">
+              Select meditation type before starting.
+            </small>
           )}
         </label>
       </div>
@@ -159,82 +174,85 @@ export default function PracticePage() {
           type="button"
           className="advanced-toggle"
           aria-expanded={advancedOpen}
+          aria-controls={advancedSectionId}
           onClick={() => setAdvancedOpen((current) => !current)}
         >
           {advancedOpen ? 'Hide Advanced Options' : 'Show Advanced Options'}
         </button>
 
-        {advancedOpen ? (
-          <div className="advanced-content">
-            <div className="form-grid">
-              <label>
-                <span>Start sound (optional)</span>
-                <select value={settings.startSound} onChange={(event) => update('startSound', event.target.value)}>
-                  {soundOptions.map((sound) => (
-                    <option key={sound} value={sound}>
-                      {sound}
-                    </option>
-                  ))}
-                </select>
-              </label>
+        <div id={advancedSectionId} className="advanced-content" hidden={!advancedOpen}>
+          <div className="form-grid">
+            <label>
+              <span>Start sound (optional)</span>
+              <select value={settings.startSound} onChange={(event) => update('startSound', event.target.value)}>
+                {soundOptions.map((sound) => (
+                  <option key={sound} value={sound}>
+                    {sound}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-              <label>
-                <span>End sound (optional)</span>
-                <select value={settings.endSound} onChange={(event) => update('endSound', event.target.value)}>
-                  {soundOptions.map((sound) => (
-                    <option key={sound} value={sound}>
-                      {sound}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <label>
+              <span>End sound (optional)</span>
+              <select value={settings.endSound} onChange={(event) => update('endSound', event.target.value)}>
+                {soundOptions.map((sound) => (
+                  <option key={sound} value={sound}>
+                    {sound}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-            <div className="interval-panel">
-              <label className="checkbox-row">
+          <div className="interval-panel">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={settings.intervalEnabled}
+                onChange={(event) => update('intervalEnabled', event.target.checked)}
+                aria-controls={intervalPanelId}
+                aria-expanded={settings.intervalEnabled}
+              />
+              <span>Enable interval bell</span>
+            </label>
+
+            <div id={intervalPanelId} className="form-grid" hidden={!settings.intervalEnabled}>
+              <label>
+                <span>Interval bell every (minutes)</span>
                 <input
-                  type="checkbox"
-                  checked={settings.intervalEnabled}
-                  onChange={(event) => update('intervalEnabled', event.target.checked)}
+                  type="number"
+                  min={1}
+                  value={settings.intervalMinutes}
+                  onChange={(event) => update('intervalMinutes', Number(event.target.value))}
+                  onBlur={() => markTouched('intervalMinutes')}
+                  aria-invalid={Boolean(visibleErrors.intervalMinutes)}
+                  aria-describedby={visibleErrors.intervalMinutes ? 'practice-interval-error' : 'practice-interval-hint'}
                 />
-                <span>Enable interval bell</span>
+                {visibleErrors.intervalMinutes ? (
+                  <small id="practice-interval-error" className="error-text">
+                    {visibleErrors.intervalMinutes}
+                  </small>
+                ) : (
+                  <small id="practice-interval-hint" className="hint-text">
+                    {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} will occur before session end.
+                  </small>
+                )}
               </label>
 
-              {settings.intervalEnabled ? (
-                <div className="form-grid">
-                  <label>
-                    <span>Interval bell every (minutes)</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={settings.intervalMinutes}
-                      onChange={(event) => update('intervalMinutes', Number(event.target.value))}
-                      onBlur={() => markTouched('intervalMinutes')}
-                    />
-                    {visibleErrors.intervalMinutes ? (
-                      <small className="error-text">{visibleErrors.intervalMinutes}</small>
-                    ) : (
-                      <small className="hint-text">
-                        {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} will occur before session end.
-                      </small>
-                    )}
-                  </label>
-
-                  <label>
-                    <span>Interval sound</span>
-                    <select value={settings.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
-                      {soundOptions.map((sound) => (
-                        <option key={sound} value={sound}>
-                          {sound}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              ) : null}
+              <label>
+                <span>Interval sound</span>
+                <select value={settings.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
+                  {soundOptions.map((sound) => (
+                    <option key={sound} value={sound}>
+                      {sound}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
-        ) : null}
+        </div>
       </section>
 
       <div className="timer-actions">
@@ -257,7 +275,13 @@ export default function PracticePage() {
       <section className="practice-tools-panel" aria-label="Practice tools">
         <div className="practice-tools-header">
           <h3 className="section-title">Practice Tools</h3>
-          <button type="button" className="secondary" onClick={() => setToolsOpen((current) => !current)}>
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={toolsOpen}
+            aria-controls={toolsSectionId}
+            onClick={() => setToolsOpen((current) => !current)}
+          >
             {toolsOpen ? 'Hide Tools' : 'Show Tools'}
           </button>
         </div>
@@ -277,8 +301,7 @@ export default function PracticePage() {
           </div>
         ) : null}
 
-        {toolsOpen ? (
-          <div className="practice-tools-content">
+        <div id={toolsSectionId} className="practice-tools-content" hidden={!toolsOpen}>
             <CustomPlayManager />
 
             <section className="playlist-entry-panel">
@@ -291,7 +314,6 @@ export default function PracticePage() {
               </div>
             </section>
           </div>
-        ) : null}
       </section>
     </section>
   );

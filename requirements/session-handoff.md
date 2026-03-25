@@ -1,49 +1,54 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-d-production-readiness/01-testing-hardening.md` is complete.
+Prompt `prompts/milestone-d-production-readiness/02-accessibility-responsive-polish.md` is complete.
 
-Milestone D testing hardening is complete for the most regression-prone runtime and persistence seams across the app.
+Milestone D accessibility and responsive polish is complete for the shared shell and the app’s densest route-level flows.
 
 ## What was implemented
 - Added and completed ExecPlan:
-  - `requirements/execplan-production-readiness-testing-hardening.md`
-- Hardened `sankalpa` storage loading:
-  - `src/utils/storage.ts`
-  - invalid persisted goals are now dropped while valid goals are preserved
-- Added storage QA coverage for `sankalpa` persistence and normalization:
-  - `src/utils/storage.test.ts`
-- Added app-shell recovery coverage for persisted active runtime state:
+  - `requirements/execplan-accessibility-responsive-polish.md`
+- Improved shared shell accessibility and layout:
+  - `src/app/AppShell.tsx`
+  - added skip link to main content
+  - added bounded top-bar inner layout for more stable desktop/tablet spacing
+  - made the main landmark an explicit skip-link target
+- Improved shared interactive styling and responsive layout behavior:
+  - `src/index.css`
+  - added consistent focus-visible treatment
+  - improved phone action stacking and dense-panel wrapping
+  - improved top-bar/banner spacing
+  - added large-screen breathing room for summary and sankalpa lists
+  - refined playlist inline item readability
+- Improved high-traffic form semantics:
+  - `src/pages/PracticePage.tsx`
+  - `src/pages/SettingsPage.tsx`
+  - `src/pages/HistoryPage.tsx`
+  - `src/pages/SankalpaPage.tsx`
+  - added `aria-controls` / `aria-expanded` for collapsible controls
+  - added `aria-invalid` / `aria-describedby` wiring for validation and helper copy
+- Added focused accessibility-oriented tests:
   - `src/App.test.tsx`
-  - recovered active timer snapshot
-  - recovered active playlist-run snapshot
-- Added route-level Sankalpa coverage:
-  - `src/pages/SankalpaPage.test.tsx`
-  - empty-state validation flow
-  - populated summary rendering
-  - persisted sankalpa creation flow
-- Added route-level playlist run coverage:
-  - `src/pages/PlaylistRunPage.test.tsx`
-  - paused recovered run resume flow
-  - end-early confirmation and logged outcome flow
+  - `src/pages/PracticePage.test.tsx`
+  - `src/pages/SettingsPage.test.tsx`
 
 ## Verification status
 - `npm run typecheck` passed
 - `npm run lint` passed
 - `npm run test` passed
   - 23 test files
-  - 111 tests passing
+  - 113 tests passing
 - `npm run build` passed
 
 ## Documentation updates made
-- Added and completed `requirements/execplan-production-readiness-testing-hardening.md`.
-- Updated `requirements/decisions.md` with production-readiness testing hardening decisions.
+- Added and completed `requirements/execplan-accessibility-responsive-polish.md`.
+- Updated `requirements/decisions.md` with accessibility/responsive polish decisions.
 - Updated `requirements/session-handoff.md`.
 
 ## Known limitations / assumptions
-- This pass stayed intentionally narrow and did not attempt broad UI polish or accessibility remediation.
-- Runtime hardening in this slice is limited to the `sankalpa` persistence boundary; broader storage normalization opportunities may still remain for later production-readiness work.
-- QA coverage remains local-first and front-end scoped; backend service behavior remains out of scope in this workspace.
+- This pass focused on obvious accessibility and responsive polish within the existing UI structure; it did not redesign flows or introduce new components.
+- Keyboard/focus improvements are strongest in shared layout and primary forms; there may still be secondary opportunities in deeper management UIs during later production-readiness work.
+- Performance characteristics were not addressed in this slice beyond layout/markup changes.
 
 ## Exact recommended next prompt
 Read:
@@ -60,16 +65,15 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for accessibility and responsive polish.
-2. Improve:
-   - keyboard usability where applicable
-   - labels and semantics
-   - focus states
-   - breakpoint behavior
-   - desktop/tablet spacing and density
-   - mobile readability
-3. Keep the design calm and minimal.
-4. Add focused tests where appropriate.
+1. Create an ExecPlan for performance cleanup.
+2. Review and improve obvious performance issues in the current front end and any directly related back-end paths:
+   - unnecessary re-renders
+   - duplicated expensive derivations
+   - overly large components
+   - wasteful persistence/update patterns
+   - obvious N+1 or wasteful query patterns if present
+3. Keep changes bounded and safe.
+4. Avoid speculative micro-optimizations.
 5. Run:
    - npm run typecheck
    - npm run lint
@@ -77,4 +81,4 @@ Then:
    - npm run build
 6. Update decisions and session-handoff.
 7. Commit with a clear message:
-   feat(polish): improve accessibility and responsive usability
+   perf(app): clean up obvious front-end and integration inefficiencies
