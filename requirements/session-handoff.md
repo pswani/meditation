@@ -1,28 +1,24 @@
 # Session Handoff
 
 ## Current status
-Prompt `prompts/milestone-c-discipline-and-insight/06-fix-discipline-and-insight-review-findings.md` is complete.
+Prompt `prompts/milestone-c-discipline-and-insight/07-test-discipline-and-insight.md` is complete.
 
-Milestone C critical and important review findings for summaries and sankalpa usability have been remediated in a bounded UX-focused pass.
+Milestone C testing and QA hardening is complete for summary derivation, sankalpa counting/time-of-day behavior, and sankalpa API-boundary handling.
 
 ## What was implemented
-- Created ExecPlan for this remediation slice:
-  - `requirements/execplan-milestone-c-discipline-insight-remediation.md`
-- Fixed critical trust issue for zero-duration display:
-  - `formatDurationLabel(0)` now renders `0 min`
-  - non-zero sub-minute values continue to render as `\< 1 min`
-- Fixed important summary-density issue on `/goals`:
-  - by meditation type and by time of day now hide inactive categories by default
-  - added `Show inactive categories` toggle
-  - added hidden-count helper text
-- Fixed important summary clarity issue:
-  - overall `Completed vs ended early` now shows explicit labels instead of `X / Y` shorthand
-- Fixed important medium-breakpoint readability issue:
-  - summary row column sizing now allows a flexible middle metric column
-  - by-source metrics now render as compact metric pills for cleaner scanability
-- Added focused test coverage for changed behavior:
-  - `src/pages/SankalpaPage.test.tsx`
-  - `src/utils/sessionLog.test.ts`
+- Added QA ExecPlan for this slice:
+  - `requirements/execplan-milestone-c-discipline-insight-testing-qa.md`
+- Strengthened summary derivation tests in `src/utils/summary.test.ts`:
+  - inclusive same-day range boundaries
+  - by-type counts constrained by date range
+  - malformed `endedAt` exclusion during snapshot derivation
+- Strengthened sankalpa tests in `src/utils/sankalpa.test.ts`:
+  - time-of-day bucket boundary matching
+  - completed-vs-expired status precedence after deadline
+  - explicit time-of-day boundary mapping coverage
+- Strengthened API boundary tests in `src/utils/sankalpaApi.test.ts`:
+  - invalid JSON payload handling
+  - non-array payload handling
 
 ## Verification status
 - `npm run typecheck` ✅
@@ -31,13 +27,13 @@ Milestone C critical and important review findings for summaries and sankalpa us
 - `npm run build` ✅
 
 ## Documentation updates made
-- Updated `requirements/decisions.md` with remediation decisions.
+- Added `requirements/execplan-milestone-c-discipline-insight-testing-qa.md`.
+- Updated `requirements/decisions.md`.
 - Updated `requirements/session-handoff.md`.
-- Added `requirements/execplan-milestone-c-discipline-insight-remediation.md`.
 
 ## Known limitations / assumptions
-- Nice-to-have review items were intentionally deferred to keep scope bounded to critical and important findings.
-- Summary derivation still computes full category coverage; inactive-row filtering is presentation-only.
+- This pass intentionally focuses on deterministic utility/API-level tests rather than broad UI-level expansion.
+- No production-behavior changes were introduced in this QA pass.
 
 ## Exact recommended next prompt
 Read:
@@ -54,19 +50,25 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for targeted Milestone C testing and QA.
-2. Strengthen testing for:
-   - summary derivation logic
-   - by-type and date-range behavior
-   - sankalpa counting rules
-   - time-of-day filtering behavior
-   - relevant REST integration boundaries for this milestone
-3. Improve fragile tests if needed.
-4. Run:
+1. Create an ExecPlan for testing and hardening.
+2. Strengthen test coverage for critical app flows and fragile logic across the full application.
+3. Improve reliability of existing tests.
+4. Add missing focused tests for:
+   - timer/session logic
+   - logging
+   - settings persistence
+   - manual logging
+   - custom plays
+   - playlists
+   - summaries
+   - sankalpa
+   - front-end/back-end REST boundaries where practical
+5. Avoid meaningless tests.
+6. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
-5. Update decisions and session-handoff.
-6. Commit with a clear message:
-   test(insight): harden milestone c flows and integration points
+7. Update decisions and session-handoff.
+8. Commit with a clear message:
+   test(app): harden critical flows and domain logic

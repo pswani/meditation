@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
-import { deriveSankalpaProgress, partitionSankalpaProgress, validateSankalpaDraft } from './sankalpa';
+import { deriveSankalpaProgress, getTimeOfDayBucket, partitionSankalpaProgress, validateSankalpaDraft } from './sankalpa';
 
 function localIso(year: number, monthIndex: number, day: number, hour: number, minute = 0): string {
   return new Date(year, monthIndex, day, hour, minute, 0, 0).toISOString();
@@ -182,6 +182,28 @@ describe('sankalpa helpers', () => {
     expect(progress.status).toBe('completed');
   });
 
+  it('applies time-of-day bucket boundaries when matching filtered logs', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-morning-boundary',
+      goalType: 'session-count-based',
+      targetValue: 2,
+      days: 2,
+      timeOfDayBucket: 'morning',
+      createdAt: localIso(2026, 2, 20, 0, 0),
+    };
+
+    const logs = [
+      createSessionLog({ id: 'night-459', endedAt: localIso(2026, 2, 20, 4, 59) }),
+      createSessionLog({ id: 'morning-500', endedAt: localIso(2026, 2, 20, 5, 0) }),
+      createSessionLog({ id: 'morning-1159', endedAt: localIso(2026, 2, 20, 11, 59) }),
+      createSessionLog({ id: 'afternoon-1200', endedAt: localIso(2026, 2, 20, 12, 0) }),
+    ];
+
+    const progress = deriveSankalpaProgress(goal, logs, new Date(localIso(2026, 2, 20, 13, 0)));
+    expect(progress.matchedSessionCount).toBe(2);
+    expect(progress.status).toBe('completed');
+  });
+
   it('marks goals as expired when deadline passes without target completion', () => {
     const goal: SankalpaGoal = {
       id: 'goal-3',
@@ -199,6 +221,36 @@ describe('sankalpa helpers', () => {
 
     expect(progress.matchedSessionCount).toBe(1);
     expect(progress.status).toBe('expired');
+  });
+
+  it('keeps completed status after deadline when target was reached', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-completed-before-deadline',
+      goalType: 'session-count-based',
+      targetValue: 1,
+      days: 1,
+      createdAt: localIso(2026, 2, 20, 0, 0),
+    };
+
+    const progress = deriveSankalpaProgress(
+      goal,
+      [createSessionLog({ id: 'matching-log', endedAt: localIso(2026, 2, 20, 7, 0) })],
+      new Date(localIso(2026, 2, 25, 7, 0))
+    );
+
+    expect(progress.matchedSessionCount).toBe(1);
+    expect(progress.status).toBe('completed');
+  });
+
+  it('maps time-of-day buckets at key clock boundaries', () => {
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 4, 59, 0, 0))).toBe('night');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 5, 0, 0, 0))).toBe('morning');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 11, 59, 0, 0))).toBe('morning');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 12, 0, 0, 0))).toBe('afternoon');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 16, 59, 0, 0))).toBe('afternoon');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 17, 0, 0, 0))).toBe('evening');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 20, 59, 0, 0))).toBe('evening');
+    expect(getTimeOfDayBucket(new Date(2026, 2, 20, 21, 0, 0, 0))).toBe('night');
   });
 
   it('partitions sankalpa progress entries by status', () => {

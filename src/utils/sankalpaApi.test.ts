@@ -65,4 +65,12 @@ describe('sankalpa api boundary', () => {
       },
     ]);
   });
+
+  it('returns an empty list for malformed persisted payloads through api boundary', () => {
+    localStorage.setItem(SANKALPAS_STORAGE_KEY, '{bad-json');
+    expect(listSankalpasFromApi()).toEqual([]);
+
+    localStorage.setItem(SANKALPAS_STORAGE_KEY, JSON.stringify({ id: 'goal-1' }));
+    expect(listSankalpasFromApi()).toEqual([]);
+  });
 });

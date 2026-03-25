@@ -298,3 +298,14 @@
   - `ended early`
 - Improve medium-breakpoint summary readability by making row metric columns more flexible and using compact metric pills in by-source rows.
 - Keep this remediation bounded to critical and important review findings; defer nice-to-have items.
+
+### 2026-03-24 discipline-and-insight testing hardening decisions
+- Keep this slice QA-only and avoid product behavior changes; strengthen Milestone C confidence through targeted utility/API tests.
+- Add explicit summary edge coverage for:
+  - inclusive same-day range boundaries
+  - by-type counts constrained by date-range filtering
+  - malformed `endedAt` exclusion in snapshot derivation.
+- Add explicit sankalpa edge coverage for:
+  - time-of-day bucket boundaries used by optional filters
+  - status precedence that keeps `completed` goals completed after deadline.
+- Add explicit sankalpa API-boundary coverage for malformed persisted payload handling (`invalid JSON`, `non-array payload`).

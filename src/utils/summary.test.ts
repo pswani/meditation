@@ -178,6 +178,67 @@ describe('summary helpers', () => {
     expect(filtered.map((entry) => entry.id)).toEqual(['2', '3']);
   });
 
+  it('keeps same-day boundary entries and preserves by-type counts for the filtered range', () => {
+    const boundaryLogs: SessionLog[] = [
+      {
+        id: 'start-boundary',
+        startedAt: new Date(2026, 2, 20, 0, 0, 0, 0).toISOString(),
+        endedAt: new Date(2026, 2, 20, 0, 5, 0, 0).toISOString(),
+        meditationType: 'Vipassana',
+        intendedDurationSeconds: 300,
+        completedDurationSeconds: 300,
+        status: 'completed',
+        source: 'auto log',
+        startSound: 'None',
+        endSound: 'None',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      },
+      {
+        id: 'end-boundary',
+        startedAt: new Date(2026, 2, 20, 23, 45, 0, 0).toISOString(),
+        endedAt: new Date(2026, 2, 20, 23, 59, 59, 999).toISOString(),
+        meditationType: 'Ajapa',
+        intendedDurationSeconds: 900,
+        completedDurationSeconds: 900,
+        status: 'completed',
+        source: 'manual log',
+        startSound: 'None',
+        endSound: 'None',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      },
+      {
+        id: 'outside-range',
+        startedAt: new Date(2026, 2, 21, 0, 0, 0, 0).toISOString(),
+        endedAt: new Date(2026, 2, 21, 0, 10, 0, 0).toISOString(),
+        meditationType: 'Kriya',
+        intendedDurationSeconds: 600,
+        completedDurationSeconds: 600,
+        status: 'completed',
+        source: 'auto log',
+        startSound: 'None',
+        endSound: 'None',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      },
+    ];
+
+    const range = deriveDateRangeFromInputs('2026-03-20', '2026-03-20');
+    if (!range) {
+      throw new Error('Expected valid range');
+    }
+
+    const snapshot = deriveSummarySnapshot(boundaryLogs, range);
+    expect(snapshot.sessionLogs.map((entry) => entry.id)).toEqual(['start-boundary', 'end-boundary']);
+    expect(snapshot.byTypeSummary.find((entry) => entry.meditationType === 'Vipassana')).toMatchObject({ sessionLogs: 1 });
+    expect(snapshot.byTypeSummary.find((entry) => entry.meditationType === 'Ajapa')).toMatchObject({ sessionLogs: 1 });
+    expect(snapshot.byTypeSummary.find((entry) => entry.meditationType === 'Kriya')).toMatchObject({ sessionLogs: 0 });
+  });
+
   it('builds a summary snapshot from a filtered date-range subset', () => {
     const range = deriveDateRangeFromInputs('2026-03-20', '2026-03-24');
     if (!range) {
@@ -197,6 +258,20 @@ describe('summary helpers', () => {
       sessionLogs: 1,
       totalDurationSeconds: 1800,
     });
+  });
+
+  it('ignores session logs with unparseable endedAt values during snapshot derivation', () => {
+    const logsWithMalformedDate: SessionLog[] = [
+      ...sampleLogs,
+      {
+        ...sampleLogs[0],
+        id: 'bad-date',
+        endedAt: 'not-a-date',
+      },
+    ];
+
+    const snapshot = deriveSummarySnapshot(logsWithMalformedDate, { startAtMs: null, endAtMs: null });
+    expect(snapshot.sessionLogs.map((entry) => entry.id)).toEqual(['1', '2', '3', '4']);
   });
 
   it('derives date-input labels from day offsets', () => {
