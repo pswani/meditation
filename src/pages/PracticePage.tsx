@@ -25,10 +25,12 @@ export default function PracticePage() {
     lastOutcome,
     isSessionLogSyncing,
     sessionLogSyncError,
+    isSettingsLoading,
+    settingsSyncError,
   } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
-  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
+  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || isSettingsLoading;
   const advancedContentId = 'advanced-timer-settings';
   const practiceToolsContentId = 'practice-tools-content';
   const timerStartBlockedMessageId = 'timer-start-blocked-message';
@@ -106,6 +108,18 @@ export default function PracticePage() {
           <button type="button" className="link-button" onClick={() => setEntryMessage(null)}>
             Dismiss
           </button>
+        </div>
+      ) : null}
+
+      {isSettingsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading timer defaults from the backend before starting a session.</p>
+        </div>
+      ) : null}
+
+      {settingsSyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{settingsSyncError}</p>
         </div>
       ) : null}
 
@@ -270,11 +284,15 @@ export default function PracticePage() {
       {isTimerStartBlockedByPlaylistRun ? (
         <div id={timerStartBlockedMessageId} className="status-banner warn" role="status">
           <p>
-            A playlist run is active. Resume or end the playlist run before starting a separate timer session.
+            {isSettingsLoading
+              ? 'Timer defaults are still loading from the backend. Please wait a moment before starting.'
+              : 'A playlist run is active. Resume or end the playlist run before starting a separate timer session.'}
           </p>
-          <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
-            Resume Playlist Run
-          </button>
+          {isSettingsLoading ? null : (
+            <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
+              Resume Playlist Run
+            </button>
+          )}
         </div>
       ) : null}
 

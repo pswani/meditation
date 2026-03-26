@@ -1,10 +1,16 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TimerProvider } from '../features/timer/TimerContext';
 import PracticePage from './PracticePage';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+
+async function waitForPracticeSettingsHydration() {
+  await waitFor(() =>
+    expect(screen.queryByText(/loading timer defaults from the backend before starting a session/i)).not.toBeInTheDocument()
+  );
+}
 
 describe('PracticePage UX', () => {
   beforeEach(() => {
@@ -15,7 +21,7 @@ describe('PracticePage UX', () => {
     cleanup();
   });
 
-  it('keeps required meditation type error hidden until start attempt', () => {
+  it('keeps required meditation type error hidden until start attempt', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
         <TimerProvider>
@@ -27,6 +33,7 @@ describe('PracticePage UX', () => {
     );
 
     expect(screen.queryByText(/meditation type is required/i)).not.toBeInTheDocument();
+    await waitForPracticeSettingsHydration();
 
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     expect(screen.getByText(/meditation type is required/i)).toBeInTheDocument();
@@ -101,7 +108,7 @@ describe('PracticePage UX', () => {
     expect(screen.getByLabelText(/^start sound \(optional\)$/i)).toBeInTheDocument();
   });
 
-  it('disables timer start and shows guidance when playlist run is active', () => {
+  it('disables timer start and shows guidance when playlist run is active', async () => {
     localStorage.setItem(
       ACTIVE_PLAYLIST_RUN_STATE_KEY,
       JSON.stringify({
@@ -139,6 +146,8 @@ describe('PracticePage UX', () => {
         </TimerProvider>
       </MemoryRouter>
     );
+
+    await waitForPracticeSettingsHydration();
 
     const startButton = screen.getByRole('button', { name: /start session/i });
     expect(startButton).toBeDisabled();

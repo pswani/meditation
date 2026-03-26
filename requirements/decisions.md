@@ -25,6 +25,22 @@
 - Use one seeded `timer_settings` record (`default`) for the current single-user local setup instead of introducing profile/account complexity in Milestone A.
 - Keep active timer and active playlist recovery local-only in this slice; only persisted settings and session history move to H2.
 
+### 2026-03-26 milestone-a core practice engine decisions
+- Treat backend timer-settings hydration as the gate for timer-start actions on `Home` and `Practice` so the core flow never starts from stale defaults before the H2-backed source of truth arrives.
+- Keep backend state feedback calm and local to the relevant screens:
+  - lightweight loading banners while timer defaults hydrate
+  - inline warning banners when backend sync/load fails
+  - no blocking overlay or dashboard-style status layer
+- Verify prompt 02 with the real local full-stack setup that now exists in-repo:
+  - Spring Boot dev backend
+  - H2 file-backed persistence
+  - Vite dev frontend and `/api` proxy
+  - media files served from disk through backend path references
+- Expand confidence in the core flow with stateful app-level integration tests rather than adding a new e2e framework in this slice:
+  - Home quick-start hydration gating
+  - backend timer-settings persistence across a fresh app mount
+  - ended-early timer -> `session log` -> History rehydration across a fresh app mount
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

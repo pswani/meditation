@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone A prompt 01 is complete: session-log REST persistence and backend-backed timer settings are now integrated into the core flow.
+Milestone A prompts 01 and 02 are complete. The core practice engine now runs against the backend-backed timer-settings and `session log` flow across Home, Practice, Active Timer, Settings, and History, and the local full-stack setup has been verified with the in-repo Spring Boot backend, H2, and Vite dev proxy.
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -14,41 +14,36 @@ Milestone A prompt 01 is complete: session-log REST persistence and backend-back
   - milestone review, remediation, verification, and local merge back to the parent branch
 - Working tree status at branch creation: clean and ready for milestone work
 
-This slice implemented the first end-to-end Milestone A backend-backed core data flow by adding H2 persistence and REST APIs for `session log` history and timer settings, then wiring the frontend `TimerContext` and `History` flow to those endpoints with calm loading/error states.
+Prompt 01 established the H2-backed REST contracts and frontend hydration/sync path for timer settings and `session log` history. Prompt 02 completed the user-facing core practice-engine flow on top of that foundation by tightening Home and Practice launch behavior, adding fresh-mount integration coverage, and verifying the runnable local stack end to end.
 
 ## What was changed
-- Added `requirements/execplan-milestone-a-session-log-rest.md` and used it to guide the slice.
-- Extended H2 schema with `V3__add_session_log_sync_and_timer_settings.sql`:
-  - added timer sound/interval columns plus `playlist_name` to `session_log`
-  - added seeded `timer_settings`
-- Added backend domain packages and REST endpoints:
-  - `backend/src/main/java/com/meditation/backend/sessionlog/**`
-  - `backend/src/main/java/com/meditation/backend/settings/**`
-  - endpoints:
-    - `/api/session-logs`
+- Added and used:
+  - `requirements/execplan-milestone-a-session-log-rest.md`
+  - `requirements/execplan-milestone-a-core-practice-engine.md`
+- Prompt 01 backend-backed foundation remains in place:
+  - H2 migration `V3__add_session_log_sync_and_timer_settings.sql`
+  - REST endpoints:
     - `/api/settings/timer`
-- Added backend tests for the new contracts:
-  - `backend/src/test/java/com/meditation/backend/sessionlog/**`
-  - `backend/src/test/java/com/meditation/backend/settings/**`
-- Added frontend API boundaries:
-  - `src/utils/sessionLogApi.ts`
-  - `src/utils/timerSettingsApi.ts`
-- Reworked `src/features/timer/TimerContext.tsx` so:
-  - timer settings hydrate from the backend
-  - session-log history hydrates from the backend
-  - local storage remains as migration/fallback cache
-  - new logs sync through REST
-  - sync failures surface explicit warning states
-- Updated frontend screens for the new backend-backed core flow:
-  - `src/pages/HistoryPage.tsx`
-  - `src/pages/ActiveTimerPage.tsx`
+    - `/api/session-logs`
+  - frontend hydration and sync through `TimerContext`
+- Prompt 02 completed the screen-level core flow:
+  - `src/pages/HomePage.tsx`
+    - quick start waits for backend timer-settings hydration
+    - calm loading and warning banners surface backend state
   - `src/pages/PracticePage.tsx`
-  - `src/pages/SettingsPage.tsx`
-- Added frontend API and integration coverage:
-  - `src/utils/sessionLogApi.test.ts`
-  - `src/utils/timerSettingsApi.test.ts`
-  - `src/test/setup.ts`
-- Updated `README.md`, `docs/architecture.md`, `requirements/decisions.md`, and `requirements/session-handoff.md`.
+    - start-session action waits for hydrated timer defaults
+    - blocked guidance distinguishes backend loading from active playlist-run state
+- Expanded app-level and page-level test coverage for the backend-backed practice engine:
+  - `src/App.test.tsx`
+    - Home quick-start hydration gating
+    - backend timer-settings persistence across a fresh app mount
+    - ended-early timer -> backend history -> History rehydration across a fresh app mount
+  - `src/pages/HomePage.test.tsx`
+  - `src/pages/PracticePage.test.tsx`
+  - `src/pages/ActiveTimerPage.test.tsx`
+- Updated milestone tracking docs:
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
 
 ## Intentional sample or helper content that remains
 - Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
@@ -56,13 +51,20 @@ This slice implemented the first end-to-end Milestone A backend-backed core data
 - `docs/review-foundation-fullstack.md` remains as the review artifact for the completed foundation assessment.
 
 ## Verification status
-- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
-- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Verified backend session-log and timer-settings controller tests against H2
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Verified live local backend startup with `npm run dev:backend`
+- Verified live local frontend startup with `npm run dev:frontend`
+- Verified backend reachability with `curl -s http://localhost:8080/api/health`
+- Verified backend media catalog directly with `curl -s http://localhost:8080/api/media/custom-plays`
+- Verified frontend dev proxy reachability with `curl -s http://localhost:5173/api/media/custom-plays`
+- Verified live UI hydration in the browser on:
+  - `http://127.0.0.1:5173/`
+  - `http://127.0.0.1:5173/practice`
 
 ## Known limitations
 - Playlists, sankalpas, and custom-play CRUD are still local-first in the UI.
@@ -70,36 +72,22 @@ This slice implemented the first end-to-end Milestone A backend-backed core data
 - Media upload/import and authenticated admin/media-management flows are still unimplemented.
 - Timer and playlist sound playback remain UI-only.
 - The Flyway H2-version compatibility warning still appears in this environment, but tests and runtime verification passed.
+- `docs/review-core-fullstack.md` does not exist yet; prompt 03 is the review/documentation slice that will create it.
 
 ## Files updated in this slice
-- `README.md`
-- `docs/architecture.md`
-- `backend/src/main/java/com/meditation/backend/sessionlog/**`
-- `backend/src/main/java/com/meditation/backend/settings/**`
-- `backend/src/main/resources/db/migration/V3__add_session_log_sync_and_timer_settings.sql`
-- `backend/src/test/java/com/meditation/backend/sessionlog/**`
-- `backend/src/test/java/com/meditation/backend/settings/**`
-- `src/features/timer/TimerContext.tsx`
-- `src/features/timer/timerContextObject.ts`
-- `src/features/timer/timerReducer.ts`
-- `src/pages/ActiveTimerPage.tsx`
-- `src/pages/HistoryPage.tsx`
+- `requirements/execplan-milestone-a-core-practice-engine.md`
+- `src/App.test.tsx`
+- `src/pages/ActiveTimerPage.test.tsx`
+- `src/pages/HomePage.test.tsx`
+- `src/pages/HomePage.tsx`
+- `src/pages/PracticePage.test.tsx`
 - `src/pages/PracticePage.tsx`
-- `src/pages/SettingsPage.tsx`
-- `src/test/setup.ts`
-- `src/utils/manualLog.ts`
-- `src/utils/sessionLogApi.test.ts`
-- `src/utils/sessionLogApi.ts`
-- `src/utils/timerSettingsApi.test.ts`
-- `src/utils/timerSettingsApi.ts`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-milestone-a-session-log-rest.md`
 
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
-- PLANS.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
@@ -111,20 +99,16 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for completing the core practice engine end to end.
-2. Ensure these flows work against the backend where appropriate:
-   - Home as launch surface
-   - Settings persistence
-   - Timer setup and active timer
-   - session completion and ended-early handling
-   - History display
-3. Make the app runnable as a real full-stack local setup.
-4. Add focused tests for:
-   - REST contract usage
-   - settings persistence
-   - history rendering
-   - timer-to-log backend flow
-5. Run full relevant verification.
-6. Update docs and session-handoff with exact recommended next prompt.
-7. Commit with a clear message:
-   feat(core): complete timer history home and settings full-stack flow
+1. Review Milestone A from:
+   - UX/usability
+   - code quality
+   - backend design
+   - REST quality
+   - performance concerns
+   - engineering hygiene
+2. Identify critical, important, and nice-to-have issues.
+3. Do not implement code changes.
+4. Write findings into:
+   - docs/review-core-fullstack.md
+   - requirements/session-handoff.md
+5. Include exact recommended next prompt.
