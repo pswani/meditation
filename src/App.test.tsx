@@ -126,8 +126,6 @@ describe('App shell', () => {
           startSound: 'None',
           endSound: 'Temple Bell',
           mediaAssetId: '',
-          mediaAssetLabel: '',
-          mediaAssetPath: '',
           recordingLabel: '',
           favorite: false,
           createdAt: '2026-03-24T08:00:00.000Z',

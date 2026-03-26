@@ -31,7 +31,7 @@ describe('CustomPlayManager UX', () => {
     fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });
     fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Soft Chime' } });
     fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Wood Block' } });
-    expect(screen.getByText(/choose a linked media session from managed metadata/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
     fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
@@ -39,6 +39,7 @@ describe('CustomPlayManager UX', () => {
     expect(screen.getByText('Morning Focus')).toBeInTheDocument();
     expect(screen.getByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
     expect(screen.getByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/managed path/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /use custom play/i }));
     expect(screen.getByText(/custom play "Morning Focus" applied to timer setup/i)).toBeInTheDocument();

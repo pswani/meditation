@@ -172,14 +172,6 @@ a {
   line-height: 1.6;
 }
 
-.placeholder-list {
-  margin: 1rem 0 0;
-  padding-left: 1rem;
-  color: var(--muted);
-  display: grid;
-  gap: 0.45rem;
-}
-
 .bottom-nav {
   position: fixed;
   left: 0;

@@ -268,6 +268,18 @@
   - `ended early`
 - Keep remediation scope bounded to critical/important summary-review findings only; defer nice-to-have items.
 
+### 2026-03-25 prototype cleanup pass-1 decisions
+- Remove dead placeholder-era scaffolding that no longer serves the app:
+  - unused `.placeholder-list` styling
+  - stale active prompt guidance that still tells contributors to add placeholder screens
+- Keep the fixed custom-play media catalog, but treat it explicitly as intentional sample/reference data behind the existing media API seam.
+- Simplify `custom play` persistence to store only `mediaAssetId` as the link to sample media metadata.
+- Derive linked-media display details from the current media catalog at render time instead of persisting denormalized label/path fields in product records.
+- Remove technical media implementation details from the custom-play UX:
+  - no managed path display
+  - no MIME-type display
+- Preserve backward compatibility for existing local storage by accepting legacy custom-play records that still contain label/path fields and normalizing them into the slimmer runtime shape.
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`

@@ -9,7 +9,7 @@ export function buildCustomPlayMediaListUrl(apiBaseUrl?: string): string {
   return buildApiUrl(CUSTOM_PLAY_MEDIA_LIST_PATH, apiBaseUrl);
 }
 
-const localMediaAssetCatalog: readonly MediaAssetMetadata[] = [
+const sampleMediaAssetCatalog: readonly MediaAssetMetadata[] = [
   {
     id: 'media-vipassana-sit-20',
     label: 'Vipassana Sit (20 min)',
@@ -40,10 +40,10 @@ const localMediaAssetCatalog: readonly MediaAssetMetadata[] = [
 ];
 
 export async function listCustomPlayMediaAssets(): Promise<MediaAssetMetadata[]> {
-  return localMediaAssetCatalog.map((entry) => ({ ...entry }));
+  return sampleMediaAssetCatalog.map((entry) => ({ ...entry }));
 }
 
 export function findCustomPlayMediaAssetById(assetId: string): MediaAssetMetadata | null {
-  const match = localMediaAssetCatalog.find((entry) => entry.id === assetId);
+  const match = sampleMediaAssetCatalog.find((entry) => entry.id === assetId);
   return match ? { ...match } : null;
 }

@@ -238,8 +238,6 @@ function normalizeCustomPlay(value: unknown): CustomPlay | null {
     startSound: typeof candidate.startSound === 'string' ? candidate.startSound : 'None',
     endSound: typeof candidate.endSound === 'string' ? candidate.endSound : 'Temple Bell',
     mediaAssetId: typeof candidate.mediaAssetId === 'string' ? candidate.mediaAssetId : '',
-    mediaAssetLabel: typeof candidate.mediaAssetLabel === 'string' ? candidate.mediaAssetLabel : '',
-    mediaAssetPath: typeof candidate.mediaAssetPath === 'string' ? candidate.mediaAssetPath : '',
     recordingLabel: typeof candidate.recordingLabel === 'string' ? candidate.recordingLabel : '',
     favorite: candidate.favorite,
     createdAt: candidate.createdAt,

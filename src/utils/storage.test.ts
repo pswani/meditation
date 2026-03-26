@@ -229,7 +229,7 @@ describe('storage custom plays', () => {
     localStorage.clear();
   });
 
-  it('persists and loads extended custom-play fields', () => {
+  it('persists and loads custom plays with the current linked-media shape', () => {
     const customPlays: CustomPlay[] = [
       {
         id: 'play-1',
@@ -239,8 +239,6 @@ describe('storage custom plays', () => {
         startSound: 'Soft Chime',
         endSound: 'Temple Bell',
         mediaAssetId: 'media-vipassana-sit-20',
-        mediaAssetLabel: 'Vipassana Sit (20 min)',
-        mediaAssetPath: '/media/custom-plays/vipassana-sit-20.mp3',
         recordingLabel: 'Session A',
         favorite: true,
         createdAt: '2026-03-24T08:00:00.000Z',
@@ -277,9 +275,46 @@ describe('storage custom plays', () => {
         startSound: 'None',
         endSound: 'Temple Bell',
         mediaAssetId: '',
-        mediaAssetLabel: '',
-        mediaAssetPath: '',
         recordingLabel: '',
+        favorite: false,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('drops legacy custom-play path fields during normalization while preserving supported data', () => {
+    localStorage.setItem(
+      rawCustomPlaysKey,
+      JSON.stringify([
+        {
+          id: 'legacy-linked-play',
+          name: 'Legacy Linked Play',
+          meditationType: 'Vipassana',
+          durationMinutes: 20,
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          mediaAssetId: 'media-vipassana-sit-20',
+          mediaAssetLabel: 'Vipassana Sit (20 min)',
+          mediaAssetPath: '/media/custom-plays/vipassana-sit-20.mp3',
+          recordingLabel: 'Legacy note',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    expect(loadCustomPlays()).toEqual([
+      {
+        id: 'legacy-linked-play',
+        name: 'Legacy Linked Play',
+        meditationType: 'Vipassana',
+        durationMinutes: 20,
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        mediaAssetId: 'media-vipassana-sit-20',
+        recordingLabel: 'Legacy note',
         favorite: false,
         createdAt: '2026-03-24T08:00:00.000Z',
         updatedAt: '2026-03-24T08:00:00.000Z',

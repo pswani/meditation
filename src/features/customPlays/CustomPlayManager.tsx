@@ -19,6 +19,10 @@ const initialDraft: CustomPlayDraft = {
 
 const initialErrors: CustomPlayValidationResult['errors'] = {};
 
+function describeLinkedMedia(asset: MediaAssetMetadata): string {
+  return asset.label;
+}
+
 export default function CustomPlayManager() {
   const { settings, setSettings, customPlays, saveCustomPlay, deleteCustomPlay, toggleFavoriteCustomPlay } = useTimer();
   const [draft, setDraft] = useState<CustomPlayDraft>(initialDraft);
@@ -249,18 +253,14 @@ export default function CustomPlayManager() {
             <small className="error-text">{errors.mediaAssetId}</small>
           ) : selectedMediaAsset ? (
             <>
-              <small className="hint-text">
-                Linked media: {selectedMediaAsset.label} · {(selectedMediaAsset.durationSeconds / 60).toFixed(0)} min ·{' '}
-                {selectedMediaAsset.mimeType}
-              </small>
-              <small className="hint-text">File path is managed by media metadata and cannot be edited here.</small>
-              <small className="hint-text">Managed path: {selectedMediaAsset.filePath}</small>
+              <small className="hint-text">Linked media session: {describeLinkedMedia(selectedMediaAsset)}</small>
+              <small className="hint-text">This keeps the custom play connected to the selected media session.</small>
             </>
           ) : mediaLoadError ? (
             <small className="error-text">{mediaLoadError}</small>
           ) : (
             <small className="hint-text">
-              Choose a linked media session from managed metadata. You do not enter file paths manually.
+              Choose a linked media session to remember which recording this custom play uses.
             </small>
           )}
         </label>
@@ -324,14 +324,10 @@ export default function CustomPlayManager() {
                     <p className="section-subtitle">
                       Sounds: {play.startSound} start · {play.endSound} end
                     </p>
-                    {play.mediaAssetLabel ? (
-                      <>
-                        <p className="section-subtitle">
-                          Media session: {play.mediaAssetLabel}
-                          {linkedAsset ? ` · ${(linkedAsset.durationSeconds / 60).toFixed(0)} min · ${linkedAsset.mimeType}` : ''}
-                        </p>
-                        <p className="section-subtitle">Managed path: {play.mediaAssetPath}</p>
-                      </>
+                    {linkedAsset ? (
+                      <p className="section-subtitle">Media session: {describeLinkedMedia(linkedAsset)}</p>
+                    ) : play.mediaAssetId ? (
+                      <p className="section-subtitle">Linked media session unavailable right now.</p>
                     ) : null}
                     {appliedPlayId === play.id ? (
                       <p className="section-subtitle" role="status">

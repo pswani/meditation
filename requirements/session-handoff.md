@@ -1,60 +1,74 @@
 # Session Handoff
 
 ## Current status
-This pass was assessment-only. No runtime cleanup was performed yet.
+Prototype cleanup pass 1 is complete.
 
-The repository now has a documented prototype-cleanup assessment that separates intentional local-first seams from actual prototype residue, placeholder leftovers, UX-demo leakage, and historical review artifacts.
+This slice removed the highest-priority prototype-only UX and journey scaffolding identified in `docs/prototype-cleanup-assessment.md` while keeping the app functional, local-first, and aligned with the current product surface.
 
-## What was done
-- Read the required repo, product, architecture, UX, roadmap, decisions, and handoff docs.
-- Read `requirements/prompts.md` because the cleanup touches current repo guidance.
-- Audited the live route surface, navigation, page components, feature modules, local API seams, storage helpers, and top-level docs.
-- Added `docs/prototype-cleanup-assessment.md` with:
-  - a full ExecPlan
-  - classification of findings into:
-    - `must remove now`
-    - `can keep temporarily`
-    - `should be converted into proper seed/sample data`
-  - explicit non-findings where prototype/demo residue is no longer present
+## What was changed
+- Added `requirements/execplan-prototype-cleanup-pass1.md` and used it to drive the cleanup slice.
+- Removed the unused `.placeholder-list` styling from `src/index.css`.
+- Updated `requirements/prompts.md` so the active app-shell guidance no longer tells contributors to add placeholder screens.
+- Simplified the `custom play` model to persist only `mediaAssetId` for linked media.
+- Updated custom-play normalization so legacy stored entries with `mediaAssetLabel` and `mediaAssetPath` still load, but those prototype-only fields are dropped from runtime state.
+- Updated the custom-play UI to show calm, human-readable linked-media details without exposing MIME types or managed file paths.
+- Updated tests to match the slimmer `custom play` shape and the cleaned-up linked-media UX.
+- Updated `README.md` so media persistence and sample catalog behavior match the new implementation.
+- Updated `requirements/decisions.md` with the cleanup decisions from this slice.
 
-## Highest-signal findings
-- Immediate cleanup candidates:
-  - unused `.placeholder-list` styling in `src/index.css`
-  - stale placeholder-screen guidance in `requirements/prompts.md`
-  - user-facing managed media path and MIME-type details in `src/features/customPlays/CustomPlayManager.tsx`
-  - prototype-oriented custom-play media path data persisted in `src/types/customPlay.ts` and `src/utils/customPlay.ts`
-- Temporary seams that can remain for now:
-  - `src/utils/playlistApi.ts`
-  - `src/utils/sankalpaApi.ts`
-  - `/sankalpa` compatibility redirect
-  - fixed sound labels while playback is still unimplemented
-- Items that should become proper seed/reference data later:
-  - fixed custom-play media catalog in `src/utils/mediaAssetApi.ts`
-  - timer sound option catalog in `src/features/timer/constants.ts`
+## Temporary content removed
+- Dead placeholder-era CSS remnant:
+  - `.placeholder-list` in `src/index.css`
+- Stale active placeholder guidance:
+  - `requirements/prompts.md` no longer instructs route-level placeholder-screen work
+- Prototype-only persisted custom-play fields:
+  - `mediaAssetLabel`
+  - `mediaAssetPath`
+- Technical custom-play UI leakage:
+  - managed path display
+  - MIME-type display
+  - “managed metadata” helper wording
 
-## Important non-findings
-- No fake summary cards or mock metric panels remain in the routed app.
-- No temporary primary navigation items remain in `src/app/routes.ts`.
-- No dead route-level page files were found in `src/pages`; all current page components are wired in `src/App.tsx`.
-- Test-only sample fixtures were intentionally excluded from product-data cleanup findings.
-
-## Files changed in this pass
-- Added `docs/prototype-cleanup-assessment.md`
-- Updated `requirements/session-handoff.md`
+## Intentional sample content that remains
+- The fixed custom-play media catalog in `src/utils/mediaAssetApi.ts` remains as intentional sample/reference data.
+- The timer sound option list in `src/features/timer/constants.ts` remains as intentional sample/reference data until real playback work is in scope.
+- Local-storage-backed `playlist` and `sankalpa` API seams remain in place as intentional local-first abstractions for future backend transport work.
+- Form placeholder examples such as `Morning Focus`, `Breath emphasis`, and `Morning Sequence` remain because they still help valid app flows.
 
 ## Verification status
-- Not run: `npm run typecheck`
-- Not run: `npm run lint`
-- Not run: `npm run test`
-- Not run: `npm run build`
-
-Reason:
-- this was a documentation-only assessment pass with no runtime or test changes
+- Passed `npm run typecheck`
+- Passed `npm run lint`
+- Passed `npm run test`
+- Passed `npm run build`
+- Checked for backend build runners:
+  - no `gradlew`
+  - no `pom.xml`
+  - no `build.gradle`
+  - no `build.gradle.kts`
+- No backend commands were run because no backend build/test entrypoints are present in this repo.
 
 ## Known limitations
-- The repository still contains the identified prototype residue because this pass intentionally stopped at assessment.
-- No archive/index strategy has been applied yet to top-level review and ExecPlan artifacts.
-- No migration has been designed yet for removing persisted custom-play media path fields from existing local storage.
+- The custom-play media catalog is still a fixed sample/reference catalog in source code.
+- Timer sound options still do not map to actual playback files or runtime audio behavior.
+- Historical review and ExecPlan artifacts remain in `docs/` and `requirements/`; this slice intentionally did not archive or reorganize them.
+- Legacy local-storage payloads with removed custom-play fields are tolerated at load time, but the app now normalizes them into the slimmer shape on the next save cycle.
+
+## Files updated in this slice
+- `README.md`
+- `requirements/prompts.md`
+- `requirements/decisions.md`
+- `requirements/session-handoff.md`
+- `requirements/execplan-prototype-cleanup-pass1.md`
+- `src/types/customPlay.ts`
+- `src/utils/customPlay.ts`
+- `src/utils/storage.ts`
+- `src/utils/mediaAssetApi.ts`
+- `src/features/customPlays/CustomPlayManager.tsx`
+- `src/index.css`
+- `src/App.test.tsx`
+- `src/features/customPlays/CustomPlayManager.test.tsx`
+- `src/utils/customPlay.test.ts`
+- `src/utils/storage.test.ts`
 
 ## Exact recommended next prompt
 Read:
@@ -69,26 +83,28 @@ Read:
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
-- requirements/prompts.md
 
 
 Then:
 
-1. Create an ExecPlan for prototype cleanup pass 1 based on `docs/prototype-cleanup-assessment.md`.
+1. Create an ExecPlan for prototype cleanup pass 2.
 2. Keep the implementation to one meaningful vertical slice:
-   - remove immediate dead placeholder remnants
-   - remove or hide technical media-path and MIME-type details from the custom play UI
-   - stop persisting prototype-only custom-play media path data in product records
-   - update stale active docs/guidance that still describe placeholder-screen setup
+   - convert remaining intentional sample/reference data into shared reference-data modules
+   - centralize:
+     - meditation types
+     - timer sound options
+     - custom play sample media catalog
+   - update UI, validation, and storage normalization to consume those shared reference modules
+   - keep current app behavior unchanged
 3. Include:
-   - focused test updates for any changed custom-play UI copy or persistence behavior
-   - README updates if media-path visibility or prototype guidance changes
+   - focused tests for any moved reference-data dependencies
+   - README updates describing where intentional sample/reference data now lives
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
    - backend or upload implementation
-   - live REST transport work
    - actual audio playback
-   - broad archive/reorganization of all historical review or ExecPlan docs
+   - live REST transport work
+   - broad archive/reorganization of historical review or ExecPlan docs
    - unrelated route or shell refactors
 5. Run:
    - npm run typecheck
@@ -96,4 +112,4 @@ Then:
    - npm run test
    - npm run build
 6. Commit with a clear message:
-   chore(cleanup): remove immediate prototype remnants
+   refactor(data): centralize sample reference catalogs

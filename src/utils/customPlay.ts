@@ -42,8 +42,6 @@ export function createCustomPlay(draft: CustomPlayDraft, now: Date): CustomPlay 
     startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
     endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
     mediaAssetId: selectedAsset?.id ?? '',
-    mediaAssetLabel: selectedAsset?.label ?? '',
-    mediaAssetPath: selectedAsset?.filePath ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     favorite: false,
     createdAt: timestamp,
@@ -62,8 +60,6 @@ export function updateCustomPlay(existing: CustomPlay, draft: CustomPlayDraft, n
     startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
     endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
     mediaAssetId: selectedAsset?.id ?? '',
-    mediaAssetLabel: selectedAsset?.label ?? '',
-    mediaAssetPath: selectedAsset?.filePath ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     updatedAt: now.toISOString(),
   };

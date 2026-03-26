@@ -11,7 +11,7 @@ This README is intentionally grounded in the current repository contents. It exp
 - The current persistence model is local-first in the browser via `localStorage`.
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
-- Custom play media uses a fixed local metadata catalog in code. There is no upload flow, media library service, or H2-backed media table in this repo.
+- Custom play media uses a fixed local sample metadata catalog in code. There is no upload flow, media library service, or H2-backed media table in this repo.
 
 ## What The Application Does
 
@@ -466,12 +466,10 @@ Current behavior:
   - `mimeType`
   - `sizeBytes`
   - `updatedAt`
-- when a user saves a custom play, the app persists:
+- when a user saves a custom play, the app persists only:
   - `mediaAssetId`
-  - `mediaAssetLabel`
-  - `mediaAssetPath`
 
-Those fields are stored in browser local storage as part of a `CustomPlay` record. There is no H2 row or backend media lookup.
+The catalog remains the source of truth for linked media details shown in the UI. There is no H2 row or backend media lookup.
 
 ### Current model vs intended backend model
 
@@ -541,10 +539,9 @@ They are not referenced in H2 because H2 is not present.
 
 ### How media file paths are referenced today
 
-Custom play media paths are referenced in two places:
+Custom play media paths are referenced in one place today:
 
 1. In the fixed metadata catalog in `src/utils/mediaAssetApi.ts`
-2. In saved custom play records via `mediaAssetPath`
 
 Example stored value:
 
@@ -568,11 +565,7 @@ If you add files under `public/media/custom-plays`, Vite can serve them statical
 
 There is no DB.
 
-Current custom play records store a root-relative path string such as:
-
-```text
-/media/custom-plays/vipassana-sit-20.mp3
-```
+Current custom play records store only `mediaAssetId`. The root-relative path stays in the sample media catalog.
 
 ### How to register or link a media file so the app can use it
 
@@ -588,8 +581,8 @@ For custom play metadata, the registration flow is:
 What "use it" means today:
 
 - the media entry appears in the dropdown
-- the label, duration, MIME type, and managed path appear in the UI
-- the custom play persists the metadata reference
+- the linked media session appears in the custom play UI
+- the custom play persists the media reference by id
 
 What it does not mean yet:
 
@@ -614,7 +607,7 @@ There are two separate concepts in the current code:
 2. Custom play media sessions
    - defined by metadata entries in `src/utils/mediaAssetApi.ts`
    - selected by `mediaAssetId`
-   - persisted into custom plays as `mediaAssetId`, `mediaAssetLabel`, and `mediaAssetPath`
+   - persisted into custom plays as `mediaAssetId`
 
 ### Naming conventions
 
@@ -669,8 +662,7 @@ npm run dev
 6. Save the custom play and confirm the UI shows:
 
 - the media session label
-- its duration and MIME type
-- the managed path `/media/custom-plays/sahaj-evening-25.mp3`
+- a linked media session reference for the saved custom play
 
 7. Optional static-file check:
 
@@ -786,10 +778,10 @@ For the current implementation, validate in this order:
 3. Start the app with `npm run dev`
 4. Confirm the item appears in the `Media session (optional)` dropdown
 5. Save a custom play using it
-6. Confirm the saved custom play shows the media session label and managed path
+6. Confirm the saved custom play shows the media session label
 7. Optionally open the direct static URL in the browser
 
-"Usable" currently means metadata selection and path visibility, not playback.
+"Usable" currently means linked-media selection and reference visibility, not playback.
 
 ## Testing And Verification
 

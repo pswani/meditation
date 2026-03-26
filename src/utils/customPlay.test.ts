@@ -53,8 +53,7 @@ describe('custom play helpers', () => {
     expect(updated.durationMinutes).toBe(25);
     expect(updated.startSound).toBe('None');
     expect(updated.endSound).toBe('Temple Bell');
-    expect(updated.mediaAssetLabel).toBe('Ajapa Breath Cycle (15 min)');
-    expect(updated.mediaAssetPath).toContain('/media/custom-plays/');
+    expect(updated.mediaAssetId).toBe('media-ajapa-breath-15');
     expect(updated.updatedAt).toBe('2026-03-23T11:00:00.000Z');
   });
 
@@ -98,7 +97,7 @@ describe('custom play helpers', () => {
     expect(result.errors.mediaAssetId).toMatch(/no longer available/i);
   });
 
-  it('trims labels and clears media metadata when media id is not present', () => {
+  it('trims labels and clears linked media id when no media session is selected', () => {
     const created = createCustomPlay(
       {
         name: '  Evening Winddown  ',
@@ -115,7 +114,5 @@ describe('custom play helpers', () => {
     expect(created.name).toBe('Evening Winddown');
     expect(created.recordingLabel).toBe('gentle close');
     expect(created.mediaAssetId).toBe('');
-    expect(created.mediaAssetLabel).toBe('');
-    expect(created.mediaAssetPath).toBe('');
   });
 });

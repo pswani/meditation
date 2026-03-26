@@ -8,8 +8,6 @@ export interface CustomPlay {
   readonly startSound: string;
   readonly endSound: string;
   readonly mediaAssetId: string;
-  readonly mediaAssetLabel: string;
-  readonly mediaAssetPath: string;
   readonly recordingLabel: string;
   readonly favorite: boolean;
   readonly createdAt: string;
