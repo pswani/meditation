@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TimerProvider } from '../timer/TimerContext';
 import PracticePage from '../../pages/PracticePage';
 
@@ -10,6 +10,7 @@ describe('CustomPlayManager UX', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     cleanup();
   });
 
@@ -92,5 +93,31 @@ describe('CustomPlayManager UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /update custom play/i }));
 
     expect(screen.getByText(/custom play "Evening Reset Updated" updated\./i)).toBeInTheDocument();
+  });
+
+  it('shows an explicit integration warning when backend media data is invalid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ unexpected: true }),
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+
+    expect(await screen.findByText(/backend media session data is invalid/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
   });
 });

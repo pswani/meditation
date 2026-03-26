@@ -250,7 +250,7 @@ npm run dev:backend
 Default behavior:
 
 - the root helper auto-detects `backend/pom.xml`
-- the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run`
+- the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev`
 - the backend listens on port `8080` unless `MEDITATION_BACKEND_PORT` is set
 
 You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
@@ -343,6 +343,7 @@ What they do:
   - prepares the media root and starts the Vite dev server
 - `npm run dev:backend`
   - runs the in-repo backend by default and still allows explicit overrides
+  - starts the backend with the `dev` profile so local-only developer surfaces stay available without being part of the default runtime
 - `npm run dev:all`
   - starts the frontend plus the backend
 - `npm run build:app`
@@ -365,7 +366,8 @@ Current repo defaults:
 - backend server: `http://localhost:8080/`
 - backend health endpoint: `http://localhost:8080/api/health`
 - backend media catalog endpoint: `http://localhost:8080/api/media/custom-plays`
-- backend H2 console: `http://localhost:8080/h2-console`
+- backend media path example: `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3`
+- backend H2 console in `dev` profile only: `http://localhost:8080/h2-console`
 - backend API base URL: `http://localhost:8080/api`
 - frontend same-origin API path during dev and preview: `/api`
 
@@ -460,6 +462,7 @@ Then open:
 
 - `http://<LAN-IP>:8080/api/health`
 - `http://<LAN-IP>:8080/api/media/custom-plays`
+- `http://<LAN-IP>:8080/media/custom-plays/vipassana-sit-20.mp3`
 
 If you are testing against a separate backend outside this repo instead, use this pattern:
 
@@ -511,16 +514,16 @@ Important limitation:
 
 ### Troubleshooting if the phone loads the UI but API calls fail
 
-For the current checked-in app, this should not happen because there are no live API calls yet.
+For the current checked-in app, the most likely live API failure is the custom-play media catalog call.
 
-If you later pair the front end with a real backend, check these first:
+Check these first:
 
 - `VITE_API_BASE_URL` must use the developer machine LAN IP, not `localhost`
 - the backend must listen on `0.0.0.0` or the LAN IP
 - the backend must expose the expected `/api/...` routes
-- backend CORS must allow the front-end origin, for example:
-  - `http://<LAN-IP>:5173`
-  - `http://<LAN-IP>:4173`
+- backend CORS must allow the front-end origin:
+  - the default backend config now allows common local/LAN hosts on ports `5173`, `5174`, `4173`, and `4174`
+  - if you use different ports or tighter policies, update backend CORS config explicitly
 - opening `http://<LAN-IP>:<BACKEND-PORT>/api/...` directly from another device should reach the backend
 - browser devtools network errors such as `ERR_CONNECTION_REFUSED` or CORS failures usually point to bind-address or origin-allowlist issues
 
@@ -566,6 +569,7 @@ Object.keys(localStorage)
 H2 is configured in:
 
 - `backend/src/main/resources/application.yml`
+- `backend/src/main/resources/application-dev.yml`
 
 Flyway schema lives in:
 
@@ -598,17 +602,19 @@ Current reference or sample data also still exists in TypeScript modules:
 
 - meditation types: `src/types/timer.ts` and `src/features/timer/constants.ts`
 - sound options: `src/features/timer/constants.ts`
-- fixed custom play media metadata catalog: `src/utils/mediaAssetApi.ts`
+- fallback custom-play media metadata used only when the backend is unavailable: `src/utils/mediaAssetApi.ts`
 
 ### How the app stores media metadata today
 
-There is now a backend DB-backed media metadata model, but the front end has not been switched over to it yet.
+There is now a backend DB-backed media metadata model, and the frontend custom-play media flow prefers it.
 
 Current behavior:
 
 - `backend` stores seeded media metadata rows in H2 `media_asset`
 - backend migrations store relative media paths such as `custom-plays/vipassana-sit-20.mp3`
-- `src/utils/mediaAssetApi.ts` contains a fixed catalog of `MediaAssetMetadata`
+- backend API responses expose public media paths such as `/media/custom-plays/vipassana-sit-20.mp3`
+- the backend serves `/media/**` from the configured media root
+- `src/utils/mediaAssetApi.ts` still contains a built-in sample fallback catalog for backend-unavailable cases
 - each media entry has:
   - `id`
   - `label`
@@ -620,7 +626,7 @@ Current behavior:
 - when a user saves a custom play, the app persists only:
   - `mediaAssetId`
 
-Today the frontend catalog remains the source of truth for linked media shown in the UI. The backend seeded media rows are foundation work for the upcoming REST migration slices.
+Today the backend media API is the preferred source of truth for linked media shown in the UI, while the frontend sample catalog remains a resilience fallback.
 
 ### Current model vs intended backend model
 
@@ -658,13 +664,25 @@ Important current limitations:
 - no code maps timer sounds to actual media files
 - no audio playback service exists
 
-The only concrete media path convention that exists in code today is for custom play media metadata:
+The concrete media path convention currently used in code is:
 
 - `src/utils/mediaAssetApi.ts` defines `CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays'`
+- backend media metadata responses use that same public path prefix
 
 ### Exact directory structure to use for local custom play media
 
-If you want the file paths in the existing media catalog to point at real static files during local development, create this directory structure:
+For backend-backed local development, place files under the backend media root:
+
+```text
+local-data/
+  media/
+    custom-plays/
+      vipassana-sit-20.mp3
+      ajapa-breath-15.mp3
+      tratak-focus-10.mp3
+```
+
+For frontend-only static checks during `npm run dev:frontend`, you can also place files under:
 
 ```text
 public/
@@ -675,13 +693,11 @@ public/
       tratak-focus-10.mp3
 ```
 
-Why this path:
+Why there are two useful locations:
 
-- the current catalog already references paths like `/media/custom-plays/vipassana-sit-20.mp3`
-- with Vite, files placed under `public/` are served from the site root
-- that means `public/media/custom-plays/vipassana-sit-20.mp3` is available at `/media/custom-plays/vipassana-sit-20.mp3`
-
-This is the intended local file placement compatible with the current codebase. The repo simply does not contain those files yet.
+- the backend now serves `/media/**` from `local-data/media` by default
+- Vite still serves `public/` files from the frontend site root during frontend-only dev
+- the repo still does not include real audio files in either location
 
 ### How media file paths are referenced in H2
 
@@ -695,8 +711,8 @@ Backend convention:
 
 Custom play media paths are referenced in two places today:
 
-1. In the fixed frontend metadata catalog in `src/utils/mediaAssetApi.ts`
-2. In the backend seeded `media_asset` rows created by Flyway
+1. In backend-seeded `media_asset` rows created by Flyway
+2. In the frontend fallback metadata catalog in `src/utils/mediaAssetApi.ts`
 
 Example stored value:
 
@@ -710,11 +726,11 @@ That is a root-relative URL path, not an absolute filesystem path.
 
 Current answer:
 
-- custom play media paths are modeled as static/public paths
-- the backend currently serves metadata, not binary media streaming
+- the backend now serves `/media/**` from the configured media root
+- Vite can also serve matching files from `public/` during frontend-only dev
 - no runtime code actually fetches or plays the file today
 
-If you add files under `public/media/custom-plays`, Vite can serve them statically, but the current app will only display the metadata path. It will not play the file yet.
+The app still only displays linked media metadata today. It does not yet play the file.
 
 ### Does the DB store file paths, relative paths, or URLs
 
@@ -724,14 +740,20 @@ Current frontend custom play records still store only `mediaAssetId`, and the UI
 
 ### How to register or link a media file so the app can use it
 
-For custom play metadata, the registration flow is:
+For the current backend-backed foundation, the registration flow is:
 
-1. Put the file under `public/media/custom-plays/` using a stable filename.
-2. Add a catalog entry to `src/utils/mediaAssetApi.ts`.
-3. Run `npm run dev:frontend`.
-4. Open `Practice` -> `Show Tools` -> `Custom Plays`.
-5. Select the new entry from `Media session (optional)`.
-6. Save a custom play.
+1. Put the file under `local-data/media/custom-plays/` or your configured backend media root.
+2. Add or update the corresponding backend metadata row through Flyway seed data or a future admin/import workflow.
+3. Run `npm run dev:backend`.
+4. Run `npm run dev:frontend`.
+5. Open `Practice` -> `Show Tools` -> `Custom Plays`.
+6. Select the entry from `Media session (optional)`.
+7. Save a custom play.
+
+Current fallback-only shortcut:
+
+1. Put the file under `public/media/custom-plays/`.
+2. Add a fallback entry in `src/utils/mediaAssetApi.ts` only if you explicitly need backend-unavailable sample behavior.
 
 What "use it" means today:
 
@@ -760,7 +782,8 @@ There are two separate concepts in the current code:
    - not currently mapped to file paths
 
 2. Custom play media sessions
-   - defined by metadata entries in `src/utils/mediaAssetApi.ts`
+   - defined primarily by backend metadata responses
+   - backed by fallback metadata entries in `src/utils/mediaAssetApi.ts` when the backend is unavailable
    - selected by `mediaAssetId`
    - persisted into custom plays as `mediaAssetId`
 
@@ -787,10 +810,12 @@ No runtime validation enforces this yet, but MP3 is the only format represented 
 1. Create the file:
 
 ```text
-public/media/custom-plays/sahaj-evening-25.mp3
+local-data/media/custom-plays/sahaj-evening-25.mp3
 ```
 
-2. Add it to `src/utils/mediaAssetApi.ts`:
+2. Add corresponding metadata through backend seed/admin flow.
+
+If you specifically need fallback sample behavior while the backend is unavailable, you can also add it to `src/utils/mediaAssetApi.ts`:
 
 ```ts
 {
@@ -807,6 +832,7 @@ public/media/custom-plays/sahaj-evening-25.mp3
 3. Start the app:
 
 ```bash
+npm run dev:backend
 npm run dev:frontend
 ```
 
@@ -819,9 +845,9 @@ npm run dev:frontend
 - the media session label
 - a linked media session reference for the saved custom play
 
-7. Optional static-file check:
+7. Optional backend media-path check:
 
-Open `http://localhost:5173/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:5173/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev:frontend` is running.
+Open `http://localhost:8080/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:8080/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev:backend` is running.
 
 Current limitation:
 
@@ -923,19 +949,19 @@ Current reference data is source-controlled directly in TypeScript:
 
 - meditation types: `src/features/timer/constants.ts`
 - sound options: `src/features/timer/constants.ts`
-- custom play media catalog: `src/utils/mediaAssetApi.ts`
+- fallback custom-play media catalog: `src/utils/mediaAssetApi.ts`
 
 ### Validate that a new media file is visible and usable
 
 For the current implementation, validate in this order:
 
 1. Ensure the file exists under `public/media/custom-plays/`
-2. Ensure there is a matching entry in `src/utils/mediaAssetApi.ts`
-3. Start the app with `npm run dev:frontend`
+2. Ensure the backend media metadata includes the file path you expect
+3. Start the app with `npm run dev:backend` and `npm run dev:frontend`
 4. Confirm the item appears in the `Media session (optional)` dropdown
 5. Save a custom play using it
 6. Confirm the saved custom play shows the media session label
-7. Optionally open the direct static URL in the browser
+7. Optionally open the backend media URL in the browser
 
 "Usable" currently means linked-media selection and reference visibility, not playback.
 
@@ -991,11 +1017,13 @@ The closest coverage is:
 
 Current manual verification checklist:
 
-1. Run `npm run dev:frontend`
-2. Open `Practice` -> `Show Tools` -> `Custom Plays`
-3. Confirm expected media entries appear in the dropdown
-4. Save a custom play and confirm the label and managed path are rendered
-5. If you created actual files under `public/media/custom-plays`, open the direct file URL in the browser
+1. Run `npm run dev:backend`
+2. Run `npm run dev:frontend`
+3. Confirm `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3` is reachable when a matching file exists under the backend media root
+4. Open `Practice` -> `Show Tools` -> `Custom Plays`
+5. Confirm expected media entries appear in the dropdown
+6. Save a custom play and confirm the linked media label is rendered
+7. Stop the backend and confirm the UI falls back to built-in sample media with a non-blocking or explicit integration warning, depending on failure type
 
 ### Verify REST APIs are reachable
 
@@ -1031,10 +1059,11 @@ Current verification pattern:
 1. Start the backend with `npm run dev:backend`.
 2. Open `http://localhost:8080/api/health`.
 3. Open `http://localhost:8080/api/media/custom-plays`.
-4. Start the front end with `npm run dev:frontend`.
-5. Open `http://localhost:5173/api/media/custom-plays` to confirm the dev proxy reaches the backend.
-6. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
-7. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with non-blocking guidance.
+4. Open `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
+5. Start the front end with `npm run dev:frontend`.
+6. Open `http://localhost:5173/api/media/custom-plays` to confirm the dev proxy reaches the backend.
+7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+8. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
 
 ## Build And Deployment
 
@@ -1083,7 +1112,8 @@ Current repo behavior:
 
 Operational implication:
 
-- if you choose to add real custom play media files before a backend exists, deploy them as static assets under the same public path structure the catalog expects
+- if you deploy the backend, place real custom-play media files under the configured backend media root so `/media/**` resolves correctly
+- if you are running frontend-only static checks, `public/` assets still work for Vite-served local development
 
 ### Runtime configuration required in deployment
 

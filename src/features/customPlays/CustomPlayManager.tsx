@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
+import type { MediaAssetCatalogIssue } from '../../utils/mediaAssetApi';
 import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
 import { meditationTypes, soundOptions } from '../timer/constants';
 import { useTimer } from '../timer/useTimer';
@@ -33,6 +34,7 @@ export default function CustomPlayManager() {
   const [saveFeedbackMessage, setSaveFeedbackMessage] = useState<string | null>(null);
   const [mediaAssets, setMediaAssets] = useState<MediaAssetMetadata[]>([]);
   const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
+  const [mediaLoadIssueKind, setMediaLoadIssueKind] = useState<MediaAssetCatalogIssue | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -44,12 +46,14 @@ export default function CustomPlayManager() {
         }
         setMediaAssets(result.assets);
         setMediaLoadError(result.errorMessage);
+        setMediaLoadIssueKind(result.errorKind);
       })
       .catch(() => {
         if (!mounted) {
           return;
         }
         setMediaLoadError('Unable to load media session options right now.');
+        setMediaLoadIssueKind('backend-error');
       });
 
     return () => {
@@ -126,6 +130,8 @@ export default function CustomPlayManager() {
   }
 
   const selectedMediaAsset = mediaAssets.find((asset) => asset.id === draft.mediaAssetId) ?? null;
+  const mediaLoadMessageClassName =
+    mediaLoadIssueKind === 'backend-error' || mediaLoadIssueKind === 'invalid-response' ? 'error-text' : 'hint-text';
 
   return (
     <section className="custom-play-panel">
@@ -259,7 +265,7 @@ export default function CustomPlayManager() {
             </>
           ) : (
             <>
-              {mediaLoadError ? <small className="hint-text">{mediaLoadError}</small> : null}
+              {mediaLoadError ? <small className={mediaLoadMessageClassName}>{mediaLoadError}</small> : null}
               <small className="hint-text">
                 Choose a linked media session to remember which recording this custom play uses.
               </small>

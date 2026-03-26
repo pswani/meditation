@@ -25,7 +25,8 @@ class ApiHealthControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("ok"))
         .andExpect(jsonPath("$.application").value("meditation-backend"))
-        .andExpect(jsonPath("$.mediaRoot").isString())
-        .andExpect(jsonPath("$.customPlayDirectory").isString());
+        .andExpect(jsonPath("$.timestamp").isString())
+        .andExpect(jsonPath("$.mediaRoot").doesNotExist())
+        .andExpect(jsonPath("$.customPlayDirectory").doesNotExist());
   }
 }

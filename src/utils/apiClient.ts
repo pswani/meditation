@@ -10,17 +10,25 @@ interface ApiRequestJsonOptions<TBody = unknown> {
   readonly signal?: AbortSignal;
 }
 
+type ApiClientErrorKind = 'network' | 'http' | 'invalid-json' | 'invalid-response';
+
 export class ApiClientError extends Error {
   readonly status: number | null;
   readonly url: string;
   readonly detail: string | null;
+  readonly kind: ApiClientErrorKind;
 
-  constructor(message: string, url: string, options?: { readonly status?: number | null; readonly detail?: string | null }) {
+  constructor(
+    message: string,
+    url: string,
+    options?: { readonly status?: number | null; readonly detail?: string | null; readonly kind?: ApiClientErrorKind }
+  ) {
     super(message);
     this.name = 'ApiClientError';
     this.status = options?.status ?? null;
     this.url = url;
     this.detail = options?.detail ?? null;
+    this.kind = options?.kind ?? 'http';
   }
 }
 
@@ -50,7 +58,9 @@ export async function requestJson<TResponse, TBody = unknown>(
       body: hasJsonBody ? JSON.stringify(options.body) : undefined,
     });
   } catch {
-    throw new ApiClientError('Unable to reach the API right now.', url);
+    throw new ApiClientError('Unable to reach the API right now.', url, {
+      kind: 'network',
+    });
   }
 
   if (!response.ok) {
@@ -66,6 +76,7 @@ export async function requestJson<TResponse, TBody = unknown>(
     throw new ApiClientError(`API request failed with status ${response.status}.`, url, {
       status: response.status,
       detail,
+      kind: 'http',
     });
   }
 
@@ -74,6 +85,7 @@ export async function requestJson<TResponse, TBody = unknown>(
   } catch {
     throw new ApiClientError('The API returned invalid JSON.', url, {
       status: response.status,
+      kind: 'invalid-json',
     });
   }
 }

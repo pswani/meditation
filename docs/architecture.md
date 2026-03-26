@@ -6,6 +6,8 @@ Single-page React application with route-based screens and feature-oriented modu
 ## Current runtime architecture
 - React SPA served by Vite
 - Spring Boot backend foundation under `backend/`
+- default backend runtime with developer-only surfaces disabled
+- `dev` backend profile for local-only conveniences such as the H2 console
 - shared frontend API client and API-base helpers under `src/utils`
 - route-level screens in `src/pages`
 - feature logic in `src/features`
@@ -13,6 +15,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - local-first persistence through browser `localStorage` for current frontend feature flows
 - Vite dev `/api` proxy for same-origin frontend/backend local development
+- backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
 
 ## Confirmed current gaps
@@ -20,6 +23,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - no playlist, sankalpa, or custom-play REST domain APIs yet
 - no end-to-end frontend/backend feature wiring yet
 - no media upload/import workflow yet
+- timer and playlist audio playback are still unimplemented
 
 ## Chosen full-stack target architecture
 - keep the current React front end and route model
@@ -35,6 +39,7 @@ Single-page React application with route-based screens and feature-oriented modu
   - playlists
   - sankalpas
   - custom-play media assets
+- serve configured media files through stable public paths
 - own H2 persistence and schema evolution
 - validate and normalize stored records before returning them to the front end
 - manage the configured media root and DB-referenced media metadata
@@ -64,6 +69,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - custom-play media lives under the `custom-plays/` subdirectory
 - H2 stores relative paths such as `custom-plays/vipassana-sit-20.mp3`
 - API responses expose a web-facing path such as `/media/custom-plays/vipassana-sit-20.mp3`
+- backend resource handling serves `/media/**` from the configured media root
 
 ## Principles
 - mobile-first

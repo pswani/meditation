@@ -37,6 +37,7 @@ describe('api client', () => {
 
     await expect(requestJson('/health')).rejects.toMatchObject<ApiClientError>({
       name: 'ApiClientError',
+      kind: 'network',
       status: null,
       url: '/api/health',
     });
@@ -54,8 +55,57 @@ describe('api client', () => {
 
     await expect(requestJson('/health')).rejects.toMatchObject<ApiClientError>({
       name: 'ApiClientError',
+      kind: 'http',
       status: 503,
       detail: 'backend unavailable',
     });
+  });
+
+  it('throws a typed error for invalid JSON responses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error('bad json');
+        },
+      })
+    );
+
+    await expect(requestJson('/health')).rejects.toMatchObject<ApiClientError>({
+      name: 'ApiClientError',
+      kind: 'invalid-json',
+      status: 200,
+    });
+  });
+
+  it('sends JSON bodies for write requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ saved: true }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      requestJson<{ saved: boolean }, { label: string }>('/media/custom-plays', {
+        method: 'POST',
+        apiBaseUrl: 'http://localhost:8080/api',
+        body: { label: 'Evening Sit' },
+      })
+    ).resolves.toEqual({ saved: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8080/api/media/custom-plays',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ label: 'Evening Sit' }),
+        headers: expect.objectContaining({
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        }),
+      })
+    );
   });
 });

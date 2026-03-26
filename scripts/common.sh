@@ -57,17 +57,17 @@ backend_dir() {
 default_backend_dev_cmd() {
   dir=$(backend_dir)
   if [ -n "$dir" ] && [ -x "$dir/mvnw" ]; then
-    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 spring-boot:run"
+    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
     return
   fi
 
   if [ -n "$dir" ] && [ -f "$dir/pom.xml" ]; then
-    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run"
+    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
     return
   fi
 
   if [ -n "$dir" ] && [ -x "$dir/gradlew" ]; then
-    printf '%s\n' "./gradlew bootRun"
+    printf '%s\n' "./gradlew bootRun --args='--spring.profiles.active=dev'"
     return
   fi
 

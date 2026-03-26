@@ -22,11 +22,13 @@ export interface MediaAssetApiResponse {
 }
 
 export type MediaAssetCatalogSource = 'backend' | 'sample-fallback';
+export type MediaAssetCatalogIssue = 'unavailable' | 'backend-error' | 'invalid-response';
 
 export interface MediaAssetCatalogResult {
   readonly assets: MediaAssetMetadata[];
   readonly source: MediaAssetCatalogSource;
   readonly errorMessage: string | null;
+  readonly errorKind: MediaAssetCatalogIssue | null;
 }
 
 const sampleMediaAssetCatalog: readonly MediaAssetApiResponse[] = [
@@ -98,12 +100,16 @@ function isMediaAssetApiResponse(value: unknown): value is MediaAssetApiResponse
 
 function normalizeMediaAssetApiPayload(payload: unknown): MediaAssetMetadata[] {
   if (!Array.isArray(payload)) {
-    throw new ApiClientError('The media catalog response had an unexpected shape.', CUSTOM_PLAY_MEDIA_LIST_ENDPOINT);
+    throw new ApiClientError('The media catalog response had an unexpected shape.', CUSTOM_PLAY_MEDIA_LIST_ENDPOINT, {
+      kind: 'invalid-response',
+    });
   }
 
   const normalizedAssets = payload.map((entry) => {
     if (!isMediaAssetApiResponse(entry)) {
-      throw new ApiClientError('The media catalog response contained invalid records.', CUSTOM_PLAY_MEDIA_LIST_ENDPOINT);
+      throw new ApiClientError('The media catalog response contained invalid records.', CUSTOM_PLAY_MEDIA_LIST_ENDPOINT, {
+        kind: 'invalid-response',
+      });
     }
 
     return normalizeMediaAssetResponse(entry);
@@ -122,13 +128,33 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
       assets: fallbackAssets,
       source: 'sample-fallback',
       errorMessage: 'Using built-in media session options because the backend media API is not available yet.',
+      errorKind: 'unavailable',
+    };
+  }
+
+  if (isApiClientError(error) && error.kind === 'network') {
+    return {
+      assets: fallbackAssets,
+      source: 'sample-fallback',
+      errorMessage: 'Using built-in media session options because the backend media API could not be reached.',
+      errorKind: 'unavailable',
+    };
+  }
+
+  if (isApiClientError(error) && (error.kind === 'invalid-json' || error.kind === 'invalid-response')) {
+    return {
+      assets: fallbackAssets,
+      source: 'sample-fallback',
+      errorMessage: 'Backend media session data is invalid. Showing built-in media session options instead.',
+      errorKind: 'invalid-response',
     };
   }
 
   return {
     assets: fallbackAssets,
     source: 'sample-fallback',
-    errorMessage: 'Using built-in media session options because the backend media API could not be reached.',
+    errorMessage: 'Backend media session loading failed. Showing built-in media session options instead.',
+    errorKind: 'backend-error',
   };
 }
 
@@ -143,6 +169,7 @@ export async function loadCustomPlayMediaAssets(apiBaseUrl?: string): Promise<Me
       assets,
       source: 'backend',
       errorMessage: null,
+      errorKind: null,
     };
   } catch (error) {
     return createFallbackResult(error);

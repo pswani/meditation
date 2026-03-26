@@ -68,11 +68,46 @@ describe('media asset api boundary', () => {
     const first = result.assets[0];
 
     expect(result.source).toBe('sample-fallback');
+    expect(result.errorKind).toBe('unavailable');
     expect(result.errorMessage).toMatch(/built-in media session options/i);
     expect(first?.id).toBeTruthy();
     expect(first?.label).toBeTruthy();
     expect(first?.durationSeconds).toBeGreaterThan(0);
     expect(first?.filePath).toContain('/media/custom-plays/');
+  });
+
+  it('surfaces invalid backend media payloads as explicit integration errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ not: 'an array' }),
+      })
+    );
+
+    const result = await loadCustomPlayMediaAssets();
+
+    expect(result.source).toBe('sample-fallback');
+    expect(result.errorKind).toBe('invalid-response');
+    expect(result.errorMessage).toMatch(/data is invalid/i);
+  });
+
+  it('surfaces backend http failures without pretending the backend is merely offline', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'internal error',
+      })
+    );
+
+    const result = await loadCustomPlayMediaAssets();
+
+    expect(result.source).toBe('sample-fallback');
+    expect(result.errorKind).toBe('backend-error');
+    expect(result.errorMessage).toMatch(/loading failed/i);
   });
 
   it('updates lookup behavior after a successful backend media load', async () => {

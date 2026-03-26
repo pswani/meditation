@@ -335,6 +335,17 @@
 - Preserve current custom-play UX by falling back to built-in sample media metadata when the backend media API is unavailable or incomplete.
 - Keep playlists, sankalpas, custom-play CRUD, and session-log persistence local-first until their backend APIs and migration slices are implemented.
 
+### 2026-03-26 foundation remediation and testing decisions
+- Disable the H2 console in the default backend runtime and enable it only in the local `dev` profile used by `npm run dev:backend`.
+- Keep `/api/health` limited to readiness metadata and remove absolute filesystem-path details from the response.
+- Replace fixed localhost-only CORS entries with origin patterns that match the documented local and LAN frontend workflow on the supported dev/preview ports.
+- Make the advertised `/media/**` contract truthful by serving backend media files from the configured filesystem media root.
+- Keep frontend media fallback support, but distinguish backend-unavailable cases from invalid backend responses and server-side failures so integration regressions are visible.
+- Strengthen the foundation test layer around:
+  - runtime profile/config expectations
+  - API client error classification
+  - repository/service/controller/media-serving behavior
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`

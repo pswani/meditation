@@ -51,4 +51,16 @@ public class MediaStorageProperties {
         : relativePath;
     return normalizedPrefix + "/" + trimmedRelativePath;
   }
+
+  public String getPublicPathPattern() {
+    String normalizedPrefix = publicPathPrefix.endsWith("/")
+        ? publicPathPrefix.substring(0, publicPathPrefix.length() - 1)
+        : publicPathPrefix;
+    return normalizedPrefix + "/**";
+  }
+
+  public String getRootResourceLocation() {
+    String uri = getRootPath().toAbsolutePath().normalize().toUri().toString();
+    return uri.endsWith("/") ? uri : uri + "/";
+  }
 }
