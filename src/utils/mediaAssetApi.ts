@@ -1,7 +1,13 @@
 import type { MediaAssetMetadata } from '../types/mediaAsset';
+import { buildApiPath, buildApiUrl } from './apiConfig';
 
 export const CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays';
-export const CUSTOM_PLAY_MEDIA_LIST_ENDPOINT = '/api/media/custom-plays';
+export const CUSTOM_PLAY_MEDIA_LIST_PATH = '/media/custom-plays';
+export const CUSTOM_PLAY_MEDIA_LIST_ENDPOINT = buildApiPath(CUSTOM_PLAY_MEDIA_LIST_PATH);
+
+export function buildCustomPlayMediaListUrl(apiBaseUrl?: string): string {
+  return buildApiUrl(CUSTOM_PLAY_MEDIA_LIST_PATH, apiBaseUrl);
+}
 
 const localMediaAssetCatalog: readonly MediaAssetMetadata[] = [
   {

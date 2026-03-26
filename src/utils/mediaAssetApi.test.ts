@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCustomPlayMediaListUrl,
   CUSTOM_PLAY_MEDIA_DIRECTORY,
   CUSTOM_PLAY_MEDIA_LIST_ENDPOINT,
   findCustomPlayMediaAssetById,
@@ -11,6 +12,8 @@ describe('media asset api boundary', () => {
     const assets = await listCustomPlayMediaAssets();
 
     expect(CUSTOM_PLAY_MEDIA_LIST_ENDPOINT).toBe('/api/media/custom-plays');
+    expect(buildCustomPlayMediaListUrl()).toBe('/api/media/custom-plays');
+    expect(buildCustomPlayMediaListUrl('http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/media/custom-plays');
     expect(assets.length).toBeGreaterThan(0);
     expect(assets[0]?.filePath).toContain(CUSTOM_PLAY_MEDIA_DIRECTORY);
     expect(assets[0]?.mimeType).toBe('audio/mpeg');

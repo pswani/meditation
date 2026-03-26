@@ -175,10 +175,12 @@ npm ci
 npm run dev
 ```
 
-Expected local dev URL:
+The Vite dev server is configured to bind to the local network on port `5173`.
 
-- usually `http://localhost:5173/`
-- Vite will choose another port if `5173` is already in use
+Open:
+
+- on the developer machine: `http://localhost:5173/`
+- on other devices on the same Wi-Fi: `http://<LAN-IP>:5173/`
 
 ### Run the back end
 
@@ -201,14 +203,31 @@ For the current implementation, "run the app locally" means running the Vite fro
 npm run dev
 ```
 
+If you want to pair this front end with a separate local backend that lives outside this repository:
+
+- run the front end here with `npm run dev`
+- run the backend separately on the developer machine
+- bind that backend to `0.0.0.0` or the machine LAN IP, not `localhost` only
+- point the front end at that backend with `VITE_API_BASE_URL`
+
 ### Environment and configuration variables
 
-There are currently no checked-in environment variables required to run the app.
+There are no required environment variables for the current local-first app.
+
+An optional example file is included:
+
+- `.env.example`
+
+Optional variable:
+
+- `VITE_API_BASE_URL`
+  - default behavior when unset: same-origin `/api`
+  - use this only when you are pairing the front end with a separate backend host or port
+  - example LAN override: `VITE_API_BASE_URL=http://192.168.1.50:8080/api`
 
 Code audit results:
 
 - no `.env` file is present
-- no `import.meta.env.VITE_*` usage exists in `src/`
 - no `process.env` frontend config exists
 - no backend host/port config exists
 
@@ -217,31 +236,157 @@ Current operational meaning:
 - install dependencies
 - start Vite
 - use browser local storage for persistence
+- optionally override the future/live API base with `VITE_API_BASE_URL`
 
 ### Default ports and URLs
 
 Current repo defaults:
 
-- front end dev server: `http://localhost:5173/` in the normal case
-- front end preview server: Vite chooses a local port when running `npm run preview`
-- backend API base URL: not configured
+- front end dev server: `http://localhost:5173/` on the developer machine, `http://<LAN-IP>:5173/` from other devices
+- front end preview server: `http://localhost:4173/` on the developer machine, `http://<LAN-IP>:4173/` from other devices
+- backend API base URL when unset: same-origin `/api`
 - H2 console URL: not applicable
 
 ### How the front end is configured to call backend APIs
 
-It is not configured to call a real backend today.
+It is still not configured to perform live HTTP requests today.
 
-The only API-related configuration in the repo is the endpoint string constants inside these files:
+The repo now contains one shared API-base helper in `src/utils/apiConfig.ts` plus REST-style boundary modules:
 
+- `src/utils/apiConfig.ts`
 - `src/utils/playlistApi.ts`
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
 
-Because there is no HTTP client, changing those constants alone will not connect the app to a server. A future backend integration would also need:
+Current behavior:
+
+- stable same-origin endpoint paths still resolve to `/api/...`
+- URL builders can also derive fully qualified LAN-safe URLs from `VITE_API_BASE_URL`
+- persistence remains local-first in browser storage
+- no network traffic is sent by the current implementation
+
+Because there is no HTTP client yet, changing `VITE_API_BASE_URL` alone will not connect the app to a live server. A future backend integration would also need:
 
 - real HTTP request code
 - error handling
 - either a build-time base URL or a Vite dev proxy
+
+## Accessing The App From Other Devices On The Same Wi-Fi
+
+### Front-end only workflow in this repo
+
+This repository is currently enough to test the UI from a phone, tablet, or another computer on the same network.
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+Start the local production preview:
+
+```bash
+npm run build
+npm run preview
+```
+
+Ports used:
+
+- dev: `5173`
+- preview: `4173`
+
+Open on your phone or another device:
+
+- dev: `http://<LAN-IP>:5173/`
+- preview: `http://<LAN-IP>:4173/`
+
+Important note:
+
+- `localhost` on your phone means the phone itself, not your development machine
+
+### How to find the developer machine LAN IP
+
+Common commands:
+
+- macOS Wi-Fi: `ipconfig getifaddr en0`
+- macOS alternate interface: `ipconfig getifaddr en1`
+- Linux: `hostname -I`
+- Windows: `ipconfig`
+
+Use the IPv4 address for the interface connected to your Wi-Fi network.
+
+### Example URLs
+
+If your machine IP is `192.168.1.50`, open:
+
+- `http://192.168.1.50:5173/` for dev
+- `http://192.168.1.50:4173/` for preview
+
+### Using a separate backend on the same LAN
+
+No backend server exists in this repository, so there is nothing extra to run here.
+
+If you are testing against a separate backend outside this repo, use this pattern:
+
+1. Start the backend on the developer machine and make it listen on `0.0.0.0` or the machine LAN IP.
+2. Start the front end with a LAN-safe API base URL:
+
+```bash
+VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev
+```
+
+3. Open the front end from your phone with:
+
+```text
+http://<LAN-IP>:5173/
+```
+
+### How the API base URL works
+
+- when `VITE_API_BASE_URL` is unset, API paths default to same-origin `/api`
+- when `VITE_API_BASE_URL` is set, REST boundary helpers build URLs from that configured base
+- root-relative static asset paths such as `/media/custom-plays/...` remain same-origin and already work with LAN access
+
+This keeps the default setup clean for local-first use while avoiding hardcoded `localhost` assumptions for future live backend testing.
+
+### Firewall and OS caveats
+
+If another device cannot reach the app:
+
+- confirm both devices are on the same Wi-Fi network
+- confirm the dev machine firewall allows incoming connections for Node.js or the terminal app you used to start Vite
+- confirm no VPN or network isolation setting is blocking peer-to-peer LAN traffic
+- confirm the port is open on the developer machine:
+  - `5173` for dev
+  - `4173` for preview
+
+### How to test from another device
+
+For the current front-end-only repo:
+
+1. Start `npm run dev`.
+2. Open `http://<LAN-IP>:5173/` on the phone.
+3. Navigate through the app and create or edit data such as a custom play, playlist, manual log, or sankalpa.
+4. Confirm the UI behaves normally on the phone.
+
+Important limitation:
+
+- the app currently stores data in each device's own browser `localStorage`, so phone changes and laptop changes do not sync with each other
+
+### Troubleshooting if the phone loads the UI but API calls fail
+
+For the current checked-in app, this should not happen because there are no live API calls yet.
+
+If you later pair the front end with a real backend, check these first:
+
+- `VITE_API_BASE_URL` must use the developer machine LAN IP, not `localhost`
+- the backend must listen on `0.0.0.0` or the LAN IP
+- the backend must expose the expected `/api/...` routes
+- backend CORS must allow the front-end origin, for example:
+  - `http://<LAN-IP>:5173`
+  - `http://<LAN-IP>:4173`
+- opening `http://<LAN-IP>:<BACKEND-PORT>/api/...` directly from another device should reach the backend
+- browser devtools network errors such as `ERR_CONNECTION_REFUSED` or CORS failures usually point to bind-address or origin-allowlist issues
 
 ## Current Persistence Model
 
@@ -529,7 +674,7 @@ npm run dev
 
 7. Optional static-file check:
 
-Open `http://localhost:5173/media/custom-plays/sahaj-evening-25.mp3` while `npm run dev` is running.
+Open `http://localhost:5173/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:5173/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev` is running.
 
 Current limitation:
 
@@ -701,6 +846,8 @@ Not applicable for this repo as-is because no backend server is present and the 
 
 What you can verify today instead:
 
+- API base-path and URL-building behavior remain stable in:
+  - `src/utils/apiConfig.test.ts`
 - endpoint contract strings remain stable in:
   - `src/utils/playlistApi.test.ts`
   - `src/utils/sankalpaApi.test.ts`
@@ -708,7 +855,15 @@ What you can verify today instead:
 
 ### Verify front-end / back-end connectivity
 
-You cannot verify live front-end / back-end connectivity in this workspace because there is no backend here and no frontend HTTP integration yet.
+You cannot verify live front-end / back-end connectivity in this workspace alone because there is no backend here and no frontend HTTP integration yet.
+
+If you pair the front end with a separate backend outside this repo, verify connectivity like this:
+
+1. Start the backend bound to `0.0.0.0`.
+2. Start the front end with `VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev`.
+3. Open `http://<LAN-IP>:5173/` from another device.
+4. Confirm the backend is reachable directly at `http://<LAN-IP>:<BACKEND-PORT>/api/...`.
+5. Trigger the relevant UI flow and check backend logs plus browser network requests.
 
 ## Build And Deployment
 
@@ -729,6 +884,8 @@ dist/
 ```bash
 npm run preview
 ```
+
+The preview server is configured to bind to the local network on port `4173`.
 
 ### Deployment assumptions
 
@@ -760,8 +917,12 @@ None for the current front-end-only app.
 There is currently:
 
 - no runtime env injection
-- no API base URL
+- no required API base URL
 - no backend hostname config
+
+Optional build-time override when pairing the built front end with a separate backend:
+
+- `VITE_API_BASE_URL=http://<HOST>:<PORT>/api`
 
 ### Known limitations and TODOs
 

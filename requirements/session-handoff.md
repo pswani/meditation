@@ -1,95 +1,94 @@
 # Session Handoff
 
 ## Current status
-README operational rewrite is complete.
+LAN / Wi-Fi access support is in place for the current front-end-only workspace.
 
-This pass was documentation-focused and did not change application behavior. The repo now has an operational README that matches the current implementation instead of implying backend, REST, H2, or media-runtime support that does not exist in this workspace.
+This pass made the minimum necessary operational changes so the app can be opened from a phone or another computer on the same local network, while keeping the implementation local-first and avoiding unrelated backend or deployment refactors.
 
-## What was implemented
-- Rewrote `README.md` into a repo-grounded setup/run/configuration/deployment guide.
-- Updated `requirements/decisions.md` with the documentation and operational-boundary decisions from this pass.
-- Updated `requirements/session-handoff.md` with the verified state of the repo and the next recommended slice.
+## What was changed to support LAN / Wi-Fi access
+- Configured Vite dev server to bind to `0.0.0.0:5173` in `vite.config.ts`.
+- Configured Vite preview server to bind to `0.0.0.0:4173` in `vite.config.ts`.
+- Added shared API-base configuration utilities in `src/utils/apiConfig.ts` with:
+  - default same-origin base `/api`
+  - optional `VITE_API_BASE_URL` override for separate backend testing
+- Updated REST-style boundary utilities so they expose:
+  - stable same-origin endpoint paths
+  - LAN-safe URL builders derived from `VITE_API_BASE_URL`
+- Added focused tests for API-base behavior and the updated boundary helpers.
+- Added `.env.example` documenting the optional API-base override.
+- Updated `README.md` with a dedicated `Accessing The App From Other Devices On The Same Wi-Fi` section.
+- Updated `requirements/decisions.md` with the LAN access decisions from this slice.
 
-## README gaps that were fixed
-- Documented what the app currently does and which routes/screens are implemented.
-- Documented the actual high-level architecture:
-  - React SPA
-  - `BrowserRouter`
-  - `TimerProvider`
-  - feature/page/type/util layout
-- Documented the real front-end/back-end split:
-  - front end is implemented here
-  - backend is absent from this workspace
-- Documented the technology stack and available npm scripts.
-- Documented the current REST integration reality:
-  - `playlistApi`, `sankalpaApi`, and `mediaAssetApi` are local-first seams
-  - no live HTTP calls are made today
-  - no Vite proxy or `VITE_*` API base URL exists
-- Documented the current persistence model:
-  - browser `localStorage`
-  - concrete key names
-  - clean-start workflow by clearing `meditation.*` keys
-- Documented H2 truthfully:
-  - no H2 config
-  - no schema
-  - no seed SQL
-  - no DB-clean/reset flow because no DB exists here
-- Documented custom-play media storage and path handling:
-  - fixed metadata catalog in `src/utils/mediaAssetApi.ts`
-  - root-relative stored paths like `/media/custom-plays/...`
-  - intended compatible static-file location `public/media/custom-plays/`
-- Documented the difference between:
-  - timer sound options
-  - custom-play media metadata
-- Added concrete examples for:
-  - local startup
-  - adding a new custom-play media file
-  - adding a new sound option
-  - extending meditation types / enum-backed options
-- Documented testing, verification, build, preview, and deployment assumptions for the current front-end-only repo.
-- Documented current limitations explicitly instead of implying missing infrastructure is already present.
+## Exact commands to run the app from a phone
 
-## Still-missing operational details in the codebase
-- No backend service exists in the repo, so there is still no runnable guidance for:
-  - server startup
-  - REST deployment
-  - H2 configuration
-  - schema migration
-  - DB seeding
-- Timer and playlist sound selections still do not trigger actual playback.
-- There is still no checked-in `public/` media tree or real audio asset set.
-- The custom-play media catalog is still hard-coded in source instead of being managed by a backend or user import flow.
-- There is still no live frontend/backend connectivity path to verify because the frontend does not perform HTTP requests for those API seams yet.
+### Dev mode
+```bash
+npm run dev
+```
 
-## Issues intentionally deferred
-- Actual sound playback for selected timer and playlist sounds.
-- Optional small gaps between playlist items.
-- Backend implementation for playlists, sankalpas, media, or session persistence.
-- H2-backed schema/configuration/migration work.
-- User-managed media import or media-library administration.
+Open from the phone:
+
+```text
+http://<LAN-IP>:5173/
+```
+
+### Local production preview
+```bash
+npm run build
+npm run preview
+```
+
+Open from the phone:
+
+```text
+http://<LAN-IP>:4173/
+```
+
+### If pairing with a separate backend outside this repo
+```bash
+VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev
+```
+
+Important backend note:
+
+- no backend service exists in this repository, so backend bind-address and CORS setup remain external to this workspace
+
+## Example URL format
+- dev example: `http://192.168.68.76:5173/`
+- preview example: `http://192.168.68.76:4173/`
 
 ## Verification status
-- Passed `npm ci`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Started local dev server successfully with `npm run dev -- --host 127.0.0.1`
-- Vite reported `http://127.0.0.1:5173/` as the local URL
-- Direct `curl` loopback verification from this sandbox returned code `7`, so startup confirmation is based on Vite server output rather than an in-sandbox HTTP fetch
+- Started dev server successfully with `npm run dev`
+- Vite reported:
+  - local: `http://localhost:5173/`
+  - network: `http://192.168.68.76:5173/`
+- Started preview server successfully with `npm run preview`
+- Vite reported:
+  - local: `http://localhost:4173/`
+  - network: `http://192.168.68.76:4173/`
+- Confirmed there are no backend build/run/test commands in this repo:
+  - no `gradlew`
+  - no `pom.xml`
+  - no `build.gradle`
+  - no backend source tree or server entrypoint
+- In-sandbox `curl` checks to `127.0.0.1:5173` and `127.0.0.1:4173` returned exit code `7`, so LAN verification is based on Vite server output rather than sandbox loopback fetches
+
+## Known limitations
+- This repo remains front-end only; there is still no backend service to bind, run, or test here.
+- The app still uses browser `localStorage`, so data does not sync between the phone and the developer machine.
+- `VITE_API_BASE_URL` now provides a clean base-URL strategy, but the current app still does not perform live HTTP requests.
+- Backend CORS guidance is documented only; no backend code exists here to apply CORS settings.
+- Firewall, VPN, or Wi-Fi isolation settings on the developer machine or router can still block device-to-device access even when the app is correctly bound to `0.0.0.0`.
 
 ## Documentation updates made
 - Updated `README.md`
 - Updated `requirements/decisions.md`
 - Updated `requirements/session-handoff.md`
-
-## Known limitations / assumptions
-- This repo remains front-end only.
-- Browser `localStorage` is still the only implemented persistence layer.
-- REST endpoint constants exist as future seams, not live integrations.
-- H2 is still part of the intended wider architecture only; it is not implemented in this workspace.
-- Custom-play media paths are modeled as root-relative URLs, not absolute filesystem paths.
-- Timer sound options are still label-only choices until playback work is implemented.
+- Added `requirements/execplan-lan-access-wifi.md`
 
 ## Exact recommended next prompt
 Read:
@@ -106,27 +105,26 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for real timer and playlist sound playback.
+1. Create an ExecPlan for live playlist REST transport using the new LAN-safe API base configuration.
 2. Keep the implementation to one meaningful vertical slice:
-   - implement browser-based playback for selected timer start, end, and interval sounds
-   - implement playlist boundary playback using the same sound catalog
-   - add one canonical sound-to-file mapping layer instead of scattering file paths through UI code
-   - keep the app local-first and front-end only
+   - replace the local-only playlist API boundary with real `fetch` requests
+   - keep `sankalpa` and `custom play media` local-first for now
+   - preserve the existing playlist validation, logging, and UI flow
+   - add clear load/save error handling in playlist management and playlist run entry points
 3. Include:
-   - a checked-in static media directory for the existing sound options
-   - a shared audio utility/service
-   - minimal timer and playlist wiring so sounds trigger at the correct moments
-   - README updates describing the real sound file locations and mapping rules
+   - a shared HTTP helper built on the existing `src/utils/apiConfig.ts`
+   - focused tests for request URL building, success handling, and failure states
+   - README updates describing how to run the front end against a separate LAN backend
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - backend media management
-   - H2 work
-   - playlist gap feature work
-   - unrelated `TimerContext` refactors
+   - backend implementation
+   - auth
+   - sankalpa transport changes
+   - unrelated route or shell refactors
 5. Run:
    - npm run typecheck
    - npm run lint
    - npm run test
    - npm run build
 6. Commit with a clear message:
-   feat(audio): implement timer and playlist sound playback
+   feat(playlists): add live REST transport via configurable API base

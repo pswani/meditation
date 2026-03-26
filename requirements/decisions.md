@@ -407,3 +407,20 @@
   - persisted in settings/logs/custom plays
   - not yet mapped to actual files or playback behavior
 - Document deployment for the current repo as static front-end deployment only, with SPA history fallback and no backend/database rollout steps.
+
+### 2026-03-25 LAN / Wi-Fi access decisions
+- Configure Vite dev and local preview servers to bind to `0.0.0.0` on stable default ports so the app can be opened from other devices on the same local network:
+  - dev: `5173`
+  - preview: `4173`
+- Keep LAN access changes minimal and front-end focused because no backend service exists in this workspace to bind or reconfigure.
+- Add one shared API-base configuration helper so REST-style boundary modules can derive either:
+  - same-origin `/api/...` paths by default
+  - fully qualified URLs from optional `VITE_API_BASE_URL` when pairing the front end with a separate backend outside this repo
+- Preserve the existing local-first persistence model:
+  - no live HTTP transport was introduced in this slice
+  - `playlist`, `sankalpa`, and `custom play media` boundaries remain local-first seams
+- Document backend host-binding and CORS requirements as external integration guidance only:
+  - backend should listen on `0.0.0.0` or the machine LAN IP
+  - backend must not assume `localhost` when serving requests from phones or other laptops
+  - backend CORS must allow the front-end LAN origin if the backend runs on a separate port
+- Keep root-relative static asset paths such as `/media/custom-plays/...` unchanged because they already work correctly for LAN access when served by Vite on the developer machine.

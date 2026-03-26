@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { buildPlaylistDetailEndpoint, listPlaylistsFromApi, persistPlaylistsToApi, PLAYLISTS_COLLECTION_ENDPOINT } from './playlistApi';
+import {
+  buildPlaylistCollectionUrl,
+  buildPlaylistDetailEndpoint,
+  buildPlaylistDetailUrl,
+  listPlaylistsFromApi,
+  persistPlaylistsToApi,
+  PLAYLISTS_COLLECTION_ENDPOINT,
+} from './playlistApi';
 
 const PLAYLISTS_STORAGE_KEY = 'meditation.playlists.v1';
 
@@ -11,6 +18,8 @@ describe('playlist api boundary', () => {
   it('exposes stable playlist endpoint contracts', () => {
     expect(PLAYLISTS_COLLECTION_ENDPOINT).toBe('/api/playlists');
     expect(buildPlaylistDetailEndpoint('playlist-1')).toBe('/api/playlists/playlist-1');
+    expect(buildPlaylistCollectionUrl()).toBe('/api/playlists');
+    expect(buildPlaylistDetailUrl('playlist-1', 'http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/playlists/playlist-1');
   });
 
   it('persists and lists playlists through api boundary', async () => {

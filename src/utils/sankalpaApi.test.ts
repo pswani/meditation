@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { buildSankalpaDetailEndpoint, listSankalpasFromApi, persistSankalpasToApi, SANKALPAS_COLLECTION_ENDPOINT } from './sankalpaApi';
+import {
+  buildSankalpaCollectionUrl,
+  buildSankalpaDetailEndpoint,
+  buildSankalpaDetailUrl,
+  listSankalpasFromApi,
+  persistSankalpasToApi,
+  SANKALPAS_COLLECTION_ENDPOINT,
+} from './sankalpaApi';
 
 const SANKALPAS_STORAGE_KEY = 'meditation.sankalpas.v1';
 
@@ -11,6 +18,8 @@ describe('sankalpa api boundary', () => {
   it('exposes stable sankalpa endpoint contracts', () => {
     expect(SANKALPAS_COLLECTION_ENDPOINT).toBe('/api/sankalpas');
     expect(buildSankalpaDetailEndpoint('goal-1')).toBe('/api/sankalpas/goal-1');
+    expect(buildSankalpaCollectionUrl()).toBe('/api/sankalpas');
+    expect(buildSankalpaDetailUrl('goal-1', 'http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/sankalpas/goal-1');
   });
 
   it('persists and lists sankalpas through api boundary', () => {
