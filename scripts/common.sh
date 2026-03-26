@@ -41,16 +41,31 @@ ensure_media_root() {
 }
 
 backend_dir() {
-  if [ -z "${MEDITATION_BACKEND_DIR:-}" ]; then
-    printf '\n'
+  if [ -n "${MEDITATION_BACKEND_DIR:-}" ]; then
+    printf '%s\n' "$(resolve_path "$MEDITATION_BACKEND_DIR")"
     return
   fi
 
-  printf '%s\n' "$(resolve_path "$MEDITATION_BACKEND_DIR")"
+  if [ -d "$ROOT_DIR/backend" ] && [ -f "$ROOT_DIR/backend/pom.xml" ]; then
+    printf '%s\n' "$ROOT_DIR/backend"
+    return
+  fi
+
+  printf '\n'
 }
 
 default_backend_dev_cmd() {
   dir=$(backend_dir)
+  if [ -n "$dir" ] && [ -x "$dir/mvnw" ]; then
+    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 spring-boot:run"
+    return
+  fi
+
+  if [ -n "$dir" ] && [ -f "$dir/pom.xml" ]; then
+    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run"
+    return
+  fi
+
   if [ -n "$dir" ] && [ -x "$dir/gradlew" ]; then
     printf '%s\n' "./gradlew bootRun"
     return
@@ -61,6 +76,16 @@ default_backend_dev_cmd() {
 
 default_backend_build_cmd() {
   dir=$(backend_dir)
+  if [ -n "$dir" ] && [ -x "$dir/mvnw" ]; then
+    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 verify"
+    return
+  fi
+
+  if [ -n "$dir" ] && [ -f "$dir/pom.xml" ]; then
+    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 verify"
+    return
+  fi
+
   if [ -n "$dir" ] && [ -x "$dir/gradlew" ]; then
     printf '%s\n' "./gradlew build"
     return

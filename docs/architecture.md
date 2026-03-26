@@ -5,24 +5,23 @@ Single-page React application with route-based screens and feature-oriented modu
 
 ## Current runtime architecture
 - React SPA served by Vite
+- Spring Boot backend foundation under `backend/`
 - route-level screens in `src/pages`
 - feature logic in `src/features`
 - shared domain types in `src/types`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
-- local-first persistence through browser `localStorage`
+- local-first persistence through browser `localStorage` for current frontend feature flows
+- H2 + Flyway backing the backend foundation
 
 ## Confirmed current gaps
-- no backend module or Java runtime code
-- no Spring Boot application entrypoint
-- no H2 datasource configuration
-- no schema or migration files
-- no checked-in REST controller/service/repository layer
-- no live HTTP transport in the front-end API-boundary utilities
-- no database-backed media metadata or filesystem media-management workflow
+- no live HTTP transport in the front-end API-boundary utilities yet
+- no playlist, sankalpa, or custom-play REST domain APIs yet
+- no end-to-end frontend/backend feature wiring yet
+- no media upload/import workflow yet
 
 ## Chosen full-stack target architecture
 - keep the current React front end and route model
-- add one Spring Boot backend application as the primary server
+- keep one Spring Boot backend application as the primary server
 - use H2 as the first persistent datastore
 - store media files under a configured filesystem root, outside the database
 - store media metadata and relative media paths in database tables
@@ -30,6 +29,7 @@ Single-page React application with route-based screens and feature-oriented modu
 
 ## Planned backend responsibilities
 - expose REST endpoints for:
+  - health
   - playlists
   - sankalpas
   - custom-play media assets
@@ -38,11 +38,30 @@ Single-page React application with route-based screens and feature-oriented modu
 - manage the configured media root and DB-referenced media metadata
 
 ## Planned implementation order
-1. add Spring Boot backend foundation and H2 configuration
-2. add schema/migration support and core persistence entities
-3. add media metadata + filesystem management
-4. swap front-end API shims to real REST integration one domain at a time
-5. tighten end-to-end local run/build workflows once both runtimes exist
+1. backend foundation and H2 configuration
+2. schema/migration support and core persistence entities
+3. media metadata + filesystem conventions
+4. front-end REST integration for media assets
+5. playlist and sankalpa backend APIs
+6. broader feature-by-feature migration away from local-only persistence
+
+## Current backend module structure
+- `backend/src/main/java/com/meditation/backend/config`
+- `backend/src/main/java/com/meditation/backend/health`
+- `backend/src/main/java/com/meditation/backend/media`
+- reserved domain packages for:
+  - `customplay`
+  - `playlist`
+  - `reference`
+  - `sankalpa`
+  - `sessionlog`
+
+## Media storage conventions
+- backend media root is configurable through `MEDITATION_MEDIA_STORAGE_ROOT`
+- current default media root resolves to `local-data/media`
+- custom-play media lives under the `custom-plays/` subdirectory
+- H2 stores relative paths such as `custom-plays/vipassana-sit-20.mp3`
+- API responses expose a web-facing path such as `/media/custom-plays/vipassana-sit-20.mp3`
 
 ## Principles
 - mobile-first

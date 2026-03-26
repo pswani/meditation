@@ -1,61 +1,97 @@
 # Session Handoff
 
 ## Current status
-Full-stack gap assessment and implementation-sequence planning is complete.
+Backend bootstrap foundation is complete.
 
-This slice confirmed the repository is still front-end only, documented the exact backend/persistence/media gaps, and defined the chosen target architecture for converting the app into a React + Spring Boot + H2 system without changing product behavior yet.
+This slice added the first real backend implementation for the repo: a Spring Boot module with H2, Flyway migrations, controller/service/repository layering, local-development CORS, a health endpoint, and a seeded custom-play media metadata API, while keeping the frontend product flows local-first for now.
 
 ## What was changed
-- Added `requirements/execplan-fullstack-gap-assessment.md` and used it to guide the assessment.
+- Added `requirements/execplan-backend-bootstrap-foundation.md` and used it to guide the slice.
+- Added the `backend/` Spring Boot module with:
+  - `pom.xml`
+  - application entrypoint
+  - `application.yml`
+  - H2 configuration
+  - Flyway migrations
+  - health controller/service
+  - media entity/repository/service/controller
+  - reserved future domain packages
+  - backend tests
+- Added the initial H2/Flyway schema for:
+  - meditation types
+  - media assets
+  - custom plays
+  - playlists
+  - playlist items
+  - sankalpa goals
+  - session logs
+- Seeded meditation types and custom-play media metadata in Flyway.
+- Added backend media-storage conventions:
+  - configurable backend media root
+  - `custom-plays/` subdirectory
+  - H2-stored relative paths
+  - API-exposed public file paths
+- Updated `scripts/common.sh` so root helper scripts auto-detect the in-repo backend and use a repo-local Maven cache under `local-data/m2`.
 - Updated `README.md` with:
-  - a confirmed full-stack gap summary
-  - the chosen target full-stack architecture
-  - corrected wording around current API-base/runtime configuration
+  - backend setup and run commands
+  - H2 and migration documentation
+  - media-storage conventions
+  - current backend verification guidance
 - Updated `docs/architecture.md` with:
-  - current runtime architecture
-  - confirmed backend/database/REST/media gaps
-  - chosen full-stack target architecture
-  - planned implementation order
-- Updated `requirements/decisions.md` with the full-stack planning decisions from this slice.
-- Updated `requirements/session-handoff.md` with the confirmed current-state assessment, chosen backend architecture, verification status, and the exact next implementation prompt.
-
-## Confirmed current-state assessment
-- The repo still has no checked-in backend module, `gradlew`, `pom.xml`, `build.gradle`, or Spring Boot application.
-- There is still no H2 datasource configuration, schema file, migration tool, or backend persistence layer in this repository.
-- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` still persist through `localStorage`, not HTTP.
-- `src/utils/mediaAssetApi.ts` still serves a fixed in-memory media catalog, not a filesystem-backed database source.
-- The front end still owns runtime orchestration and local-first persistence while exposing REST-shaped path helpers for future replacement.
+  - current frontend + backend runtime architecture
+  - backend module/package structure
+  - media-storage conventions
+- Updated `requirements/decisions.md` with the backend foundation decisions from this slice.
+- Updated `requirements/session-handoff.md` with the current backend state, verification status, and exact next implementation prompt.
 
 ## Chosen backend architecture
 - one Java/Spring Boot backend application as the primary server
 - H2 as the initial database
 - media files stored under a configured filesystem root
 - database rows that reference media by stable ID and relative file path
+- Flyway as the source of truth for schema and seed data
 - incremental front-end migration from local API shims to real REST transport through the existing API-boundary utilities
 
 ## Intentional sample or helper content that remains
-- The repo remains a front-end-only React workspace with local-first persistence in browser storage.
+- Frontend feature flows still persist in browser `localStorage`.
 - REST-style boundary helpers remain in `src/utils` as the integration seam for future backend work.
-- The current app-level helper scripts remain in place for frontend development and optional future paired-backend workflows.
-- The sample media catalog remains intentional reference data until the backend media layer is implemented.
+- The frontend sample media catalog remains in place until the frontend media API migration slice is implemented.
+- The current root helper scripts remain the preferred local workflow for frontend + backend startup.
 
 ## Verification status
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
+- Passed `npm run build:app`
+- Verified `npm run dev:backend` startup outside the sandbox after in-sandbox port binding failed with `Operation not permitted`
+- Verified `curl -s http://localhost:8080/api/health` outside the sandbox
+- Verified `curl -s http://localhost:8080/api/media/custom-plays` outside the sandbox
 
 ## Known limitations
-- This slice is planning-only; it does not add the backend, schema, H2 wiring, or REST transport.
-- Session logs are still local-only and were intentionally not expanded into backend planning scope in this first assessment pass.
-- Media file upload/import behavior remains unimplemented; only the target architecture and sequencing are now documented.
+- The frontend does not yet call the backend APIs; playlists, sankalpas, custom plays, and session logs are still local-first in the UI.
+- Only backend foundation endpoints exist so far:
+  - `/api/health`
+  - `/api/media/custom-plays`
+- Media upload/import and binary media serving are still unimplemented.
+- Flyway emits an H2-version compatibility warning in this environment, but migrations and tests passed successfully.
 
 ## Files updated in this slice
+- `.env.example`
+- `.gitignore`
 - `README.md`
 - `docs/architecture.md`
+- `backend/pom.xml`
+- `backend/src/main/java/com/meditation/backend/**`
+- `backend/src/main/resources/application.yml`
+- `backend/src/main/resources/db/migration/**`
+- `backend/src/test/**`
+- `scripts/common.sh`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-fullstack-gap-assessment.md`
+- `requirements/execplan-backend-bootstrap-foundation.md`
 
 ## Exact recommended next prompt
 Read:
@@ -72,26 +108,28 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for backend foundation scaffolding.
+1. Create an ExecPlan for frontend media API integration.
 2. Keep the implementation to one meaningful vertical slice:
-   - add one Spring Boot backend module inside this repo
-   - add a minimal Gradle build and application entrypoint
-   - add H2 datasource configuration for local development
-   - add a health endpoint and one media-root configuration property
-   - do not yet wire full product persistence or front-end REST integration
+   - replace the frontend custom-play media catalog shim with live fetches from `/api/media/custom-plays`
+   - preserve the existing `MediaAssetMetadata` UI contract where practical
+   - add a safe fallback or error state for backend-unreachable media loading
+   - keep playlists, sankalpas, custom plays, and session logs otherwise local-first
 3. Include:
-   - README updates for backend setup and run commands
+   - any minimal frontend API helper changes needed for the media endpoint
+   - README updates for running frontend against the in-repo backend
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - playlist, sankalpa, and custom-play REST controllers
-   - front-end data-layer rewiring
+   - playlist and sankalpa REST integration
+   - custom-play CRUD REST persistence
    - media upload/import features
    - unrelated app UI refactors
 5. Run:
+   - `mvn -Dmaven.repo.local=../local-data/m2 test`
+   - `mvn -Dmaven.repo.local=../local-data/m2 verify`
    - `npm run typecheck`
    - `npm run lint`
    - `npm run test`
    - `npm run build`
-   - relevant backend verification commands for the new module
+   - any relevant startup or endpoint verification commands
 6. Commit with a clear message:
-   `feat(backend): scaffold spring boot foundation`
+   `feat(media): load custom-play media from backend api`

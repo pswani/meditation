@@ -12,6 +12,7 @@ coverage/
 .vite/
 *.tsbuildinfo
 .cache/
+backend/target/
 
 # --------------------------------------------------
 # Environment files

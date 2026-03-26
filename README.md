@@ -6,22 +6,28 @@ This README is intentionally grounded in the current repository contents. It exp
 
 ## Current Status
 
-- This workspace is a front-end-only React application.
-- There is no checked-in backend service, REST server, Java module, Gradle build, SQL schema, or H2 configuration in this repository.
-- The current persistence model is local-first in the browser via `localStorage`.
+- This workspace now contains:
+  - a React front end
+  - a Spring Boot backend foundation in `backend/`
+- The backend foundation includes:
+  - H2 datasource configuration
+  - Flyway migrations
+  - local-development CORS
+  - a health endpoint
+  - a seeded media metadata API
+- The current product persistence model is still mostly local-first in the browser via `localStorage`.
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
-- Custom play media uses a fixed local sample metadata catalog in code. There is no upload flow, media library service, or H2-backed media table in this repo.
+- Front-end feature flows are not yet wired to live backend REST transport.
 
 ## Confirmed Full-Stack Gaps
 
 The current repository still needs all of the following before it can be considered a functioning full-stack app:
 
-- a checked-in Java/Spring Boot backend module
-- H2 datasource configuration and schema management
-- real REST persistence for playlists, sankalpas, custom plays, and media assets
+- front-end HTTP integration for playlists, sankalpas, custom plays, and media assets
+- real REST persistence wired into the existing front-end data flows
 - replacement of front-end local-storage API shims with HTTP-backed implementations
-- real media-file management on disk with database-referenced file paths and metadata
+- richer media-file management flows beyond seeded metadata and directory conventions
 
 ## Planned Full-Stack Target
 
@@ -91,15 +97,20 @@ The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydr
 
 ### Back-end responsibilities
 
-No backend code exists in this workspace today.
+The repo now contains a Spring Boot backend foundation under `backend/`.
 
-The repo does contain REST-shaped boundary modules intended for future backend replacement:
+Current backend endpoints:
+
+- `/api/health`
+- `/api/media/custom-plays`
+
+The front end also still contains REST-shaped boundary modules intended for future backend replacement:
 
 - `src/utils/playlistApi.ts`
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
 
-Today those modules do not perform HTTP requests. They read from local storage or from an in-memory catalog and simply expose stable endpoint constants such as:
+Today those front-end modules do not perform HTTP requests. They read from local storage or from an in-memory catalog and simply expose stable endpoint constants such as:
 
 - `/api/playlists`
 - `/api/sankalpas`
@@ -126,7 +137,7 @@ Important repo facts:
 - there is no `fetch` or `axios` integration for playlists, sankalpas, or media in the current codebase
 - there is no live HTTP transport wired into the current API-boundary modules
 - there is no Vite proxy in `vite.config.ts`
-- there is no checked-in backend URL/runtime configuration beyond optional front-end env helpers
+- backend runtime configuration now exists in `backend/src/main/resources/application.yml`
 
 Instead, the app uses local API-boundary shims:
 
@@ -144,19 +155,20 @@ This means:
 
 ### How H2 is used in this project
 
-H2 is not used in this repository today.
+H2 is now used by the backend foundation in `backend/`.
 
-There is currently:
+Current backend persistence foundation includes:
 
-- no H2 JDBC URL
-- no `application.yml` or `application.properties`
-- no `schema.sql`
-- no `data.sql`
-- no migration tool
-- no `.mv.db` file
-- no repository/service/controller code
+- `backend/src/main/resources/application.yml`
+- Flyway migrations in `backend/src/main/resources/db/migration/`
+- a file-backed H2 datasource for local development
+- an in-memory H2 datasource for tests
 
-Any prior references to H2 belong to the broader product vision, not to the runnable code in this workspace.
+This is still a foundation slice:
+
+- the backend schema exists for future milestones
+- the front end is not yet wired to consume those domain APIs
+- most user-facing data still persists locally in the browser
 
 ## Repository Layout
 
@@ -172,6 +184,7 @@ src/
   utils/                Validation, persistence, summaries, API boundaries
 docs/                   Product, architecture, UX, and review docs
 requirements/           Decisions, handoff, roadmap, ExecPlans
+backend/                Spring Boot + H2 backend foundation
 ```
 
 ## Local Development
@@ -180,15 +193,17 @@ requirements/           Decisions, handoff, roadmap, ExecPlans
 
 - Node.js 20 or newer
 - npm 10 or newer recommended
+- Java 21
+- Maven 3.9 or newer
 - a modern desktop browser
-
-You do not need Java, Gradle, Docker, H2, or a backend runtime for the current repo.
 
 ### Install
 
 ```bash
 npm ci
 ```
+
+Backend dependencies are resolved when you first run the backend commands.
 
 ### Prepare local media root
 
@@ -213,31 +228,21 @@ Open:
 
 ### Run the back end
 
-You cannot run a backend from this repository because none is present here.
+The repo now includes an in-repo backend module under `backend/`.
 
-There is:
-
-- no `gradlew`
-- no backend package
-- no server entrypoint
-- no backend test suite
-
-The helper script is for pairing this front end with a separate backend workspace:
+The cleanest way to start it is:
 
 ```bash
 npm run dev:backend
 ```
 
-To make that work, configure `.env.local` with:
+Default behavior:
 
-- `MEDITATION_BACKEND_DIR`
-- optionally `MEDITATION_BACKEND_DEV_CMD`
+- the root helper auto-detects `backend/pom.xml`
+- the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run`
+- the backend listens on port `8080` unless `MEDITATION_BACKEND_PORT` is set
 
-If `MEDITATION_BACKEND_DIR` contains `./gradlew` and no explicit backend command is set, the helper defaults to:
-
-```bash
-./gradlew bootRun
-```
+You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
 
 ### Run both together
 
@@ -251,8 +256,8 @@ Behavior:
 
 - always prepares the media root
 - starts the front end
-- starts a paired external backend only if backend configuration is present
-- otherwise prints a clear message and runs the front end only
+- starts the in-repo backend by default when `backend/pom.xml` is present
+- still supports an overridden external backend command when explicitly configured
 
 ### Environment and configuration variables
 
@@ -269,7 +274,7 @@ Optional variables:
   - use this only when you are pairing the front end with a separate backend host or port
   - example LAN override: `VITE_API_BASE_URL=http://192.168.1.50:8080/api`
 - `MEDITATION_BACKEND_DIR`
-  - path to a separate backend workspace
+  - optional override for backend workspace location
 - `MEDITATION_BACKEND_DEV_CMD`
   - optional override for backend local-dev startup
 - `MEDITATION_BACKEND_BUILD_CMD`
@@ -280,20 +285,23 @@ Optional variables:
   - optional H2 database filename prefix
 - `MEDITATION_MEDIA_ROOT`
   - optional media root override
+- `MEDITATION_MEDIA_STORAGE_ROOT`
+  - optional backend media-storage root override
 
 Code audit results:
 
 - no `.env` file is present
 - no `process.env` frontend config exists
-- no backend host/port config exists
+- backend runtime configuration now lives in `backend/src/main/resources/application.yml`
 
 Current operational meaning:
 
 - install dependencies
 - optionally prepare `public/media/custom-plays`
 - start Vite
+- start Spring Boot + H2 from `backend/`
 - use browser local storage for persistence
-- optionally pair an external backend through helper scripts
+- keep front-end feature data local-first until the REST migration slices are implemented
 - optionally override the future/live API base with `VITE_API_BASE_URL`
 
 ### App-level helper commands
@@ -317,11 +325,11 @@ What they do:
 - `npm run dev:frontend`
   - prepares the media root and starts the Vite dev server
 - `npm run dev:backend`
-  - runs a paired external backend command if configured
+  - runs the in-repo backend by default and still allows explicit overrides
 - `npm run dev:all`
-  - starts frontend plus an optional paired backend
+  - starts the frontend plus the backend
 - `npm run build:app`
-  - builds the frontend and optionally runs a paired backend build
+  - builds the frontend and runs backend verification/package work
 - `npm run preview:app`
   - rebuilds the frontend and starts a production-like Vite preview server
 - `npm run db:h2:reset`
@@ -329,7 +337,7 @@ What they do:
 
 Important note:
 
-- H2 reset support is a local helper only; it does not create schema or start a database service because no backend/H2 implementation lives in this repo
+- H2 reset clears the local DB files; Flyway recreates schema on the next backend startup
 
 ### Default ports and URLs
 
@@ -337,8 +345,11 @@ Current repo defaults:
 
 - front end dev server: `http://localhost:5173/` on the developer machine, `http://<LAN-IP>:5173/` from other devices
 - front end preview server: `http://localhost:4173/` on the developer machine, `http://<LAN-IP>:4173/` from other devices
-- backend API base URL when unset: same-origin `/api`
-- H2 console URL: not applicable
+- backend server: `http://localhost:8080/`
+- backend health endpoint: `http://localhost:8080/api/health`
+- backend media catalog endpoint: `http://localhost:8080/api/media/custom-plays`
+- backend H2 console: `http://localhost:8080/h2-console`
+- backend API base URL when the front end is eventually wired: `http://localhost:8080/api`
 
 ### How the front end is configured to call backend APIs
 
@@ -366,9 +377,14 @@ Because there is no HTTP client yet, changing `VITE_API_BASE_URL` alone will not
 
 ## Accessing The App From Other Devices On The Same Wi-Fi
 
-### Front-end only workflow in this repo
+### Frontend + backend foundation workflow in this repo
 
-This repository is currently enough to test the UI from a phone, tablet, or another computer on the same network.
+This repository is now enough to run:
+
+- the frontend on another device on the same network
+- the backend health endpoint and media catalog on the developer machine
+
+The frontend is still not wired to live backend APIs, so most UI data remains device-local today.
 
 Start the dev server:
 
@@ -414,17 +430,26 @@ If your machine IP is `192.168.1.50`, open:
 - `http://192.168.1.50:5173/` for dev
 - `http://192.168.1.50:4173/` for preview
 
-### Using a separate backend on the same LAN
+### Using the in-repo backend on the same LAN
 
-No backend server exists in this repository, so there is nothing extra to run here.
+If you want other devices to reach the backend directly, start it and use the developer machine LAN IP:
 
-If you are testing against a separate backend outside this repo, use this pattern:
+```bash
+npm run dev:backend
+```
+
+Then open:
+
+- `http://<LAN-IP>:8080/api/health`
+- `http://<LAN-IP>:8080/api/media/custom-plays`
+
+If you are testing against a separate backend outside this repo instead, use this pattern:
 
 1. Start the backend on the developer machine and make it listen on `0.0.0.0` or the machine LAN IP.
 2. Start the front end with a LAN-safe API base URL:
 
 ```bash
-VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev
+VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev:frontend
 ```
 
 3. Open the front end from your phone with:
@@ -454,9 +479,9 @@ If another device cannot reach the app:
 
 ### How to test from another device
 
-For the current front-end-only repo:
+For the current checked-in app:
 
-1. Start `npm run dev`.
+1. Start `npm run dev:frontend`.
 2. Open `http://<LAN-IP>:5173/` on the phone.
 3. Navigate through the app and create or edit data such as a custom play, playlist, manual log, or sankalpa.
 4. Confirm the UI behaves normally on the phone.
@@ -519,25 +544,38 @@ Object.keys(localStorage)
 
 ### Where H2 is configured
 
-Nowhere in this repo.
+H2 is configured in:
 
-There is no H2 configuration to document because the backend is not present.
+- `backend/src/main/resources/application.yml`
+
+Flyway schema lives in:
+
+- `backend/src/main/resources/db/migration/V1__create_core_reference_and_domain_tables.sql`
+- `backend/src/main/resources/db/migration/V2__seed_reference_data.sql`
 
 ### How to start with a clean DB
 
-Not applicable in this repo.
+Use:
 
-Use the local-storage reset flow above instead.
+```bash
+npm run db:h2:reset
+```
+
+Then restart the backend so Flyway can recreate the schema and seed data.
 
 ### Where the schema lives
 
-No schema files exist in this repository.
+- `backend/src/main/resources/db/migration/V1__create_core_reference_and_domain_tables.sql`
+- `backend/src/main/resources/db/migration/V2__seed_reference_data.sql`
 
 ### Where seed or sample data lives
 
-There is no database seed layer.
+The backend now seeds:
 
-Current reference or sample data is hard-coded in TypeScript modules:
+- meditation types
+- sample custom-play media metadata
+
+Current reference or sample data also still exists in TypeScript modules:
 
 - meditation types: `src/types/timer.ts` and `src/features/timer/constants.ts`
 - sound options: `src/features/timer/constants.ts`
@@ -545,10 +583,12 @@ Current reference or sample data is hard-coded in TypeScript modules:
 
 ### How the app stores media metadata today
 
-There is no DB-backed media model.
+There is now a backend DB-backed media metadata model, but the front end has not been switched over to it yet.
 
 Current behavior:
 
+- `backend` stores seeded media metadata rows in H2 `media_asset`
+- backend migrations store relative media paths such as `custom-plays/vipassana-sit-20.mp3`
 - `src/utils/mediaAssetApi.ts` contains a fixed catalog of `MediaAssetMetadata`
 - each media entry has:
   - `id`
@@ -561,7 +601,7 @@ Current behavior:
 - when a user saves a custom play, the app persists only:
   - `mediaAssetId`
 
-The catalog remains the source of truth for linked media details shown in the UI. There is no H2 row or backend media lookup.
+Today the frontend catalog remains the source of truth for linked media shown in the UI. The backend seeded media rows are foundation work for the upcoming REST migration slices.
 
 ### Current model vs intended backend model
 
@@ -586,16 +626,15 @@ Intended backend/H2 model, inferred from the current front-end domain types and 
 - `session_log`
 - `sankalpa_goal`
 
-That backend model is not implemented here, so treat it as design intent, not an operational artifact.
+The backend foundation now includes schema and seeded reference/media data, but the broader domain APIs are still future work.
 
 ## Media Files And Storage
 
 ### Current state
 
-Important current limitation:
+Important current limitations:
 
 - no audio files are checked into this repo
-- there is no `public/` directory yet
 - timer sound options are labels only
 - no code maps timer sounds to actual media files
 - no audio playback service exists
@@ -627,13 +666,18 @@ This is the intended local file placement compatible with the current codebase. 
 
 ### How media file paths are referenced in H2
 
-They are not referenced in H2 because H2 is not present.
+Backend convention:
+
+- H2 stores a relative path in `media_asset.relative_path`
+- backend responses expose a web path such as `/media/custom-plays/vipassana-sit-20.mp3`
+- media files are intended to live under the configured media root plus the `custom-plays/` subdirectory
 
 ### How media file paths are referenced today
 
-Custom play media paths are referenced in one place today:
+Custom play media paths are referenced in two places today:
 
-1. In the fixed metadata catalog in `src/utils/mediaAssetApi.ts`
+1. In the fixed frontend metadata catalog in `src/utils/mediaAssetApi.ts`
+2. In the backend seeded `media_asset` rows created by Flyway
 
 Example stored value:
 
@@ -647,17 +691,17 @@ That is a root-relative URL path, not an absolute filesystem path.
 
 Current answer:
 
-- custom play media paths are modeled as static paths
-- no backend media-serving endpoint exists
+- custom play media paths are modeled as static/public paths
+- the backend currently serves metadata, not binary media streaming
 - no runtime code actually fetches or plays the file today
 
 If you add files under `public/media/custom-plays`, Vite can serve them statically, but the current app will only display the metadata path. It will not play the file yet.
 
 ### Does the DB store file paths, relative paths, or URLs
 
-There is no DB.
+The backend DB stores relative paths.
 
-Current custom play records store only `mediaAssetId`. The root-relative path stays in the sample media catalog.
+Current frontend custom play records still store only `mediaAssetId`, and the UI still resolves display details from the sample catalog.
 
 ### How to register or link a media file so the app can use it
 
@@ -665,7 +709,7 @@ For custom play metadata, the registration flow is:
 
 1. Put the file under `public/media/custom-plays/` using a stable filename.
 2. Add a catalog entry to `src/utils/mediaAssetApi.ts`.
-3. Run `npm run dev`.
+3. Run `npm run dev:frontend`.
 4. Open `Practice` -> `Show Tools` -> `Custom Plays`.
 5. Select the new entry from `Media session (optional)`.
 6. Save a custom play.
@@ -744,7 +788,7 @@ public/media/custom-plays/sahaj-evening-25.mp3
 3. Start the app:
 
 ```bash
-npm run dev
+npm run dev:frontend
 ```
 
 4. In the UI, go to `Practice` -> `Show Tools` -> `Custom Plays`.
@@ -758,7 +802,7 @@ npm run dev
 
 7. Optional static-file check:
 
-Open `http://localhost:5173/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:5173/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev` is running.
+Open `http://localhost:5173/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:5173/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev:frontend` is running.
 
 Current limitation:
 
@@ -833,7 +877,8 @@ What does not happen yet:
 Current repo support:
 
 - you can wire the front-end type, UI, validation, storage normalization, and tests here
-- you cannot finish backend or H2 wiring here because those layers do not exist in this workspace
+- you can extend the backend schema, reference data, and REST foundation in `backend/`
+- you still cannot finish end-to-end feature wiring without adding the specific domain API and front-end transport layer for that feature
 
 Front-end checklist for enum-backed additions:
 
@@ -843,17 +888,17 @@ Front-end checklist for enum-backed additions:
 4. Update any helper logic in `src/utils`
 5. Add or update focused tests
 
-Backend/H2 work that would still be required outside this repo:
+Backend/H2 work that may still be required in this repo:
 
-- database enum or lookup table
-- schema migration
-- REST contract update
+- database enum or lookup table updates
+- Flyway migration changes
+- REST contract updates
 - server-side validation
 - seed or reference-data updates
 
 ### Update seed or reference data
 
-There is no DB seed layer.
+The backend now has a Flyway seed layer for meditation types and sample media metadata.
 
 Current reference data is source-controlled directly in TypeScript:
 
@@ -867,7 +912,7 @@ For the current implementation, validate in this order:
 
 1. Ensure the file exists under `public/media/custom-plays/`
 2. Ensure there is a matching entry in `src/utils/mediaAssetApi.ts`
-3. Start the app with `npm run dev`
+3. Start the app with `npm run dev:frontend`
 4. Confirm the item appears in the `Media session (optional)` dropdown
 5. Save a custom play using it
 6. Confirm the saved custom play shows the media session label
@@ -885,6 +930,14 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
+```
+
+Backend verification:
+
+```bash
+cd backend
+mvn -Dmaven.repo.local=../local-data/m2 test
+mvn -Dmaven.repo.local=../local-data/m2 verify
 ```
 
 ### Unit and integration tests
@@ -912,13 +965,14 @@ There is no separate Playwright or Cypress test suite in this repo today.
 The closest coverage is:
 
 - App-level Vitest flows in `src/App.test.tsx`
-- live local startup verification with `npm run dev`
+- backend API startup verification with `npm run dev:backend`
+- live frontend startup verification with `npm run dev:frontend`
 
 ### Verify media files and configuration
 
 Current manual verification checklist:
 
-1. Run `npm run dev`
+1. Run `npm run dev:frontend`
 2. Open `Practice` -> `Show Tools` -> `Custom Plays`
 3. Confirm expected media entries appear in the dropdown
 4. Save a custom play and confirm the label and managed path are rendered
@@ -926,9 +980,17 @@ Current manual verification checklist:
 
 ### Verify REST APIs are reachable
 
-Not applicable for this repo as-is because no backend server is present and the front end does not perform HTTP requests for these domains.
+The backend foundation exposes reachable REST endpoints now:
 
-What you can verify today instead:
+- `GET /api/health`
+- `GET /api/media/custom-plays`
+
+What is still true today:
+
+- the frontend does not yet call those endpoints
+- the playlist and sankalpa front-end API modules remain local shims
+
+What you can verify today:
 
 - API base-path and URL-building behavior remain stable in:
   - `src/utils/apiConfig.test.ts`
@@ -939,15 +1001,15 @@ What you can verify today instead:
 
 ### Verify front-end / back-end connectivity
 
-You cannot verify live front-end / back-end connectivity in this workspace alone because there is no backend here and no frontend HTTP integration yet.
+You can verify backend reachability in this workspace now, but not end-to-end feature integration yet.
 
-If you pair the front end with a separate backend outside this repo, verify connectivity like this:
+Current verification pattern:
 
-1. Start the backend bound to `0.0.0.0`.
-2. Start the front end with `VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev`.
-3. Open `http://<LAN-IP>:5173/` from another device.
-4. Confirm the backend is reachable directly at `http://<LAN-IP>:<BACKEND-PORT>/api/...`.
-5. Trigger the relevant UI flow and check backend logs plus browser network requests.
+1. Start the backend with `npm run dev:backend`.
+2. Open `http://localhost:8080/api/health`.
+3. Open `http://localhost:8080/api/media/custom-plays`.
+4. Start the front end with `npm run dev:frontend`.
+5. Treat direct backend response checks and browser network checks as separate until a frontend REST migration slice is implemented.
 
 ## Build And Deployment
 
@@ -961,6 +1023,7 @@ Build output goes to:
 
 ```text
 dist/
+backend/target/
 ```
 
 ### Preview the production build locally
@@ -973,22 +1036,25 @@ The preview server is configured to bind to the local network on port `4173`.
 
 ### Deployment assumptions
 
-Current deployment target is a static front-end host for the built Vite app.
+The repo now produces:
+
+- a static frontend build
+- a packaged Spring Boot backend artifact
 
 Important assumptions:
 
 - deploy the contents of `dist/`
 - configure SPA history fallback so routes like `/practice` and `/history` return `index.html`
-- there is no server-side API artifact to deploy from this repository
-- there is no database migration step from this repository
+- deploy the backend jar from `backend/target/`
+- run Flyway-backed backend startup before considering the API healthy
 
 ### Static assets and media in deployment
 
 Current repo behavior:
 
-- there is no checked-in `public/` directory yet
 - if you add files under `public/`, Vite will include them as static assets in the build output
 - the custom play media catalog already expects paths under `/media/custom-plays`
+- backend media storage expects filesystem content under the configured media root, outside the database
 
 Operational implication:
 
@@ -996,13 +1062,15 @@ Operational implication:
 
 ### Runtime configuration required in deployment
 
-None for the current front-end-only app.
+Current likely runtime configuration:
 
-There is currently:
-
-- no runtime env injection
-- no required API base URL
-- no backend hostname config
+- frontend:
+  - optional `VITE_API_BASE_URL`
+- backend:
+  - `MEDITATION_BACKEND_PORT`
+  - `MEDITATION_H2_DB_DIR`
+  - `MEDITATION_H2_DB_NAME`
+  - `MEDITATION_MEDIA_STORAGE_ROOT`
 
 Optional build-time override when pairing the built front end with a separate backend:
 
@@ -1012,19 +1080,20 @@ Optional build-time override when pairing the built front end with a separate ba
 
 - timer and playlist sound selections are still UI-only; real playback is not implemented
 - optional small gap support between playlist items is not implemented
-- custom play media is a fixed source-code catalog, not a user-managed library
-- there is no backend service in this workspace
-- there is no H2 persistence layer in this workspace
-- there is no live REST integration to verify or deploy
+- custom play media in the frontend is still a fixed source-code catalog, not a user-managed library
+- only backend foundation endpoints are present so far
+- there is no live front-end REST integration yet for the existing feature flows
 
 ## Operator Notes
 
 For someone trying to configure, run, or deploy this project today, the correct mental model is:
 
-- this repo is operational as a front-end prototype
-- it is not yet operational as a full-stack deployment unit
-- local persistence is the source of truth
-- REST and H2 sections in the design materials describe intended seams, not runnable infrastructure here
+- this repo is operational as:
+  - a frontend app
+  - a backend foundation
+- it is not yet operational as a fully integrated full-stack product
+- browser local storage is still the source of truth for most user-facing feature flows
+- backend REST + H2 are now runnable infrastructure, but only for the foundation slice
 
 ## Verification Snapshot
 

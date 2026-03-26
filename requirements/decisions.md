@@ -309,6 +309,24 @@
 - Keep media files on disk under a configured root and store relative file paths plus metadata in the database.
 - Migrate the front end to the backend through the existing API-boundary utilities incrementally, starting with backend foundation and persistence before broader feature rewrites.
 
+### 2026-03-25 backend bootstrap foundation decisions
+- Add one in-repo Spring Boot backend module under `backend/` as the first real backend implementation step.
+- Use Maven for the backend foundation because it works reliably in this environment, while the local Gradle installation does not.
+- Use Flyway migrations as the source of truth for schema and seed data instead of Hibernate schema generation.
+- Establish the initial backend package structure with real implementation in:
+  - `config`
+  - `health`
+  - `media`
+  and reserved domain packages for:
+  - `customplay`
+  - `playlist`
+  - `reference`
+  - `sankalpa`
+  - `sessionlog`
+- Keep the first live domain API bounded to seeded custom-play media metadata plus a health endpoint; defer broader feature REST APIs to later slices.
+- Store media files on disk under a configured backend media root and persist relative paths in H2 rather than binary blobs.
+- Keep frontend feature flows local-first for now; do not mix backend scaffolding with premature frontend transport rewiring in this slice.
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`
