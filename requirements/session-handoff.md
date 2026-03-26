@@ -1,7 +1,18 @@
 # Session Handoff
 
 ## Current status
-Foundation remediation and testing are complete.
+Milestone A branch setup is complete and implementation work has not started yet.
+
+## Milestone branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/prompts/milestone-a-core-fullstack`
+- Milestone scope:
+  - session log REST persistence
+  - timer completion record support needed by the core flow
+  - settings/preferences persistence needed by the core flow
+  - Home, Practice, active timer, and History backend integration
+  - milestone review, remediation, verification, and local merge back to the parent branch
+- Working tree status at branch creation: clean and ready for milestone work
 
 This slice implemented the critical and important review findings by moving the H2 console behind the local `dev` profile, removing filesystem-path leakage from `/api/health`, aligning backend CORS behavior with the documented local/LAN workflow, making `/media/**` actually serve from the backend media root, and tightening frontend media fallback behavior so backend regressions are more visible.
 

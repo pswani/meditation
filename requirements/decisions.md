@@ -2,6 +2,17 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-a core full-stack branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-a-core-fullstack`.
+- Create and use the local milestone branch `codex/prompts/milestone-a-core-fullstack` for all Milestone A prompt execution before merging back to the parent branch.
+- Keep Milestone A bounded to the core full-stack practice engine flow:
+  - session log REST persistence
+  - timer completion record support needed by the core flow
+  - settings/preferences persistence needed by the core flow
+  - Home, Practice, active timer, and History backend integration
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.
