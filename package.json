@@ -5,8 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:frontend": "./scripts/dev-frontend.sh",
+    "dev:backend": "./scripts/dev-backend.sh",
+    "dev:all": "./scripts/dev-stack.sh",
     "build": "tsc -b && vite build",
+    "build:app": "./scripts/build-local.sh",
     "preview": "vite preview",
+    "preview:app": "./scripts/preview-local.sh",
+    "media:setup": "./scripts/setup-media-root.sh",
+    "db:h2:reset": "./scripts/h2-reset.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

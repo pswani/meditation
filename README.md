@@ -169,10 +169,18 @@ You do not need Java, Gradle, Docker, H2, or a backend runtime for the current r
 npm ci
 ```
 
+### Prepare local media root
+
+```bash
+npm run media:setup
+```
+
+This ensures `public/media/custom-plays/` exists for local static custom-play files.
+
 ### Run the front end
 
 ```bash
-npm run dev
+npm run dev:frontend
 ```
 
 The Vite dev server is configured to bind to the local network on port `5173`.
@@ -184,7 +192,7 @@ Open:
 
 ### Run the back end
 
-You cannot run a backend from this repository because none is present.
+You cannot run a backend from this repository because none is present here.
 
 There is:
 
@@ -193,22 +201,37 @@ There is:
 - no server entrypoint
 - no backend test suite
 
-### Run both together
-
-There is no full-stack "run both" command in this repo.
-
-For the current implementation, "run the app locally" means running the Vite front end only:
+The helper script is for pairing this front end with a separate backend workspace:
 
 ```bash
-npm run dev
+npm run dev:backend
 ```
 
-If you want to pair this front end with a separate local backend that lives outside this repository:
+To make that work, configure `.env.local` with:
 
-- run the front end here with `npm run dev`
-- run the backend separately on the developer machine
-- bind that backend to `0.0.0.0` or the machine LAN IP, not `localhost` only
-- point the front end at that backend with `VITE_API_BASE_URL`
+- `MEDITATION_BACKEND_DIR`
+- optionally `MEDITATION_BACKEND_DEV_CMD`
+
+If `MEDITATION_BACKEND_DIR` contains `./gradlew` and no explicit backend command is set, the helper defaults to:
+
+```bash
+./gradlew bootRun
+```
+
+### Run both together
+
+Use the app-level helper:
+
+```bash
+npm run dev:all
+```
+
+Behavior:
+
+- always prepares the media root
+- starts the front end
+- starts a paired external backend only if backend configuration is present
+- otherwise prints a clear message and runs the front end only
 
 ### Environment and configuration variables
 
@@ -218,12 +241,24 @@ An optional example file is included:
 
 - `.env.example`
 
-Optional variable:
+Optional variables:
 
 - `VITE_API_BASE_URL`
   - default behavior when unset: same-origin `/api`
   - use this only when you are pairing the front end with a separate backend host or port
   - example LAN override: `VITE_API_BASE_URL=http://192.168.1.50:8080/api`
+- `MEDITATION_BACKEND_DIR`
+  - path to a separate backend workspace
+- `MEDITATION_BACKEND_DEV_CMD`
+  - optional override for backend local-dev startup
+- `MEDITATION_BACKEND_BUILD_CMD`
+  - optional override for backend build
+- `MEDITATION_H2_DB_DIR`
+  - optional H2 file directory for reset/init helper flows
+- `MEDITATION_H2_DB_NAME`
+  - optional H2 database filename prefix
+- `MEDITATION_MEDIA_ROOT`
+  - optional media root override
 
 Code audit results:
 
@@ -234,9 +269,46 @@ Code audit results:
 Current operational meaning:
 
 - install dependencies
+- optionally prepare `public/media/custom-plays`
 - start Vite
 - use browser local storage for persistence
+- optionally pair an external backend through helper scripts
 - optionally override the future/live API base with `VITE_API_BASE_URL`
+
+### App-level helper commands
+
+Use these commands for the cleanest local workflow:
+
+```bash
+npm run media:setup
+npm run dev:frontend
+npm run dev:backend
+npm run dev:all
+npm run build:app
+npm run preview:app
+npm run db:h2:reset
+```
+
+What they do:
+
+- `npm run media:setup`
+  - ensures the custom-play media root exists
+- `npm run dev:frontend`
+  - prepares the media root and starts the Vite dev server
+- `npm run dev:backend`
+  - runs a paired external backend command if configured
+- `npm run dev:all`
+  - starts frontend plus an optional paired backend
+- `npm run build:app`
+  - builds the frontend and optionally runs a paired backend build
+- `npm run preview:app`
+  - rebuilds the frontend and starts a production-like Vite preview server
+- `npm run db:h2:reset`
+  - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows
+
+Important note:
+
+- H2 reset support is a local helper only; it does not create schema or start a database service because no backend/H2 implementation lives in this repo
 
 ### Default ports and URLs
 
@@ -280,14 +352,13 @@ This repository is currently enough to test the UI from a phone, tablet, or anot
 Start the dev server:
 
 ```bash
-npm run dev
+npm run dev:frontend
 ```
 
 Start the local production preview:
 
 ```bash
-npm run build
-npm run preview
+npm run preview:app
 ```
 
 Ports used:
@@ -862,7 +933,7 @@ If you pair the front end with a separate backend outside this repo, verify conn
 ### Build production artifacts
 
 ```bash
-npm run build
+npm run build:app
 ```
 
 Build output goes to:
@@ -874,7 +945,7 @@ dist/
 ### Preview the production build locally
 
 ```bash
-npm run preview
+npm run preview:app
 ```
 
 The preview server is configured to bind to the local network on port `4173`.

@@ -280,6 +280,22 @@
   - no MIME-type display
 - Preserve backward compatibility for existing local storage by accepting legacy custom-play records that still contain label/path fields and normalizing them into the slimmer runtime shape.
 
+### 2026-03-25 app-level scripting decisions
+- Keep this slice truthful to the current repository:
+  - the repo remains front-end only
+  - no in-repo backend, H2 service, or deployment server was invented for scripting convenience
+- Add app-level helper scripts for the current workspace and paired-backend workflows:
+  - `dev:frontend`
+  - `dev:backend`
+  - `dev:all`
+  - `build:app`
+  - `preview:app`
+  - `db:h2:reset`
+  - `media:setup`
+- Treat backend and H2 scripting as external-backend adapters configured through environment variables rather than in-repo implementation details.
+- Default media-root setup to `public/media/custom-plays` and H2 reset to ignored local files under `local-data/h2`.
+- Prefer shell helper scripts and `package.json` wiring over Docker in this slice because local development and front-end truthfulness were the higher-priority goals.
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`

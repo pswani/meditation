@@ -1,74 +1,79 @@
 # Session Handoff
 
 ## Current status
-Prototype cleanup pass 1 is complete.
+App-level build, run, and deployment scripting is complete for the current front-end-first repository.
 
-This slice removed the highest-priority prototype-only UX and journey scaffolding identified in `docs/prototype-cleanup-assessment.md` while keeping the app functional, local-first, and aligned with the current product surface.
+This slice added a clean local workflow for frontend startup, optional external-backend pairing, production build, production-like preview, H2 file reset helpers, and media-root setup without pretending a backend exists inside this repo.
 
 ## What was changed
-- Added `requirements/execplan-prototype-cleanup-pass1.md` and used it to drive the cleanup slice.
-- Removed the unused `.placeholder-list` styling from `src/index.css`.
-- Updated `requirements/prompts.md` so the active app-shell guidance no longer tells contributors to add placeholder screens.
-- Simplified the `custom play` model to persist only `mediaAssetId` for linked media.
-- Updated custom-play normalization so legacy stored entries with `mediaAssetLabel` and `mediaAssetPath` still load, but those prototype-only fields are dropped from runtime state.
-- Updated the custom-play UI to show calm, human-readable linked-media details without exposing MIME types or managed file paths.
-- Updated tests to match the slimmer `custom play` shape and the cleaned-up linked-media UX.
-- Updated `README.md` so media persistence and sample catalog behavior match the new implementation.
-- Updated `requirements/decisions.md` with the cleanup decisions from this slice.
+- Added `requirements/execplan-devops-local-scripting.md` and used it to guide the slice.
+- Added app-level helper scripts under `scripts/`:
+  - `common.sh`
+  - `setup-media-root.sh`
+  - `dev-frontend.sh`
+  - `dev-backend.sh`
+  - `dev-stack.sh`
+  - `build-local.sh`
+  - `preview-local.sh`
+  - `h2-reset.sh`
+- Added package entrypoints for the new helpers:
+  - `dev:frontend`
+  - `dev:backend`
+  - `dev:all`
+  - `build:app`
+  - `preview:app`
+  - `media:setup`
+  - `db:h2:reset`
+- Expanded `.env.example` with optional frontend, backend, H2, and media-root variables.
+- Added `public/media/custom-plays/.gitkeep` so the default local media root can be created and preserved cleanly.
+- Updated `README.md` with truthful local-development, preview, H2-reset, media-root, and external-backend wiring instructions.
+- Updated `requirements/decisions.md` with the scripting decisions from this slice.
 
-## Temporary content removed
-- Dead placeholder-era CSS remnant:
-  - `.placeholder-list` in `src/index.css`
-- Stale active placeholder guidance:
-  - `requirements/prompts.md` no longer instructs route-level placeholder-screen work
-- Prototype-only persisted custom-play fields:
-  - `mediaAssetLabel`
-  - `mediaAssetPath`
-- Technical custom-play UI leakage:
-  - managed path display
-  - MIME-type display
-  - “managed metadata” helper wording
+## Temporary content removed or avoided
+- No fake in-repo backend service, fake H2 application layer, or pretend deployment server was added.
+- No Dockerfile or `docker-compose.yml` was added in this slice because the minimum practical solution for the current repo was local-first shell scripting.
+- No unrelated UI, routing, or product-behavior scaffolding was introduced.
 
-## Intentional sample content that remains
-- The fixed custom-play media catalog in `src/utils/mediaAssetApi.ts` remains as intentional sample/reference data.
-- The timer sound option list in `src/features/timer/constants.ts` remains as intentional sample/reference data until real playback work is in scope.
-- Local-storage-backed `playlist` and `sankalpa` API seams remain in place as intentional local-first abstractions for future backend transport work.
-- Form placeholder examples such as `Morning Focus`, `Breath emphasis`, and `Morning Sequence` remain because they still help valid app flows.
+## Intentional sample or helper content that remains
+- The repo remains a front-end-only React workspace with local-first persistence in browser storage.
+- REST-style boundary helpers remain in `src/utils` as the integration seam for future backend work.
+- `public/media/custom-plays/.gitkeep` remains as an intentional bootstrap artifact for local static custom-play media.
+- The helper-script environment variables in `.env.example` remain as intentional optional configuration for pairing this front end with a separate backend workspace.
 
 ## Verification status
+- Passed `npm run media:setup`
+- Passed `npm run db:h2:reset`
+- Passed `MEDITATION_BACKEND_DEV_CMD='printf "%s\n" backend-dev-ok' npm run dev:backend`
+- Passed `MEDITATION_BACKEND_BUILD_CMD='printf "%s\n" backend-build-ok' npm run build:app`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Checked for backend build runners:
-  - no `gradlew`
-  - no `pom.xml`
-  - no `build.gradle`
-  - no `build.gradle.kts`
-- No backend commands were run because no backend build/test entrypoints are present in this repo.
+- Verified `npm run dev:frontend` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
+- Verified `npm run dev:all` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
+- Verified `npm run preview:app` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
 
 ## Known limitations
-- The custom-play media catalog is still a fixed sample/reference catalog in source code.
-- Timer sound options still do not map to actual playback files or runtime audio behavior.
-- Historical review and ExecPlan artifacts remain in `docs/` and `requirements/`; this slice intentionally did not archive or reorganize them.
-- Legacy local-storage payloads with removed custom-play fields are tolerated at load time, but the app now normalizes them into the slimmer shape on the next save cycle.
+- No backend implementation exists in this repo, so `dev:backend` and the backend portion of `build:app` only do real work when pointed at a separate backend workspace.
+- `db:h2:reset` only prepares and clears local H2 files; it does not create schema, start a service, or validate a backend because those pieces do not exist here.
+- Production deployment packaging is still manual; this slice stopped at app-level local scripts and production-like preview.
 
 ## Files updated in this slice
+- `.env.example`
 - `README.md`
-- `requirements/prompts.md`
+- `package.json`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-prototype-cleanup-pass1.md`
-- `src/types/customPlay.ts`
-- `src/utils/customPlay.ts`
-- `src/utils/storage.ts`
-- `src/utils/mediaAssetApi.ts`
-- `src/features/customPlays/CustomPlayManager.tsx`
-- `src/index.css`
-- `src/App.test.tsx`
-- `src/features/customPlays/CustomPlayManager.test.tsx`
-- `src/utils/customPlay.test.ts`
-- `src/utils/storage.test.ts`
+- `requirements/execplan-devops-local-scripting.md`
+- `public/media/custom-plays/.gitkeep`
+- `scripts/common.sh`
+- `scripts/setup-media-root.sh`
+- `scripts/dev-frontend.sh`
+- `scripts/dev-backend.sh`
+- `scripts/dev-stack.sh`
+- `scripts/build-local.sh`
+- `scripts/preview-local.sh`
+- `scripts/h2-reset.sh`
 
 ## Exact recommended next prompt
 Read:
@@ -79,37 +84,31 @@ Read:
 - docs/product-requirements.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
-- docs/prototype-cleanup-assessment.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
 
-
 Then:
 
-1. Create an ExecPlan for prototype cleanup pass 2.
+1. Create an ExecPlan for frontend containerization and deployment packaging.
 2. Keep the implementation to one meaningful vertical slice:
-   - convert remaining intentional sample/reference data into shared reference-data modules
-   - centralize:
-     - meditation types
-     - timer sound options
-     - custom play sample media catalog
-   - update UI, validation, and storage normalization to consume those shared reference modules
-   - keep current app behavior unchanged
+   - add a production-ready frontend Dockerfile
+   - add a minimal `docker-compose.yml` for local production-like frontend preview
+   - keep backend support optional and external
+   - preserve the new local-first script workflow
 3. Include:
-   - focused tests for any moved reference-data dependencies
-   - README updates describing where intentional sample/reference data now lives
+   - README updates for Docker and non-Docker workflows
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - backend or upload implementation
-   - actual audio playback
-   - live REST transport work
-   - broad archive/reorganization of historical review or ExecPlan docs
-   - unrelated route or shell refactors
+   - backend implementation
+   - live REST transport
+   - H2 schema/service implementation
+   - unrelated app UI refactors
 5. Run:
-   - npm run typecheck
-   - npm run lint
-   - npm run test
-   - npm run build
+   - `npm run typecheck`
+   - `npm run lint`
+   - `npm run test`
+   - `npm run build`
+   - any relevant Docker validation commands if Docker is available
 6. Commit with a clear message:
-   refactor(data): centralize sample reference catalogs
+   `chore(devops): add frontend container workflow`
