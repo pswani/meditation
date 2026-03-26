@@ -1,10 +1,19 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TimerProvider } from '../features/timer/TimerContext';
 import PracticePage from './PracticePage';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+
+function createJsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
+}
 
 async function waitForPracticeSettingsHydration() {
   await waitFor(() =>
@@ -87,7 +96,7 @@ describe('PracticePage UX', () => {
     expect(screen.getByRole('button', { name: /open playlists/i })).toBeInTheDocument();
   });
 
-  it('exposes explicit expanded state for advanced timer settings', () => {
+  it('exposes explicit expanded state for advanced timer settings', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
         <TimerProvider>
@@ -98,6 +107,7 @@ describe('PracticePage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForPracticeSettingsHydration();
     const advancedToggle = screen.getByRole('button', { name: /show advanced options/i });
     expect(advancedToggle).toHaveAttribute('aria-expanded', 'false');
     expect(advancedToggle).toHaveAttribute('aria-controls', 'advanced-timer-settings');
@@ -158,5 +168,59 @@ describe('PracticePage UX', () => {
     expect(guidanceBanner).not.toBeNull();
     expect(startButton).toHaveAttribute('aria-describedby', 'timer-start-blocked-message');
     expect(within(guidanceBanner ?? document.body).getByRole('button', { name: /resume playlist run/i })).toBeInTheDocument();
+  });
+
+  it('locks timer-setting controls until backend timer settings finish hydrating', async () => {
+    let resolveSettingsResponse: ((response: ReturnType<typeof createJsonResponse>) => void) | null = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return await new Promise((resolve) => {
+            resolveSettingsResponse = resolve;
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <TimerProvider>
+          <Routes>
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </TimerProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByLabelText(/duration \(minutes\)/i)).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /show advanced options/i })).toBeDisabled();
+
+    resolveSettingsResponse?.(
+      createJsonResponse(200, {
+        id: 'default',
+        durationMinutes: 24,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+        updatedAt: '2026-03-26T12:00:00.000Z',
+      })
+    );
+
+    await waitFor(() => expect(screen.getByLabelText(/duration \(minutes\)/i)).toBeEnabled());
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toBeEnabled();
   });
 });

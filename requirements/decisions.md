@@ -41,6 +41,14 @@
   - backend timer-settings persistence across a fresh app mount
   - ended-early timer -> `session log` -> History rehydration across a fresh app mount
 
+### 2026-03-26 milestone-a remediation decisions
+- Lock timer-setting controls on `Practice` and `Settings` until backend hydration finishes, rather than allowing editable-but-overwritable intermediate state.
+- Expose explicit timer-settings sync state from `TimerContext` so `Settings` can distinguish:
+  - loading
+  - saving in flight
+  - saved after backend confirmation
+- Keep the broader `Practice` draft-vs-defaults model unchanged in this remediation slice and defer that bigger product/state decision as a later nice-to-have improvement.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

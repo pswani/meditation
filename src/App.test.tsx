@@ -151,16 +151,18 @@ describe('App shell', () => {
     expect(screen.getByLabelText(/default duration \(minutes\)/i)).toBeInTheDocument();
   });
 
-  it('reflects saved defaults from Settings in timer setup', () => {
+  it('reflects saved defaults from Settings in timer setup', async () => {
     render(
       <MemoryRouter initialEntries={['/settings']}>
         <App />
       </MemoryRouter>
     );
 
+    await flushBackendHydration();
     fireEvent.change(screen.getByLabelText(/default duration \(minutes\)/i), { target: { value: '32' } });
     fireEvent.change(screen.getByLabelText(/default meditation type/i), { target: { value: 'Sahaj' } });
     fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
+    expect(await screen.findByText(/settings saved/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('link', { name: /^Practice$/i })[0]);
 

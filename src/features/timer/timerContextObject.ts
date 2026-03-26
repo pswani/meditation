@@ -32,6 +32,7 @@ export interface TimerContextValue {
   readonly isSessionLogSyncing: boolean;
   readonly sessionLogSyncError: string | null;
   readonly isSettingsLoading: boolean;
+  readonly isSettingsSyncing: boolean;
   readonly settingsSyncError: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => CustomPlayValidationResult;

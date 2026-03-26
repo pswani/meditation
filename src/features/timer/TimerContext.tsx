@@ -253,6 +253,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSessionLogSyncing, setIsSessionLogSyncing] = useState(false);
   const [sessionLogSyncError, setSessionLogSyncError] = useState<string | null>(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestTimerSettingsRef = useRef(state.settings);
@@ -605,7 +606,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     let cancelled = false;
 
     async function persistSettings() {
+      setIsSettingsSyncing(true);
+
       try {
+        setSettingsSyncError(null);
         const savedSettings = await persistTimerSettingsToApi(state.settings);
         if (cancelled) {
           return;
@@ -621,6 +625,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         setSettingsSyncError(
           `${formatApiErrorMessage(error, 'Timer settings could not be saved to the backend.')} Local timer settings remain available in this browser.`
         );
+      } finally {
+        if (!cancelled) {
+          setIsSettingsSyncing(false);
+        }
       }
     }
 
@@ -796,6 +804,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSessionLogSyncing,
       sessionLogSyncError,
       isSettingsLoading,
+      isSettingsSyncing,
       settingsSyncError,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: (draft, editId) => {
@@ -1063,6 +1072,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSessionLogsLoading,
       isSessionLogSyncing,
       isSettingsLoading,
+      isSettingsSyncing,
       playlistRunOutcome,
       playlists,
       recoveryMessage,

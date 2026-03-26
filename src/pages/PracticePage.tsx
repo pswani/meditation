@@ -31,6 +31,7 @@ export default function PracticePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || isSettingsLoading;
+  const areTimerSettingsControlsDisabled = isSettingsLoading;
   const advancedContentId = 'advanced-timer-settings';
   const practiceToolsContentId = 'practice-tools-content';
   const timerStartBlockedMessageId = 'timer-start-blocked-message';
@@ -154,6 +155,7 @@ export default function PracticePage() {
             type="number"
             min={1}
             value={settings.durationMinutes}
+            disabled={areTimerSettingsControlsDisabled}
             onChange={(event) => update('durationMinutes', Number(event.target.value))}
             onBlur={() => markTouched('durationMinutes')}
           />
@@ -168,6 +170,7 @@ export default function PracticePage() {
           <span>Meditation type</span>
           <select
             value={settings.meditationType}
+            disabled={areTimerSettingsControlsDisabled}
             onChange={(event) => update('meditationType', event.target.value as MeditationType | '')}
             onBlur={() => markTouched('meditationType')}
           >
@@ -192,6 +195,7 @@ export default function PracticePage() {
           className="advanced-toggle"
           aria-expanded={advancedOpen}
           aria-controls={advancedContentId}
+          disabled={areTimerSettingsControlsDisabled}
           onClick={() => setAdvancedOpen((current) => !current)}
         >
           {advancedOpen ? 'Hide Advanced Options' : 'Show Advanced Options'}
@@ -202,7 +206,11 @@ export default function PracticePage() {
             <div className="form-grid">
               <label>
                 <span>Start sound (optional)</span>
-                <select value={settings.startSound} onChange={(event) => update('startSound', event.target.value)}>
+                <select
+                  value={settings.startSound}
+                  disabled={areTimerSettingsControlsDisabled}
+                  onChange={(event) => update('startSound', event.target.value)}
+                >
                   {soundOptions.map((sound) => (
                     <option key={sound} value={sound}>
                       {sound}
@@ -213,7 +221,11 @@ export default function PracticePage() {
 
               <label>
                 <span>End sound (optional)</span>
-                <select value={settings.endSound} onChange={(event) => update('endSound', event.target.value)}>
+                <select
+                  value={settings.endSound}
+                  disabled={areTimerSettingsControlsDisabled}
+                  onChange={(event) => update('endSound', event.target.value)}
+                >
                   {soundOptions.map((sound) => (
                     <option key={sound} value={sound}>
                       {sound}
@@ -228,6 +240,7 @@ export default function PracticePage() {
                 <input
                   type="checkbox"
                   checked={settings.intervalEnabled}
+                  disabled={areTimerSettingsControlsDisabled}
                   onChange={(event) => update('intervalEnabled', event.target.checked)}
                 />
                 <span>Enable interval bell</span>
@@ -241,6 +254,7 @@ export default function PracticePage() {
                       type="number"
                       min={1}
                       value={settings.intervalMinutes}
+                      disabled={areTimerSettingsControlsDisabled}
                       onChange={(event) => update('intervalMinutes', Number(event.target.value))}
                       onBlur={() => markTouched('intervalMinutes')}
                     />
@@ -255,7 +269,11 @@ export default function PracticePage() {
 
                   <label>
                     <span>Interval sound</span>
-                    <select value={settings.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
+                    <select
+                      value={settings.intervalSound}
+                      disabled={areTimerSettingsControlsDisabled}
+                      onChange={(event) => update('intervalSound', event.target.value)}
+                    >
                       {soundOptions.map((sound) => (
                         <option key={sound} value={sound}>
                           {sound}
