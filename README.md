@@ -13,6 +13,27 @@ This README is intentionally grounded in the current repository contents. It exp
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
 - Custom play media uses a fixed local sample metadata catalog in code. There is no upload flow, media library service, or H2-backed media table in this repo.
 
+## Confirmed Full-Stack Gaps
+
+The current repository still needs all of the following before it can be considered a functioning full-stack app:
+
+- a checked-in Java/Spring Boot backend module
+- H2 datasource configuration and schema management
+- real REST persistence for playlists, sankalpas, custom plays, and media assets
+- replacement of front-end local-storage API shims with HTTP-backed implementations
+- real media-file management on disk with database-referenced file paths and metadata
+
+## Planned Full-Stack Target
+
+The chosen target architecture for the next implementation phase is:
+
+- React + TypeScript + Vite front end
+- one Spring Boot backend application
+- H2 database for local and early deployment persistence
+- media files stored under a configured filesystem root
+- database rows that reference media by stable ID and relative file path
+- REST integration through the existing front-end API-boundary utilities
+
 ## What The Application Does
 
 The app supports a focused meditation practice workflow:
@@ -103,9 +124,9 @@ It currently does not make live REST calls.
 Important repo facts:
 
 - there is no `fetch` or `axios` integration for playlists, sankalpas, or media in the current codebase
-- there is no `VITE_*` API base URL
+- there is no live HTTP transport wired into the current API-boundary modules
 - there is no Vite proxy in `vite.config.ts`
-- there is no backend URL configuration file
+- there is no checked-in backend URL/runtime configuration beyond optional front-end env helpers
 
 Instead, the app uses local API-boundary shims:
 

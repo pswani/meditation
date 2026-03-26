@@ -1,79 +1,61 @@
 # Session Handoff
 
 ## Current status
-App-level build, run, and deployment scripting is complete for the current front-end-first repository.
+Full-stack gap assessment and implementation-sequence planning is complete.
 
-This slice added a clean local workflow for frontend startup, optional external-backend pairing, production build, production-like preview, H2 file reset helpers, and media-root setup without pretending a backend exists inside this repo.
+This slice confirmed the repository is still front-end only, documented the exact backend/persistence/media gaps, and defined the chosen target architecture for converting the app into a React + Spring Boot + H2 system without changing product behavior yet.
 
 ## What was changed
-- Added `requirements/execplan-devops-local-scripting.md` and used it to guide the slice.
-- Added app-level helper scripts under `scripts/`:
-  - `common.sh`
-  - `setup-media-root.sh`
-  - `dev-frontend.sh`
-  - `dev-backend.sh`
-  - `dev-stack.sh`
-  - `build-local.sh`
-  - `preview-local.sh`
-  - `h2-reset.sh`
-- Added package entrypoints for the new helpers:
-  - `dev:frontend`
-  - `dev:backend`
-  - `dev:all`
-  - `build:app`
-  - `preview:app`
-  - `media:setup`
-  - `db:h2:reset`
-- Expanded `.env.example` with optional frontend, backend, H2, and media-root variables.
-- Added `public/media/custom-plays/.gitkeep` so the default local media root can be created and preserved cleanly.
-- Updated `README.md` with truthful local-development, preview, H2-reset, media-root, and external-backend wiring instructions.
-- Updated `requirements/decisions.md` with the scripting decisions from this slice.
+- Added `requirements/execplan-fullstack-gap-assessment.md` and used it to guide the assessment.
+- Updated `README.md` with:
+  - a confirmed full-stack gap summary
+  - the chosen target full-stack architecture
+  - corrected wording around current API-base/runtime configuration
+- Updated `docs/architecture.md` with:
+  - current runtime architecture
+  - confirmed backend/database/REST/media gaps
+  - chosen full-stack target architecture
+  - planned implementation order
+- Updated `requirements/decisions.md` with the full-stack planning decisions from this slice.
+- Updated `requirements/session-handoff.md` with the confirmed current-state assessment, chosen backend architecture, verification status, and the exact next implementation prompt.
 
-## Temporary content removed or avoided
-- No fake in-repo backend service, fake H2 application layer, or pretend deployment server was added.
-- No Dockerfile or `docker-compose.yml` was added in this slice because the minimum practical solution for the current repo was local-first shell scripting.
-- No unrelated UI, routing, or product-behavior scaffolding was introduced.
+## Confirmed current-state assessment
+- The repo still has no checked-in backend module, `gradlew`, `pom.xml`, `build.gradle`, or Spring Boot application.
+- There is still no H2 datasource configuration, schema file, migration tool, or backend persistence layer in this repository.
+- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` still persist through `localStorage`, not HTTP.
+- `src/utils/mediaAssetApi.ts` still serves a fixed in-memory media catalog, not a filesystem-backed database source.
+- The front end still owns runtime orchestration and local-first persistence while exposing REST-shaped path helpers for future replacement.
+
+## Chosen backend architecture
+- one Java/Spring Boot backend application as the primary server
+- H2 as the initial database
+- media files stored under a configured filesystem root
+- database rows that reference media by stable ID and relative file path
+- incremental front-end migration from local API shims to real REST transport through the existing API-boundary utilities
 
 ## Intentional sample or helper content that remains
 - The repo remains a front-end-only React workspace with local-first persistence in browser storage.
 - REST-style boundary helpers remain in `src/utils` as the integration seam for future backend work.
-- `public/media/custom-plays/.gitkeep` remains as an intentional bootstrap artifact for local static custom-play media.
-- The helper-script environment variables in `.env.example` remain as intentional optional configuration for pairing this front end with a separate backend workspace.
+- The current app-level helper scripts remain in place for frontend development and optional future paired-backend workflows.
+- The sample media catalog remains intentional reference data until the backend media layer is implemented.
 
 ## Verification status
-- Passed `npm run media:setup`
-- Passed `npm run db:h2:reset`
-- Passed `MEDITATION_BACKEND_DEV_CMD='printf "%s\n" backend-dev-ok' npm run dev:backend`
-- Passed `MEDITATION_BACKEND_BUILD_CMD='printf "%s\n" backend-build-ok' npm run build:app`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Verified `npm run dev:frontend` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
-- Verified `npm run dev:all` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
-- Verified `npm run preview:app` startup output outside the sandbox after sandbox port-binding failed with `listen EPERM`
 
 ## Known limitations
-- No backend implementation exists in this repo, so `dev:backend` and the backend portion of `build:app` only do real work when pointed at a separate backend workspace.
-- `db:h2:reset` only prepares and clears local H2 files; it does not create schema, start a service, or validate a backend because those pieces do not exist here.
-- Production deployment packaging is still manual; this slice stopped at app-level local scripts and production-like preview.
+- This slice is planning-only; it does not add the backend, schema, H2 wiring, or REST transport.
+- Session logs are still local-only and were intentionally not expanded into backend planning scope in this first assessment pass.
+- Media file upload/import behavior remains unimplemented; only the target architecture and sequencing are now documented.
 
 ## Files updated in this slice
-- `.env.example`
 - `README.md`
-- `package.json`
+- `docs/architecture.md`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-devops-local-scripting.md`
-- `public/media/custom-plays/.gitkeep`
-- `scripts/common.sh`
-- `scripts/setup-media-root.sh`
-- `scripts/dev-frontend.sh`
-- `scripts/dev-backend.sh`
-- `scripts/dev-stack.sh`
-- `scripts/build-local.sh`
-- `scripts/preview-local.sh`
-- `scripts/h2-reset.sh`
+- `requirements/execplan-fullstack-gap-assessment.md`
 
 ## Exact recommended next prompt
 Read:
@@ -90,25 +72,26 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for frontend containerization and deployment packaging.
+1. Create an ExecPlan for backend foundation scaffolding.
 2. Keep the implementation to one meaningful vertical slice:
-   - add a production-ready frontend Dockerfile
-   - add a minimal `docker-compose.yml` for local production-like frontend preview
-   - keep backend support optional and external
-   - preserve the new local-first script workflow
+   - add one Spring Boot backend module inside this repo
+   - add a minimal Gradle build and application entrypoint
+   - add H2 datasource configuration for local development
+   - add a health endpoint and one media-root configuration property
+   - do not yet wire full product persistence or front-end REST integration
 3. Include:
-   - README updates for Docker and non-Docker workflows
+   - README updates for backend setup and run commands
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - backend implementation
-   - live REST transport
-   - H2 schema/service implementation
+   - playlist, sankalpa, and custom-play REST controllers
+   - front-end data-layer rewiring
+   - media upload/import features
    - unrelated app UI refactors
 5. Run:
    - `npm run typecheck`
    - `npm run lint`
    - `npm run test`
    - `npm run build`
-   - any relevant Docker validation commands if Docker is available
+   - relevant backend verification commands for the new module
 6. Commit with a clear message:
-   `chore(devops): add frontend container workflow`
+   `feat(backend): scaffold spring boot foundation`

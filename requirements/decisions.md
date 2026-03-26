@@ -296,6 +296,19 @@
 - Default media-root setup to `public/media/custom-plays` and H2 reset to ignored local files under `local-data/h2`.
 - Prefer shell helper scripts and `package.json` wiring over Docker in this slice because local development and front-end truthfulness were the higher-priority goals.
 
+### 2026-03-25 full-stack gap assessment decisions
+- Confirm the current repo state explicitly:
+  - no backend module
+  - no Spring Boot application
+  - no H2 datasource or schema
+  - no live REST persistence
+  - current API layers for playlists and sankalpas still persist through `localStorage`
+  - current media API layer still serves a fixed in-memory sample catalog
+- Choose one Java/Spring Boot backend application as the first full-stack target instead of splitting the platform into multiple backend services.
+- Keep H2 as the initial database for local development and early deployment simplicity.
+- Keep media files on disk under a configured root and store relative file paths plus metadata in the database.
+- Migrate the front end to the backend through the existing API-boundary utilities incrementally, starting with backend foundation and persistence before broader feature rewrites.
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`
