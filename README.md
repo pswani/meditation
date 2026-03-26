@@ -15,18 +15,23 @@ This README is intentionally grounded in the current repository contents. It exp
   - local-development CORS
   - a health endpoint
   - a seeded media metadata API
+- The frontend now includes:
+  - a shared typed API client
+  - a configurable API base URL strategy
+  - a Vite local-dev `/api` proxy for the in-repo backend
+  - live backend media loading with graceful sample fallback
 - The current product persistence model is still mostly local-first in the browser via `localStorage`.
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
-- Front-end feature flows are not yet wired to live backend REST transport.
+- Playlist, sankalpa, custom-play CRUD, and session-log feature flows are not yet wired to live backend REST transport.
 
 ## Confirmed Full-Stack Gaps
 
 The current repository still needs all of the following before it can be considered a functioning full-stack app:
 
-- front-end HTTP integration for playlists, sankalpas, custom plays, and media assets
+- front-end HTTP integration for playlists, sankalpas, custom plays, and session logs
 - real REST persistence wired into the existing front-end data flows
-- replacement of front-end local-storage API shims with HTTP-backed implementations
+- replacement of the remaining front-end local-storage API shims with HTTP-backed implementations
 - richer media-file management flows beyond seeded metadata and directory conventions
 
 ## Planned Full-Stack Target
@@ -91,7 +96,7 @@ The front end currently owns all of the following:
 - session log generation
 - summary derivation
 - sankalpa progress calculation
-- fixed media metadata lookup for custom plays
+- fallback sample media metadata for custom plays when the backend is unavailable
 
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
 
@@ -104,13 +109,18 @@ Current backend endpoints:
 - `/api/health`
 - `/api/media/custom-plays`
 
-The front end also still contains REST-shaped boundary modules intended for future backend replacement:
+The front end also contains REST-shaped boundary modules used as the integration seam:
 
 - `src/utils/playlistApi.ts`
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
 
-Today those front-end modules do not perform HTTP requests. They read from local storage or from an in-memory catalog and simply expose stable endpoint constants such as:
+Today:
+
+- `src/utils/mediaAssetApi.ts` performs live HTTP requests to `/api/media/custom-plays` through a shared API client
+- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` still use local-first persistence while exposing stable REST-shaped contracts
+
+Stable endpoint contracts in the frontend still include:
 
 - `/api/playlists`
 - `/api/sankalpas`
@@ -130,28 +140,29 @@ Today those front-end modules do not perform HTTP requests. They read from local
 
 ### How the React front end integrates with REST APIs
 
-It currently does not make live REST calls.
+The frontend now has a shared REST transport foundation, but only the media catalog uses live backend fetches today.
 
 Important repo facts:
 
-- there is no `fetch` or `axios` integration for playlists, sankalpas, or media in the current codebase
-- there is no live HTTP transport wired into the current API-boundary modules
-- there is no Vite proxy in `vite.config.ts`
-- backend runtime configuration now exists in `backend/src/main/resources/application.yml`
+- `src/utils/apiClient.ts` is the shared typed JSON request layer
+- `src/utils/mediaAssetApi.ts` fetches `/api/media/custom-plays`
+- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` remain local-first shims
+- `vite.config.ts` and `vite.config.js` now proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset
+- backend runtime configuration lives in `backend/src/main/resources/application.yml`
 
-Instead, the app uses local API-boundary shims:
+Current API-boundary status:
 
 | File | Exposed contract | Current implementation |
 | --- | --- | --- |
 | `src/utils/playlistApi.ts` | `/api/playlists` | reads/writes `localStorage` |
 | `src/utils/sankalpaApi.ts` | `/api/sankalpas` | reads/writes `localStorage` |
-| `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | returns a fixed in-memory media catalog |
+| `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
 
 This means:
 
-- the front end behaves as if these API contracts exist
-- no network traffic is sent for these domains
-- swapping in a real backend should start by changing these utility modules instead of rewriting screens
+- the front end now sends network traffic for the media catalog only
+- media loading still preserves today’s UX when the backend is unavailable
+- swapping in broader live backend support should continue through these utility modules instead of rewriting screens
 
 ### How H2 is used in this project
 
@@ -261,7 +272,7 @@ Behavior:
 
 ### Environment and configuration variables
 
-There are no required environment variables for the current local-first app.
+There are no required environment variables for the default local workflow.
 
 An optional example file is included:
 
@@ -271,8 +282,13 @@ Optional variables:
 
 - `VITE_API_BASE_URL`
   - default behavior when unset: same-origin `/api`
-  - use this only when you are pairing the front end with a separate backend host or port
+  - in local frontend development, Vite proxies `/api` to the backend origin
+  - use this when you are pairing the front end with a separate backend host or port, including LAN testing
   - example LAN override: `VITE_API_BASE_URL=http://192.168.1.50:8080/api`
+- `VITE_DEV_BACKEND_ORIGIN`
+  - used only by the Vite dev proxy when `VITE_API_BASE_URL` is unset
+  - default: `http://127.0.0.1:8080`
+  - example override: `VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:9090`
 - `MEDITATION_BACKEND_DIR`
   - optional override for backend workspace location
 - `MEDITATION_BACKEND_DEV_CMD`
@@ -301,8 +317,9 @@ Current operational meaning:
 - start Vite
 - start Spring Boot + H2 from `backend/`
 - use browser local storage for persistence
-- keep front-end feature data local-first until the REST migration slices are implemented
-- optionally override the future/live API base with `VITE_API_BASE_URL`
+- fetch custom-play media metadata from the backend when available
+- keep playlists, sankalpas, custom plays, and session logs local-first until later REST migration slices are implemented
+- optionally override the API base with `VITE_API_BASE_URL`
 
 ### App-level helper commands
 
@@ -349,31 +366,32 @@ Current repo defaults:
 - backend health endpoint: `http://localhost:8080/api/health`
 - backend media catalog endpoint: `http://localhost:8080/api/media/custom-plays`
 - backend H2 console: `http://localhost:8080/h2-console`
-- backend API base URL when the front end is eventually wired: `http://localhost:8080/api`
+- backend API base URL: `http://localhost:8080/api`
+- frontend same-origin API path during dev and preview: `/api`
 
 ### How the front end is configured to call backend APIs
 
-It is still not configured to perform live HTTP requests today.
-
-The repo now contains one shared API-base helper in `src/utils/apiConfig.ts` plus REST-style boundary modules:
+The frontend now uses one shared API-base helper and typed JSON client:
 
 - `src/utils/apiConfig.ts`
+- `src/utils/apiClient.ts`
 - `src/utils/playlistApi.ts`
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
 
 Current behavior:
 
-- stable same-origin endpoint paths still resolve to `/api/...`
-- URL builders can also derive fully qualified LAN-safe URLs from `VITE_API_BASE_URL`
-- persistence remains local-first in browser storage
-- no network traffic is sent by the current implementation
+- stable same-origin endpoint paths resolve to `/api/...`
+- URL builders can derive fully qualified URLs from `VITE_API_BASE_URL`
+- when `VITE_API_BASE_URL` is unset, Vite dev proxies `/api` to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
+- `mediaAssetApi` performs live fetches and falls back to built-in sample metadata if the backend is unavailable
+- playlist and sankalpa persistence remain local-first in browser storage
 
-Because there is no HTTP client yet, changing `VITE_API_BASE_URL` alone will not connect the app to a live server. A future backend integration would also need:
+This means:
 
-- real HTTP request code
-- error handling
-- either a build-time base URL or a Vite dev proxy
+- the media catalog is now exercised through the real REST boundary
+- the current custom-play UX continues working even when the backend is down
+- future backend migrations should reuse `apiClient` and the existing boundary modules instead of adding ad hoc `fetch` code inside screens
 
 ## Accessing The App From Other Devices On The Same Wi-Fi
 
@@ -384,7 +402,7 @@ This repository is now enough to run:
 - the frontend on another device on the same network
 - the backend health endpoint and media catalog on the developer machine
 
-The frontend is still not wired to live backend APIs, so most UI data remains device-local today.
+The frontend now uses the live backend media catalog in this workflow, but most UI data remains device-local today.
 
 Start the dev server:
 
@@ -461,10 +479,11 @@ http://<LAN-IP>:5173/
 ### How the API base URL works
 
 - when `VITE_API_BASE_URL` is unset, API paths default to same-origin `/api`
+- in Vite dev, `/api` is proxied to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
 - when `VITE_API_BASE_URL` is set, REST boundary helpers build URLs from that configured base
 - root-relative static asset paths such as `/media/custom-plays/...` remain same-origin and already work with LAN access
 
-This keeps the default setup clean for local-first use while avoiding hardcoded `localhost` assumptions for future live backend testing.
+This keeps the default setup clean for local development while avoiding hardcoded `localhost` assumptions for LAN or external backend testing.
 
 ### Firewall and OS caveats
 
@@ -987,21 +1006,25 @@ The backend foundation exposes reachable REST endpoints now:
 
 What is still true today:
 
-- the frontend does not yet call those endpoints
+- the frontend now calls the media catalog endpoint
 - the playlist and sankalpa front-end API modules remain local shims
 
 What you can verify today:
 
+- shared HTTP request behavior is covered in:
+  - `src/utils/apiClient.test.ts`
 - API base-path and URL-building behavior remain stable in:
   - `src/utils/apiConfig.test.ts`
 - endpoint contract strings remain stable in:
   - `src/utils/playlistApi.test.ts`
   - `src/utils/sankalpaApi.test.ts`
   - `src/utils/mediaAssetApi.test.ts`
+- backend media connectivity also works through the frontend dev proxy:
+  - `curl -s http://localhost:5173/api/media/custom-plays`
 
 ### Verify front-end / back-end connectivity
 
-You can verify backend reachability in this workspace now, but not end-to-end feature integration yet.
+You can verify backend reachability in this workspace now, plus the frontend media integration path.
 
 Current verification pattern:
 
@@ -1009,7 +1032,9 @@ Current verification pattern:
 2. Open `http://localhost:8080/api/health`.
 3. Open `http://localhost:8080/api/media/custom-plays`.
 4. Start the front end with `npm run dev:frontend`.
-5. Treat direct backend response checks and browser network checks as separate until a frontend REST migration slice is implemented.
+5. Open `http://localhost:5173/api/media/custom-plays` to confirm the dev proxy reaches the backend.
+6. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+7. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with non-blocking guidance.
 
 ## Build And Deployment
 
@@ -1080,9 +1105,9 @@ Optional build-time override when pairing the built front end with a separate ba
 
 - timer and playlist sound selections are still UI-only; real playback is not implemented
 - optional small gap support between playlist items is not implemented
-- custom play media in the frontend is still a fixed source-code catalog, not a user-managed library
+- custom-play media falls back to built-in sample metadata and is not yet a user-managed library
 - only backend foundation endpoints are present so far
-- there is no live front-end REST integration yet for the existing feature flows
+- live front-end REST integration exists only for the media catalog; other feature flows remain local-first
 
 ## Operator Notes
 

@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
-import { listCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
+import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
 import { meditationTypes, soundOptions } from '../timer/constants';
 import { useTimer } from '../timer/useTimer';
 
@@ -37,12 +37,13 @@ export default function CustomPlayManager() {
   useEffect(() => {
     let mounted = true;
 
-    listCustomPlayMediaAssets()
-      .then((assets) => {
+    loadCustomPlayMediaAssets()
+      .then((result) => {
         if (!mounted) {
           return;
         }
-        setMediaAssets(assets);
+        setMediaAssets(result.assets);
+        setMediaLoadError(result.errorMessage);
       })
       .catch(() => {
         if (!mounted) {
@@ -256,12 +257,13 @@ export default function CustomPlayManager() {
               <small className="hint-text">Linked media session: {describeLinkedMedia(selectedMediaAsset)}</small>
               <small className="hint-text">This keeps the custom play connected to the selected media session.</small>
             </>
-          ) : mediaLoadError ? (
-            <small className="error-text">{mediaLoadError}</small>
           ) : (
-            <small className="hint-text">
-              Choose a linked media session to remember which recording this custom play uses.
-            </small>
+            <>
+              {mediaLoadError ? <small className="hint-text">{mediaLoadError}</small> : null}
+              <small className="hint-text">
+                Choose a linked media session to remember which recording this custom play uses.
+              </small>
+            </>
           )}
         </label>
 

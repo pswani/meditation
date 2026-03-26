@@ -327,6 +327,14 @@
 - Store media files on disk under a configured backend media root and persist relative paths in H2 rather than binary blobs.
 - Keep frontend feature flows local-first for now; do not mix backend scaffolding with premature frontend transport rewiring in this slice.
 
+### 2026-03-26 frontend API integration foundation decisions
+- Introduce one shared frontend JSON API client instead of adding ad hoc `fetch` calls inside feature components.
+- Keep API-base resolution same-origin by default (`/api`) and support explicit absolute override with `VITE_API_BASE_URL`.
+- Add a Vite dev proxy for `/api` so local frontend development works cleanly against the in-repo backend without hardcoding backend origins into feature code.
+- Limit the first live frontend/backend transport slice to the existing media endpoint because the backend already exposes `/api/media/custom-plays`.
+- Preserve current custom-play UX by falling back to built-in sample media metadata when the backend media API is unavailable or incomplete.
+- Keep playlists, sankalpas, custom-play CRUD, and session-log persistence local-first until their backend APIs and migration slices are implemented.
+
 ### 2026-03-24 sankalpa milestone-c implementation decisions
 - Keep sankalpa persistence local-first but route through an explicit REST-style API boundary utility for backend readiness:
   - collection endpoint: `/api/sankalpas`

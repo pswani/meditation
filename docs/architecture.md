@@ -6,15 +6,17 @@ Single-page React application with route-based screens and feature-oriented modu
 ## Current runtime architecture
 - React SPA served by Vite
 - Spring Boot backend foundation under `backend/`
+- shared frontend API client and API-base helpers under `src/utils`
 - route-level screens in `src/pages`
 - feature logic in `src/features`
 - shared domain types in `src/types`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - local-first persistence through browser `localStorage` for current frontend feature flows
+- Vite dev `/api` proxy for same-origin frontend/backend local development
 - H2 + Flyway backing the backend foundation
 
 ## Confirmed current gaps
-- no live HTTP transport in the front-end API-boundary utilities yet
+- only the media API boundary uses live HTTP transport today
 - no playlist, sankalpa, or custom-play REST domain APIs yet
 - no end-to-end frontend/backend feature wiring yet
 - no media upload/import workflow yet
@@ -41,7 +43,7 @@ Single-page React application with route-based screens and feature-oriented modu
 1. backend foundation and H2 configuration
 2. schema/migration support and core persistence entities
 3. media metadata + filesystem conventions
-4. front-end REST integration for media assets
+4. front-end REST integration foundation and media asset transport
 5. playlist and sankalpa backend APIs
 6. broader feature-by-feature migration away from local-only persistence
 

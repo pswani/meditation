@@ -1,61 +1,39 @@
 # Session Handoff
 
 ## Current status
-Backend bootstrap foundation is complete.
+Frontend API integration foundation is complete.
 
-This slice added the first real backend implementation for the repo: a Spring Boot module with H2, Flyway migrations, controller/service/repository layering, local-development CORS, a health endpoint, and a seeded custom-play media metadata API, while keeping the frontend product flows local-first for now.
+This slice established the shared frontend REST transport layer, added a local `/api` dev proxy, and migrated custom-play media loading to prefer the live backend media endpoint while preserving the existing custom-play UX through a built-in sample fallback.
 
 ## What was changed
-- Added `requirements/execplan-backend-bootstrap-foundation.md` and used it to guide the slice.
-- Added the `backend/` Spring Boot module with:
-  - `pom.xml`
-  - application entrypoint
-  - `application.yml`
-  - H2 configuration
-  - Flyway migrations
-  - health controller/service
-  - media entity/repository/service/controller
-  - reserved future domain packages
-  - backend tests
-- Added the initial H2/Flyway schema for:
-  - meditation types
-  - media assets
-  - custom plays
-  - playlists
-  - playlist items
-  - sankalpa goals
-  - session logs
-- Seeded meditation types and custom-play media metadata in Flyway.
-- Added backend media-storage conventions:
-  - configurable backend media root
-  - `custom-plays/` subdirectory
-  - H2-stored relative paths
-  - API-exposed public file paths
-- Updated `scripts/common.sh` so root helper scripts auto-detect the in-repo backend and use a repo-local Maven cache under `local-data/m2`.
-- Updated `README.md` with:
-  - backend setup and run commands
-  - H2 and migration documentation
-  - media-storage conventions
-  - current backend verification guidance
-- Updated `docs/architecture.md` with:
-  - current frontend + backend runtime architecture
-  - backend module/package structure
-  - media-storage conventions
-- Updated `requirements/decisions.md` with the backend foundation decisions from this slice.
-- Updated `requirements/session-handoff.md` with the current backend state, verification status, and exact next implementation prompt.
+- Added `requirements/execplan-frontend-api-integration-foundation.md` and used it to guide the slice.
+- Added `src/utils/apiClient.ts` as the shared typed JSON API client with structured API errors.
+- Updated `src/utils/mediaAssetApi.ts` to:
+  - fetch `/api/media/custom-plays`
+  - validate response shape
+  - cache normalized media metadata
+  - fall back to built-in sample media metadata when the backend is unavailable
+- Updated `src/features/customPlays/CustomPlayManager.tsx` so the custom-play form surfaces non-blocking fallback guidance while preserving the existing selection flow.
+- Updated `vite.config.ts` and `vite.config.js` to proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset.
+- Updated `src/vite-env.d.ts` and `.env.example` to document `VITE_DEV_BACKEND_ORIGIN`.
+- Added and updated frontend tests for:
+  - the shared API client
+  - backend media response normalization
+  - fallback behavior when the backend media API is unavailable
+- Updated `README.md`, `docs/architecture.md`, `requirements/decisions.md`, and `requirements/session-handoff.md` to reflect the new transport behavior and local-dev workflow.
 
-## Chosen backend architecture
-- one Java/Spring Boot backend application as the primary server
-- H2 as the initial database
-- media files stored under a configured filesystem root
-- database rows that reference media by stable ID and relative file path
-- Flyway as the source of truth for schema and seed data
-- incremental front-end migration from local API shims to real REST transport through the existing API-boundary utilities
+## Chosen frontend integration architecture
+- use one shared typed JSON API client for frontend REST transport
+- keep same-origin `/api` as the default frontend API base
+- support explicit absolute API base overrides with `VITE_API_BASE_URL`
+- use a Vite dev proxy for `/api` during local frontend development when no absolute API base is configured
+- migrate frontend API boundaries incrementally, starting with media assets
+- preserve current UX with bounded fallback behavior instead of breaking existing flows when the backend is unavailable
 
 ## Intentional sample or helper content that remains
-- Frontend feature flows still persist in browser `localStorage`.
+- Frontend feature flows still persist in browser `localStorage` for playlists, sankalpas, custom plays, and session logs.
 - REST-style boundary helpers remain in `src/utils` as the integration seam for future backend work.
-- The frontend sample media catalog remains in place until the frontend media API migration slice is implemented.
+- Built-in sample media metadata remains as an intentional fallback when the backend media API is unavailable.
 - The current root helper scripts remain the preferred local workflow for frontend + backend startup.
 
 ## Verification status
@@ -65,38 +43,38 @@ This slice added the first real backend implementation for the repo: a Spring Bo
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Passed `npm run build:app`
-- Verified `npm run dev:backend` startup outside the sandbox after in-sandbox port binding failed with `Operation not permitted`
-- Verified `curl -s http://localhost:8080/api/health` outside the sandbox
-- Verified `curl -s http://localhost:8080/api/media/custom-plays` outside the sandbox
+- Verified `npm run dev:backend` startup
+- Verified `npm run dev:frontend` startup
+- Verified `curl -s http://localhost:8080/api/health`
+- Verified `curl -s http://localhost:8080/api/media/custom-plays`
+- Verified `curl -s http://localhost:5174/api/media/custom-plays` through the frontend dev proxy during this session because port `5173` was already in use
 
 ## Known limitations
-- The frontend does not yet call the backend APIs; playlists, sankalpas, custom plays, and session logs are still local-first in the UI.
-- Only backend foundation endpoints exist so far:
-  - `/api/health`
-  - `/api/media/custom-plays`
+- Only the media API boundary uses live backend fetches today.
+- Playlists, sankalpas, custom-play CRUD, and session logs are still local-first in the UI.
 - Media upload/import and binary media serving are still unimplemented.
+- The custom-play media fallback still uses built-in sample metadata, which should eventually be replaced by richer backend-managed or seeded reference data.
 - Flyway emits an H2-version compatibility warning in this environment, but migrations and tests passed successfully.
 
 ## Files updated in this slice
 - `.env.example`
-- `.gitignore`
 - `README.md`
 - `docs/architecture.md`
-- `backend/pom.xml`
-- `backend/src/main/java/com/meditation/backend/**`
-- `backend/src/main/resources/application.yml`
-- `backend/src/main/resources/db/migration/**`
-- `backend/src/test/**`
-- `scripts/common.sh`
+- `src/features/customPlays/CustomPlayManager.tsx`
+- `src/utils/apiClient.ts`
+- `src/utils/apiClient.test.ts`
+- `src/utils/mediaAssetApi.ts`
+- `src/utils/mediaAssetApi.test.ts`
+- `src/vite-env.d.ts`
+- `vite.config.ts`
+- `vite.config.js`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-backend-bootstrap-foundation.md`
+- `requirements/execplan-frontend-api-integration-foundation.md`
 
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
-- PLANS.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
@@ -108,28 +86,19 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for frontend media API integration.
-2. Keep the implementation to one meaningful vertical slice:
-   - replace the frontend custom-play media catalog shim with live fetches from `/api/media/custom-plays`
-   - preserve the existing `MediaAssetMetadata` UI contract where practical
-   - add a safe fallback or error state for backend-unreachable media loading
-   - keep playlists, sankalpas, custom plays, and session logs otherwise local-first
-3. Include:
-   - any minimal frontend API helper changes needed for the media endpoint
-   - README updates for running frontend against the in-repo backend
-   - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
-4. Exclude:
-   - playlist and sankalpa REST integration
-   - custom-play CRUD REST persistence
-   - media upload/import features
-   - unrelated app UI refactors
-5. Run:
-   - `mvn -Dmaven.repo.local=../local-data/m2 test`
-   - `mvn -Dmaven.repo.local=../local-data/m2 verify`
-   - `npm run typecheck`
-   - `npm run lint`
-   - `npm run test`
-   - `npm run build`
-   - any relevant startup or endpoint verification commands
-6. Commit with a clear message:
-   `feat(media): load custom-play media from backend api`
+1. Review the foundation phase from:
+   - usability
+   - architecture cleanliness
+   - code quality
+   - REST boundary quality
+   - backend hygiene
+   - H2/media-storage design sanity
+2. Identify:
+   - critical issues
+   - important issues
+   - nice-to-have improvements
+3. Do not implement code changes in this step.
+4. Write findings into:
+   - docs/review-foundation-fullstack.md
+   - requirements/session-handoff.md
+5. Include exact recommended next prompt in session-handoff.
