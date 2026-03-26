@@ -1,125 +1,94 @@
 # Session Handoff
 
 ## Current status
-LAN / Wi-Fi access support is in place for the current front-end-only workspace.
+This pass was assessment-only. No runtime cleanup was performed yet.
 
-This pass made the minimum necessary operational changes so the app can be opened from a phone or another computer on the same local network, while keeping the implementation local-first and avoiding unrelated backend or deployment refactors.
+The repository now has a documented prototype-cleanup assessment that separates intentional local-first seams from actual prototype residue, placeholder leftovers, UX-demo leakage, and historical review artifacts.
 
-## What was changed to support LAN / Wi-Fi access
-- Configured Vite dev server to bind to `0.0.0.0:5173` in `vite.config.ts`.
-- Configured Vite preview server to bind to `0.0.0.0:4173` in `vite.config.ts`.
-- Added shared API-base configuration utilities in `src/utils/apiConfig.ts` with:
-  - default same-origin base `/api`
-  - optional `VITE_API_BASE_URL` override for separate backend testing
-- Updated REST-style boundary utilities so they expose:
-  - stable same-origin endpoint paths
-  - LAN-safe URL builders derived from `VITE_API_BASE_URL`
-- Added focused tests for API-base behavior and the updated boundary helpers.
-- Added `.env.example` documenting the optional API-base override.
-- Updated `README.md` with a dedicated `Accessing The App From Other Devices On The Same Wi-Fi` section.
-- Updated `requirements/decisions.md` with the LAN access decisions from this slice.
+## What was done
+- Read the required repo, product, architecture, UX, roadmap, decisions, and handoff docs.
+- Read `requirements/prompts.md` because the cleanup touches current repo guidance.
+- Audited the live route surface, navigation, page components, feature modules, local API seams, storage helpers, and top-level docs.
+- Added `docs/prototype-cleanup-assessment.md` with:
+  - a full ExecPlan
+  - classification of findings into:
+    - `must remove now`
+    - `can keep temporarily`
+    - `should be converted into proper seed/sample data`
+  - explicit non-findings where prototype/demo residue is no longer present
 
-## Exact commands to run the app from a phone
+## Highest-signal findings
+- Immediate cleanup candidates:
+  - unused `.placeholder-list` styling in `src/index.css`
+  - stale placeholder-screen guidance in `requirements/prompts.md`
+  - user-facing managed media path and MIME-type details in `src/features/customPlays/CustomPlayManager.tsx`
+  - prototype-oriented custom-play media path data persisted in `src/types/customPlay.ts` and `src/utils/customPlay.ts`
+- Temporary seams that can remain for now:
+  - `src/utils/playlistApi.ts`
+  - `src/utils/sankalpaApi.ts`
+  - `/sankalpa` compatibility redirect
+  - fixed sound labels while playback is still unimplemented
+- Items that should become proper seed/reference data later:
+  - fixed custom-play media catalog in `src/utils/mediaAssetApi.ts`
+  - timer sound option catalog in `src/features/timer/constants.ts`
 
-### Dev mode
-```bash
-npm run dev
-```
+## Important non-findings
+- No fake summary cards or mock metric panels remain in the routed app.
+- No temporary primary navigation items remain in `src/app/routes.ts`.
+- No dead route-level page files were found in `src/pages`; all current page components are wired in `src/App.tsx`.
+- Test-only sample fixtures were intentionally excluded from product-data cleanup findings.
 
-Open from the phone:
-
-```text
-http://<LAN-IP>:5173/
-```
-
-### Local production preview
-```bash
-npm run build
-npm run preview
-```
-
-Open from the phone:
-
-```text
-http://<LAN-IP>:4173/
-```
-
-### If pairing with a separate backend outside this repo
-```bash
-VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev
-```
-
-Important backend note:
-
-- no backend service exists in this repository, so backend bind-address and CORS setup remain external to this workspace
-
-## Example URL format
-- dev example: `http://192.168.68.76:5173/`
-- preview example: `http://192.168.68.76:4173/`
+## Files changed in this pass
+- Added `docs/prototype-cleanup-assessment.md`
+- Updated `requirements/session-handoff.md`
 
 ## Verification status
-- Passed `npm run typecheck`
-- Passed `npm run lint`
-- Passed `npm run test`
-- Passed `npm run build`
-- Started dev server successfully with `npm run dev`
-- Vite reported:
-  - local: `http://localhost:5173/`
-  - network: `http://192.168.68.76:5173/`
-- Started preview server successfully with `npm run preview`
-- Vite reported:
-  - local: `http://localhost:4173/`
-  - network: `http://192.168.68.76:4173/`
-- Confirmed there are no backend build/run/test commands in this repo:
-  - no `gradlew`
-  - no `pom.xml`
-  - no `build.gradle`
-  - no backend source tree or server entrypoint
-- In-sandbox `curl` checks to `127.0.0.1:5173` and `127.0.0.1:4173` returned exit code `7`, so LAN verification is based on Vite server output rather than sandbox loopback fetches
+- Not run: `npm run typecheck`
+- Not run: `npm run lint`
+- Not run: `npm run test`
+- Not run: `npm run build`
+
+Reason:
+- this was a documentation-only assessment pass with no runtime or test changes
 
 ## Known limitations
-- This repo remains front-end only; there is still no backend service to bind, run, or test here.
-- The app still uses browser `localStorage`, so data does not sync between the phone and the developer machine.
-- `VITE_API_BASE_URL` now provides a clean base-URL strategy, but the current app still does not perform live HTTP requests.
-- Backend CORS guidance is documented only; no backend code exists here to apply CORS settings.
-- Firewall, VPN, or Wi-Fi isolation settings on the developer machine or router can still block device-to-device access even when the app is correctly bound to `0.0.0.0`.
-
-## Documentation updates made
-- Updated `README.md`
-- Updated `requirements/decisions.md`
-- Updated `requirements/session-handoff.md`
-- Added `requirements/execplan-lan-access-wifi.md`
+- The repository still contains the identified prototype residue because this pass intentionally stopped at assessment.
+- No archive/index strategy has been applied yet to top-level review and ExecPlan artifacts.
+- No migration has been designed yet for removing persisted custom-play media path fields from existing local storage.
 
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
 - PLANS.md
 - README.md
-- docs/product-requirements.md
 - docs/architecture.md
+- docs/product-requirements.md
 - docs/ux-spec.md
+- docs/screen-inventory.md
+- docs/prototype-cleanup-assessment.md
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
+- requirements/prompts.md
 
 
 Then:
 
-1. Create an ExecPlan for live playlist REST transport using the new LAN-safe API base configuration.
+1. Create an ExecPlan for prototype cleanup pass 1 based on `docs/prototype-cleanup-assessment.md`.
 2. Keep the implementation to one meaningful vertical slice:
-   - replace the local-only playlist API boundary with real `fetch` requests
-   - keep `sankalpa` and `custom play media` local-first for now
-   - preserve the existing playlist validation, logging, and UI flow
-   - add clear load/save error handling in playlist management and playlist run entry points
+   - remove immediate dead placeholder remnants
+   - remove or hide technical media-path and MIME-type details from the custom play UI
+   - stop persisting prototype-only custom-play media path data in product records
+   - update stale active docs/guidance that still describe placeholder-screen setup
 3. Include:
-   - a shared HTTP helper built on the existing `src/utils/apiConfig.ts`
-   - focused tests for request URL building, success handling, and failure states
-   - README updates describing how to run the front end against a separate LAN backend
+   - focused test updates for any changed custom-play UI copy or persistence behavior
+   - README updates if media-path visibility or prototype guidance changes
    - updates to `requirements/decisions.md` and `requirements/session-handoff.md`
 4. Exclude:
-   - backend implementation
-   - auth
-   - sankalpa transport changes
+   - backend or upload implementation
+   - live REST transport work
+   - actual audio playback
+   - broad archive/reorganization of all historical review or ExecPlan docs
    - unrelated route or shell refactors
 5. Run:
    - npm run typecheck
@@ -127,4 +96,4 @@ Then:
    - npm run test
    - npm run build
 6. Commit with a clear message:
-   feat(playlists): add live REST transport via configurable API base
+   chore(cleanup): remove immediate prototype remnants
