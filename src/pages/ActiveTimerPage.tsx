@@ -4,7 +4,17 @@ import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
 
 export default function ActiveTimerPage() {
-  const { activeSession, isPaused, pauseSession, resumeSession, endSessionEarly, lastOutcome, clearOutcome } = useTimer();
+  const {
+    activeSession,
+    isPaused,
+    pauseSession,
+    resumeSession,
+    endSessionEarly,
+    lastOutcome,
+    clearOutcome,
+    isSessionLogSyncing,
+    sessionLogSyncError,
+  } = useTimer();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
 
@@ -22,8 +32,22 @@ export default function ActiveTimerPage() {
         <section className="page-card active-timer">
           <h2 className="page-title">{completionTitle}</h2>
           <p className="page-description">
-            You completed {formatRemainingTime(lastOutcome.completedDurationSeconds)}. An auto log was added to history.
+            You completed {formatRemainingTime(lastOutcome.completedDurationSeconds)}.
           </p>
+          {isSessionLogSyncing ? (
+            <div className="status-banner" role="status">
+              <p>Saving the latest auto log to the backend history.</p>
+            </div>
+          ) : null}
+          {sessionLogSyncError ? (
+            <div className="status-banner warn" role="status">
+              <p>{sessionLogSyncError}</p>
+            </div>
+          ) : (
+            <div className="status-banner ok" role="status">
+              <p>An auto log was added to history.</p>
+            </div>
+          )}
           <div className="timer-actions">
             <button
               type="button"

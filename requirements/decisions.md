@@ -13,6 +13,18 @@
   - milestone review, remediation, verification, and local merge-back
 - Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
 
+### 2026-03-26 milestone-a session-log rest integration decisions
+- Implement the first Milestone A backend-backed core flow around:
+  - `session log` history
+  - timer settings/preferences
+- Keep the frontend `SessionLog` and `TimerSettings` shapes stable and adapt the new backend DTOs to those existing contracts instead of rewriting screen-level consumers.
+- Use backend hydration as the source of truth for timer settings and session logs, while retaining local storage as:
+  - a migration source for existing browser data
+  - a fallback cache when backend hydration fails
+- Sync new timer-generated and manual `session log` entries through the `/api/session-logs` REST boundary, with calm warning states when backend sync fails.
+- Use one seeded `timer_settings` record (`default`) for the current single-user local setup instead of introducing profile/account complexity in Milestone A.
+- Keep active timer and active playlist recovery local-only in this slice; only persisted settings and session history move to H2.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

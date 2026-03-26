@@ -12,7 +12,7 @@ import type {
 import type { SessionLog } from '../../types/sessionLog';
 import type { TimerSettings } from '../../types/timer';
 import type { createInitialTimerState } from './timerReducer';
-import type { ManualLogInput, ManualLogValidationResult } from '../../utils/manualLog';
+import type { ManualLogInput, ManualLogSaveResult } from '../../utils/manualLog';
 
 export interface TimerContextValue {
   readonly settings: TimerSettings;
@@ -28,6 +28,11 @@ export interface TimerContextValue {
   readonly isPaused: boolean;
   readonly isPlaylistRunPaused: boolean;
   readonly recoveryMessage: string | null;
+  readonly isSessionLogsLoading: boolean;
+  readonly isSessionLogSyncing: boolean;
+  readonly sessionLogSyncError: string | null;
+  readonly isSettingsLoading: boolean;
+  readonly settingsSyncError: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => CustomPlayValidationResult;
   readonly deleteCustomPlay: (playId: string) => void;
@@ -40,7 +45,7 @@ export interface TimerContextValue {
   readonly resumePlaylistRun: () => void;
   readonly endPlaylistRunEarly: () => void;
   readonly clearPlaylistRunOutcome: () => void;
-  readonly addManualLog: (input: ManualLogInput) => ManualLogValidationResult;
+  readonly addManualLog: (input: ManualLogInput) => Promise<ManualLogSaveResult>;
   readonly startSession: () => boolean;
   readonly pauseSession: () => void;
   readonly resumeSession: () => void;

@@ -14,7 +14,18 @@ interface PracticeRouteState {
 }
 
 export default function PracticePage() {
-  const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
+  const {
+    settings,
+    validation,
+    activeSession,
+    activePlaylistRun,
+    setSettings,
+    startSession,
+    clearOutcome,
+    lastOutcome,
+    isSessionLogSyncing,
+    sessionLogSyncError,
+  } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
   const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
@@ -99,10 +110,14 @@ export default function PracticePage() {
       ) : null}
 
       {lastOutcome ? (
-        <div className={`status-banner ${lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
+        <div className={`status-banner ${sessionLogSyncError ? 'warn' : lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
           <p>
-            Last session {lastOutcome.status}. An auto log was created for {formatRemainingTime(lastOutcome.completedDurationSeconds)}.
+            Last session {lastOutcome.status}.{' '}
+            {isSessionLogSyncing
+              ? `Saving ${formatRemainingTime(lastOutcome.completedDurationSeconds)} to backend history.`
+              : `An auto log was created for ${formatRemainingTime(lastOutcome.completedDurationSeconds)}.`}
           </p>
+          {sessionLogSyncError ? <p>{sessionLogSyncError}</p> : null}
           <button type="button" className="link-button" onClick={clearOutcome}>
             Dismiss
           </button>

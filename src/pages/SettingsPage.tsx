@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { meditationTypes, soundOptions, defaultTimerSettings } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { TimerSettings } from '../types/timer';
@@ -17,11 +17,15 @@ function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings
 }
 
 export default function SettingsPage() {
-  const { settings, setSettings } = useTimer();
+  const { settings, setSettings, isSettingsLoading, settingsSyncError } = useTimer();
   const [draft, setDraft] = useState<TimerSettings>(settings);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
+
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
 
   const intervalCount = useMemo(
     () => (draft.intervalEnabled ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
@@ -72,6 +76,18 @@ export default function SettingsPage() {
       {saveMessage ? (
         <div className="status-banner ok" role="status">
           <p>{saveMessage}</p>
+        </div>
+      ) : null}
+
+      {isSettingsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading timer preferences from the backend.</p>
+        </div>
+      ) : null}
+
+      {settingsSyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{settingsSyncError}</p>
         </div>
       ) : null}
 
