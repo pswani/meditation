@@ -1,7 +1,19 @@
 # Session Handoff
 
 ## Current status
-Milestone C is complete and merged into `codex/functioning`. The parent branch is ready for Milestone D branch setup.
+Milestone D branch setup is complete on `codex/milestone-d-offline-sync-fullstack`. Offline-first architecture work is the active next step.
+
+## Milestone D branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-d-offline-sync-fullstack`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone D scope:
+  - offline-first architecture foundations
+  - front-end offline behavior and sync queue support for implemented domains
+  - backend reconciliation and sync-safe duplicate handling
+  - milestone review, remediation, verification, and local merge back to the parent branch
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/01-offline-architecture.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`

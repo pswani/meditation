@@ -2,6 +2,16 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline sync branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-d-offline-sync-fullstack`.
+- Create and use the local milestone branch `codex/milestone-d-offline-sync-fullstack` for all Milestone D prompt execution before merging back to the parent branch.
+- Keep Milestone D bounded to the offline-sync full-stack slice:
+  - offline-first architecture foundations
+  - frontend offline behavior and sync queue support for implemented domains
+  - backend reconciliation and sync-safe duplicate handling
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-26 milestone-c sankalpa rest decisions
 - Move `sankalpa` persistence and primary progress calculation to the backend so Home and Sankalpa read the same H2-backed source of truth.
 - Keep the frontend `SankalpaGoal` and `SankalpaProgress` shapes stable by returning backend progress entries that match the existing UI model instead of redesigning the screens.
