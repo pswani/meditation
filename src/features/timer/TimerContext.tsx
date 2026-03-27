@@ -1167,11 +1167,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           setPlaylistSyncError(null);
           return result;
         } catch (error) {
-          setPlaylistSyncError(
-            `${formatApiErrorMessage(error, 'Playlist deletion failed.')} The previous playlist state is still available locally.`
-          );
+          const persistenceError = `${formatApiErrorMessage(
+            error,
+            'Playlist deletion failed.'
+          )} The previous playlist state is still available locally.`;
+          setPlaylistSyncError(persistenceError);
           return {
             deleted: false,
+            persistenceError,
           };
         } finally {
           setIsPlaylistSyncing(false);
@@ -1210,6 +1213,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         const startResult = evaluatePlaylistRunStart({
           playlistId,
           playlists,
+          isPlaylistsLoading,
           activeTimerSession: Boolean(state.activeSession),
           activePlaylistRun,
         });

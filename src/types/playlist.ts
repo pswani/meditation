@@ -67,6 +67,7 @@ export interface PlaylistRunOutcome {
 }
 
 export type PlaylistRunStartBlockReason =
+  | 'playlists loading'
   | 'timer session active'
   | 'playlist run active'
   | 'playlist not found'
@@ -82,4 +83,5 @@ export type PlaylistDeleteBlockReason = 'playlist run active';
 export interface PlaylistDeleteResult {
   readonly deleted: boolean;
   readonly reason?: PlaylistDeleteBlockReason;
+  readonly persistenceError?: string;
 }

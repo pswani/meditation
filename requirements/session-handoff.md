@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone B prompt 03 is complete on `codex/milestone-b-practice-composition-fullstack`. Playlist persistence now runs through H2 + REST with history-safe delete behavior, and the branch is ready for prompt 04 milestone review work.
+Milestone B prompt 05 is complete on `codex/milestone-b-practice-composition-fullstack`. The important review findings have been remediated, full frontend/backend verification passed, and the branch is ready for prompt 06 milestone testing.
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
@@ -84,6 +84,45 @@ Milestone B prompt 03 is complete on `codex/milestone-b-practice-composition-ful
   - preserved cached playlist run launching while backend hydration is in flight
   - added frontend API-boundary tests for playlist list/upsert/delete transport
   - added backend repository/controller coverage for playlist persistence and history-safe delete behavior
+
+## Milestone B prompt 04: review
+- Added:
+  - `docs/review-practice-composition-fullstack.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - playlist delete failures currently surface the wrong user message
+    - playlist runs can start from stale cached definitions before backend hydration completes
+    - globally unique playlist-item external ids can still fail as an unhandled server-side constraint error across playlists
+  - nice-to-have issues:
+    - `TimerContext` is carrying too many milestone responsibilities
+- Prompt 04 intentionally made no code changes.
+
+## Milestone B prompt 05: remediation
+- Added and used:
+  - `requirements/execplan-milestone-b-practice-composition-remediation.md`
+- Frontend changes:
+  - added an explicit `playlists loading` launch-block reason so playlist runs cannot start from stale cached definitions before backend hydration completes
+  - disabled playlist run actions on `Practice` and favorite playlist shortcuts on `Home` while playlist hydration is still in flight, with calm loading copy to explain the wait
+  - returned truthful playlist delete persistence failures from `TimerContext` so Practice only shows the active-run delete message for real run conflicts
+- Backend changes:
+  - added H2 migration `V6__scope_playlist_item_external_id_uniqueness.sql`
+  - scoped playlist-item `external_id` uniqueness to `(playlist_id, external_id)` so different playlists can safely reuse the same browser-created item ids
+- Tests:
+  - expanded frontend coverage for playlist loading gates and truthful delete failure guidance in:
+    - `src/utils/playlistRunPolicy.test.ts`
+    - `src/pages/PlaylistsPage.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/features/timer/TimerContext.test.tsx`
+  - added backend controller coverage proving different playlists can reuse the same playlist-item id without a server error
+
+## Milestone B review findings summary
+- Critical:
+  - none recorded in `docs/review-practice-composition-fullstack.md`
+- Important:
+  - prompt 05 remediated all three important review findings
+- Nice-to-have:
+  - `TimerContext` still carries too many milestone responsibilities and remains a future maintainability slice
 
 ## Milestone B verification status
 - Passed `npm run typecheck`
@@ -251,27 +290,27 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
+- PLANS.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
 - requirements/roadmap.md
-- requirements/session-handoff.md
 - requirements/decisions.md
+- requirements/session-handoff.md
 
 Then:
 
-1. Review Milestone B from:
-   - UX/usability
-   - media setup clarity
-   - code quality
-   - REST design
-   - backend hygiene
-   - performance and maintainability
-2. Identify critical, important, and nice-to-have issues.
-3. Do not implement code changes.
-4. Write findings into:
-   - docs/review-practice-composition-fullstack.md
-   - requirements/session-handoff.md
-5. Include exact recommended next prompt.
+1. Create an ExecPlan for a strong test pass on Milestone B.
+2. Thoroughly test:
+   - manual logging
+   - custom plays
+   - media catalog handling
+   - playlists
+   - history integration for those features
+3. Improve coverage where needed with focused maintainable tests only.
+4. Run full relevant verification.
+5. Update docs and session-handoff with exact recommended next prompt.
+6. Commit with a clear message:
+   test(composition): verify practice composition full-stack flows

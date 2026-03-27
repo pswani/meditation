@@ -2,6 +2,11 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b remediation decisions
+- Treat backend playlist hydration as the source-of-truth gate for playlist-run launch actions on both `Practice` and `Home`; expose an explicit `playlists loading` block reason and disable launch buttons while hydration is still in flight.
+- Keep backend playlist persistence failures distinct from active-run delete blocks by returning expressive delete results from `TimerContext` and reserving the “currently running” message for the real run-conflict case only.
+- Scope playlist-item `external_id` uniqueness to `(playlist_id, external_id)` instead of the whole table so migrated browser ids remain reusable across different playlists without leaking raw H2 constraint failures through the REST API.
+
 ### 2026-03-26 milestone-b playlists rest decisions
 - Move playlist persistence to backend-owned H2 + REST while keeping the existing frontend `Playlist` and `PlaylistItem` shapes stable for screen consumers.
 - Reuse the existing `playlist` and `playlist_item` tables, but add a stable string `external_id` for playlist items so older browser-created item ids migrate cleanly.

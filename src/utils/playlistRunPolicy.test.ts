@@ -21,6 +21,7 @@ describe('playlist run policy', () => {
     const result = evaluatePlaylistRunStart({
       playlistId: samplePlaylist.id,
       playlists: [samplePlaylist],
+      isPlaylistsLoading: false,
       activeTimerSession: true,
       activePlaylistRun: null,
     });
@@ -35,6 +36,7 @@ describe('playlist run policy', () => {
     const result = evaluatePlaylistRunStart({
       playlistId: samplePlaylist.id,
       playlists: [samplePlaylist],
+      isPlaylistsLoading: false,
       activeTimerSession: false,
       activePlaylistRun: {
         runId: 'run-1',
@@ -63,6 +65,7 @@ describe('playlist run policy', () => {
     const result = evaluatePlaylistRunStart({
       playlistId: samplePlaylist.id,
       playlists: [samplePlaylist],
+      isPlaylistsLoading: false,
       activeTimerSession: false,
       activePlaylistRun: null,
     });
@@ -74,6 +77,7 @@ describe('playlist run policy', () => {
     const result = evaluatePlaylistRunStart({
       playlistId: 'missing-playlist',
       playlists: [samplePlaylist],
+      isPlaylistsLoading: false,
       activeTimerSession: false,
       activePlaylistRun: null,
     });
@@ -94,6 +98,7 @@ describe('playlist run policy', () => {
           items: [],
         },
       ],
+      isPlaylistsLoading: false,
       activeTimerSession: false,
       activePlaylistRun: null,
     });
@@ -130,6 +135,21 @@ describe('playlist run policy', () => {
   it('allows deleting playlist when no active run blocks it', () => {
     expect(evaluatePlaylistDelete(samplePlaylist.id, null)).toEqual({
       deleted: true,
+    });
+  });
+
+  it('blocks playlist start while playlists are still hydrating from the backend', () => {
+    const result = evaluatePlaylistRunStart({
+      playlistId: samplePlaylist.id,
+      playlists: [samplePlaylist],
+      isPlaylistsLoading: true,
+      activeTimerSession: false,
+      activePlaylistRun: null,
+    });
+
+    expect(result).toEqual({
+      started: false,
+      reason: 'playlists loading',
     });
   });
 });

@@ -106,6 +106,7 @@ export default function PlaylistManager() {
     }
 
     const reasonToMessage: Record<NonNullable<typeof result.reason>, string> = {
+      'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
       'timer session active': 'Finish or end the active timer session before starting a playlist run.',
       'playlist run active': 'A playlist run is already active. Open it to continue before starting another.',
       'playlist not found': 'That playlist is no longer available. Refresh and try again.',
@@ -120,7 +121,17 @@ export default function PlaylistManager() {
   async function confirmDelete(playlistId: string) {
     const deleteResult = await deletePlaylist(playlistId);
     if (!deleteResult.deleted) {
-      setPlaylistFeedback('This playlist is currently running. End the run before deleting it.');
+      if (deleteResult.reason === 'playlist run active') {
+        setPlaylistFeedback('This playlist is currently running. End the run before deleting it.');
+        return;
+      }
+
+      if (deleteResult.persistenceError) {
+        setPlaylistFeedback(null);
+        return;
+      }
+
+      setPlaylistFeedback('Playlist deletion failed. Review the warning above and try again.');
       return;
     }
 
@@ -355,7 +366,7 @@ export default function PlaylistManager() {
                       Open Active Run
                     </button>
                   ) : (
-                    <button type="button" onClick={() => runPlaylist(playlist.id)} disabled={isPlaylistSyncing}>
+                    <button type="button" onClick={() => runPlaylist(playlist.id)} disabled={controlsDisabled}>
                       Run Playlist
                     </button>
                   )}

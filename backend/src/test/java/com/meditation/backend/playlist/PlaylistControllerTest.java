@@ -161,4 +161,51 @@ class PlaylistControllerTest {
     assertNull(sessionLogs.get(0).getPlaylistId());
     assertEquals("Morning Sequence", sessionLogs.get(0).getPlaylistName());
   }
+
+  @Test
+  void allowsDifferentPlaylistsToReuseTheSamePlaylistItemId() throws Exception {
+    mockMvc.perform(put("/api/playlists/playlist-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "playlist-1",
+                  "name": "Morning Sequence",
+                  "favorite": false,
+                  "items": [
+                    {
+                      "id": "shared-item",
+                      "meditationType": "Vipassana",
+                      "durationMinutes": 10
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/playlists/playlist-2")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "playlist-2",
+                  "name": "Evening Sequence",
+                  "favorite": true,
+                  "items": [
+                    {
+                      "id": "shared-item",
+                      "meditationType": "Ajapa",
+                      "durationMinutes": 15
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("playlist-2"))
+        .andExpect(jsonPath("$.items[0].id").value("shared-item"));
+
+    mockMvc.perform(get("/api/playlists"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(2)))
+        .andExpect(jsonPath("$[0].items[0].id").value("shared-item"))
+        .andExpect(jsonPath("$[1].items[0].id").value("shared-item"));
+  }
 }

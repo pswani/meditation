@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
@@ -11,6 +11,15 @@ const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 
 async function waitForHomeQuickStartReady() {
   await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
+}
+
+function createJsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
 }
 
 describe('HomePage UX', () => {
@@ -160,5 +169,97 @@ describe('HomePage UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
     expect(screen.getByText(/stay present/i)).toBeInTheDocument();
+  });
+
+  it('keeps favorite playlist shortcuts disabled until backend playlists finish hydrating', async () => {
+    localStorage.setItem(
+      PLAYLISTS_KEY,
+      JSON.stringify([
+        {
+          id: 'playlist-1',
+          name: 'Evening Sequence',
+          favorite: true,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+          items: [
+            {
+              id: 'playlist-item-1',
+              durationMinutes: 10,
+              meditationType: 'Vipassana',
+            },
+          ],
+        },
+      ])
+    );
+
+    let resolvePlaylists: ((value: unknown) => void) | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: '',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          const body = await new Promise((resolve) => {
+            resolvePlaylists = resolve;
+          });
+
+          return createJsonResponse(200, body);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/loading favorite playlists from the backend/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^run$/i })).toBeDisabled();
+
+    resolvePlaylists?.([
+      {
+        id: 'playlist-1',
+        name: 'Evening Sequence',
+        favorite: true,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+        items: [
+          {
+            id: 'playlist-item-1',
+            durationMinutes: 10,
+            meditationType: 'Vipassana',
+          },
+        ],
+      },
+    ]);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^run$/i })).toBeEnabled());
+    expect(screen.queryByText(/loading favorite playlists from the backend/i)).not.toBeInTheDocument();
   });
 });

@@ -22,6 +22,13 @@ function getSetItemCallsFor(spy: ReturnType<typeof vi.spyOn>, storageKey: string
   return spy.mock.calls.filter((call) => call[0] === storageKey);
 }
 
+async function flushProviderHydration() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 function PersistenceHarness() {
   const { setSettings, startSession, pauseSession, startPlaylistRun, pausePlaylistRun, activeSession, activePlaylistRun } = useTimer();
 
@@ -92,7 +99,7 @@ describe('TimerProvider persistence behavior', () => {
     expect(pausedPayload.activeSession.remainingSeconds).toBeLessThan(600);
   });
 
-  it('does not rewrite active playlist persistence on every countdown tick', () => {
+  it('does not rewrite active playlist persistence on every countdown tick', async () => {
     localStorage.setItem(
       PLAYLISTS_KEY,
       JSON.stringify([
@@ -122,6 +129,7 @@ describe('TimerProvider persistence behavior', () => {
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     setItemSpy.mockClear();
 
+    await flushProviderHydration();
     fireEvent.click(screen.getByRole('button', { name: /start playlist run/i }));
 
     expect(getSetItemCallsFor(setItemSpy, ACTIVE_PLAYLIST_RUN_STATE_KEY)).toHaveLength(1);
