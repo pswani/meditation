@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C prompt 02 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has backend-backed summaries plus backend-backed sankalpa persistence/progress and is ready for the discipline-and-insight review prompt.
+Milestone C prompt 03 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has a written discipline-and-insight review and is ready for the remediation prompt.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -80,6 +80,19 @@ Milestone C prompt 02 is complete on `codex/milestone-c-discipline-insight-fulls
   - frontend local fallback still derives progress client-side when the backend is unavailable
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/03-review-discipline-insight-fullstack.md`
+
+## Milestone C prompt 03: review
+- Added:
+  - `docs/review-discipline-insight-fullstack.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - `sankalpa` save fallback currently writes to local storage for any API failure, which can diverge the UI from the H2-backed source of truth
+    - backend time-of-day bucketing depends on server timezone and can disagree with browser-local fallback behavior
+  - nice-to-have issues:
+    - fallback `sankalpa` saves are styled like success instead of degraded persistence
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/04-remediate-discipline-insight-fullstack.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
