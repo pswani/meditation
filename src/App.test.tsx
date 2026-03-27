@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1073,9 +1074,11 @@ describe('App shell', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const firstRender = render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <App />
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter initialEntries={['/settings']}>
+          <App />
+        </MemoryRouter>
+      </StrictMode>
     );
 
     await flushBackendHydration();
@@ -1087,9 +1090,11 @@ describe('App shell', () => {
     firstRender.unmount();
 
     render(
-      <MemoryRouter initialEntries={['/practice']}>
-        <App />
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter initialEntries={['/practice']}>
+          <App />
+        </MemoryRouter>
+      </StrictMode>
     );
 
     expect(await screen.findByLabelText(/duration \(minutes\)/i)).toHaveValue(32);

@@ -329,6 +329,20 @@ Open:
 - on the developer machine: `http://localhost:5173/`
 - on other devices on the same Wi-Fi: `http://<LAN-IP>:5173/`
 
+Notes:
+
+- the backend CORS allowlist already supports the local dev and preview ports used by this repo:
+  - `5173`
+  - `5174`
+  - `4173`
+  - `4174`
+- if you need an isolated local full-stack run without using the default frontend port, prefer `5174` over an arbitrary port so the existing backend CORS config continues to work without extra changes
+- for an isolated frontend run pointed at a non-default backend port, this prompt verified:
+
+```bash
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+```
+
 ### Run the back end
 
 The repo now includes an in-repo backend module under `backend/`.
@@ -344,6 +358,12 @@ Default behavior:
 - the root helper auto-detects `backend/pom.xml`
 - the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev`
 - the backend listens on port `8080` unless `MEDITATION_BACKEND_PORT` is set
+
+For an isolated local verification run that does not reuse the default H2 file or backend port, this prompt verified:
+
+```bash
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+```
 
 You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
 
@@ -1173,6 +1193,42 @@ Current verification pattern:
 7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
 8. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
 
+### Verified full-stack local workflow
+
+This prompt verified the following local full-stack flow end to end:
+
+1. Run `npm run media:setup`.
+2. Start an isolated backend:
+
+```bash
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+```
+
+3. Start the frontend on an already-allowed local dev port and point the proxy at that backend:
+
+```bash
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+```
+
+4. Open `http://127.0.0.1:5174/`.
+5. Verify the main flows:
+   - `Settings` save updates backend-backed timer defaults
+   - `History` manual log save appears immediately in recent session log entries
+   - `Practice` -> `Show Tools` -> `Custom Plays` creates and applies a `custom play`
+   - `Practice` -> `Open Playlists` creates a playlist and records an ended-early playlist `session log`
+   - `Sankalpa` saves a goal and `Home` reflects the active sankalpa snapshot plus recent activity
+
+Important distinction:
+
+- Vite dev uses the `/api` proxy
+- Vite preview does not proxy `/api`
+- if you want a production-build preview connected to a backend, rebuild first with an explicit API base URL, for example:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8081/api npm run build
+npm run preview -- --host 127.0.0.1 --port 4174
+```
+
 ## Build And Deployment
 
 ### Build production artifacts
@@ -1266,6 +1322,14 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
+```
+
+Backend verification for the in-repo Spring Boot module is also required for meaningful full-stack changes:
+
+```bash
+cd backend
+mvn -Dmaven.repo.local=../local-data/m2 test
+mvn -Dmaven.repo.local=../local-data/m2 verify
 ```
 
 Use those commands before handing off documentation or behavior changes.

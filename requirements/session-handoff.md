@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone E prompt 03 accessibility and responsive polish is complete on `codex/milestone-e-hardening-release`. The app now has stronger form accessibility semantics, calmer wide-screen management layouts, and verified prompt-03 coverage. The next exact prompt is ready.
+Milestone E prompt 04 end-to-end verification is complete on `codex/milestone-e-hardening-release`. The app now has connected local full-stack verification coverage, two verification-driven bug fixes, and updated run guidance that matches the working local stack. The next exact prompt is ready.
 
 ## Milestone E branch setup
 - Parent branch: `codex/functioning`
@@ -103,6 +103,42 @@ Milestone E prompt 03 accessibility and responsive polish is complete on `codex/
   - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
 - Exact recommended next prompt:
   - `prompts/milestone-e-hardening-release/04-e2e-verification.md`
+
+## Milestone E prompt 04: end-to-end verification
+- Added and used:
+  - `requirements/execplan-milestone-e-e2e-verification.md`
+- Connected local stack verified:
+  - frontend `http://127.0.0.1:5174`
+  - backend `http://127.0.0.1:8081`
+  - isolated H2 database name `meditation-prompt04`
+- Verification-driven fixes:
+  - fixed a React StrictMode lifecycle bug in `src/features/timer/TimerContext.tsx` so queue-backed sync flushes still run after the initial development mount cycle
+  - shortened playlist-generated `session log` ids in `src/utils/playlistLog.ts` so playlist auto-log and ended-early flows fit the backend `session_log.id varchar(64)` limit
+- Test coverage updates:
+  - wrapped the existing backend timer-settings rehydration app test in `StrictMode` within `src/App.test.tsx` so prompt 04 covers the real app lifecycle
+  - added focused playlist log id-length coverage in `src/utils/playlistLog.test.ts`
+- Documentation updates:
+  - updated `README.md` with the exact verified connected backend and frontend commands
+  - documented that Vite dev proxies `/api`, while Vite preview requires an explicit `VITE_API_BASE_URL`
+  - added backend Maven verification commands to the README verification snapshot
+- Live browser verification completed for:
+  - Home
+  - Settings save and reload
+  - manual log save in History
+  - `custom play` creation and timer apply
+  - playlist creation, run launch, ended-early logging, and History visibility
+  - Sankalpa creation and Home snapshot visibility
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+- Known limitations:
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/05-release-readiness.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`

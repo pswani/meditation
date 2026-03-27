@@ -359,6 +359,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     activeSessionStartedAt !== null &&
     bootstrap.hydration.activeSession?.startedAt === activeSessionStartedAt &&
     bootstrap.hydration.activeSession?.endAtMs === activeSessionEndAtMs;
+
   const persistedTimerRemainingSeconds = activeSessionStartedAt
     ? isPaused || isRecoveredRunningTimer
       ? activeSessionRemainingSeconds
@@ -505,6 +506,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [queue]);
 
   useEffect(() => {
+    isTimerProviderMountedRef.current = true;
+
     return () => {
       isTimerProviderMountedRef.current = false;
     };

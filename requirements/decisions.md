@@ -2,6 +2,16 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e end-to-end verification decisions
+- Run connected local full-stack verification on backend `127.0.0.1:8081` with isolated H2 database `meditation-prompt04`, and point the frontend at that backend on supported local ports already covered by the backend CORS allowlist:
+  - Vite dev: `5173` or `5174`
+  - Vite preview: `4173` or `4174`
+- Treat React StrictMode as part of the real app lifecycle and fix `TimerContext` mount-state bookkeeping in the provider, instead of weakening StrictMode-based test coverage or special-casing development behavior.
+- Keep playlist-generated `session log` ids bounded to the backend `session_log.id varchar(64)` limit so playlist auto-log and ended-early flows remain safe against H2 persistence failures.
+- Document local runtime expectations explicitly:
+  - Vite dev proxies `/api`
+  - Vite preview does not proxy `/api` and therefore requires an explicit `VITE_API_BASE_URL` for connected full-stack checks
+
 ### 2026-03-27 milestone-e accessibility and responsive polish decisions
 - Improve accessible form semantics on the highest-value validation-heavy flows first:
   - timer setup

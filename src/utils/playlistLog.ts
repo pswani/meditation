@@ -29,9 +29,11 @@ export function buildPlaylistItemLogEntry({
   status,
 }: BuildPlaylistItemLogEntryParams): SessionLog {
   const intendedDurationSeconds = Math.round(item.durationMinutes * 60);
+  const statusToken = status === 'completed' ? 'completed' : 'ended-early';
+  const runToken = playlistRunId.slice(-24);
 
   return {
-    id: `${playlistId}-${item.id}-${endedAt.getTime()}-${status}`,
+    id: `plog-${runToken}-${itemPosition}-${endedAt.getTime()}-${statusToken}`,
     startedAt,
     endedAt: endedAt.toISOString(),
     meditationType: item.meditationType,
