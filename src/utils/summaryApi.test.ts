@@ -12,6 +12,7 @@ describe('summary api boundary', () => {
     expect(buildSummariesPath({ startAt: '2026-03-20T00:00:00.000Z', endAt: '2026-03-26T23:59:59.999Z' })).toBe(
       '/summaries?startAt=2026-03-20T00%3A00%3A00.000Z&endAt=2026-03-26T23%3A59%3A59.999Z'
     );
+    expect(buildSummariesPath({ timeZone: 'America/Chicago' })).toBe('/summaries?timeZone=America%2FChicago');
     expect(buildSummariesUrl({ startAt: '2026-03-20T00:00:00.000Z' }, 'http://127.0.0.1:8080/api')).toBe(
       'http://127.0.0.1:8080/api/summaries?startAt=2026-03-20T00%3A00%3A00.000Z'
     );

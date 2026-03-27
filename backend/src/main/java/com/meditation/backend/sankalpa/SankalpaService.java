@@ -3,6 +3,7 @@ package com.meditation.backend.sankalpa;
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
@@ -31,21 +32,23 @@ public class SankalpaService {
     this.sessionLogRepository = sessionLogRepository;
   }
 
-  public List<SankalpaProgressResponse> listSankalpas() {
+  public List<SankalpaProgressResponse> listSankalpas(String timeZoneRaw) {
     List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
     Instant now = Instant.now();
+    ZoneId zoneId = parseZoneId(timeZoneRaw);
 
     return sankalpaGoalRepository.findAllByArchivedFalseOrderByCreatedAtDesc()
         .stream()
-        .map((goal) -> toProgressResponse(goal, sessionLogs, now))
+        .map((goal) -> toProgressResponse(goal, sessionLogs, now, zoneId))
         .toList();
   }
 
-  public SankalpaProgressResponse saveSankalpa(String sankalpaId, SankalpaGoalUpsertRequest request) {
+  public SankalpaProgressResponse saveSankalpa(String sankalpaId, SankalpaGoalUpsertRequest request, String timeZoneRaw) {
     validateRequest(sankalpaId, request);
 
     Instant now = Instant.now();
     Instant createdAt = parseTimestamp(request.createdAt(), "Created at must be a valid ISO timestamp.");
+    ZoneId zoneId = parseZoneId(timeZoneRaw);
     SankalpaGoalEntity entity = sankalpaGoalRepository.findById(sankalpaId)
         .orElseGet(() -> new SankalpaGoalEntity(
             sankalpaId,
@@ -73,20 +76,21 @@ public class SankalpaService {
     );
 
     List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
-    SankalpaProgressResponse progress = toProgressResponse(entity, sessionLogs, now);
+    SankalpaProgressResponse progress = toProgressResponse(entity, sessionLogs, now, zoneId);
     entity.setCompletedAt("completed".equals(progress.status()) ? now : null);
 
     SankalpaGoalEntity savedEntity = sankalpaGoalRepository.save(entity);
-    return toProgressResponse(savedEntity, sessionLogs, now);
+    return toProgressResponse(savedEntity, sessionLogs, now, zoneId);
   }
 
   private SankalpaProgressResponse toProgressResponse(
       SankalpaGoalEntity goal,
       List<SessionLogEntity> sessionLogs,
-      Instant now
+      Instant now,
+      ZoneId zoneId
   ) {
     List<SessionLogEntity> matchingSessionLogs = sessionLogs.stream()
-        .filter((sessionLog) -> sessionLogInGoalWindow(sessionLog, goal) && sessionLogMatchesFilters(sessionLog, goal))
+        .filter((sessionLog) -> sessionLogInGoalWindow(sessionLog, goal) && sessionLogMatchesFilters(sessionLog, goal, zoneId))
         .toList();
     int matchedSessionCount = matchingSessionLogs.size();
     int matchedDurationSeconds = matchingSessionLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum();
@@ -136,16 +140,16 @@ public class SankalpaService {
     return !sessionLog.getEndedAt().isBefore(goal.getCreatedAt()) && !sessionLog.getEndedAt().isAfter(deadlineAt);
   }
 
-  private boolean sessionLogMatchesFilters(SessionLogEntity sessionLog, SankalpaGoalEntity goal) {
+  private boolean sessionLogMatchesFilters(SessionLogEntity sessionLog, SankalpaGoalEntity goal, ZoneId zoneId) {
     if (goal.getMeditationTypeCode() != null && !goal.getMeditationTypeCode().equals(sessionLog.getMeditationTypeCode())) {
       return false;
     }
 
-    return goal.getTimeOfDayBucket() == null || goal.getTimeOfDayBucket().equals(getTimeOfDayBucket(sessionLog));
+    return goal.getTimeOfDayBucket() == null || goal.getTimeOfDayBucket().equals(getTimeOfDayBucket(sessionLog, zoneId));
   }
 
-  private String getTimeOfDayBucket(SessionLogEntity sessionLog) {
-    int hour = sessionLog.getEndedAt().atZone(ZoneId.systemDefault()).getHour();
+  private String getTimeOfDayBucket(SessionLogEntity sessionLog, ZoneId zoneId) {
+    int hour = sessionLog.getEndedAt().atZone(zoneId).getHour();
     if (hour >= 5 && hour < 12) {
       return "morning";
     }
@@ -156,6 +160,18 @@ public class SankalpaService {
       return "evening";
     }
     return "night";
+  }
+
+  private ZoneId parseZoneId(String value) {
+    if (value == null || value.isBlank()) {
+      return ZoneId.systemDefault();
+    }
+
+    try {
+      return ZoneId.of(value);
+    } catch (DateTimeException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Time zone must be a valid IANA zone.");
+    }
   }
 
   private void validateRequest(String sankalpaId, SankalpaGoalUpsertRequest request) {

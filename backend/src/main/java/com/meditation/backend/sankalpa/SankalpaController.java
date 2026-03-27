@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,15 +20,16 @@ public class SankalpaController {
   }
 
   @GetMapping
-  public List<SankalpaProgressResponse> listSankalpas() {
-    return sankalpaService.listSankalpas();
+  public List<SankalpaProgressResponse> listSankalpas(@RequestParam(required = false) String timeZone) {
+    return sankalpaService.listSankalpas(timeZone);
   }
 
   @PutMapping("/{sankalpaId}")
   public SankalpaProgressResponse saveSankalpa(
       @PathVariable String sankalpaId,
-      @RequestBody SankalpaGoalUpsertRequest request
+      @RequestBody SankalpaGoalUpsertRequest request,
+      @RequestParam(required = false) String timeZone
   ) {
-    return sankalpaService.saveSankalpa(sankalpaId, request);
+    return sankalpaService.saveSankalpa(sankalpaId, request, timeZone);
   }
 }

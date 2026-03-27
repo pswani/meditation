@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C prompt 03 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has a written discipline-and-insight review and is ready for the remediation prompt.
+Milestone C prompt 04 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has the review remediations in place and is ready for the Milestone C testing prompt.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -93,6 +93,36 @@ Milestone C prompt 03 is complete on `codex/milestone-c-discipline-insight-fulls
     - fallback `sankalpa` saves are styled like success instead of degraded persistence
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/04-remediate-discipline-insight-fullstack.md`
+
+## Milestone C prompt 04: remediation
+- Added and used:
+  - `requirements/execplan-milestone-c-discipline-insight-remediation.md`
+- Backend changes:
+  - updated `GET /api/summaries` to accept an optional `timeZone` query parameter for time-of-day aggregation
+  - updated `GET /api/sankalpas` and `PUT /api/sankalpas/{id}` to accept an optional `timeZone` query parameter for time-of-day filter evaluation
+  - added explicit invalid-time-zone validation so malformed IANA zone ids return `400` instead of silently using the backend host timezone
+- Frontend changes:
+  - added `src/utils/timeZone.ts` to resolve the browser's IANA time zone when available
+  - updated `src/utils/summaryApi.ts` and `src/utils/sankalpaApi.ts` to send the browser time zone to the backend
+  - tightened `src/features/sankalpa/useSankalpaProgress.ts` so local `sankalpa` save fallback only happens for network failures
+  - kept backend rejections as inline errors on `SankalpaPage` and styled degraded fallback feedback as a warning instead of a clean success state
+- Tests:
+  - added backend controller coverage for time-zone-aware summary bucketing and sankalpa time-of-day filtering
+  - updated frontend API-boundary tests for time-zone query handling
+  - added `SankalpaPage` coverage proving rejected backend saves do not persist local divergent goals
+  - updated `HomePage` backend snapshot coverage for the new `timeZone` query parameter
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - `sankalpa` editing, deletion, and archive management are still not implemented
+  - frontend summary fallback still derives buckets locally when the summary API is unavailable
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/05-test-discipline-insight-fullstack.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

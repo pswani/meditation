@@ -296,7 +296,7 @@ describe('HomePage UX', () => {
           return createJsonResponse(200, []);
         }
 
-        if (url.endsWith('/api/sankalpas') && method === 'GET') {
+        if (url.includes('/api/sankalpas') && method === 'GET') {
           return createJsonResponse(200, [
             {
               goal: {

@@ -80,11 +80,13 @@ Single-page React application with route-based screens and feature-oriented modu
   - `/api/playlists`
 - current sankalpa REST surfaces include:
   - `/api/sankalpas`
+    - accepts optional `timeZone` query input for time-of-day filter evaluation
 - current session-log REST surfaces include:
   - `/api/session-logs`
   - `/api/session-logs/manual`
 - current summary REST surfaces include:
   - `/api/summaries`
+    - accepts optional `timeZone` query input for time-of-day aggregation
 - reserved domain packages for:
   - `reference`
 

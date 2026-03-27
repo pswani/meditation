@@ -105,6 +105,20 @@ class SummaryControllerTest {
         .andExpect(status().isBadRequest());
   }
 
+  @Test
+  void usesTheRequestedTimeZoneForTimeOfDayBuckets() throws Exception {
+    sessionLogRepository.save(
+        createSessionLog("log-zone", "Vipassana", "auto log", "completed", Instant.parse("2026-03-26T23:30:00Z"), 900)
+    );
+
+    mockMvc.perform(get("/api/summaries")
+            .queryParam("timeZone", "Asia/Kolkata")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.byTimeOfDaySummary[0].timeOfDayBucket").value("morning"))
+        .andExpect(jsonPath("$.byTimeOfDaySummary[0].sessionLogs").value(1));
+  }
+
   private SessionLogEntity createSessionLog(
       String id,
       String meditationType,

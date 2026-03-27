@@ -26,6 +26,12 @@ interface SankalpaProgressApiResponse {
   readonly progressRatio: number;
 }
 
+interface SankalpaApiOptions {
+  readonly apiBaseUrl?: string;
+  readonly signal?: AbortSignal;
+  readonly timeZone?: string;
+}
+
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
 const goalTypes = new Set(['duration-based', 'session-count-based']);
 const statuses = new Set(['active', 'completed', 'expired']);
@@ -119,6 +125,22 @@ export function buildSankalpaDetailPath(sankalpaId: string): string {
   return `${SANKALPAS_COLLECTION_PATH}/${sankalpaId}`;
 }
 
+function buildSankalpaQueryString(timeZone?: string): string {
+  if (!timeZone) {
+    return '';
+  }
+
+  return `?${new URLSearchParams({ timeZone }).toString()}`;
+}
+
+function buildSankalpaCollectionPath(timeZone?: string): string {
+  return `${SANKALPAS_COLLECTION_PATH}${buildSankalpaQueryString(timeZone)}`;
+}
+
+function buildSankalpaDetailRequestPath(sankalpaId: string, timeZone?: string): string {
+  return `${buildSankalpaDetailPath(sankalpaId)}${buildSankalpaQueryString(timeZone)}`;
+}
+
 export function buildSankalpaDetailEndpoint(sankalpaId: string): string {
   return buildApiPath(buildSankalpaDetailPath(sankalpaId));
 }
@@ -131,15 +153,19 @@ export function buildSankalpaDetailUrl(sankalpaId: string, apiBaseUrl?: string):
   return buildApiUrl(buildSankalpaDetailPath(sankalpaId), apiBaseUrl);
 }
 
-export async function listSankalpaProgressFromApi(apiBaseUrl?: string, signal?: AbortSignal): Promise<SankalpaProgress[]> {
-  const payload = await requestJson<unknown>(SANKALPAS_COLLECTION_PATH, { apiBaseUrl, signal });
+export async function listSankalpaProgressFromApi(options: SankalpaApiOptions = {}): Promise<SankalpaProgress[]> {
+  const payload = await requestJson<unknown>(buildSankalpaCollectionPath(options.timeZone), {
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
+  });
   return normalizeProgressCollection(payload);
 }
 
-export async function persistSankalpaToApi(sankalpa: SankalpaGoal, apiBaseUrl?: string): Promise<SankalpaProgress> {
-  const payload = await requestJson<unknown, SankalpaGoal>(buildSankalpaDetailPath(sankalpa.id), {
+export async function persistSankalpaToApi(sankalpa: SankalpaGoal, options: SankalpaApiOptions = {}): Promise<SankalpaProgress> {
+  const payload = await requestJson<unknown, SankalpaGoal>(buildSankalpaDetailRequestPath(sankalpa.id, options.timeZone), {
     method: 'PUT',
-    apiBaseUrl,
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
     body: sankalpa,
   });
 

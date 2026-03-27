@@ -18,8 +18,9 @@ public class SummaryController {
   @GetMapping
   public SummaryResponse getSummary(
       @RequestParam(required = false) String startAt,
-      @RequestParam(required = false) String endAt
+      @RequestParam(required = false) String endAt,
+      @RequestParam(required = false) String timeZone
   ) {
-    return summaryService.getSummary(startAt, endAt);
+    return summaryService.getSummary(startAt, endAt, timeZone);
   }
 }

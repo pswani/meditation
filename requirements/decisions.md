@@ -22,6 +22,12 @@
 - Preserve a calm local derived fallback on the `Sankalpa` screen when the summary API is temporarily unavailable, and explain that fallback plainly instead of hiding the degraded state.
 - Treat backend time-of-day bucketing as a local-runtime timezone concern for the current single-user local-development setup.
 
+### 2026-03-26 milestone-c discipline insight remediation decisions
+- Accept an optional browser-supplied IANA `timeZone` query parameter on `/api/summaries` and `/api/sankalpas` so backend time-of-day buckets stay aligned with the frontend's local fallback semantics.
+- Keep invalid time-zone input explicit and bounded by returning a `400` response instead of silently falling back to the backend host timezone.
+- Narrow local `sankalpa` save fallback to true network-unreachable failures only; backend validation or server rejections must not fork local state away from the H2-backed source of truth.
+- Surface degraded local-save fallback as a warning state and keep backend rejection feedback inline on the `Sankalpa` screen.
+
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
 - Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.

@@ -378,4 +378,140 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByText(/filters: meditation type: vipassana · time of day: morning/i)).toBeInTheDocument();
     expect(screen.getByText(/progress: 2 \/ 3 session logs · 1 session log remaining/i)).toBeInTheDocument();
   });
+
+  it('does not save a sankalpa locally when the backend rejects the save request', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.includes('/api/settings/timer') && method === 'GET') {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              id: 'default',
+              durationMinutes: 20,
+              meditationType: '',
+              startSound: 'None',
+              endSound: 'Temple Bell',
+              intervalEnabled: false,
+              intervalMinutes: 5,
+              intervalSound: 'Temple Bell',
+              updatedAt: '2026-03-26T12:00:00.000Z',
+            }),
+          };
+        }
+
+        if (url.includes('/api/session-logs') && method === 'GET') {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+
+        if (url.includes('/api/media/custom-plays') && method === 'GET') {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+
+        if (url.includes('/api/playlists') && method === 'GET') {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+
+        if (url.includes('/api/summaries') && method === 'GET') {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              overallSummary: {
+                totalSessionLogs: 0,
+                completedSessionLogs: 0,
+                endedEarlySessionLogs: 0,
+                totalDurationSeconds: 0,
+                averageDurationSeconds: 0,
+                autoLogs: 0,
+                manualLogs: 0,
+              },
+              byTypeSummary: [
+                { meditationType: 'Vipassana', sessionLogs: 0, totalDurationSeconds: 0 },
+                { meditationType: 'Ajapa', sessionLogs: 0, totalDurationSeconds: 0 },
+                { meditationType: 'Tratak', sessionLogs: 0, totalDurationSeconds: 0 },
+                { meditationType: 'Kriya', sessionLogs: 0, totalDurationSeconds: 0 },
+                { meditationType: 'Sahaj', sessionLogs: 0, totalDurationSeconds: 0 },
+              ],
+              bySourceSummary: [
+                {
+                  source: 'auto log',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+                {
+                  source: 'manual log',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+              ],
+              byTimeOfDaySummary: [
+                {
+                  timeOfDayBucket: 'morning',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+                {
+                  timeOfDayBucket: 'afternoon',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+                {
+                  timeOfDayBucket: 'evening',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+                {
+                  timeOfDayBucket: 'night',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url.includes('/api/sankalpas') && method === 'GET') {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+
+        if (url.includes('/api/sankalpas') && method === 'PUT') {
+          return {
+            ok: false,
+            status: 400,
+            text: async () => 'Sankalpa goal type is invalid.',
+          };
+        }
+
+        throw new TypeError(`Unhandled ${method} ${url}`);
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa goal type is invalid/i)).toBeInTheDocument());
+    expect(screen.queryByText(/120 min in 7 days/i)).not.toBeInTheDocument();
+  });
 });

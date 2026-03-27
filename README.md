@@ -137,13 +137,13 @@ Today:
 
 - `src/utils/customPlayApi.ts` performs live HTTP requests to `/api/custom-plays`
 - `src/utils/mediaAssetApi.ts` performs live HTTP requests to `/api/media/custom-plays` through a shared API client
-- `src/utils/summaryApi.ts` performs live HTTP requests to `/api/summaries`
+- `src/utils/summaryApi.ts` performs live HTTP requests to `/api/summaries` and sends the browser time zone when available
 - `src/utils/sessionLogApi.ts` creates manual logs through `/api/session-logs/manual`
 - `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
 - `src/utils/playlistApi.ts` performs live HTTP requests to `/api/playlists`
-- `src/utils/sankalpaApi.ts` performs live HTTP requests to `/api/sankalpas`
-- `src/features/sankalpa/useSankalpaProgress.ts` hydrates backend sankalpa progress while preserving local cache fallback and id-preserving migration
+- `src/utils/sankalpaApi.ts` performs live HTTP requests to `/api/sankalpas` and sends the browser time zone when available
+- `src/features/sankalpa/useSankalpaProgress.ts` hydrates backend sankalpa progress while preserving local cache fallback, id-preserving migration, and network-only local-save fallback
 
 Stable endpoint contracts in the frontend still include:
 
@@ -1094,11 +1094,14 @@ The backend foundation exposes reachable REST endpoints now:
 - `GET /api/playlists`
 - `GET /api/media/custom-plays`
 - `GET /api/sankalpas`
+- `GET /api/summaries`
 
 What is still true today:
 
 - the frontend now calls the media catalog endpoint
 - the sankalpa front-end API module now performs live REST requests with local cache fallback
+- backend-backed `summary` and `sankalpa` time-of-day behavior can take the browser's IANA time zone when available
+- `sankalpa` saves only fall back to local persistence when the backend is unreachable; backend validation failures stay as inline errors
 
 What you can verify today:
 

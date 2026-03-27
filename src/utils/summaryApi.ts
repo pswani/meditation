@@ -8,6 +8,7 @@ export const SUMMARIES_COLLECTION_ENDPOINT = buildApiPath(SUMMARIES_COLLECTION_P
 interface SummaryApiRequest {
   readonly startAt?: string;
   readonly endAt?: string;
+  readonly timeZone?: string;
 }
 
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
@@ -107,6 +108,9 @@ function buildSummaryQueryString(request: SummaryApiRequest = {}): string {
   }
   if (request.endAt) {
     query.set('endAt', request.endAt);
+  }
+  if (request.timeZone) {
+    query.set('timeZone', request.timeZone);
   }
 
   const queryString = query.toString();

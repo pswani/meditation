@@ -55,7 +55,7 @@ describe('sankalpa api boundary', () => {
       })
     );
 
-    await expect(listSankalpaProgressFromApi()).resolves.toEqual([
+    await expect(listSankalpaProgressFromApi({ timeZone: 'America/Chicago' })).resolves.toEqual([
       {
         goal: {
           id: 'goal-valid',
@@ -103,13 +103,16 @@ describe('sankalpa api boundary', () => {
     );
 
     await expect(
-      persistSankalpaToApi({
-        id: 'goal-1',
-        goalType: 'duration-based',
-        targetValue: 12.5,
-        days: 7,
-        createdAt: '2026-03-24T08:00:00.000Z',
-      })
+      persistSankalpaToApi(
+        {
+          id: 'goal-1',
+          goalType: 'duration-based',
+          targetValue: 12.5,
+          days: 7,
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+        { timeZone: 'America/Chicago' }
+      )
     ).resolves.toMatchObject({
       goal: {
         id: 'goal-1',

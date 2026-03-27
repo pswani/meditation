@@ -2,6 +2,7 @@ package com.meditation.backend.summary;
 
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
@@ -25,9 +26,10 @@ public class SummaryService {
     this.sessionLogRepository = sessionLogRepository;
   }
 
-  public SummaryResponse getSummary(String startAtRaw, String endAtRaw) {
+  public SummaryResponse getSummary(String startAtRaw, String endAtRaw, String timeZoneRaw) {
     Instant startAt = parseOptionalInstant(startAtRaw, "Start at must be a valid ISO timestamp.");
     Instant endAt = parseOptionalInstant(endAtRaw, "End at must be a valid ISO timestamp.");
+    ZoneId zoneId = parseZoneId(timeZoneRaw);
 
     if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
@@ -38,7 +40,7 @@ public class SummaryService {
         deriveOverallSummary(sessionLogs),
         deriveSummaryByType(sessionLogs),
         deriveSummaryBySource(sessionLogs),
-        deriveSummaryByTimeOfDay(sessionLogs)
+        deriveSummaryByTimeOfDay(sessionLogs, zoneId)
     );
   }
 
@@ -113,11 +115,11 @@ public class SummaryService {
         .toList();
   }
 
-  private List<SummaryByTimeOfDayResponse> deriveSummaryByTimeOfDay(List<SessionLogEntity> sessionLogs) {
+  private List<SummaryByTimeOfDayResponse> deriveSummaryByTimeOfDay(List<SessionLogEntity> sessionLogs, ZoneId zoneId) {
     return TIME_OF_DAY_BUCKETS.stream()
         .map((bucket) -> {
           List<SessionLogEntity> matchingLogs = sessionLogs.stream()
-              .filter((entry) -> bucket.equals(getTimeOfDayBucket(entry)))
+              .filter((entry) -> bucket.equals(getTimeOfDayBucket(entry, zoneId)))
               .toList();
           int completedSessionLogs = (int) matchingLogs.stream().filter(this::isCompletedLog).count();
 
@@ -136,8 +138,8 @@ public class SummaryService {
     return COMPLETED_STATUS.contains(sessionLog.getStatus());
   }
 
-  private String getTimeOfDayBucket(SessionLogEntity sessionLog) {
-    int hour = sessionLog.getEndedAt().atZone(ZoneId.systemDefault()).getHour();
+  private String getTimeOfDayBucket(SessionLogEntity sessionLog, ZoneId zoneId) {
+    int hour = sessionLog.getEndedAt().atZone(zoneId).getHour();
     if (hour >= 5 && hour < 12) {
       return "morning";
     }
@@ -148,6 +150,18 @@ public class SummaryService {
       return "evening";
     }
     return "night";
+  }
+
+  private ZoneId parseZoneId(String value) {
+    if (value == null || value.isBlank()) {
+      return ZoneId.systemDefault();
+    }
+
+    try {
+      return ZoneId.of(value);
+    } catch (DateTimeException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Time zone must be a valid IANA zone.");
+    }
   }
 
   private Instant parseOptionalInstant(String value, String errorMessage) {

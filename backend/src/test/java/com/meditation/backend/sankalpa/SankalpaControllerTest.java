@@ -116,6 +116,31 @@ class SankalpaControllerTest {
         .andExpect(status().isBadRequest());
   }
 
+  @Test
+  void usesTheRequestedTimeZoneWhenApplyingTimeOfDayFilters() throws Exception {
+    sankalpaGoalRepository.save(
+        new SankalpaGoalEntity(
+            "goal-zone",
+            "session-count-based",
+            java.math.BigDecimal.ONE,
+            7,
+            null,
+            "morning",
+            Instant.parse("2026-03-24T00:00:00Z"),
+            null,
+            false
+        )
+    );
+    sessionLogRepository.save(createSessionLog("log-zone", "Vipassana", Instant.parse("2026-03-26T23:30:00Z"), 900));
+
+    mockMvc.perform(get("/api/sankalpas")
+            .queryParam("timeZone", "Asia/Kolkata")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].matchedSessionCount").value(1))
+        .andExpect(jsonPath("$[0].status").value("completed"));
+  }
+
   private SessionLogEntity createSessionLog(String id, String meditationType, Instant endedAt, int completedDurationSeconds) {
     return new SessionLogEntity(
         id,

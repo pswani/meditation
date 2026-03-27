@@ -5,9 +5,10 @@ import { isApiClientError } from '../../utils/apiClient';
 import { deriveSankalpaProgress } from '../../utils/sankalpa';
 import { listSankalpaProgressFromApi, persistSankalpaToApi } from '../../utils/sankalpaApi';
 import { loadSankalpas, saveSankalpas } from '../../utils/storage';
+import { getUserTimeZone } from '../../utils/timeZone';
 
 interface SankalpaSaveResult {
-  readonly savedRemotely: boolean;
+  readonly tone: 'ok' | 'warn' | 'error';
   readonly message: string;
 }
 
@@ -88,12 +89,31 @@ function formatSaveFallbackMessage(error: unknown): string {
   return 'Saved locally because the backend is unavailable right now.';
 }
 
+function formatSaveErrorMessage(error: unknown): string {
+  if (isApiClientError(error)) {
+    if (error.detail && error.detail.trim().length > 0) {
+      return error.detail.trim();
+    }
+
+    if (error.kind === 'network') {
+      return 'Unable to save sankalpa right now.';
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message.trim();
+  }
+
+  return 'Unable to save sankalpa right now.';
+}
+
 export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSankalpaProgressResult {
   const [goals, setGoals] = useState<SankalpaGoal[]>(() => loadSankalpas());
   const [remoteProgressEntries, setRemoteProgressEntries] = useState<SankalpaProgress[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const goalsRef = useRef(goals);
+  const timeZone = useMemo(() => getUserTimeZone(), []);
 
   useEffect(() => {
     goalsRef.current = goals;
@@ -106,7 +126,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     const controller = new AbortController();
     setIsLoading(true);
 
-    listSankalpaProgressFromApi(undefined, controller.signal)
+    listSankalpaProgressFromApi({ signal: controller.signal, timeZone })
       .then(async (remoteProgressEntriesResponse) => {
         const cachedGoals = goalsRef.current;
         const remoteGoalIds = new Set(remoteProgressEntriesResponse.map((entry) => entry.goal.id));
@@ -115,7 +135,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
 
         if (missingCachedGoals.length > 0) {
           const migratedProgressEntries = await Promise.all(
-            missingCachedGoals.map((goal) => persistSankalpaToApi(goal))
+            missingCachedGoals.map((goal) => persistSankalpaToApi(goal, { timeZone }))
           );
           mergedProgressEntries = mergeProgressEntries(remoteProgressEntriesResponse, migratedProgressEntries);
         } else {
@@ -148,11 +168,11 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     return () => {
       controller.abort();
     };
-  }, [sessionLogs]);
+  }, [sessionLogs, timeZone]);
 
   async function saveSankalpa(goal: SankalpaGoal): Promise<SankalpaSaveResult> {
     try {
-      const savedProgressEntry = await persistSankalpaToApi(goal);
+      const savedProgressEntry = await persistSankalpaToApi(goal, { timeZone });
       const nextProgressEntries = mergeProgressEntries(progressEntries, [savedProgressEntry]);
       setRemoteProgressEntries(nextProgressEntries);
       setGoals(nextProgressEntries.map((entry) => entry.goal));
@@ -160,10 +180,17 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       setSyncMessage(null);
 
       return {
-        savedRemotely: true,
+        tone: 'ok',
         message: 'Sankalpa saved.',
       };
     } catch (error) {
+      if (!isApiClientError(error) || error.kind !== 'network') {
+        return {
+          tone: 'error',
+          message: formatSaveErrorMessage(error),
+        };
+      }
+
       const nextGoals = [...goalsRef.current.filter((entry) => entry.id !== goal.id), goal].sort(
         (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)
       );
@@ -171,10 +198,9 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       saveSankalpas(nextGoals);
       setRemoteProgressEntries(null);
       const message = formatSaveFallbackMessage(error);
-      setSyncMessage(message);
 
       return {
-        savedRemotely: false,
+        tone: 'warn',
         message,
       };
     }

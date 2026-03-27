@@ -23,9 +23,11 @@ import {
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
+import { getUserTimeZone } from '../utils/timeZone';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
+type SaveMessageTone = 'ok' | 'warn' | 'error';
 
 function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'duration-based') {
@@ -164,6 +166,7 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
+  const userTimeZone = useMemo(() => getUserTimeZone(), []);
   const summaryDateDefaults = useMemo(() => {
     const today = new Date();
     return {
@@ -175,6 +178,7 @@ export default function SankalpaPage() {
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
@@ -271,6 +275,7 @@ export default function SankalpaPage() {
         startAt:
           summaryRangeSelection.range.startAtMs === null ? undefined : new Date(summaryRangeSelection.range.startAtMs).toISOString(),
         endAt: summaryRangeSelection.range.endAtMs === null ? undefined : new Date(summaryRangeSelection.range.endAtMs).toISOString(),
+        timeZone: userTimeZone,
       },
       undefined,
       controller.signal
@@ -295,7 +300,7 @@ export default function SankalpaPage() {
     return () => {
       controller.abort();
     };
-  }, [sessionLogs, summaryRangeSelection.range]);
+  }, [sessionLogs, summaryRangeSelection.range, userTimeZone]);
 
   const inactiveSummaryCategoriesCount = useMemo(() => {
     if (!effectiveSummarySnapshot) {
@@ -346,6 +351,7 @@ export default function SankalpaPage() {
     const result = await saveSankalpa(nextGoal);
     setDraft(createInitialSankalpaDraft());
     setErrors(initialErrors);
+    setSaveMessageTone(result.tone);
     setSaveMessage(result.message);
   }
 
@@ -526,7 +532,7 @@ export default function SankalpaPage() {
         </p>
 
         {saveMessage ? (
-          <div className="status-banner ok" role="status">
+          <div className={`status-banner ${saveMessageTone === 'error' ? 'warn' : saveMessageTone}`} role="status">
             <p>{saveMessage}</p>
           </div>
         ) : null}
