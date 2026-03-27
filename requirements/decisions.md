@@ -2,6 +2,10 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d merge decisions
+- Merge `codex/milestone-d-offline-sync-fullstack` back into `codex/functioning` with a normal local merge commit so the offline architecture, reconciliation, remediation, and testing history remain intact.
+- Mark Milestone D complete on `codex/functioning` and hand off directly to `prompts/milestone-e-hardening-release/00-create-branch.md` as the next exact prompt.
+
 ### 2026-03-27 milestone-d offline sync testing decisions
 - Use app-level stateful fetch-mock journeys in `src/App.test.tsx` as the main prompt 06 confidence layer, because the remaining Milestone D risk is startup and replay continuity across multiple features rather than isolated queue helpers.
 - Add only two new prompt 06 journeys:

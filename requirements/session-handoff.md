@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 06 is complete on `codex/milestone-d-offline-sync-fullstack`. The offline-first and reconciliation flows now have expanded end-to-end verification coverage, and the milestone is ready for the final merge prompt.
+Milestone D is complete and merged into `codex/functioning`. The offline-first sync architecture, reconciliation behavior, remediation fixes, and milestone verification are now on the parent branch, and the next exact prompt is ready.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -160,6 +160,24 @@ Milestone D prompt 06 is complete on `codex/milestone-d-offline-sync-fullstack`.
   - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/99-merge-branch.md`
+
+## Milestone D merge
+- Milestone branch merged:
+  - `codex/milestone-d-offline-sync-fullstack`
+- Parent branch updated:
+  - `codex/functioning`
+- Merge strategy:
+  - normal local merge commit preserving milestone history
+- Resulting git status:
+  - clean
+- Milestone completion summary:
+  - added a shared offline/sync foundation under `src/features/sync/` and `src/utils/syncQueue.ts`
+  - made implemented backend-backed write flows local-first with browser-persisted deferred replay for timer settings, `session log`, `custom play`, playlist, and `sankalpa`
+  - added backend reconciliation through the existing REST routes with stale-write protection and idempotent replay boundaries
+  - remediated `sankalpa` replay churn and stale queued delete handling for `custom play` and playlist records
+  - expanded app-level verification for offline startup, offline actions, reconnection, sync success, and partial-failure retry flows
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/00-create-branch.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
