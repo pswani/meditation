@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone B prompt 01 is complete on `codex/milestone-b-practice-composition-fullstack`. Manual-log creation is now a dedicated backend-owned REST flow, and the branch is ready for prompt 02 media-catalog and `custom play` work.
+Milestone B prompt 02 is complete on `codex/milestone-b-practice-composition-fullstack`. Media catalog-backed `custom play` persistence now runs through H2 + REST, and the branch is ready for prompt 03 playlist full-stack work.
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
@@ -31,6 +31,30 @@ Milestone B prompt 01 is complete on `codex/milestone-b-practice-composition-ful
   - updated History test backend mocks for the new manual-log route
   - fixed `SessionLogControllerTest` isolation by clearing stored `session log` rows between tests
 
+## Milestone B prompt 02: media catalog and custom plays REST
+- Added and used:
+  - `requirements/execplan-milestone-b-media-catalog-custom-plays-rest.md`
+- Backend changes:
+  - added H2 migration `V4__add_custom_play_sound_fields.sql` to align the `custom_play` table with the current frontend sound fields
+  - added backend `custom play` repository, service, controller, request, and response contracts under `backend/src/main/java/com/meditation/backend/customplay/`
+  - added backend routes:
+    - `GET /api/custom-plays`
+    - `PUT /api/custom-plays/{id}`
+    - `DELETE /api/custom-plays/{id}`
+  - validated optional linked `media asset` ids against active `custom-play` media rows
+- Frontend changes:
+  - added `src/utils/customPlayApi.ts` as the shared REST boundary for list, upsert, and delete
+  - updated `TimerContext` to hydrate `custom play` data from the backend, migrate older local entries forward on first load, and preserve local cache fallback behavior
+  - made `custom play` save, delete, and favorite actions async so Practice feedback reflects backend persistence truthfully
+  - kept the existing `CustomPlay` screen contract stable for the rest of the app
+- UX and documentation changes:
+  - added calm loading and sync banners for backend-backed `custom play` work inside Practice tools
+  - documented local media placement under `local-data/media/custom-plays/` and the backend media-asset mapping expectations
+- Tests:
+  - added frontend API-boundary tests for `custom play` response normalization and delete failure handling
+  - updated `CustomPlayManager` tests for backend-backed save/delete/favorite flows and loading/sync states
+  - added backend repository and controller tests for `custom play` list/save/delete validation paths
+
 ## Milestone B verification status
 - Passed `npm run typecheck`
 - Passed `npm run lint`
@@ -40,7 +64,7 @@ Milestone B prompt 01 is complete on `codex/milestone-b-practice-composition-ful
 - Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 
 ## Milestone B known limitations
-- `custom play` and playlist CRUD are still local-first in the frontend.
+- Playlist and sankalpa CRUD are still local-first in the frontend.
 - Media catalog browsing still depends on the seeded backend media metadata surface plus frontend fallback assumptions.
 - Playlist-generated `session log` entries still sync through the existing generic `session log` path until playlist REST persistence lands.
 - Timer and playlist sound playback remain UI-only.
@@ -131,7 +155,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 - Finished with both automated and live verification strong enough for parent-branch merge.
 
 ## Intentional sample or helper content that remains
-- Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
+- Frontend persistence for playlists and sankalpas is still local-first outside the completed media catalog and `custom play` seam.
 - Built-in sample media metadata remains as a fallback when the backend media endpoint is unavailable.
 - `docs/review-foundation-fullstack.md` remains as the review artifact for the completed foundation assessment.
 
@@ -169,7 +193,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
   - `http://127.0.0.1:5175/practice`
 
 ## Known limitations
-- Playlists, sankalpas, and custom-play CRUD are still local-first in the UI.
+- Playlists and sankalpas are still local-first in the UI.
 - Playlist-generated `session log` entries still depend on local-only playlist data, so playlist history sync should be revisited once playlist REST persistence is added.
 - Media upload/import and authenticated admin/media-management flows are still unimplemented.
 - Timer and playlist sound playback remain UI-only.
@@ -210,16 +234,11 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for media catalog and custom plays.
-2. Implement backend support for:
-   - media asset metadata in H2
-   - media file path references
-   - media root directory configuration
-   - REST endpoints for listing relevant media assets
-   - custom play persistence
-3. Wire the front end custom plays flow to the backend.
-4. Document exactly where media files should be placed and how they map to app options.
+1. Create an ExecPlan for playlists full-stack support.
+2. Implement backend/H2/REST support for playlists and playlist items.
+3. Wire front-end playlist management and run flows to the backend where appropriate.
+4. Define and implement playlist logging behavior cleanly.
 5. Add focused tests and run full verification.
 6. Update docs and session-handoff with exact recommended next prompt.
 7. Commit with a clear message:
-   feat(composition): add media catalog and custom plays rest integration
+   feat(composition): add playlists full-stack support

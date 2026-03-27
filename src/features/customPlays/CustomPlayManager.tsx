@@ -25,7 +25,17 @@ function describeLinkedMedia(asset: MediaAssetMetadata): string {
 }
 
 export default function CustomPlayManager() {
-  const { settings, setSettings, customPlays, saveCustomPlay, deleteCustomPlay, toggleFavoriteCustomPlay } = useTimer();
+  const {
+    settings,
+    setSettings,
+    customPlays,
+    saveCustomPlay,
+    deleteCustomPlay,
+    toggleFavoriteCustomPlay,
+    isCustomPlaysLoading,
+    isCustomPlaySyncing,
+    customPlaySyncError,
+  } = useTimer();
   const [draft, setDraft] = useState<CustomPlayDraft>(initialDraft);
   const [errors, setErrors] = useState<CustomPlayValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);
@@ -61,14 +71,14 @@ export default function CustomPlayManager() {
     };
   }, []);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const playName = draft.name.trim() || 'Custom play';
     const feedbackMessage = editId ? `Custom play "${playName}" updated.` : `Custom play "${playName}" saved.`;
-    const result = saveCustomPlay(draft, editId ?? undefined);
+    const result = await saveCustomPlay(draft, editId ?? undefined);
     setErrors(result.errors);
 
-    if (result.isValid) {
+    if (result.isValid && result.persisted) {
       setDraft(initialDraft);
       setEditId(null);
       setSaveFeedbackMessage(feedbackMessage);
@@ -94,8 +104,12 @@ export default function CustomPlayManager() {
     setSaveFeedbackMessage(null);
   }
 
-  function confirmDelete(playId: string) {
-    deleteCustomPlay(playId);
+  async function confirmDelete(playId: string) {
+    const deleted = await deleteCustomPlay(playId);
+    if (!deleted) {
+      return;
+    }
+
     setPendingDeleteId(null);
     setSaveFeedbackMessage(null);
 
@@ -138,6 +152,24 @@ export default function CustomPlayManager() {
       <h3 className="section-title">Custom Plays</h3>
       <p className="section-subtitle">Create and manage your custom play presets.</p>
 
+      {isCustomPlaysLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading custom plays from the backend.</p>
+        </div>
+      ) : null}
+
+      {isCustomPlaySyncing ? (
+        <div className="status-banner" role="status">
+          <p>Saving custom plays to the backend.</p>
+        </div>
+      ) : null}
+
+      {customPlaySyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{customPlaySyncError}</p>
+        </div>
+      ) : null}
+
       {saveFeedbackMessage ? (
         <div className="status-banner ok" role="status">
           <p>{saveFeedbackMessage}</p>
@@ -148,6 +180,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Custom play name</span>
           <input
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.name}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -161,6 +194,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Custom play meditation type</span>
           <select
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.meditationType}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -185,6 +219,7 @@ export default function CustomPlayManager() {
           <input
             type="number"
             min={1}
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.durationMinutes}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -200,6 +235,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Custom play start sound (optional)</span>
           <select
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.startSound}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -220,6 +256,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Custom play end sound (optional)</span>
           <select
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.endSound}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -240,6 +277,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Media session (optional)</span>
           <select
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.mediaAssetId}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -276,6 +314,7 @@ export default function CustomPlayManager() {
         <label>
           <span>Session note (optional)</span>
           <input
+            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
             value={draft.recordingLabel}
             onChange={(event) => {
               setSaveFeedbackMessage(null);
@@ -286,11 +325,14 @@ export default function CustomPlayManager() {
         </label>
 
         <div className="timer-actions">
-          <button type="submit">{editId ? 'Update Custom Play' : 'Create Custom Play'}</button>
+          <button type="submit" disabled={isCustomPlaysLoading || isCustomPlaySyncing}>
+            {editId ? 'Update Custom Play' : 'Create Custom Play'}
+          </button>
           {editId ? (
             <button
               type="button"
               className="secondary"
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
               onClick={() => {
                 setEditId(null);
                 setDraft(initialDraft);
@@ -346,16 +388,34 @@ export default function CustomPlayManager() {
 
                   <div className="custom-play-side">
                     <div className="custom-play-actions">
-                      <button type="button" onClick={() => applyCustomPlay(play.id)}>
+                      <button type="button" disabled={isCustomPlaysLoading || isCustomPlaySyncing} onClick={() => applyCustomPlay(play.id)}>
                         Use Custom Play
                       </button>
-                      <button type="button" className="secondary" onClick={() => startEdit(play.id)}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                        onClick={() => startEdit(play.id)}
+                      >
                         Edit
                       </button>
-                      <button type="button" className="secondary" onClick={() => toggleFavoriteCustomPlay(play.id)}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                        onClick={async () => {
+                          setSaveFeedbackMessage(null);
+                          await toggleFavoriteCustomPlay(play.id);
+                        }}
+                      >
                         {play.favorite ? 'Unfavorite' : 'Favorite'}
                       </button>
-                      <button type="button" className="secondary" onClick={() => requestDelete(play.id)}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                        onClick={() => requestDelete(play.id)}
+                      >
                         Delete
                       </button>
                     </div>
@@ -364,10 +424,19 @@ export default function CustomPlayManager() {
                       <div className="confirm-sheet" role="dialog" aria-label={`Delete custom play ${play.name} confirmation`}>
                         <p>Delete custom play "{play.name}"?</p>
                         <div className="timer-actions">
-                          <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                            onClick={() => setPendingDeleteId(null)}
+                          >
                             Keep Custom Play
                           </button>
-                          <button type="button" onClick={() => confirmDelete(play.id)}>
+                          <button
+                            type="button"
+                            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                            onClick={() => void confirmDelete(play.id)}
+                          >
                             Delete Custom Play
                           </button>
                         </div>

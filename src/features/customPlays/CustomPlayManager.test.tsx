@@ -1,12 +1,97 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TimerProvider } from '../timer/TimerContext';
 import PracticePage from '../../pages/PracticePage';
 
+function createJsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
+}
+
 describe('CustomPlayManager UX', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, [
+            {
+              id: 'media-vipassana-sit-20',
+              label: 'Vipassana Sit (20 min)',
+              filePath: '/media/custom-plays/vipassana-sit-20.mp3',
+              durationSeconds: 1200,
+              mimeType: 'audio/mpeg',
+              sizeBytes: 9200000,
+              updatedAt: '2026-03-24T08:00:00.000Z',
+            },
+            {
+              id: 'media-ajapa-breath-15',
+              label: 'Ajapa Breath Cycle (15 min)',
+              filePath: '/media/custom-plays/ajapa-breath-15.mp3',
+              durationSeconds: 900,
+              mimeType: 'audio/mpeg',
+              sizeBytes: 6900000,
+              updatedAt: '2026-03-24T08:00:00.000Z',
+            },
+            {
+              id: 'media-tratak-focus-10',
+              label: 'Tratak Focus Bellset (10 min)',
+              filePath: '/media/custom-plays/tratak-focus-10.mp3',
+              durationSeconds: 600,
+              mimeType: 'audio/mpeg',
+              sizeBytes: 4500000,
+              updatedAt: '2026-03-24T08:00:00.000Z',
+            },
+          ]);
+        }
+
+        if (url.includes('/api/custom-plays/') && method === 'PUT') {
+          return createJsonResponse(200, JSON.parse(String(init?.body ?? '{}')));
+        }
+
+        if (url.includes('/api/custom-plays/') && method === 'DELETE') {
+          return {
+            ok: true,
+            status: 204,
+            json: async () => ({}),
+            text: async () => '',
+          };
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
   });
 
   afterEach(() => {
@@ -37,8 +122,8 @@ describe('CustomPlayManager UX', () => {
     fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
+    expect(await screen.findByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
     expect(screen.getByText('Morning Focus')).toBeInTheDocument();
-    expect(screen.getByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
     expect(screen.getByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
     expect(screen.queryByText(/managed path/i)).not.toBeInTheDocument();
 
@@ -66,7 +151,7 @@ describe('CustomPlayManager UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete/i }));
     fireEvent.click(screen.getByRole('button', { name: /delete custom play/i }));
 
-    expect(screen.queryByText('Morning Focus')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Morning Focus')).not.toBeInTheDocument());
   });
 
   it('shows explicit success feedback after updating a custom play', async () => {
@@ -88,11 +173,12 @@ describe('CustomPlayManager UX', () => {
     fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-ajapa-breath-15' } });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
+    expect(await screen.findByText(/custom play "Evening Reset" saved\./i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /edit/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Evening Reset Updated' } });
     fireEvent.click(screen.getByRole('button', { name: /update custom play/i }));
 
-    expect(screen.getByText(/custom play "Evening Reset Updated" updated\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/custom play "Evening Reset Updated" updated\./i)).toBeInTheDocument();
   });
 
   it('shows an explicit integration warning when backend media data is invalid', async () => {

@@ -2,6 +2,22 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b media catalog custom plays rest decisions
+- Keep the existing backend `media asset` catalog, configured media-root filesystem conventions, and seeded custom-play metadata as the source of truth for selectable recordings in this slice.
+- Move `custom play` persistence to backend-owned H2 + REST while keeping the existing frontend `CustomPlay` shape stable and adapting the new backend contract to it.
+- Extend the existing `custom_play` table with the missing sound fields instead of introducing a second `custom play` persistence model.
+- Use backend detail upserts at `PUT /api/custom-plays/{id}` so existing browser-created `custom play` ids can migrate cleanly during first backend hydration.
+- Preserve browser `localStorage` for:
+  - first-hydration migration of older local `custom play` records
+  - fallback cache continuity when backend hydration fails
+- Keep backend validation narrow and explicit in this slice:
+  - required `custom play` name
+  - allowed meditation type
+  - duration greater than 0
+  - required start and end sounds
+  - optional linked `media asset` id must exist, be active, and belong to the `custom-play` asset kind
+- Add calm Practice feedback for backend-backed `custom play` load and save states instead of introducing heavier global status UI.
+
 ### 2026-03-26 milestone-b manual logging rest decisions
 - Add a dedicated backend create route for manual logs at `/api/session-logs/manual` while keeping the existing `PUT /api/session-logs/{id}` flow for auto-log and playlist-log sync.
 - Keep manual logs in the shared `session_log` table and shared `SessionLogResponse` contract instead of introducing a separate manual-log persistence model.

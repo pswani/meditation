@@ -13,16 +13,17 @@ Single-page React application with route-based screens and feature-oriented modu
 - feature logic in `src/features`
 - shared domain types in `src/types`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
-- backend-backed persistence for timer settings and session logs
-- local-first persistence through browser `localStorage` for the remaining frontend-only feature flows
+- backend-backed persistence for custom plays, timer settings, and session logs
+- local-first persistence through browser `localStorage` for playlists and sankalpas, plus fallback cache support for backend-backed flows
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
 
 ## Confirmed current gaps
-- playlist, sankalpa, and custom-play CRUD API boundaries are still local-first
-- no playlist, sankalpa, or custom-play REST domain APIs yet
+- playlist and sankalpa API boundaries are still local-first
+- no playlist or sankalpa REST domain APIs yet
 - full-stack wiring is now in place for:
+  - custom plays
   - timer settings
   - session logs
 - no media upload/import workflow yet
@@ -39,6 +40,7 @@ Single-page React application with route-based screens and feature-oriented modu
 ## Planned backend responsibilities
 - expose REST endpoints for:
   - health
+  - custom plays
   - timer settings
   - session logs
   - manual session-log creation
@@ -61,15 +63,17 @@ Single-page React application with route-based screens and feature-oriented modu
 
 ## Current backend module structure
 - `backend/src/main/java/com/meditation/backend/config`
+- `backend/src/main/java/com/meditation/backend/customplay`
 - `backend/src/main/java/com/meditation/backend/health`
 - `backend/src/main/java/com/meditation/backend/media`
 - `backend/src/main/java/com/meditation/backend/settings`
 - `backend/src/main/java/com/meditation/backend/sessionlog`
+- current custom-play REST surfaces include:
+  - `/api/custom-plays`
 - current session-log REST surfaces include:
   - `/api/session-logs`
   - `/api/session-logs/manual`
 - reserved domain packages for:
-  - `customplay`
   - `playlist`
   - `reference`
   - `sankalpa`

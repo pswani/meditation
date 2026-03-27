@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
+import type { CustomPlay, CustomPlayDraft, CustomPlaySaveResult } from '../../types/customPlay';
 import type {
   ActivePlaylistRun,
   PlaylistDeleteResult,
@@ -31,13 +31,16 @@ export interface TimerContextValue {
   readonly isSessionLogsLoading: boolean;
   readonly isSessionLogSyncing: boolean;
   readonly sessionLogSyncError: string | null;
+  readonly isCustomPlaysLoading: boolean;
+  readonly isCustomPlaySyncing: boolean;
+  readonly customPlaySyncError: string | null;
   readonly isSettingsLoading: boolean;
   readonly isSettingsSyncing: boolean;
   readonly settingsSyncError: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
-  readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => CustomPlayValidationResult;
-  readonly deleteCustomPlay: (playId: string) => void;
-  readonly toggleFavoriteCustomPlay: (playId: string) => void;
+  readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => Promise<CustomPlaySaveResult>;
+  readonly deleteCustomPlay: (playId: string) => Promise<boolean>;
+  readonly toggleFavoriteCustomPlay: (playId: string) => Promise<boolean>;
   readonly savePlaylist: (draft: PlaylistDraft, editId?: string) => PlaylistValidationResult;
   readonly deletePlaylist: (playlistId: string) => PlaylistDeleteResult;
   readonly toggleFavoritePlaylist: (playlistId: string) => void;
