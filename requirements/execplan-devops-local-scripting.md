@@ -1,107 +1,127 @@
-# ExecPlan: App-Level Run, Build, and Deployment Scripting
+# ExecPlan: Managed Local App-Stack Scripting
 
 ## 1. Objective
-Add a clean, practical scripting layer for local development and production-like preview that works truthfully for the current front-end-only workspace while supporting pairing with an external backend and H2 database when available.
+Add a coherent local scripting layer that can:
+- build the frontend and backend
+- start the frontend and backend together for local access
+- stop the managed local stack cleanly
+- restart the stack, with a documented `--no-db` option that keeps the current backend-owned H2 state running
+- expose status and log helpers as operator-safe best practices
 
 ## 2. Why
-The app already has working `npm` commands, but there is no coherent app-level scripting story for frontend dev, optional external backend dev, combined startup, media-root setup, or H2 reset flows. A small, honest helper layer will reduce setup friction without pretending the backend exists in this repository.
+The repository already has useful foreground development commands, but it still lacks a clean managed workflow for operators who want one command to start, stop, inspect, and restart the local application stack. This slice reduces friction without pretending the embedded H2 database is a standalone daemon when it is not.
 
 ## 3. Scope
 Included:
-- add an ExecPlan for this slice
-- add root/package helper scripts for:
-  - frontend local dev
-  - optional external backend local dev
-  - combined local startup
-  - production build
-  - local production-like preview
-  - H2 init/reset helper
-  - media root directory setup
-- add environment examples for the helper scripts
-- document all commands in `README.md`
-- verify relevant commands
+- update the existing helper script foundation to support:
+  - managed runtime directories
+  - PID files
+  - log files
+  - health checks
+  - configurable frontend host and port settings
+- add package entrypoints for:
+  - managed start
+  - managed stop
+  - managed restart
+  - managed status
+  - managed log tailing
+- keep the existing build, media-setup, H2 reset, and preview helpers aligned with the new configuration layer
+- document the embedded-H2 lifecycle truthfully in `README.md`
+- update decisions and session handoff
 
 Excluded:
-- implementing a backend in this repo
-- adding live API transport
-- adding Docker-based infrastructure unless it becomes clearly necessary
-- changing product behavior
-- unrelated cleanup or architecture refactors
+- adding Docker or container orchestration
+- introducing a standalone H2 TCP server or any separate DB daemon
+- changing app UI behavior
+- unrelated frontend or backend refactors
 
 ## 4. Source documents
 - `AGENTS.md`
 - `PLANS.md`
 - `README.md`
-- `docs/architecture.md`
 - `docs/product-requirements.md`
+- `docs/architecture.md`
 - `docs/ux-spec.md`
 - `docs/screen-inventory.md`
 - `requirements/roadmap.md`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
+- `requirements/prompts.md`
 
 ## 5. Affected files and modules
 - `package.json`
 - `.env.example`
 - `README.md`
+- `requirements/execplan-devops-local-scripting.md`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-devops-local-scripting.md`
 - `scripts/common.sh`
 - `scripts/dev-frontend.sh`
-- `scripts/dev-backend.sh`
-- `scripts/dev-stack.sh`
-- `scripts/build-local.sh`
 - `scripts/preview-local.sh`
-- `scripts/h2-reset.sh`
-- `scripts/setup-media-root.sh`
-- `public/media/custom-plays/.gitkeep`
+- `scripts/app-start.sh`
+- `scripts/app-stop.sh`
+- `scripts/app-restart.sh`
+- `scripts/app-status.sh`
+- `scripts/app-logs.sh`
 
 ## 6. UX behavior
-- No app UI changes are expected.
-- The main user-facing outcome is simpler developer/operator workflow documentation.
-- Helper commands should be explicit and calm:
-  - succeed for the front-end-only repo
-  - explain clearly when backend pairing is optional but not configured
+- No product UI changes are expected.
+- Command behavior should feel calm and explicit:
+  - managed start waits for backend health before reporting success
+  - managed stop only targets processes launched by the managed helpers
+  - restart explains what `--no-db` means in this repo's embedded-H2 model
+  - status shows where logs and PID files live
+- Local operators should be able to recover from common issues without guessing:
+  - port already in use
+  - stale PID files
+  - backend failing health checks
 
 ## 7. Data and state model
-- Keep the app local-first.
-- Treat backend scripting as an external integration hook rather than an in-repo service.
-- Use ignored local filesystem directories for H2 reset defaults and media-root bootstrap defaults.
+- The backend still owns the real H2 lifecycle.
+- H2 remains file-backed at `local-data/h2` by default; it is not a separate service process.
+- Managed runtime metadata is stored under `local-data/runtime/`:
+  - `pids/`
+  - `logs/`
+- Frontend and backend media roots continue to be prepared through the existing media helper flow.
 
 ## 8. Risks
-- It would be easy to imply a backend exists in this repo when it does not.
-- Helper scripts that silently no-op could create confusion; missing backend configuration should be explained clearly.
-- Long-running verification commands (`dev`, `preview`) need bounded manual checks rather than waiting indefinitely.
+- A misleading DB abstraction would confuse operators, so the scripts and docs must state that H2 is embedded in the backend process.
+- Managed stop should not kill unrelated processes that merely happen to use the same ports.
+- Startup verification can fail in sandboxed environments that cannot bind local ports, so live startup verification may require escalation.
 
 ## 9. Milestones
-1. Add helper shell scripts and package-script entrypoints.
-2. Add media-root bootstrap directory and environment examples.
-3. Update README with truthful app-level command documentation.
-4. Verify build/run/reset/setup commands.
-5. Update decisions and handoff, then commit.
+1. Extend the shared shell helpers with runtime, PID, logging, and health-check support.
+2. Add managed start, stop, restart, status, and logs scripts plus package entrypoints.
+3. Update README and environment examples with the new workflow and DB semantics.
+4. Verify build, status, and managed lifecycle commands.
+5. Record decisions and handoff details for the next slice.
 
 ## 10. Verification
 - `npm run typecheck`
 - `npm run lint`
 - `npm run test`
 - `npm run build`
+- `npm run build:app`
 - `npm run media:setup`
 - `npm run db:h2:reset`
-- `npm run build:app`
-- start `npm run dev:frontend` and confirm Vite startup output
-- start `npm run dev:all` and confirm frontend starts and backend handling is explicit
-- start `npm run preview:app` and confirm preview startup output
-- verify backend helper command wiring with a configured sample backend command
+- `npm run status:app`
+- start `npm run start:app`, confirm:
+  - frontend responds on the configured dev URL
+  - backend health responds on `/api/health`
+  - logs and PID files are written under `local-data/runtime`
+- run `npm run restart:app -- --no-db` and confirm the frontend cycles while the backend remains reachable
+- run `npm run stop:app` and confirm the managed processes are no longer running
 
 ## 11. Decision log
-- Keep the current repo front-end only; do not scaffold a fake backend service.
-- Implement backend/H2 commands as adapters for an external backend configured through environment variables.
-- Prioritize local development and production-like preview over containerization in this slice.
+- Keep the existing foreground `dev:*` scripts for direct local development, and add separate managed helpers instead of replacing them.
+- Use the Vite dev server for the managed local stack because it preserves the existing `/api` proxy behavior without needing a build-time `VITE_API_BASE_URL`.
+- Treat `--no-db` as a frontend-only restart because the current H2 database is embedded in the backend process rather than running as a separate daemon.
+- Store PID files and logs under ignored local-data paths so the managed workflow stays local-only and easy to clean up.
 
 ## 12. Progress log
-- 2026-03-25: reviewed required docs and current repo run/build state.
-- 2026-03-25: confirmed no backend build entrypoint exists in this workspace.
-- 2026-03-25: implemented the local-first helper script layer, environment examples, and README command documentation.
-- 2026-03-25: verified media setup, H2 reset, backend command wiring, app build, and the required quality commands.
-- 2026-03-25: verified `dev:frontend`, `dev:all`, and `preview:app` startup outside the sandbox because the sandbox could not bind local ports.
+- 2026-03-27: reviewed the required docs plus the existing helper scripts, backend runtime configuration, and current README guidance.
+- 2026-03-27: updated the shared script foundation with runtime-directory, PID, log, port-check, and health-check helpers.
+- 2026-03-27: added managed local stack commands for start, stop, restart, status, and logs.
+- 2026-03-27: updated environment examples and README documentation to describe the new workflow and the embedded-H2 lifecycle truthfully.
+- 2026-03-27: passed `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, `npm run build:app`, `npm run media:setup`, and `npm run db:h2:reset`.
+- 2026-03-27: verified `start:app`, `status:app`, backend/frontend localhost reachability, `restart:app -- --no-db`, and `stop:app` in one unsandboxed interactive shell session because isolated command runs in this tool harness do not preserve background children between invocations.

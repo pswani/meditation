@@ -382,6 +382,38 @@ Behavior:
 - starts the in-repo backend by default when `backend/pom.xml` is present
 - still supports an overridden external backend command when explicitly configured
 
+### Start and stop the managed local stack
+
+Use the managed stack helpers when you want background processes, PID files, health checks, and logs:
+
+```bash
+npm run start:app
+npm run status:app
+npm run logs:app -- --tail 40
+npm run restart:app
+npm run restart:app -- --no-db
+npm run stop:app
+```
+
+Behavior:
+
+- `npm run start:app`
+  - prepares both media roots
+  - starts the backend dev server in the background
+  - waits for backend health before starting the frontend dev server
+  - writes PID files and logs under `local-data/runtime/`
+- `npm run stop:app`
+  - stops only the managed frontend and backend processes started by `npm run start:app`
+- `npm run restart:app`
+  - restarts the managed frontend and backend together
+- `npm run restart:app -- --no-db`
+  - restarts only the frontend so the current backend process and embedded H2 state stay up
+  - this repo uses file-backed H2 inside the backend process, so there is no separate DB daemon to restart independently
+- `npm run status:app`
+  - shows managed PID, URL, health, and log-path details
+- `npm run logs:app`
+  - tails the managed frontend and backend logs
+
 ### Environment and configuration variables
 
 There are no required environment variables for the default local workflow.
@@ -407,6 +439,16 @@ Optional variables:
   - optional override for backend local-dev startup
 - `MEDITATION_BACKEND_BUILD_CMD`
   - optional override for backend build
+- `MEDITATION_RUNTIME_DIR`
+  - optional runtime directory for managed PID files and logs
+- `MEDITATION_FRONTEND_DEV_HOST`
+  - optional host override for `npm run dev:frontend` and `npm run start:app`
+- `MEDITATION_FRONTEND_DEV_PORT`
+  - optional port override for `npm run dev:frontend` and `npm run start:app`
+- `MEDITATION_FRONTEND_PREVIEW_HOST`
+  - optional host override for `npm run preview:app`
+- `MEDITATION_FRONTEND_PREVIEW_PORT`
+  - optional port override for `npm run preview:app`
 - `MEDITATION_H2_DB_DIR`
   - optional H2 file directory for reset/init helper flows
 - `MEDITATION_H2_DB_NAME`
@@ -451,6 +493,11 @@ npm run dev:frontend
 npm run dev:backend
 npm run dev:all
 npm run build:app
+npm run start:app
+npm run stop:app
+npm run restart:app
+npm run status:app
+npm run logs:app
 npm run preview:app
 npm run db:h2:reset
 ```
@@ -468,6 +515,17 @@ What they do:
   - starts the frontend plus the backend
 - `npm run build:app`
   - builds the frontend and runs backend verification/package work
+- `npm run start:app`
+  - starts the managed frontend and backend in the background and records runtime state under `local-data/runtime`
+- `npm run stop:app`
+  - stops the managed frontend and backend
+- `npm run restart:app`
+  - restarts the managed frontend and backend
+  - pass `-- --no-db` to leave the current backend process and embedded H2 state running while cycling only the frontend
+- `npm run status:app`
+  - prints the managed process, health, and log status
+- `npm run logs:app`
+  - tails the managed process logs
 - `npm run preview:app`
   - rebuilds the frontend and starts a production-like Vite preview server
 - `npm run db:h2:reset`

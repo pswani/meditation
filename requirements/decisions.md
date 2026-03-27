@@ -2,6 +2,12 @@
 
 ## Decision log
 
+### 2026-03-27 managed local app-stack scripting decisions
+- Keep the existing foreground `dev:frontend`, `dev:backend`, and `dev:all` commands for direct development work, and add a separate managed app-stack layer for background start/stop/restart operations.
+- Use the Vite dev server for the managed frontend startup instead of Vite preview so the existing `/api` proxy continues to work without requiring a build-time `VITE_API_BASE_URL`.
+- Treat the requested `--no-db` restart mode as a frontend-only restart because this repository uses file-backed H2 inside the backend process, not a standalone database daemon that can be restarted independently.
+- Store managed runtime artifacts under ignored local paths in `local-data/runtime` so PID files and logs stay scoped to the developer machine and do not pollute the working tree.
+
 ### 2026-03-27 milestone-e merge decisions
 - Merge `codex/milestone-e-hardening-release` back into `codex/functioning` with a normal local merge commit so the review, remediation, accessibility, end-to-end verification, and release-readiness history remain intact.
 - Mark Milestone E complete on `codex/functioning` after the merge because:

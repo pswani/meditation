@@ -1,6 +1,52 @@
 # Session Handoff
 
 ## Current status
+Managed local app-stack scripting is now implemented on top of the existing full-stack repo. The workspace has build, start, stop, restart, status, and log helpers for the local frontend/backend stack, with the embedded-H2 lifecycle documented explicitly.
+
+## 2026-03-27 managed local app-stack scripting
+- Added and updated:
+  - `requirements/execplan-devops-local-scripting.md`
+  - `scripts/app-start.sh`
+  - `scripts/app-stop.sh`
+  - `scripts/app-restart.sh`
+  - `scripts/app-status.sh`
+  - `scripts/app-logs.sh`
+  - `scripts/common.sh`
+  - `scripts/dev-frontend.sh`
+  - `scripts/preview-local.sh`
+  - `package.json`
+  - `.env.example`
+  - `README.md`
+- Operator workflow changes:
+  - `npm run build:app` remains the one-command frontend and backend build helper
+  - `npm run start:app` now starts the managed backend and frontend in the background, waits for health, and writes runtime state under `local-data/runtime`
+  - `npm run stop:app` stops only the managed processes launched by `start:app`
+  - `npm run restart:app` restarts the managed frontend and backend
+  - `npm run restart:app -- --no-db` now restarts only the frontend so the current backend process and embedded H2 state remain up
+  - `npm run status:app` and `npm run logs:app` provide basic operator-safe inspection helpers
+- Important implementation note:
+  - the repo still uses file-backed H2 inside the backend process, so there is no standalone DB daemon to stop or restart independently
+- Remaining limitations:
+  - the managed stop helper intentionally does not kill unrelated processes that were not started through the managed scripts
+  - live startup verification may still require unsandboxed local port binding in some environments
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `npm run build:app`
+  - passed `npm run media:setup`
+  - passed `npm run db:h2:reset`
+  - verified `npm run start:app`
+  - verified `npm run status:app`
+  - verified `curl -s http://localhost:8080/api/health`
+  - verified `curl -s http://localhost:5173 | head -n 3`
+  - verified `npm run restart:app -- --no-db`
+  - verified `npm run stop:app`
+- Exact recommended next prompt:
+  - `Implement a local smoke-check helper for the managed app stack. Include a script that starts from a clean managed state, verifies backend health and frontend reachability, confirms PID/log creation, exercises restart:app -- --no-db, stops the managed stack, updates README plus handoff/decisions, runs the relevant verification commands, and commits with a clear message.`
+
+## Current milestone snapshot
 Milestone E is complete and merged into `codex/functioning`. The parent branch now contains the full hardening slice, the working tree is clean, and there is no remaining checked-in prompt file for this milestone sequence.
 
 ## Milestone E branch setup

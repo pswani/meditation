@@ -35,6 +35,38 @@ backend_media_root_dir() {
   printf '%s\n' "$(resolve_path "${MEDITATION_MEDIA_STORAGE_ROOT:-local-data/media}")/custom-plays"
 }
 
+frontend_dev_host() {
+  printf '%s\n' "${MEDITATION_FRONTEND_DEV_HOST:-0.0.0.0}"
+}
+
+frontend_dev_port() {
+  printf '%s\n' "${MEDITATION_FRONTEND_DEV_PORT:-5173}"
+}
+
+frontend_dev_url() {
+  printf 'http://127.0.0.1:%s/\n' "$(frontend_dev_port)"
+}
+
+frontend_preview_host() {
+  printf '%s\n' "${MEDITATION_FRONTEND_PREVIEW_HOST:-0.0.0.0}"
+}
+
+frontend_preview_port() {
+  printf '%s\n' "${MEDITATION_FRONTEND_PREVIEW_PORT:-4173}"
+}
+
+frontend_preview_url() {
+  printf 'http://127.0.0.1:%s/\n' "$(frontend_preview_port)"
+}
+
+backend_port() {
+  printf '%s\n' "${MEDITATION_BACKEND_PORT:-8080}"
+}
+
+backend_health_url() {
+  printf 'http://127.0.0.1:%s/api/health\n' "$(backend_port)"
+}
+
 ensure_media_directory() {
   media_root=$1
   mkdir -p "$media_root"
@@ -68,17 +100,17 @@ backend_dir() {
 default_backend_dev_cmd() {
   dir=$(backend_dir)
   if [ -n "$dir" ] && [ -x "$dir/mvnw" ]; then
-    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
+    printf '%s\n' "exec ./mvnw -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
     return
   fi
 
   if [ -n "$dir" ] && [ -f "$dir/pom.xml" ]; then
-    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
+    printf '%s\n' "exec mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev"
     return
   fi
 
   if [ -n "$dir" ] && [ -x "$dir/gradlew" ]; then
-    printf '%s\n' "./gradlew bootRun --args='--spring.profiles.active=dev'"
+    printf '%s\n' "exec ./gradlew bootRun --args='--spring.profiles.active=dev'"
     return
   fi
 
@@ -88,17 +120,17 @@ default_backend_dev_cmd() {
 default_backend_build_cmd() {
   dir=$(backend_dir)
   if [ -n "$dir" ] && [ -x "$dir/mvnw" ]; then
-    printf '%s\n' "./mvnw -Dmaven.repo.local=../local-data/m2 verify"
+    printf '%s\n' "exec ./mvnw -Dmaven.repo.local=../local-data/m2 verify"
     return
   fi
 
   if [ -n "$dir" ] && [ -f "$dir/pom.xml" ]; then
-    printf '%s\n' "mvn -Dmaven.repo.local=../local-data/m2 verify"
+    printf '%s\n' "exec mvn -Dmaven.repo.local=../local-data/m2 verify"
     return
   fi
 
   if [ -n "$dir" ] && [ -x "$dir/gradlew" ]; then
-    printf '%s\n' "./gradlew build"
+    printf '%s\n' "exec ./gradlew build"
     return
   fi
 
@@ -151,6 +183,182 @@ run_backend_command() {
   fi
 
   exec sh -lc "$command_value"
+}
+
+runtime_dir() {
+  printf '%s\n' "$(resolve_path "${MEDITATION_RUNTIME_DIR:-local-data/runtime}")"
+}
+
+runtime_pid_dir() {
+  printf '%s\n' "$(runtime_dir)/pids"
+}
+
+runtime_log_dir() {
+  printf '%s\n' "$(runtime_dir)/logs"
+}
+
+ensure_runtime_dirs() {
+  mkdir -p "$(runtime_pid_dir)" "$(runtime_log_dir)"
+}
+
+component_pid_file() {
+  printf '%s/%s.pid\n' "$(runtime_pid_dir)" "$1"
+}
+
+component_log_file() {
+  printf '%s/%s.log\n' "$(runtime_log_dir)" "$1"
+}
+
+read_pid_file() {
+  pid_file=$(component_pid_file "$1")
+  if [ -f "$pid_file" ]; then
+    tr -d ' \n\r' < "$pid_file"
+    return
+  fi
+
+  printf '\n'
+}
+
+pid_is_running() {
+  pid=$1
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+
+  kill -0 "$pid" 2>/dev/null
+}
+
+remove_pid_file() {
+  rm -f "$(component_pid_file "$1")"
+}
+
+cleanup_stale_pid_file() {
+  name=$1
+  pid=$(read_pid_file "$name")
+
+  if [ -n "$pid" ] && ! pid_is_running "$pid"; then
+    remove_pid_file "$name"
+  fi
+}
+
+component_is_running() {
+  name=$1
+  cleanup_stale_pid_file "$name"
+  pid=$(read_pid_file "$name")
+  pid_is_running "$pid"
+}
+
+write_pid_file() {
+  name=$1
+  pid=$2
+  printf '%s\n' "$pid" > "$(component_pid_file "$name")"
+}
+
+port_in_use() {
+  port=$1
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -iTCP:"$port" -sTCP:LISTEN -n -P >/dev/null 2>&1
+    return $?
+  fi
+
+  if command -v nc >/dev/null 2>&1; then
+    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
+    return $?
+  fi
+
+  return 1
+}
+
+ensure_component_stopped() {
+  name=$1
+  port=${2:-}
+
+  if component_is_running "$name"; then
+    printf '%s\n' "Managed $name process is already running."
+    printf '%s\n' "Use the stop helper before starting it again."
+    return 1
+  fi
+
+  if [ -n "$port" ] && port_in_use "$port"; then
+    printf '%s\n' "Port $port is already in use by another process."
+    printf '%s\n' "Free the port or change the configured port before starting the managed stack."
+    return 1
+  fi
+
+  return 0
+}
+
+wait_for_http() {
+  url=$1
+  timeout_seconds=${2:-60}
+  attempt=0
+
+  while [ "$attempt" -lt "$timeout_seconds" ]; do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 1
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
+append_log_header() {
+  name=$1
+  message=$2
+  log_file=$(component_log_file "$name")
+  timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  printf '\n[%s] %s\n' "$timestamp" "$message" >> "$log_file"
+}
+
+print_log_tail() {
+  name=$1
+  lines=${2:-20}
+  log_file=$(component_log_file "$name")
+
+  if [ ! -f "$log_file" ]; then
+    printf '%s\n' "No log file found for $name at $log_file"
+    return 0
+  fi
+
+  tail -n "$lines" "$log_file"
+}
+
+stop_component() {
+  name=$1
+  pid=$(read_pid_file "$name")
+
+  if [ -z "$pid" ]; then
+    remove_pid_file "$name"
+    return 0
+  fi
+
+  if ! pid_is_running "$pid"; then
+    remove_pid_file "$name"
+    return 0
+  fi
+
+  kill "$pid" 2>/dev/null || true
+
+  attempt=0
+  while [ "$attempt" -lt 20 ]; do
+    if ! pid_is_running "$pid"; then
+      remove_pid_file "$name"
+      return 0
+    fi
+
+    sleep 1
+    attempt=$((attempt + 1))
+  done
+
+  if pid_is_running "$pid"; then
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+
+  remove_pid_file "$name"
 }
 
 h2_db_dir() {
