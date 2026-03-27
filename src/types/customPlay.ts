@@ -33,3 +33,8 @@ export interface CustomPlayValidationResult {
     mediaAssetId?: string;
   };
 }
+
+export interface CustomPlaySaveResult extends CustomPlayValidationResult {
+  readonly persisted: boolean;
+  readonly persistenceError?: string;
+}

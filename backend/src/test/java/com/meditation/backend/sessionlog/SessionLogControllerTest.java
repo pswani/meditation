@@ -3,10 +3,12 @@ package com.meditation.backend.sessionlog;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,6 +23,14 @@ class SessionLogControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
+
+  @Autowired
+  private SessionLogRepository sessionLogRepository;
+
+  @BeforeEach
+  void clearSessionLogs() {
+    sessionLogRepository.deleteAll();
+  }
 
   @Test
   void savesAndListsSessionLogsThroughTheApi() throws Exception {
@@ -76,6 +86,31 @@ class SessionLogControllerTest {
   }
 
   @Test
+  void createsManualSessionLogsThroughTheApi() throws Exception {
+    mockMvc.perform(post("/api/session-logs/manual")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "durationMinutes": 12,
+                  "meditationType": "Ajapa",
+                  "sessionTimestamp": "2026-03-26T11:12:00Z"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.source").value("manual log"))
+        .andExpect(jsonPath("$.status").value("completed"))
+        .andExpect(jsonPath("$.intendedDurationSeconds").value(720))
+        .andExpect(jsonPath("$.completedDurationSeconds").value(720))
+        .andExpect(jsonPath("$.startedAt").value("2026-03-26T11:00:00Z"))
+        .andExpect(jsonPath("$.endedAt").value("2026-03-26T11:12:00Z"));
+
+    mockMvc.perform(get("/api/session-logs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].source").value("manual log"));
+  }
+
+  @Test
   void rejectsInvalidSessionLogPayloads() throws Exception {
     mockMvc.perform(put("/api/session-logs/log-invalid")
             .contentType(APPLICATION_JSON)
@@ -94,6 +129,20 @@ class SessionLogControllerTest {
                   "intervalEnabled": false,
                   "intervalMinutes": 0,
                   "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void rejectsInvalidManualSessionLogPayloads() throws Exception {
+    mockMvc.perform(post("/api/session-logs/manual")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "durationMinutes": 0,
+                  "meditationType": "",
+                  "sessionTimestamp": "invalid"
                 }
                 """))
         .andExpect(status().isBadRequest());

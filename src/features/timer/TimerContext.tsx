@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { CustomPlay } from '../../types/customPlay';
-import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome } from '../../types/playlist';
+import type { CustomPlay, CustomPlaySaveResult } from '../../types/customPlay';
+import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome, PlaylistSaveResult } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
+import { deleteCustomPlayFromApi, listCustomPlaysFromApi, persistCustomPlayToApi } from '../../utils/customPlayApi';
 import { isApiClientError } from '../../utils/apiClient';
-import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
+import { buildManualLogCreateRequest, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
-import { persistPlaylistsToApi } from '../../utils/playlistApi';
+import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
-import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
+import { createManualSessionLogInApi, listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
 import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
@@ -22,6 +23,7 @@ import {
   saveActivePlaylistRunState,
   saveActiveTimerState,
   saveCustomPlays,
+  savePlaylists,
   saveSessionLogs,
   saveTimerSettings,
 } from '../../utils/storage';
@@ -206,6 +208,38 @@ function mergeSessionLogs(primary: readonly SessionLog[], secondary: readonly Se
   return [...entriesById.values()].sort((left, right) => Date.parse(right.endedAt) - Date.parse(left.endedAt));
 }
 
+function mergeCustomPlays(primary: readonly CustomPlay[], secondary: readonly CustomPlay[]) {
+  const entriesById = new Map<string, CustomPlay>();
+
+  for (const entry of primary) {
+    entriesById.set(entry.id, entry);
+  }
+
+  for (const entry of secondary) {
+    if (!entriesById.has(entry.id)) {
+      entriesById.set(entry.id, entry);
+    }
+  }
+
+  return [...entriesById.values()].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+}
+
+function mergePlaylists(primary: readonly Playlist[], secondary: readonly Playlist[]) {
+  const entriesById = new Map<string, Playlist>();
+
+  for (const entry of primary) {
+    entriesById.set(entry.id, entry);
+  }
+
+  for (const entry of secondary) {
+    if (!entriesById.has(entry.id)) {
+      entriesById.set(entry.id, entry);
+    }
+  }
+
+  return [...entriesById.values()].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+}
+
 function formatApiErrorMessage(error: unknown, fallbackMessage: string): string {
   if (isApiClientError(error)) {
     if (error.kind === 'network') {
@@ -225,6 +259,14 @@ function formatApiErrorMessage(error: unknown, fallbackMessage: string): string 
 }
 
 function areSessionLogCollectionsEqual(left: readonly SessionLog[], right: readonly SessionLog[]) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function areCustomPlayCollectionsEqual(left: readonly CustomPlay[], right: readonly CustomPlay[]) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function arePlaylistCollectionsEqual(left: readonly Playlist[], right: readonly Playlist[]) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
@@ -252,10 +294,18 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSessionLogsLoading, setIsSessionLogsLoading] = useState(true);
   const [isSessionLogSyncing, setIsSessionLogSyncing] = useState(false);
   const [sessionLogSyncError, setSessionLogSyncError] = useState<string | null>(null);
+  const [isCustomPlaysLoading, setIsCustomPlaysLoading] = useState(true);
+  const [isCustomPlaySyncing, setIsCustomPlaySyncing] = useState(false);
+  const [customPlaySyncError, setCustomPlaySyncError] = useState<string | null>(null);
+  const [isPlaylistsLoading, setIsPlaylistsLoading] = useState(true);
+  const [isPlaylistSyncing, setIsPlaylistSyncing] = useState(false);
+  const [playlistSyncError, setPlaylistSyncError] = useState<string | null>(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const latestSessionLogsRef = useRef(state.sessionLogs);
+  const latestCustomPlaysRef = useRef(customPlays);
+  const latestPlaylistsRef = useRef(playlists);
   const latestTimerSettingsRef = useRef(state.settings);
   const skipInitialTimerSettingsPersistRef = useRef(true);
   const skipInitialSessionLogsPersistRef = useRef(true);
@@ -413,6 +463,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [state.sessionLogs]);
 
   useEffect(() => {
+    latestCustomPlaysRef.current = customPlays;
+  }, [customPlays]);
+
+  useEffect(() => {
+    latestPlaylistsRef.current = playlists;
+  }, [playlists]);
+
+  useEffect(() => {
     latestTimerSettingsRef.current = state.settings;
   }, [state.settings]);
 
@@ -461,7 +519,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
-    void persistPlaylistsToApi(playlists);
+    savePlaylists(playlists);
   }, [playlists]);
 
   useEffect(() => {
@@ -484,6 +542,128 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       activePlaylistPersistence?.isPaused ?? false
     );
   }, [activePlaylistPersistence]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateCustomPlays() {
+      setIsCustomPlaysLoading(true);
+
+      try {
+        const remoteCustomPlays = await listCustomPlaysFromApi();
+        if (cancelled) {
+          return;
+        }
+
+        const missingLocalCustomPlays = bootstrap.customPlays.filter(
+          (localPlay) => !remoteCustomPlays.some((remotePlay) => remotePlay.id === localPlay.id)
+        );
+
+        let nextCustomPlays = remoteCustomPlays;
+        if (missingLocalCustomPlays.length > 0) {
+          setIsCustomPlaySyncing(true);
+
+          const promotedCustomPlays: CustomPlay[] = [];
+          for (const customPlay of missingLocalCustomPlays) {
+            const savedCustomPlay = await persistCustomPlayToApi(customPlay);
+            if (cancelled) {
+              return;
+            }
+
+            promotedCustomPlays.push(savedCustomPlay);
+          }
+
+          nextCustomPlays = mergeCustomPlays(remoteCustomPlays, promotedCustomPlays);
+        }
+
+        if (!areCustomPlayCollectionsEqual(nextCustomPlays, latestCustomPlaysRef.current)) {
+          setCustomPlays(nextCustomPlays);
+        }
+
+        setCustomPlaySyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setCustomPlaySyncError(
+          `${formatApiErrorMessage(error, 'Custom play loading failed.')} Showing the local custom play cache instead.`
+        );
+      } finally {
+        if (!cancelled) {
+          setIsCustomPlaySyncing(false);
+          setIsCustomPlaysLoading(false);
+        }
+      }
+    }
+
+    void hydrateCustomPlays();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrap.customPlays]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydratePlaylists() {
+      setIsPlaylistsLoading(true);
+
+      try {
+        const remotePlaylists = await listPlaylistsFromApi();
+        if (cancelled) {
+          return;
+        }
+
+        const missingLocalPlaylists = bootstrap.playlists.filter(
+          (localPlaylist) => !remotePlaylists.some((remotePlaylist) => remotePlaylist.id === localPlaylist.id)
+        );
+
+        let nextPlaylists = remotePlaylists;
+        if (missingLocalPlaylists.length > 0) {
+          setIsPlaylistSyncing(true);
+
+          const promotedPlaylists: Playlist[] = [];
+          for (const playlist of missingLocalPlaylists) {
+            const savedPlaylist = await persistPlaylistToApi(playlist);
+            if (cancelled) {
+              return;
+            }
+
+            promotedPlaylists.push(savedPlaylist);
+          }
+
+          nextPlaylists = mergePlaylists(remotePlaylists, promotedPlaylists);
+        }
+
+        if (!arePlaylistCollectionsEqual(nextPlaylists, latestPlaylistsRef.current)) {
+          setPlaylists(nextPlaylists);
+        }
+
+        setPlaylistSyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setPlaylistSyncError(
+          `${formatApiErrorMessage(error, 'Playlist loading failed.')} Showing the local playlist cache instead.`
+        );
+      } finally {
+        if (!cancelled) {
+          setIsPlaylistSyncing(false);
+          setIsPlaylistsLoading(false);
+        }
+      }
+    }
+
+    void hydratePlaylists();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrap.playlists]);
 
   useEffect(() => {
     let cancelled = false;
@@ -803,81 +983,237 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSessionLogsLoading,
       isSessionLogSyncing,
       sessionLogSyncError,
+      isCustomPlaysLoading,
+      isCustomPlaySyncing,
+      customPlaySyncError,
+      isPlaylistsLoading,
+      isPlaylistSyncing,
+      playlistSyncError,
       isSettingsLoading,
       isSettingsSyncing,
       settingsSyncError,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
-      saveCustomPlay: (draft, editId) => {
+      saveCustomPlay: async (draft, editId): Promise<CustomPlaySaveResult> => {
         const validation = validateCustomPlayDraft(draft);
         if (!validation.isValid) {
-          return validation;
+          return {
+            ...validation,
+            persisted: false,
+          };
         }
 
-        setCustomPlays((current) => {
-          if (editId) {
-            return current.map((play) => (play.id === editId ? updateCustomPlay(play, draft, new Date()) : play));
-          }
+        const now = new Date();
+        const existingPlay = editId ? customPlays.find((play) => play.id === editId) : null;
+        if (editId && !existingPlay) {
+          const persistenceError = 'The custom play could not be found for update.';
+          setCustomPlaySyncError(persistenceError);
+          return {
+            ...validation,
+            persisted: false,
+            persistenceError,
+          };
+        }
 
-          return [createCustomPlay(draft, new Date()), ...current];
-        });
+        const candidate = existingPlay ? updateCustomPlay(existingPlay, draft, now) : createCustomPlay(draft, now);
+        setIsCustomPlaySyncing(true);
 
-        return validation;
+        try {
+          const savedCustomPlay = await persistCustomPlayToApi(candidate);
+          setCustomPlays((current) => {
+            if (existingPlay) {
+              return current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play));
+            }
+
+            return [savedCustomPlay, ...current];
+          });
+          setCustomPlaySyncError(null);
+
+          return {
+            ...validation,
+            persisted: true,
+          };
+        } catch (error) {
+          const persistenceError = `${formatApiErrorMessage(
+            error,
+            'Custom play saving failed.'
+          )} The custom play was not saved to the backend.`;
+          setCustomPlaySyncError(persistenceError);
+          return {
+            ...validation,
+            persisted: false,
+            persistenceError,
+          };
+        } finally {
+          setIsCustomPlaySyncing(false);
+        }
       },
-      deleteCustomPlay: (playId) =>
-        setCustomPlays((current) => current.filter((play) => play.id !== playId)),
-      toggleFavoriteCustomPlay: (playId) =>
-        setCustomPlays((current) =>
-          current.map((play) =>
-            play.id === playId
-              ? {
-                  ...play,
-                  favorite: !play.favorite,
-                  updatedAt: new Date().toISOString(),
-                }
-              : play
-          )
-        ),
-      savePlaylist: (draft, editId) => {
+      deleteCustomPlay: async (playId) => {
+        setIsCustomPlaySyncing(true);
+
+        try {
+          await deleteCustomPlayFromApi(playId);
+          setCustomPlays((current) => current.filter((play) => play.id !== playId));
+          setCustomPlaySyncError(null);
+          return true;
+        } catch (error) {
+          setCustomPlaySyncError(
+            `${formatApiErrorMessage(error, 'Custom play deletion failed.')} The custom play is still available in this browser.`
+          );
+          return false;
+        } finally {
+          setIsCustomPlaySyncing(false);
+        }
+      },
+      toggleFavoriteCustomPlay: async (playId) => {
+        const existingPlay = customPlays.find((play) => play.id === playId);
+        if (!existingPlay) {
+          return false;
+        }
+
+        const candidate = {
+          ...existingPlay,
+          favorite: !existingPlay.favorite,
+          updatedAt: new Date().toISOString(),
+        };
+        setIsCustomPlaySyncing(true);
+
+        try {
+          const savedCustomPlay = await persistCustomPlayToApi(candidate);
+          setCustomPlays((current) =>
+            current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play))
+          );
+          setCustomPlaySyncError(null);
+          return true;
+        } catch (error) {
+          setCustomPlaySyncError(
+            `${formatApiErrorMessage(error, 'Custom play update failed.')} The previous custom play state is still available locally.`
+          );
+          return false;
+        } finally {
+          setIsCustomPlaySyncing(false);
+        }
+      },
+      savePlaylist: async (draft, editId): Promise<PlaylistSaveResult> => {
         const validation = validatePlaylistDraft(draft);
         if (!validation.isValid) {
-          return validation;
+          return {
+            ...validation,
+            persisted: false,
+          };
         }
 
-        setPlaylists((current) => {
-          if (editId) {
-            return current.map((playlist) => (playlist.id === editId ? updatePlaylist(playlist, draft, new Date()) : playlist));
+        const now = new Date();
+        let candidate: Playlist;
+        if (editId) {
+          const existingPlaylist = playlists.find((playlist) => playlist.id === editId);
+          if (!existingPlaylist) {
+            const persistenceError = 'That playlist is no longer available.';
+            setPlaylistSyncError(persistenceError);
+            return {
+              ...validation,
+              persisted: false,
+              persistenceError,
+            };
           }
 
-          return [createPlaylist(draft, new Date()), ...current];
-        });
+          candidate = updatePlaylist(existingPlaylist, draft, now);
+        } else {
+          candidate = createPlaylist(draft, now);
+        }
 
-        return validation;
+        setIsPlaylistSyncing(true);
+
+        try {
+          const savedPlaylist = await persistPlaylistToApi(candidate);
+          setPlaylists((current) => {
+            if (editId) {
+              return current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist));
+            }
+
+            return mergePlaylists([savedPlaylist], current);
+          });
+          setPlaylistSyncError(null);
+
+          return {
+            ...validation,
+            persisted: true,
+          };
+        } catch (error) {
+          const persistenceError = `${formatApiErrorMessage(
+            error,
+            'Playlist saving failed.'
+          )} The previous playlist state is still available locally.`;
+          setPlaylistSyncError(persistenceError);
+          return {
+            ...validation,
+            persisted: false,
+            persistenceError,
+          };
+        } finally {
+          setIsPlaylistSyncing(false);
+        }
       },
-      deletePlaylist: (playlistId) => {
+      deletePlaylist: async (playlistId) => {
         const result = evaluatePlaylistDelete(playlistId, activePlaylistRun);
         if (!result.deleted) {
           return result;
         }
 
-        setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
-        return result;
+        setIsPlaylistSyncing(true);
+
+        try {
+          await deletePlaylistFromApi(playlistId);
+          setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
+          setPlaylistSyncError(null);
+          return result;
+        } catch (error) {
+          const persistenceError = `${formatApiErrorMessage(
+            error,
+            'Playlist deletion failed.'
+          )} The previous playlist state is still available locally.`;
+          setPlaylistSyncError(persistenceError);
+          return {
+            deleted: false,
+            persistenceError,
+          };
+        } finally {
+          setIsPlaylistSyncing(false);
+        }
       },
-      toggleFavoritePlaylist: (playlistId) =>
-        setPlaylists((current) =>
-          current.map((playlist) =>
-            playlist.id === playlistId
-              ? {
-                  ...playlist,
-                  favorite: !playlist.favorite,
-                  updatedAt: new Date().toISOString(),
-                }
-              : playlist
-          )
-        ),
+      toggleFavoritePlaylist: async (playlistId) => {
+        const existingPlaylist = playlists.find((playlist) => playlist.id === playlistId);
+        if (!existingPlaylist) {
+          return false;
+        }
+
+        const candidate = {
+          ...existingPlaylist,
+          favorite: !existingPlaylist.favorite,
+          updatedAt: new Date().toISOString(),
+        };
+        setIsPlaylistSyncing(true);
+
+        try {
+          const savedPlaylist = await persistPlaylistToApi(candidate);
+          setPlaylists((current) =>
+            current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist))
+          );
+          setPlaylistSyncError(null);
+          return true;
+        } catch (error) {
+          setPlaylistSyncError(
+            `${formatApiErrorMessage(error, 'Playlist update failed.')} The previous playlist state is still available locally.`
+          );
+          return false;
+        } finally {
+          setIsPlaylistSyncing(false);
+        }
+      },
       startPlaylistRun: (playlistId) => {
         const startResult = evaluatePlaylistRunStart({
           playlistId,
           playlists,
+          isPlaylistsLoading,
           activeTimerSession: Boolean(state.activeSession),
           activePlaylistRun,
         });
@@ -1006,10 +1342,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           };
         }
 
-        const sessionLogEntry = buildManualLogEntry(input, new Date());
-
         try {
-          const savedEntry = await persistSessionLogToApi(sessionLogEntry);
+          const savedEntry = await createManualSessionLogInApi(buildManualLogCreateRequest(input));
           syncedSessionLogIdsRef.current.add(savedEntry.id);
           dispatch({
             type: 'ADD_SESSION_LOG',
@@ -1067,7 +1401,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     [
       activePlaylistRun,
       customPlays,
+      customPlaySyncError,
       isPaused,
+      isCustomPlaysLoading,
+      isCustomPlaySyncing,
+      isPlaylistsLoading,
+      isPlaylistSyncing,
       isPlaylistRunPaused,
       isSessionLogsLoading,
       isSessionLogSyncing,
@@ -1075,6 +1414,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSettingsSyncing,
       playlistRunOutcome,
       playlists,
+      playlistSyncError,
       recoveryMessage,
       sessionLogSyncError,
       settingsSyncError,

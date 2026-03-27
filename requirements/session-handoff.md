@@ -1,7 +1,179 @@
 # Session Handoff
 
 ## Current status
-Milestone A is complete and has been merged into `codex/functioning`. The parent branch now contains the full backend-backed core practice engine slice and its verification history, and the next recommended work is Milestone B branch setup.
+Milestone B has been merged locally into `codex/functioning`. The parent branch now contains the full practice-composition slice and is ready for Milestone C branch setup.
+
+## Milestone B branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-b-practice-composition-fullstack`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone B scope:
+  - manual `session log` REST persistence for manual logging
+  - media catalog metadata + filesystem path references + `custom play` REST persistence
+  - playlist and playlist-item REST persistence
+  - milestone review, remediation, verification, and local merge back to the parent branch
+
+## Milestone B prompt 01: manual logging REST
+- Added and used:
+  - `requirements/execplan-milestone-b-manual-logging-rest.md`
+- Backend changes:
+  - added dedicated manual-log create endpoint:
+    - `POST /api/session-logs/manual`
+  - added backend-owned manual-log validation and record construction in `sessionlog` service code
+  - kept manual logs in the shared H2-backed `session_log` table and shared response contract
+- Frontend changes:
+  - History manual-log submission now posts manual-log input to the dedicated backend route instead of fabricating a full `session log` entry client-side
+  - `sessionLogApi` now exposes a dedicated manual-log create helper while preserving the existing generic `session log` sync helpers
+  - manual-log helpers now normalize a backend create request shape from the History form input
+- Tests:
+  - added frontend coverage for manual-log create-request normalization and the dedicated API endpoint helper
+  - added backend controller coverage for successful and invalid manual-log creation
+  - updated History test backend mocks for the new manual-log route
+  - fixed `SessionLogControllerTest` isolation by clearing stored `session log` rows between tests
+
+## Milestone B prompt 02: media catalog and custom plays REST
+- Added and used:
+  - `requirements/execplan-milestone-b-media-catalog-custom-plays-rest.md`
+- Backend changes:
+  - added H2 migration `V4__add_custom_play_sound_fields.sql` to align the `custom_play` table with the current frontend sound fields
+  - added backend `custom play` repository, service, controller, request, and response contracts under `backend/src/main/java/com/meditation/backend/customplay/`
+  - added backend routes:
+    - `GET /api/custom-plays`
+    - `PUT /api/custom-plays/{id}`
+    - `DELETE /api/custom-plays/{id}`
+  - validated optional linked `media asset` ids against active `custom-play` media rows
+- Frontend changes:
+  - added `src/utils/customPlayApi.ts` as the shared REST boundary for list, upsert, and delete
+  - updated `TimerContext` to hydrate `custom play` data from the backend, migrate older local entries forward on first load, and preserve local cache fallback behavior
+  - made `custom play` save, delete, and favorite actions async so Practice feedback reflects backend persistence truthfully
+  - kept the existing `CustomPlay` screen contract stable for the rest of the app
+- UX and documentation changes:
+  - added calm loading and sync banners for backend-backed `custom play` work inside Practice tools
+  - documented local media placement under `local-data/media/custom-plays/` and the backend media-asset mapping expectations
+- Tests:
+  - added frontend API-boundary tests for `custom play` response normalization and delete failure handling
+  - updated `CustomPlayManager` tests for backend-backed save/delete/favorite flows and loading/sync states
+  - added backend repository and controller tests for `custom play` list/save/delete validation paths
+
+## Milestone B prompt 03: playlists REST
+- Added and used:
+  - `requirements/execplan-milestone-b-playlists-rest.md`
+- Backend changes:
+  - added H2 migration `V5__add_playlist_rest_support.sql`
+    - adds stable `playlist_item.external_id` support for browser-created playlist-item ids
+    - updates playlist-delete behavior so historical `session log` rows keep readable playlist context while `playlist_id` can null out safely
+  - added backend playlist repository, item repository, service, controller, request, and response contracts under `backend/src/main/java/com/meditation/backend/playlist/`
+  - added backend routes:
+    - `GET /api/playlists`
+    - `PUT /api/playlists/{id}`
+    - `DELETE /api/playlists/{id}`
+- Frontend changes:
+  - replaced the local-only playlist seam in `src/utils/playlistApi.ts` with live playlist list/upsert/delete HTTP helpers
+  - updated `TimerContext` to hydrate playlists from the backend, promote older local playlists on first load, and keep browser cache fallback behavior
+  - made playlist save, delete, and favorite actions async so playlist management feedback reflects backend persistence truthfully
+  - kept active playlist-run recovery local-first while playlist definitions now come from backend hydration
+- Playlist logging behavior:
+  - kept per-item playlist `session log` behavior intact through the existing generic `session log` sync path
+  - preserved readable History context after playlist deletion through stored snapshot metadata:
+    - `playlistName`
+    - `playlistRunId`
+    - `playlistRunStartedAt`
+    - item position/count
+- UX and tests:
+  - added calm load/sync banners for backend-backed playlist management
+  - preserved cached playlist run launching while backend hydration is in flight
+  - added frontend API-boundary tests for playlist list/upsert/delete transport
+  - added backend repository/controller coverage for playlist persistence and history-safe delete behavior
+
+## Milestone B prompt 04: review
+- Added:
+  - `docs/review-practice-composition-fullstack.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - playlist delete failures currently surface the wrong user message
+    - playlist runs can start from stale cached definitions before backend hydration completes
+    - globally unique playlist-item external ids can still fail as an unhandled server-side constraint error across playlists
+  - nice-to-have issues:
+    - `TimerContext` is carrying too many milestone responsibilities
+- Prompt 04 intentionally made no code changes.
+
+## Milestone B prompt 05: remediation
+- Added and used:
+  - `requirements/execplan-milestone-b-practice-composition-remediation.md`
+- Frontend changes:
+  - added an explicit `playlists loading` launch-block reason so playlist runs cannot start from stale cached definitions before backend hydration completes
+  - disabled playlist run actions on `Practice` and favorite playlist shortcuts on `Home` while playlist hydration is still in flight, with calm loading copy to explain the wait
+  - returned truthful playlist delete persistence failures from `TimerContext` so Practice only shows the active-run delete message for real run conflicts
+- Backend changes:
+  - added H2 migration `V6__scope_playlist_item_external_id_uniqueness.sql`
+  - scoped playlist-item `external_id` uniqueness to `(playlist_id, external_id)` so different playlists can safely reuse the same browser-created item ids
+- Tests:
+  - expanded frontend coverage for playlist loading gates and truthful delete failure guidance in:
+    - `src/utils/playlistRunPolicy.test.ts`
+    - `src/pages/PlaylistsPage.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/features/timer/TimerContext.test.tsx`
+  - added backend controller coverage proving different playlists can reuse the same playlist-item id without a server error
+
+## Milestone B review findings summary
+- Critical:
+  - none recorded in `docs/review-practice-composition-fullstack.md`
+- Important:
+  - prompt 05 remediated all three important review findings
+- Nice-to-have:
+  - `TimerContext` still carries too many milestone responsibilities and remains a future maintainability slice
+
+## Milestone B prompt 06: testing
+- Added and used:
+  - `requirements/execplan-milestone-b-practice-composition-testing.md`
+- Test additions:
+  - expanded `src/App.test.tsx` with backend-backed fresh-mount integration coverage for:
+    - manual log creation -> History rehydration
+    - custom play creation -> Practice rehydration
+    - playlist run auto logs -> History rehydration
+  - extended the existing stateful backend fetch mock only as far as needed to cover Milestone B manual-log, custom-play, and playlist persistence seams
+- Verification:
+  - re-ran:
+    - `npm run typecheck`
+    - `npm run lint`
+    - `npm run test`
+    - `npm run build`
+    - `mvn -Dmaven.repo.local=../local-data/m2 test`
+    - `mvn -Dmaven.repo.local=../local-data/m2 verify`
+
+## Milestone B merge status
+- Parent branch updated: `codex/functioning`
+- Merged milestone branch: `codex/milestone-b-practice-composition-fullstack`
+- Merge strategy: normal local merge commit preserving milestone history
+
+## Milestone B completion summary
+- Completed the backend-backed practice-composition vertical slice for:
+  - manual `session log` persistence
+  - media catalog-backed `custom play` persistence
+  - playlist persistence and playlist-run history continuity
+- Closed the important practice-composition review findings before merge:
+  - truthful playlist delete feedback
+  - backend-hydration gating for playlist launches
+  - playlist-item external-id uniqueness scoped safely for reused browser ids
+- Finished with milestone-level integration coverage proving backend-backed fresh-mount continuity for:
+  - manual logs
+  - custom plays
+  - playlist-run history
+
+## Milestone B verification status
+- Passed `npm run typecheck`
+- Passed `npm run lint`
+- Passed `npm run test`
+- Passed `npm run build`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+
+## Milestone B known limitations
+- Sankalpa CRUD is still local-first in the frontend.
+- Media catalog browsing still depends on the seeded backend media metadata surface plus frontend fallback assumptions.
+- Playlist-generated `session log` entries still sync through the existing generic `session log` path, now against backend-backed playlist ids and snapshot metadata.
+- Timer and playlist sound playback remain UI-only.
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -89,7 +261,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 - Finished with both automated and live verification strong enough for parent-branch merge.
 
 ## Intentional sample or helper content that remains
-- Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
+- Frontend persistence for sankalpas is still local-first outside the completed media catalog, `custom play`, and playlist seams.
 - Built-in sample media metadata remains as a fallback when the backend media endpoint is unavailable.
 - `docs/review-foundation-fullstack.md` remains as the review artifact for the completed foundation assessment.
 
@@ -127,8 +299,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
   - `http://127.0.0.1:5175/practice`
 
 ## Known limitations
-- Playlists, sankalpas, and custom-play CRUD are still local-first in the UI.
-- Playlist-generated `session log` entries still depend on local-only playlist data, so playlist history sync should be revisited once playlist REST persistence is added.
+- Sankalpas are still local-first in the UI.
 - Media upload/import and authenticated admin/media-management flows are still unimplemented.
 - Timer and playlist sound playback remain UI-only.
 - The Flyway H2-version compatibility warning still appears in this environment, but tests and runtime verification passed.
@@ -163,10 +334,10 @@ Read:
 Then:
 
 1. Inspect the current git branch and confirm the current branch name before making changes.
-2. Treat the current branch as the parent branch for this Milestone B.
-3. Create a new local branch for this Milestone B work from the current branch.
+2. Treat the current branch as the parent branch for this Milestone C.
+3. Create a new local branch for this Milestone C work from the current branch.
 4. Use a clear branch name in this format if available:
-   - `codex/milestone-b-practice-composition-fullstack`
+   - `codex/milestone-c-discipline-insight-fullstack`
    If that exact name already exists locally, create a clear alternative with a short numeric suffix.
 5. Switch to the new branch.
 6. Confirm:
@@ -183,4 +354,4 @@ Then:
    - exact recommended next prompt
 9. Do not implement milestone feature work in this step beyond branch setup and minimal documentation updates if needed.
 10. Commit documentation-only changes if any were made, with a clear message such as:
-    chore(branch): prepare local branch for Milestone B
+   chore(branch): prepare local branch for Milestone C

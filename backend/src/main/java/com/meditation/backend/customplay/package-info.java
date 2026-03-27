@@ -1,4 +1,4 @@
 /**
- * Domain package reserved for future custom play persistence and REST work.
+ * Backend-backed custom play persistence and REST support.
  */
 package com.meditation.backend.customplay;

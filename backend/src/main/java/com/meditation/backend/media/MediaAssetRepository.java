@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MediaAssetRepository extends JpaRepository<MediaAssetEntity, String> {
 
   List<MediaAssetEntity> findByAssetKindAndActiveTrueOrderByLabelAsc(String assetKind);
+
+  boolean existsByIdAndAssetKindAndActiveTrue(String id, String assetKind);
 }

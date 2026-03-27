@@ -8,6 +8,7 @@ import type {
 interface EvaluatePlaylistRunStartParams {
   readonly playlistId: string;
   readonly playlists: readonly Playlist[];
+  readonly isPlaylistsLoading: boolean;
   readonly activeTimerSession: boolean;
   readonly activePlaylistRun: ActivePlaylistRun | null;
 }
@@ -15,9 +16,14 @@ interface EvaluatePlaylistRunStartParams {
 export function evaluatePlaylistRunStart({
   playlistId,
   playlists,
+  isPlaylistsLoading,
   activeTimerSession,
   activePlaylistRun,
 }: EvaluatePlaylistRunStartParams): PlaylistRunStartResult {
+  if (isPlaylistsLoading) {
+    return { started: false, reason: 'playlists loading' };
+  }
+
   if (activeTimerSession) {
     return { started: false, reason: 'timer session active' };
   }

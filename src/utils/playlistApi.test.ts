@@ -1,99 +1,88 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { Playlist } from '../types/playlist';
 import {
   buildPlaylistCollectionUrl,
   buildPlaylistDetailEndpoint,
+  buildPlaylistDetailPath,
   buildPlaylistDetailUrl,
+  deletePlaylistFromApi,
   listPlaylistsFromApi,
-  persistPlaylistsToApi,
+  persistPlaylistToApi,
   PLAYLISTS_COLLECTION_ENDPOINT,
 } from './playlistApi';
 
-const PLAYLISTS_STORAGE_KEY = 'meditation.playlists.v1';
+const playlist: Playlist = {
+  id: 'playlist-1',
+  name: 'Evening Sequence',
+  favorite: false,
+  createdAt: '2026-03-24T08:00:00.000Z',
+  updatedAt: '2026-03-24T08:00:00.000Z',
+  items: [
+    {
+      id: 'item-1',
+      meditationType: 'Tratak',
+      durationMinutes: 14,
+    },
+  ],
+};
 
 describe('playlist api boundary', () => {
-  beforeEach(() => {
-    localStorage.clear();
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('exposes stable playlist endpoint contracts', () => {
     expect(PLAYLISTS_COLLECTION_ENDPOINT).toBe('/api/playlists');
+    expect(buildPlaylistDetailPath('playlist-1')).toBe('/playlists/playlist-1');
     expect(buildPlaylistDetailEndpoint('playlist-1')).toBe('/api/playlists/playlist-1');
     expect(buildPlaylistCollectionUrl()).toBe('/api/playlists');
-    expect(buildPlaylistDetailUrl('playlist-1', 'http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/playlists/playlist-1');
+    expect(buildPlaylistDetailUrl('playlist-1', 'http://192.168.1.25:8080/api')).toBe(
+      'http://192.168.1.25:8080/api/playlists/playlist-1'
+    );
   });
 
-  it('persists and lists playlists through api boundary', async () => {
-    const playlists = [
-      {
-        id: 'playlist-1',
-        name: 'Evening Sequence',
-        favorite: false,
-        createdAt: '2026-03-24T08:00:00.000Z',
-        updatedAt: '2026-03-24T08:00:00.000Z',
-        items: [
-          {
-            id: 'item-1',
-            meditationType: 'Tratak' as const,
-            durationMinutes: 14,
-          },
-        ],
-      },
-    ];
-
-    await persistPlaylistsToApi(playlists);
-    await expect(listPlaylistsFromApi()).resolves.toEqual(playlists);
-  });
-
-  it('returns normalized playlists through api list boundary', async () => {
-    localStorage.setItem(
-      PLAYLISTS_STORAGE_KEY,
-      JSON.stringify([
-        {
-          id: 'playlist-valid',
-          name: 'Valid Sequence',
-          favorite: false,
-          createdAt: '2026-03-24T08:00:00.000Z',
-          updatedAt: '2026-03-24T08:00:00.000Z',
-          items: [
-            {
-              id: 'item-1',
-              meditationType: 'Ajapa',
-              durationMinutes: 12,
-            },
-          ],
-        },
-        {
-          id: 'playlist-invalid',
-          name: 'Invalid Sequence',
-          favorite: false,
-          createdAt: '2026-03-24T08:00:00.000Z',
-          updatedAt: '2026-03-24T08:00:00.000Z',
-          items: [
-            {
-              id: 'item-2',
-              meditationType: 'Breathwork',
-              durationMinutes: 0,
-            },
-          ],
-        },
-      ])
+  it('lists playlists from the backend', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [playlist],
+      })
     );
 
-    await expect(listPlaylistsFromApi()).resolves.toEqual([
-      {
-        id: 'playlist-valid',
-        name: 'Valid Sequence',
-        favorite: false,
-        createdAt: '2026-03-24T08:00:00.000Z',
-        updatedAt: '2026-03-24T08:00:00.000Z',
-        items: [
-          {
-            id: 'item-1',
-            meditationType: 'Ajapa',
-            durationMinutes: 12,
-          },
-        ],
-      },
-    ]);
+    await expect(listPlaylistsFromApi()).resolves.toEqual([playlist]);
+  });
+
+  it('persists and deletes playlists through the backend endpoints', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => playlist,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const saved = await persistPlaylistToApi(playlist);
+    expect(saved).toEqual(playlist);
+
+    await expect(deletePlaylistFromApi(playlist.id)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/playlists/playlist-1',
+      expect.objectContaining({ method: 'PUT' })
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/playlists/playlist-1',
+      expect.objectContaining({ method: 'DELETE' })
+    );
   });
 });

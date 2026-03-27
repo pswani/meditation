@@ -36,6 +36,11 @@ export interface PlaylistValidationResult {
   };
 }
 
+export interface PlaylistSaveResult extends PlaylistValidationResult {
+  readonly persisted: boolean;
+  readonly persistenceError?: string;
+}
+
 export interface ActivePlaylistRun {
   readonly runId: string;
   readonly playlistId: string;
@@ -62,6 +67,7 @@ export interface PlaylistRunOutcome {
 }
 
 export type PlaylistRunStartBlockReason =
+  | 'playlists loading'
   | 'timer session active'
   | 'playlist run active'
   | 'playlist not found'
@@ -77,4 +83,5 @@ export type PlaylistDeleteBlockReason = 'playlist run active';
 export interface PlaylistDeleteResult {
   readonly deleted: boolean;
   readonly reason?: PlaylistDeleteBlockReason;
+  readonly persistenceError?: string;
 }

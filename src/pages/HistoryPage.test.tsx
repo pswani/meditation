@@ -1,18 +1,82 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TimerProvider } from '../features/timer/TimerContext';
 import HistoryPage from './HistoryPage';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 
+function createJsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
+}
+
 describe('HistoryPage UX', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs/manual') && method === 'POST') {
+          const requestBody = JSON.parse(String(init?.body ?? '{}')) as {
+            durationMinutes: number;
+            meditationType: string;
+            sessionTimestamp: string;
+          };
+          const durationSeconds = Math.round(requestBody.durationMinutes * 60);
+          const endedAt = new Date(requestBody.sessionTimestamp);
+          const startedAt = new Date(endedAt.getTime() - durationSeconds * 1000);
+
+          return createJsonResponse(200, {
+            id: 'manual-log-created',
+            startedAt: startedAt.toISOString(),
+            endedAt: endedAt.toISOString(),
+            meditationType: requestBody.meditationType,
+            intendedDurationSeconds: durationSeconds,
+            completedDurationSeconds: durationSeconds,
+            status: 'completed',
+            source: 'manual log',
+            startSound: 'None',
+            endSound: 'None',
+            intervalEnabled: false,
+            intervalMinutes: 0,
+            intervalSound: 'None',
+          });
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   it('shows timestamp helper text and save success feedback for manual log', async () => {

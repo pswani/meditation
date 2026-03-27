@@ -15,6 +15,7 @@ function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
   }
 
   const reasonToMessage: Record<NonNullable<PlaylistRunStartResult['reason']>, string> = {
+    'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
     'timer session active': 'Finish or end the active timer session before starting a playlist run.',
     'playlist run active': 'A playlist run is already active. Open it to continue.',
     'playlist not found': 'That playlist is no longer available.',
@@ -37,6 +38,7 @@ export default function HomePage() {
     setSettings,
     startPlaylistRun,
     isSettingsLoading,
+    isPlaylistsLoading,
     settingsSyncError,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -269,18 +271,32 @@ export default function HomePage() {
             <div className="home-shortcuts">
               <strong>Favorite playlist</strong>
               {favoritePlaylists.length === 0 ? (
-                <p className="section-subtitle">No favorite playlist yet.</p>
+                isPlaylistsLoading ? (
+                  <p className="section-subtitle">Loading favorite playlists from the backend.</p>
+                ) : (
+                  <p className="section-subtitle">No favorite playlist yet.</p>
+                )
               ) : (
-                <ul className="home-shortcut-list">
-                  {favoritePlaylists.map((playlist) => (
-                    <li key={playlist.id} className="home-shortcut-item">
-                      <span className="home-shortcut-label">{playlist.name}</span>
-                      <button type="button" className="secondary" onClick={() => runFavoritePlaylist(playlist.id)}>
-                        Run
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {isPlaylistsLoading ? (
+                    <p className="section-subtitle">Loading favorite playlists from the backend.</p>
+                  ) : null}
+                  <ul className="home-shortcut-list">
+                    {favoritePlaylists.map((playlist) => (
+                      <li key={playlist.id} className="home-shortcut-item">
+                        <span className="home-shortcut-label">{playlist.name}</span>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => runFavoritePlaylist(playlist.id)}
+                          disabled={isPlaylistsLoading}
+                        >
+                          Run
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </div>
           </div>

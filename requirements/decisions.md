@@ -2,6 +2,77 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b merge decisions
+- Merge `codex/milestone-b-practice-composition-fullstack` back into `codex/functioning` with a normal local merge commit so the manual logging, custom play, media catalog, playlist, remediation, and testing history stays intact.
+- Mark Milestone B complete on `codex/functioning` and hand off to Milestone C branch setup as the next prompt sequence.
+
+### 2026-03-26 milestone-b testing decisions
+- Use app-level stateful fetch-mock coverage in `src/App.test.tsx` as the main prompt 06 confidence layer for Milestone B, because the remaining risk is backend-backed persistence and fresh-mount hydration continuity rather than isolated reducer or component logic.
+- Strengthen test confidence with backend-backed rehydration journeys for:
+  - manual log -> History
+  - custom play -> Practice tools
+  - playlist run -> History
+- Keep prompt 06 bounded to test additions and milestone documentation only; do not introduce new feature behavior outside what the tests need to exercise.
+
+### 2026-03-26 milestone-b remediation decisions
+- Treat backend playlist hydration as the source-of-truth gate for playlist-run launch actions on both `Practice` and `Home`; expose an explicit `playlists loading` block reason and disable launch buttons while hydration is still in flight.
+- Keep backend playlist persistence failures distinct from active-run delete blocks by returning expressive delete results from `TimerContext` and reserving the “currently running” message for the real run-conflict case only.
+- Scope playlist-item `external_id` uniqueness to `(playlist_id, external_id)` instead of the whole table so migrated browser ids remain reusable across different playlists without leaking raw H2 constraint failures through the REST API.
+
+### 2026-03-26 milestone-b playlists rest decisions
+- Move playlist persistence to backend-owned H2 + REST while keeping the existing frontend `Playlist` and `PlaylistItem` shapes stable for screen consumers.
+- Reuse the existing `playlist` and `playlist_item` tables, but add a stable string `external_id` for playlist items so older browser-created item ids migrate cleanly.
+- Keep playlist-generated `session log` behavior at per-item granularity through the existing `session log` sync path:
+  - each reached item logs an `auto log`
+  - completed items log `completed`
+  - ending early logs the active item as `ended early`
+  - unstarted future items do not log
+- Preserve readable historical playlist context even after a playlist is deleted by storing snapshot fields (`playlistName`, run metadata, item position/count`) on `session log` rows and letting `playlist_id` null out on delete.
+- Preserve browser `localStorage` for:
+  - first-hydration migration of older local playlists
+  - fallback cache continuity when backend hydration fails
+- Keep playlist management feedback calm and local to the Practice/playlist surfaces:
+  - loading banners during backend hydration
+  - inline warning banners on backend failures
+  - truthful save/update/delete feedback only after backend confirmation
+
+### 2026-03-26 milestone-b media catalog custom plays rest decisions
+- Keep the existing backend `media asset` catalog, configured media-root filesystem conventions, and seeded custom-play metadata as the source of truth for selectable recordings in this slice.
+- Move `custom play` persistence to backend-owned H2 + REST while keeping the existing frontend `CustomPlay` shape stable and adapting the new backend contract to it.
+- Extend the existing `custom_play` table with the missing sound fields instead of introducing a second `custom play` persistence model.
+- Use backend detail upserts at `PUT /api/custom-plays/{id}` so existing browser-created `custom play` ids can migrate cleanly during first backend hydration.
+- Preserve browser `localStorage` for:
+  - first-hydration migration of older local `custom play` records
+  - fallback cache continuity when backend hydration fails
+- Keep backend validation narrow and explicit in this slice:
+  - required `custom play` name
+  - allowed meditation type
+  - duration greater than 0
+  - required start and end sounds
+  - optional linked `media asset` id must exist, be active, and belong to the `custom-play` asset kind
+- Add calm Practice feedback for backend-backed `custom play` load and save states instead of introducing heavier global status UI.
+
+### 2026-03-26 milestone-b manual logging rest decisions
+- Add a dedicated backend create route for manual logs at `/api/session-logs/manual` while keeping the existing `PUT /api/session-logs/{id}` flow for auto-log and playlist-log sync.
+- Keep manual logs in the shared `session_log` table and shared `SessionLogResponse` contract instead of introducing a separate manual-log persistence model.
+- Make the backend the owner of manual-log construction details:
+  - generated id
+  - `source = manual log`
+  - `status = completed`
+  - derived `startedAt` and `endedAt`
+  - default sound and interval fields
+- Keep frontend manual-log validation in place for calm immediate feedback, but treat the backend-created `session log` response as the source of truth for what enters History.
+
+### 2026-03-26 milestone-b practice composition branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-b-practice-composition-fullstack`.
+- Create and use the local milestone branch `codex/milestone-b-practice-composition-fullstack` for all Milestone B prompt execution before merging back to the parent branch.
+- Keep Milestone B bounded to the practice-composition full-stack slice:
+  - manual `session log` REST persistence for manual logging
+  - media catalog and `custom play` REST persistence
+  - playlist and playlist-item REST persistence
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-26 milestone-a core full-stack branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-a-core-fullstack`.
 - Create and use the local milestone branch `codex/prompts/milestone-a-core-fullstack` for all Milestone A prompt execution before merging back to the parent branch.

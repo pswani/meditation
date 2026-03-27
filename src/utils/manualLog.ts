@@ -21,6 +21,12 @@ export interface ManualLogSaveResult extends ManualLogValidationResult {
   readonly persistenceError?: string;
 }
 
+export interface ManualLogCreateRequest {
+  readonly durationMinutes: number;
+  readonly meditationType: MeditationType;
+  readonly sessionTimestamp: string;
+}
+
 function parseManualTimestamp(timestamp: string): number | null {
   const parsedMs = new Date(timestamp).getTime();
   if (Number.isNaN(parsedMs)) {
@@ -58,20 +64,34 @@ export function validateManualLogInput(input: ManualLogInput, now: Date = new Da
   };
 }
 
-export function buildManualLogEntry(input: ManualLogInput, now: Date): SessionLog {
-  const endedAtMs = parseManualTimestamp(input.sessionTimestamp);
-  if (endedAtMs === null) {
+export function buildManualLogCreateRequest(input: ManualLogInput): ManualLogCreateRequest {
+  const sessionTimestampMs = parseManualTimestamp(input.sessionTimestamp);
+  if (sessionTimestampMs === null) {
     throw new Error('Manual log timestamp is invalid.');
   }
 
-  const durationSeconds = Math.round(input.durationMinutes * 60);
+  if (!input.meditationType) {
+    throw new Error('Manual log meditation type is invalid.');
+  }
+
+  return {
+    durationMinutes: input.durationMinutes,
+    meditationType: input.meditationType,
+    sessionTimestamp: new Date(sessionTimestampMs).toISOString(),
+  };
+}
+
+export function buildManualLogEntry(input: ManualLogInput, now: Date): SessionLog {
+  const request = buildManualLogCreateRequest(input);
+  const endedAtMs = new Date(request.sessionTimestamp).getTime();
+  const durationSeconds = Math.round(request.durationMinutes * 60);
   const startedAtMs = endedAtMs - durationSeconds * 1000;
 
   return {
     id: `manual-log-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
-    meditationType: input.meditationType as MeditationType,
+    meditationType: request.meditationType,
     intendedDurationSeconds: durationSeconds,
     completedDurationSeconds: durationSeconds,
     status: 'completed',
