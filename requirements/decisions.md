@@ -49,6 +49,17 @@
   - saved after backend confirmation
 - Keep the broader `Practice` draft-vs-defaults model unchanged in this remediation slice and defer that bigger product/state decision as a later nice-to-have improvement.
 
+### 2026-03-26 milestone-a verification decisions
+- Keep prompt 05 verification-focused and add only narrow confidence-building coverage where the milestone still had a meaningful gap:
+  - backend-backed Home quick start launching from hydrated defaults
+  - direct H2 timer-settings persistence at the repository boundary
+- Treat the locked default dev H2 file and occupied default dev ports as environment constraints, not Milestone A product failures.
+- Complete live runtime verification against an isolated local stack when the default dev runtime is busy:
+  - temporary backend H2 database name `meditation-prompt05`
+  - backend port `8081`
+  - frontend port `5175`
+- Use that isolated runtime only for verification and keep the shipped app behavior/config unchanged.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

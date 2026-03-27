@@ -565,6 +565,35 @@ describe('App shell', () => {
     expect(screen.getByText(/default timer: 25 min/i)).toBeInTheDocument();
   });
 
+  it('starts a timer from Home after backend defaults hydrate', async () => {
+    const { fetchMock } = createStatefulBackendFetchMock({
+      settings: {
+        durationMinutes: 18,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
+    expect(screen.getByText(/default timer: 18 min/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: '18:00' })).toBeInTheDocument();
+    expect(screen.getByText(/stay present/i)).toBeInTheDocument();
+  });
+
   it('persists backend timer settings and rehydrates them on a fresh app mount', async () => {
     const { fetchMock } = createStatefulBackendFetchMock({
       settings: {

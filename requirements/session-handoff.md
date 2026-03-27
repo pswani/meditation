@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone A prompts 01 through 04 are complete. The core practice engine remains backend-backed and runnable locally, and the prompt 04 remediation pass closed the two important timer-settings trust issues identified by the review.
+Milestone A prompts 01 through 05 are complete. The core practice engine remains backend-backed and verified end to end, and the prompt 05 pass added the final test and runtime confidence needed before local merge.
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -14,7 +14,7 @@ Milestone A prompts 01 through 04 are complete. The core practice engine remains
   - milestone review, remediation, verification, and local merge back to the parent branch
 - Working tree status at branch creation: clean and ready for milestone work
 
-Prompt 01 established the H2-backed REST contracts and frontend hydration/sync path for timer settings and `session log` history. Prompt 02 completed the user-facing core practice-engine flow on top of that foundation by tightening Home and Practice launch behavior, adding fresh-mount integration coverage, and verifying the runnable local stack end to end. Prompt 03 reviewed that milestone slice without code changes and identified the bounded issues to remediate next. Prompt 04 then fixed those important issues with a small, focused remediation pass.
+Prompt 01 established the H2-backed REST contracts and frontend hydration/sync path for timer settings and `session log` history. Prompt 02 completed the user-facing core practice-engine flow on top of that foundation by tightening Home and Practice launch behavior, adding fresh-mount integration coverage, and verifying the runnable local stack end to end. Prompt 03 reviewed that milestone slice without code changes and identified the bounded issues to remediate next. Prompt 04 then fixed those important issues with a small, focused remediation pass. Prompt 05 finished the milestone with a strong verification pass across automated coverage, backend persistence, and isolated live runtime checks.
 
 ## What was changed
 - Added and used:
@@ -54,6 +54,21 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
   - locked `Settings` defaults controls while backend timer settings hydrate
   - added explicit settings-sync state so Settings save feedback only reports success after backend persistence succeeds
   - updated focused tests for hydration locking and truthful Settings save feedback
+- Prompt 05 verification:
+  - added `requirements/execplan-milestone-a-core-testing.md`
+  - added app-level coverage proving Home quick start can launch from backend-hydrated defaults
+  - added backend repository coverage proving seeded timer settings round-trip through H2 persistence updates
+  - re-ran the full frontend and backend verification suite successfully
+  - completed isolated live runtime verification using:
+    - temporary backend port `8081`
+    - temporary frontend port `5175`
+    - temporary H2 database `meditation-prompt05`
+  - confirmed live:
+    - backend health
+    - timer settings GET/PUT persistence
+    - `session log` GET/PUT persistence
+    - frontend `/api` proxy reachability
+    - hydrated Home and Practice launch surfaces against backend-backed defaults
 
 ## Intentional sample or helper content that remains
 - Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
@@ -79,6 +94,19 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
   - Practice hydration locking
   - Settings hydration locking
   - truthful backend-backed Settings save feedback
+- Passed prompt 05 added coverage for:
+  - Home quick start launching from backend-hydrated defaults
+  - H2-backed timer settings repository persistence
+- Verified isolated live backend startup on `http://127.0.0.1:8081/api/health`
+- Verified isolated live backend timer settings on `http://127.0.0.1:8081/api/settings/timer`
+- Verified isolated live backend `session log` history on `http://127.0.0.1:8081/api/session-logs`
+- Verified isolated live frontend proxy reachability on:
+  - `http://127.0.0.1:5175/api/media/custom-plays`
+  - `http://127.0.0.1:5175/api/settings/timer`
+  - `http://127.0.0.1:5175/api/session-logs`
+- Verified isolated live Home and Practice hydration with headless Chrome on:
+  - `http://127.0.0.1:5175/`
+  - `http://127.0.0.1:5175/practice`
 
 ## Known limitations
 - Playlists, sankalpas, and custom-play CRUD are still local-first in the UI.
@@ -88,6 +116,7 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
 - The Flyway H2-version compatibility warning still appears in this environment, but tests and runtime verification passed.
 - `Practice` still writes directly into shared saved timer settings; prompt 04 intentionally deferred that larger defaults-vs-session-draft model change as a later nice-to-have.
 - `TimerContext` remains the main change-risk hotspot for future milestone work even after the targeted remediation.
+- The default local dev H2 database file and default dev ports were already busy during prompt 05, so live verification used an isolated temporary backend/frontend runtime instead of mutating the busy default environment.
 
 ## Review findings summary
 - Critical:
@@ -100,15 +129,9 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
   - backend validation duplicates reference-domain values in code.
 
 ## Files updated in this slice
-- `requirements/execplan-milestone-a-core-remediation.md`
-- `docs/review-core-fullstack.md`
+- `requirements/execplan-milestone-a-core-testing.md`
+- `backend/src/test/java/com/meditation/backend/settings/TimerSettingsRepositoryTest.java`
 - `src/App.test.tsx`
-- `src/features/timer/TimerContext.tsx`
-- `src/features/timer/timerContextObject.ts`
-- `src/pages/PracticePage.test.tsx`
-- `src/pages/PracticePage.tsx`
-- `src/pages/SettingsPage.test.tsx`
-- `src/pages/SettingsPage.tsx`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
 
@@ -116,26 +139,38 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
 Read:
 - AGENTS.md
 - PLANS.md
+- requirements/session-handoff.md
+- requirements/decisions.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
-- requirements/roadmap.md
-- requirements/decisions.md
-- requirements/session-handoff.md
 
 Then:
 
-1. Create an ExecPlan.
-2. Thoroughly test:
-   - backend startup
-   - H2 persistence for the core flow
-   - timer -> log -> history
-   - settings -> timer defaults
-   - Home launch-surface behavior
-3. Improve test coverage where needed with focused maintainable tests only.
-4. Run the full relevant verification suite.
-5. Update docs and session-handoff with exact recommended next prompt.
-6. Commit with a clear message:
-   test(core): verify core full-stack practice engine end to end
+1. Inspect the current git state and determine:
+   - the current milestone branch
+   - the parent branch recorded earlier in requirements/session-handoff.md if present
+2. Verify the milestone work is in a good state before merging:
+   - review git status
+   - ensure there are no unintended uncommitted changes
+   - run the relevant verification commands for the milestone if they have not already been run recently
+3. Merge the current milestone branch back into its parent branch locally.
+4. Prefer a normal merge that preserves milestone history unless the repo state clearly requires another safe local strategy.
+5. Switch to the parent branch and complete the merge locally.
+6. If a merge conflict occurs, resolve it carefully, rerun relevant checks, and continue.
+7. After merge, confirm:
+   - parent branch name
+   - merged milestone branch name
+   - resulting git status
+8. Update:
+   - requirements/decisions.md
+   - requirements/session-handoff.md
+9. In session-handoff, record:
+   - milestone branch merged
+   - parent branch updated
+   - milestone completion summary
+   - exact recommended next prompt
+10. Commit any final merge-related documentation updates if needed with a clear message such as:
+    chore(branch): merge Milestone A branch into parent
