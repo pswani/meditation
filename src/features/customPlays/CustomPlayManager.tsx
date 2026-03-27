@@ -146,6 +146,10 @@ export default function CustomPlayManager() {
   const selectedMediaAsset = mediaAssets.find((asset) => asset.id === draft.mediaAssetId) ?? null;
   const mediaLoadMessageClassName =
     mediaLoadIssueKind === 'backend-error' || mediaLoadIssueKind === 'invalid-response' ? 'error-text' : 'hint-text';
+  const customPlayNameMessageId = errors.name ? 'custom-play-name-error' : undefined;
+  const customPlayMeditationTypeMessageId = errors.meditationType ? 'custom-play-meditation-type-error' : undefined;
+  const customPlayDurationMessageId = errors.durationMinutes ? 'custom-play-duration-error' : undefined;
+  const customPlayMediaMessageId = errors.mediaAssetId ? 'custom-play-media-error' : 'custom-play-media-hint';
 
   return (
     <section className="custom-play-panel">
@@ -176,184 +180,210 @@ export default function CustomPlayManager() {
         </div>
       ) : null}
 
-      <form className="form-grid" onSubmit={onSubmit}>
-        <label>
-          <span>Custom play name</span>
-          <input
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.name}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({ ...current, name: event.target.value }));
-            }}
-            placeholder="Morning Focus"
-          />
-          {errors.name ? <small className="error-text">{errors.name}</small> : null}
-        </label>
-
-        <label>
-          <span>Custom play meditation type</span>
-          <select
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.meditationType}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({
-                ...current,
-                meditationType: event.target.value as CustomPlayDraft['meditationType'],
-              }));
-            }}
-          >
-            <option value="">Select custom play meditation type</option>
-            {meditationTypes.map((meditationType) => (
-              <option key={meditationType} value={meditationType}>
-                {meditationType}
-              </option>
-            ))}
-          </select>
-          {errors.meditationType ? <small className="error-text">{errors.meditationType}</small> : null}
-        </label>
-
-        <label>
-          <span>Custom play duration (minutes)</span>
-          <input
-            type="number"
-            min={1}
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.durationMinutes}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({
-                ...current,
-                durationMinutes: Number(event.target.value),
-              }));
-            }}
-          />
-          {errors.durationMinutes ? <small className="error-text">{errors.durationMinutes}</small> : null}
-        </label>
-
-        <label>
-          <span>Custom play start sound (optional)</span>
-          <select
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.startSound}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({
-                ...current,
-                startSound: event.target.value,
-              }));
-            }}
-          >
-            {soundOptions.map((sound) => (
-              <option key={sound} value={sound}>
-                {sound}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span>Custom play end sound (optional)</span>
-          <select
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.endSound}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({
-                ...current,
-                endSound: event.target.value,
-              }));
-            }}
-          >
-            {soundOptions.map((sound) => (
-              <option key={sound} value={sound}>
-                {sound}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span>Media session (optional)</span>
-          <select
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.mediaAssetId}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({
-                ...current,
-                mediaAssetId: event.target.value,
-              }));
-            }}
-          >
-            <option value="">No linked media session</option>
-            {mediaAssets.map((asset) => (
-              <option key={asset.id} value={asset.id}>
-                {asset.label}
-              </option>
-            ))}
-          </select>
-          {errors.mediaAssetId ? (
-            <small className="error-text">{errors.mediaAssetId}</small>
-          ) : selectedMediaAsset ? (
-            <>
-              <small className="hint-text">Linked media session: {describeLinkedMedia(selectedMediaAsset)}</small>
-              <small className="hint-text">This keeps the custom play connected to the selected media session.</small>
-            </>
-          ) : (
-            <>
-              {mediaLoadError ? <small className={mediaLoadMessageClassName}>{mediaLoadError}</small> : null}
-              <small className="hint-text">
-                Choose a linked media session to remember which recording this custom play uses.
-              </small>
-            </>
-          )}
-        </label>
-
-        <label>
-          <span>Session note (optional)</span>
-          <input
-            disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-            value={draft.recordingLabel}
-            onChange={(event) => {
-              setSaveFeedbackMessage(null);
-              setDraft((current) => ({ ...current, recordingLabel: event.target.value }));
-            }}
-            placeholder="Breath emphasis"
-          />
-        </label>
-
-        <div className="timer-actions">
-          <button type="submit" disabled={isCustomPlaysLoading || isCustomPlaySyncing}>
-            {editId ? 'Update Custom Play' : 'Create Custom Play'}
-          </button>
-          {editId ? (
-            <button
-              type="button"
-              className="secondary"
+      <div className="custom-play-manager-layout">
+        <form className="form-grid custom-play-form" onSubmit={onSubmit}>
+          <label>
+            <span>Custom play name</span>
+            <input
               disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-              onClick={() => {
-                setEditId(null);
-                setDraft(initialDraft);
-                setErrors(initialErrors);
+              value={draft.name}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={customPlayNameMessageId}
+              onChange={(event) => {
                 setSaveFeedbackMessage(null);
+                setDraft((current) => ({ ...current, name: event.target.value }));
+              }}
+              placeholder="Morning Focus"
+            />
+            {errors.name ? (
+              <small id={customPlayNameMessageId} className="error-text">
+                {errors.name}
+              </small>
+            ) : null}
+          </label>
+
+          <label>
+            <span>Custom play meditation type</span>
+            <select
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.meditationType}
+              aria-invalid={Boolean(errors.meditationType)}
+              aria-describedby={customPlayMeditationTypeMessageId}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({
+                  ...current,
+                  meditationType: event.target.value as CustomPlayDraft['meditationType'],
+                }));
               }}
             >
-              Cancel Edit
-            </button>
-          ) : null}
-        </div>
-      </form>
+              <option value="">Select custom play meditation type</option>
+              {meditationTypes.map((meditationType) => (
+                <option key={meditationType} value={meditationType}>
+                  {meditationType}
+                </option>
+              ))}
+            </select>
+            {errors.meditationType ? (
+              <small id={customPlayMeditationTypeMessageId} className="error-text">
+                {errors.meditationType}
+              </small>
+            ) : null}
+          </label>
 
-      {customPlays.length === 0 ? (
-        <div className="empty-state">
-          <p>No custom play entries yet.</p>
-          <p>Create one to quickly reuse your preferred setup.</p>
-        </div>
-      ) : (
-        <ul className="custom-play-list">
-          {customPlays.map((play) => {
+          <label>
+            <span>Custom play duration (minutes)</span>
+            <input
+              type="number"
+              min={1}
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.durationMinutes}
+              aria-invalid={Boolean(errors.durationMinutes)}
+              aria-describedby={customPlayDurationMessageId}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({
+                  ...current,
+                  durationMinutes: Number(event.target.value),
+                }));
+              }}
+            />
+            {errors.durationMinutes ? (
+              <small id={customPlayDurationMessageId} className="error-text">
+                {errors.durationMinutes}
+              </small>
+            ) : null}
+          </label>
+
+          <label>
+            <span>Custom play start sound (optional)</span>
+            <select
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.startSound}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({
+                  ...current,
+                  startSound: event.target.value,
+                }));
+              }}
+            >
+              {soundOptions.map((sound) => (
+                <option key={sound} value={sound}>
+                  {sound}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Custom play end sound (optional)</span>
+            <select
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.endSound}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({
+                  ...current,
+                  endSound: event.target.value,
+                }));
+              }}
+            >
+              {soundOptions.map((sound) => (
+                <option key={sound} value={sound}>
+                  {sound}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Media session (optional)</span>
+            <select
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.mediaAssetId}
+              aria-invalid={Boolean(errors.mediaAssetId)}
+              aria-describedby={customPlayMediaMessageId}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({
+                  ...current,
+                  mediaAssetId: event.target.value,
+                }));
+              }}
+            >
+              <option value="">No linked media session</option>
+              {mediaAssets.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.label}
+                </option>
+              ))}
+            </select>
+            {errors.mediaAssetId ? (
+              <small id={customPlayMediaMessageId} className="error-text">
+                {errors.mediaAssetId}
+              </small>
+            ) : selectedMediaAsset ? (
+              <>
+                <small id={customPlayMediaMessageId} className="hint-text">
+                  Linked media session: {describeLinkedMedia(selectedMediaAsset)}
+                </small>
+                <small className="hint-text">This keeps the custom play connected to the selected media session.</small>
+              </>
+            ) : (
+              <>
+                {mediaLoadError ? <small id={customPlayMediaMessageId} className={mediaLoadMessageClassName}>{mediaLoadError}</small> : null}
+                <small className="hint-text">
+                  Choose a linked media session to remember which recording this custom play uses.
+                </small>
+              </>
+            )}
+          </label>
+
+          <label>
+            <span>Session note (optional)</span>
+            <input
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              value={draft.recordingLabel}
+              onChange={(event) => {
+                setSaveFeedbackMessage(null);
+                setDraft((current) => ({ ...current, recordingLabel: event.target.value }));
+              }}
+              placeholder="Breath emphasis"
+            />
+          </label>
+
+          <div className="timer-actions">
+            <button type="submit" disabled={isCustomPlaysLoading || isCustomPlaySyncing}>
+              {editId ? 'Update Custom Play' : 'Create Custom Play'}
+            </button>
+            {editId ? (
+              <button
+                type="button"
+                className="secondary"
+                disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                onClick={() => {
+                  setEditId(null);
+                  setDraft(initialDraft);
+                  setErrors(initialErrors);
+                  setSaveFeedbackMessage(null);
+                }}
+              >
+                Cancel Edit
+              </button>
+            ) : null}
+          </div>
+        </form>
+
+        <div className="custom-play-collection" aria-live="polite">
+          {customPlays.length === 0 ? (
+            <div className="empty-state">
+              <p>No custom play entries yet.</p>
+              <p>Create one to quickly reuse your preferred setup.</p>
+            </div>
+          ) : (
+            <ul className="custom-play-list">
+              {customPlays.map((play) => {
             const linkedAsset = play.mediaAssetId ? mediaAssets.find((asset) => asset.id === play.mediaAssetId) : null;
 
             return (
@@ -446,9 +476,11 @@ export default function CustomPlayManager() {
                 </div>
               </li>
             );
-          })}
-        </ul>
-      )}
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

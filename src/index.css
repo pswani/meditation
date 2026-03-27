@@ -909,6 +909,9 @@ button:disabled {
   font-weight: 700;
   color: var(--text);
   list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .manual-log-disclosure-body {
@@ -923,6 +926,19 @@ button:disabled {
   padding: 0;
   display: grid;
   gap: 0.7rem;
+}
+
+.custom-play-manager-layout,
+.playlist-manager-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.custom-play-form,
+.playlist-form,
+.custom-play-collection,
+.playlist-collection {
+  min-width: 0;
 }
 
 .custom-play-item {
@@ -1136,5 +1152,11 @@ button:disabled {
 
   .summary-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .custom-play-manager-layout,
+  .playlist-manager-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
   }
 }

@@ -47,6 +47,11 @@ export default function HistoryPage() {
   const [sourceFilter, setSourceFilter] = useState<'all' | SessionLog['source']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | SessionLog['status']>('all');
   const [visibleCount, setVisibleCount] = useState(20);
+  const manualDurationMessageId = errors.durationMinutes ? 'manual-log-duration-error' : 'manual-log-duration-hint';
+  const manualMeditationTypeMessageId = errors.meditationType
+    ? 'manual-log-meditation-type-error'
+    : 'manual-log-meditation-type-hint';
+  const manualTimestampMessageId = errors.sessionTimestamp ? 'manual-log-timestamp-error' : 'manual-log-timestamp-hint';
 
   const filteredLogs = useMemo(
     () =>
@@ -226,6 +231,8 @@ export default function HistoryPage() {
                   type="number"
                   min={1}
                   value={manualLog.durationMinutes}
+                  aria-invalid={Boolean(errors.durationMinutes)}
+                  aria-describedby={manualDurationMessageId}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
                     setSaveErrorMessage(null);
@@ -235,13 +242,23 @@ export default function HistoryPage() {
                     }));
                   }}
                 />
-                {errors.durationMinutes ? <small className="error-text">{errors.durationMinutes}</small> : null}
+                {errors.durationMinutes ? (
+                  <small id={manualDurationMessageId} className="error-text">
+                    {errors.durationMinutes}
+                  </small>
+                ) : (
+                  <small id={manualDurationMessageId} className="hint-text">
+                    Enter the full session duration in minutes.
+                  </small>
+                )}
               </label>
 
               <label>
                 <span>Meditation type</span>
                 <select
                   value={manualLog.meditationType}
+                  aria-invalid={Boolean(errors.meditationType)}
+                  aria-describedby={manualMeditationTypeMessageId}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
                     setSaveErrorMessage(null);
@@ -258,7 +275,15 @@ export default function HistoryPage() {
                     </option>
                   ))}
                 </select>
-                {errors.meditationType ? <small className="error-text">{errors.meditationType}</small> : null}
+                {errors.meditationType ? (
+                  <small id={manualMeditationTypeMessageId} className="error-text">
+                    {errors.meditationType}
+                  </small>
+                ) : (
+                  <small id={manualMeditationTypeMessageId} className="hint-text">
+                    Choose the meditation type you practiced.
+                  </small>
+                )}
               </label>
 
               <label>
@@ -266,6 +291,8 @@ export default function HistoryPage() {
                 <input
                   type="datetime-local"
                   value={manualLog.sessionTimestamp}
+                  aria-invalid={Boolean(errors.sessionTimestamp)}
+                  aria-describedby={manualTimestampMessageId}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
                     setSaveErrorMessage(null);
@@ -276,9 +303,13 @@ export default function HistoryPage() {
                   }}
                 />
                 {errors.sessionTimestamp ? (
-                  <small className="error-text">{errors.sessionTimestamp}</small>
+                  <small id={manualTimestampMessageId} className="error-text">
+                    {errors.sessionTimestamp}
+                  </small>
                 ) : (
-                  <small className="hint-text">Use your local date and time when the session ended.</small>
+                  <small id={manualTimestampMessageId} className="hint-text">
+                    Use your local date and time when the session ended.
+                  </small>
                 )}
               </label>
 

@@ -2,6 +2,19 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e accessibility and responsive polish decisions
+- Improve accessible form semantics on the highest-value validation-heavy flows first:
+  - timer setup
+  - settings
+  - manual log
+  - `custom play`
+  - playlist management
+- Keep hint text visible and connected to its control through stable `aria-describedby` ids, then swap that relationship to the inline error message only when the field becomes invalid.
+- Use wider-screen two-column layouts only for the management surfaces that naturally split into editing and review panes:
+  - `custom play`
+  - playlist management
+- Keep phone layouts stacked and touch-friendly so the responsive polish adds space on tablet and desktop without turning the app into a dense dashboard.
+
 ### 2026-03-27 milestone-e hardening remediation decisions
 - Reduce `TimerContext` risk incrementally by extracting the repeated queue-backed collection reconciliation rules into a focused helper module, instead of attempting a larger provider split during this prompt.
 - Replace JSON-stringification-based queue hydration keys and collection equality checks with narrower metadata signatures and domain-aware equality helpers so sync cycles do less avoidable serialization work.

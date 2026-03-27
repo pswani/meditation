@@ -94,14 +94,15 @@ describe('HistoryPage UX', () => {
     );
 
     expect(screen.getByText(/use your local date and time when the session ended/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/session timestamp/i)).toHaveAttribute('aria-describedby', 'manual-log-timestamp-hint');
 
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
     expect(await screen.findByText(/^manual log$/i)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     expect(screen.queryByText(/manual log saved to history/i)).not.toBeInTheDocument();
   });
 

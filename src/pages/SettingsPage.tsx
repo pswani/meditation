@@ -28,6 +28,9 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
   const areSettingsControlsDisabled = isSettingsLoading || isSettingsSyncing;
+  const durationMessageId = errors.durationMinutes ? 'settings-duration-error' : 'settings-duration-hint';
+  const meditationTypeMessageId = errors.meditationType ? 'settings-meditation-type-error' : 'settings-meditation-type-hint';
+  const intervalMessageId = errors.intervalMinutes ? 'settings-interval-error' : 'settings-interval-hint';
 
   useEffect(() => {
     setDraft(settings);
@@ -143,12 +146,18 @@ export default function SettingsPage() {
               min={1}
               value={draft.durationMinutes}
               disabled={areSettingsControlsDisabled}
+              aria-invalid={Boolean(errors.durationMinutes)}
+              aria-describedby={durationMessageId}
               onChange={(event) => update('durationMinutes', Number(event.target.value))}
             />
             {errors.durationMinutes ? (
-              <small className="error-text">{errors.durationMinutes}</small>
+              <small id={durationMessageId} className="error-text">
+                {errors.durationMinutes}
+              </small>
             ) : (
-              <small className="hint-text">Used when opening timer setup.</small>
+              <small id={durationMessageId} className="hint-text">
+                Used when opening timer setup.
+              </small>
             )}
           </label>
 
@@ -157,6 +166,8 @@ export default function SettingsPage() {
             <select
               value={draft.meditationType}
               disabled={areSettingsControlsDisabled}
+              aria-invalid={Boolean(errors.meditationType)}
+              aria-describedby={meditationTypeMessageId}
               onChange={(event) => update('meditationType', event.target.value as TimerSettings['meditationType'])}
             >
               <option value="">Select meditation type</option>
@@ -166,7 +177,15 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            {errors.meditationType ? <small className="error-text">{errors.meditationType}</small> : null}
+            {errors.meditationType ? (
+              <small id={meditationTypeMessageId} className="error-text">
+                {errors.meditationType}
+              </small>
+            ) : (
+              <small id={meditationTypeMessageId} className="hint-text">
+                Used as the default meditation type in timer setup.
+              </small>
+            )}
           </label>
 
           <label>
@@ -218,12 +237,16 @@ export default function SettingsPage() {
                   min={1}
                   value={draft.intervalMinutes}
                   disabled={areSettingsControlsDisabled}
+                  aria-invalid={Boolean(errors.intervalMinutes)}
+                  aria-describedby={intervalMessageId}
                   onChange={(event) => update('intervalMinutes', Number(event.target.value))}
                 />
                 {errors.intervalMinutes ? (
-                  <small className="error-text">{errors.intervalMinutes}</small>
+                  <small id={intervalMessageId} className="error-text">
+                    {errors.intervalMinutes}
+                  </small>
                 ) : (
-                  <small className="hint-text">
+                  <small id={intervalMessageId} className="hint-text">
                     {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} within the default session.
                   </small>
                 )}

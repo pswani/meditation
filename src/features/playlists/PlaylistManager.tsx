@@ -35,6 +35,7 @@ export default function PlaylistManager() {
   const [playlistFeedback, setPlaylistFeedback] = useState<string | null>(null);
 
   const controlsDisabled = isPlaylistsLoading || isPlaylistSyncing;
+  const playlistNameMessageId = errors.name ? 'playlist-name-error' : undefined;
 
   function updateDraft(next: PlaylistDraft) {
     setDraft(next);
@@ -175,43 +176,52 @@ export default function PlaylistManager() {
         </div>
       ) : null}
 
-      <form className="playlist-form" onSubmit={onSubmit}>
-        <label>
-          <span>Playlist name</span>
-          <input
-            disabled={controlsDisabled}
-            value={draft.name}
-            onChange={(event) => {
-              setPlaylistFeedback(null);
-              updateDraft({ ...draft, name: event.target.value });
-            }}
-            placeholder="Morning Sequence"
-          />
-          {errors.name ? <small className="error-text">{errors.name}</small> : null}
-        </label>
-
-        <div className="playlist-item-builder">
-          <div className="history-row">
-            <strong>Playlist items</strong>
-            <button
-              type="button"
-              className="secondary"
+      <div className="playlist-manager-layout">
+        <form className="playlist-form" onSubmit={onSubmit}>
+          <label>
+            <span>Playlist name</span>
+            <input
               disabled={controlsDisabled}
-              onClick={() =>
-                updateDraft({
-                  ...draft,
-                  items: [...draft.items, createPlaylistDraftItem()],
-                })
-              }
-            >
-              Add Item
-            </button>
-          </div>
+              value={draft.name}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={playlistNameMessageId}
+              onChange={(event) => {
+                setPlaylistFeedback(null);
+                updateDraft({ ...draft, name: event.target.value });
+              }}
+              placeholder="Morning Sequence"
+            />
+            {errors.name ? (
+              <small id={playlistNameMessageId} className="error-text">
+                {errors.name}
+              </small>
+            ) : null}
+          </label>
 
-          {errors.items ? <small className="error-text">{errors.items}</small> : null}
+          <div className="playlist-item-builder">
+            <div className="history-row">
+              <strong>Playlist items</strong>
+              <button
+                type="button"
+                className="secondary"
+                disabled={controlsDisabled}
+                onClick={() =>
+                  updateDraft({
+                    ...draft,
+                    items: [...draft.items, createPlaylistDraftItem()],
+                  })
+                }
+              >
+                Add Item
+              </button>
+            </div>
 
-          {draft.items.map((item, index) => {
+            {errors.items ? <small className="error-text">{errors.items}</small> : null}
+
+            {draft.items.map((item, index) => {
             const itemErrors = errors.itemErrors[item.id];
+            const itemMeditationTypeMessageId = itemErrors?.meditationType ? `playlist-item-${item.id}-meditation-type-error` : undefined;
+            const itemDurationMessageId = itemErrors?.durationMinutes ? `playlist-item-${item.id}-duration-error` : undefined;
             return (
               <div key={item.id} className="playlist-item-row">
                 <label>
@@ -219,6 +229,8 @@ export default function PlaylistManager() {
                   <select
                     disabled={controlsDisabled}
                     value={item.meditationType}
+                    aria-invalid={Boolean(itemErrors?.meditationType)}
+                    aria-describedby={itemMeditationTypeMessageId}
                     onChange={(event) => {
                       setPlaylistFeedback(null);
                       updateDraft({
@@ -238,7 +250,11 @@ export default function PlaylistManager() {
                       </option>
                     ))}
                   </select>
-                  {itemErrors?.meditationType ? <small className="error-text">{itemErrors.meditationType}</small> : null}
+                  {itemErrors?.meditationType ? (
+                    <small id={itemMeditationTypeMessageId} className="error-text">
+                      {itemErrors.meditationType}
+                    </small>
+                  ) : null}
                 </label>
 
                 <label>
@@ -248,6 +264,8 @@ export default function PlaylistManager() {
                     min={1}
                     disabled={controlsDisabled}
                     value={item.durationMinutes}
+                    aria-invalid={Boolean(itemErrors?.durationMinutes)}
+                    aria-describedby={itemDurationMessageId}
                     onChange={(event) => {
                       setPlaylistFeedback(null);
                       updateDraft({
@@ -260,7 +278,11 @@ export default function PlaylistManager() {
                       });
                     }}
                   />
-                  {itemErrors?.durationMinutes ? <small className="error-text">{itemErrors.durationMinutes}</small> : null}
+                  {itemErrors?.durationMinutes ? (
+                    <small id={itemDurationMessageId} className="error-text">
+                      {itemErrors.durationMinutes}
+                    </small>
+                  ) : null}
                 </label>
 
                 <div className="playlist-item-controls">
@@ -307,33 +329,34 @@ export default function PlaylistManager() {
                 </div>
               </div>
             );
-          })}
-        </div>
+            })}
+          </div>
 
-        <p className="section-subtitle">
-          Derived total duration: {computePlaylistTotalDurationMinutes(draft.items)} min
-        </p>
+          <p className="section-subtitle">
+            Derived total duration: {computePlaylistTotalDurationMinutes(draft.items)} min
+          </p>
 
-        <div className="timer-actions">
-          <button type="submit" disabled={controlsDisabled}>
-            {editId ? 'Update Playlist' : 'Create Playlist'}
-          </button>
-          {editId ? (
-            <button type="button" className="secondary" onClick={cancelEdit} disabled={controlsDisabled}>
-              Cancel Edit
+          <div className="timer-actions">
+            <button type="submit" disabled={controlsDisabled}>
+              {editId ? 'Update Playlist' : 'Create Playlist'}
             </button>
-          ) : null}
-        </div>
-      </form>
+            {editId ? (
+              <button type="button" className="secondary" onClick={cancelEdit} disabled={controlsDisabled}>
+                Cancel Edit
+              </button>
+            ) : null}
+          </div>
+        </form>
 
-      {playlists.length === 0 ? (
-        <div className="empty-state">
-          <p>No playlist entries yet.</p>
-          <p>Create a playlist to run multiple meditation type segments in order.</p>
-        </div>
-      ) : (
-        <ul className="playlist-list">
-          {playlists.map((playlist) => {
+        <div className="playlist-collection" aria-live="polite">
+          {playlists.length === 0 ? (
+            <div className="empty-state">
+              <p>No playlist entries yet.</p>
+              <p>Create a playlist to run multiple meditation type segments in order.</p>
+            </div>
+          ) : (
+            <ul className="playlist-list">
+              {playlists.map((playlist) => {
             const isActivePlaylist = activePlaylistRun?.playlistId === playlist.id;
 
             return (
@@ -412,9 +435,11 @@ export default function PlaylistManager() {
                 ) : null}
               </li>
             );
-          })}
-        </ul>
-      )}
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

@@ -95,6 +95,11 @@ describe('SettingsPage UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
 
     expect(screen.getByText(/less than total duration/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/default interval \(minutes\)/i)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/default interval \(minutes\)/i)).toHaveAttribute(
+      'aria-describedby',
+      'settings-interval-error'
+    );
     expect(screen.queryByText(/settings saved/i)).not.toBeInTheDocument();
 
     const persisted = localStorage.getItem(TIMER_SETTINGS_KEY);

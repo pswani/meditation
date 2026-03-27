@@ -686,7 +686,7 @@ describe('App shell', () => {
 
     expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -777,8 +777,8 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -1146,8 +1146,8 @@ describe('App shell', () => {
     );
 
     await flushBackendHydration();
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -1187,8 +1187,8 @@ describe('App shell', () => {
     );
 
     await flushBackendHydration();
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();

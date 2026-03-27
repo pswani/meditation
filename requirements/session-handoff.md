@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone E prompt 02 remediation is complete on `codex/milestone-e-hardening-release`. The important release-hardening issues are remediated, the updated setup flow is verified, and the next exact prompt is ready.
+Milestone E prompt 03 accessibility and responsive polish is complete on `codex/milestone-e-hardening-release`. The app now has stronger form accessibility semantics, calmer wide-screen management layouts, and verified prompt-03 coverage. The next exact prompt is ready.
 
 ## Milestone E branch setup
 - Parent branch: `codex/functioning`
@@ -68,6 +68,41 @@ Milestone E prompt 02 remediation is complete on `codex/milestone-e-hardening-re
   - backend Maven verification still emits a Flyway/H2 compatibility warning
 - Exact recommended next prompt:
   - `prompts/milestone-e-hardening-release/03-accessibility-responsive-polish.md`
+
+## Milestone E prompt 03: accessibility and responsive polish
+- Added and used:
+  - `requirements/execplan-milestone-e-accessibility-responsive-polish.md`
+- Accessibility changes:
+  - added `aria-invalid` and `aria-describedby` wiring plus stable hint and error ids on the validation-heavy form controls in:
+    - `Practice`
+    - `Settings`
+    - manual log in `History`
+    - `custom play`
+    - playlist management
+  - kept the existing validation copy and calm interaction model while making hint text and inline errors more reliably associated with each control
+- Responsive polish:
+  - added calm two-column management layouts for `custom play` and playlist management on wider screens
+  - kept those same surfaces stacked on phone-sized layouts so controls remain touch-friendly and easy to scan
+  - refined the manual-log disclosure summary layout so the collapsed/expanded affordance reads more cleanly across breakpoints
+- Tests:
+  - added focused accessibility assertions in:
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+    - `src/pages/HistoryPage.test.tsx`
+  - updated `src/App.test.tsx` manual-log queries to stay aligned with the more descriptive accessible labels
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+  - completed a local responsive spot-check on `http://127.0.0.1:4174`
+- Known limitations:
+  - the local preview spot-check used frontend fallback states because no backend was attached to the preview server
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/04-e2e-verification.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
