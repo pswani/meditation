@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C prompt 05 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has the testing pass in place and is ready for the local merge prompt.
+Milestone C is complete and merged into `codex/functioning`. The parent branch is ready for Milestone D branch setup.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -142,6 +142,22 @@ Milestone C prompt 05 is complete on `codex/milestone-c-discipline-insight-fulls
   - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/99-merge-branch.md`
+
+## Milestone C merge
+- Milestone branch merged:
+  - `codex/milestone-c-discipline-insight-fullstack`
+- Parent branch updated:
+  - `codex/functioning`
+- Merge strategy:
+  - normal local merge commit preserving milestone history
+- Milestone completion summary:
+  - backend-backed `summary` support is now in place with explicit time-zone-aware aggregation
+  - backend-backed `sankalpa` persistence and derived progress are now in place with H2-backed source-of-truth behavior
+  - review, remediation, and testing prompts are complete, including safer local fallback boundaries and stronger interaction coverage
+- Resulting git status after merge:
+  - clean on `codex/functioning`
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/00-create-branch.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

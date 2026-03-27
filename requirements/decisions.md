@@ -32,6 +32,10 @@
 - Add one stateful app-level interaction test for the highest-value Milestone C journey: a backend-backed manual log saved in `History` must surface correctly in both `summary` and `sankalpa` on the `Sankalpa` screen, including a fresh mount.
 - Add negative-path backend controller coverage for invalid `timeZone` input so the remediation boundary is tested on both successful and rejected requests without widening the milestone into new feature work.
 
+### 2026-03-26 milestone-c merge decisions
+- Merge `codex/milestone-c-discipline-insight-fullstack` back into `codex/functioning` with a normal local merge commit so the milestone's review, remediation, and testing history stays intact.
+- Mark Milestone C complete on `codex/functioning` and hand off to `prompts/milestone-d-offline-sync-fullstack/00-create-branch.md` as the next exact prompt.
+
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
 - Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.
