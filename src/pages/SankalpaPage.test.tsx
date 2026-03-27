@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -143,6 +143,128 @@ describe('Sankalpa summary UX', () => {
 
     expect(within(manualSourceRow).getByText(/completed: 0/i)).toBeInTheDocument();
     expect(within(manualSourceRow).getByText(/ended early: 1/i)).toBeInTheDocument();
+  });
+
+  it('prefers backend summary data when the summary API responds', async () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([createSessionLog('log-1', new Date(2026, 2, 24, 6, 0, 0, 0).toISOString(), 'auto log', 'completed', 900)])
+    );
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        if (url.includes('/api/summaries')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              overallSummary: {
+                totalSessionLogs: 5,
+                completedSessionLogs: 4,
+                endedEarlySessionLogs: 1,
+                totalDurationSeconds: 3600,
+                averageDurationSeconds: 720,
+                autoLogs: 2,
+                manualLogs: 3,
+              },
+              byTypeSummary: [
+                { meditationType: 'Vipassana', sessionLogs: 2, totalDurationSeconds: 1800 },
+                { meditationType: 'Ajapa', sessionLogs: 1, totalDurationSeconds: 600 },
+                { meditationType: 'Tratak', sessionLogs: 1, totalDurationSeconds: 600 },
+                { meditationType: 'Kriya', sessionLogs: 1, totalDurationSeconds: 600 },
+                { meditationType: 'Sahaj', sessionLogs: 0, totalDurationSeconds: 0 },
+              ],
+              bySourceSummary: [
+                {
+                  source: 'auto log',
+                  sessionLogs: 2,
+                  completedSessionLogs: 2,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 1800,
+                },
+                {
+                  source: 'manual log',
+                  sessionLogs: 3,
+                  completedSessionLogs: 2,
+                  endedEarlySessionLogs: 1,
+                  totalDurationSeconds: 1800,
+                },
+              ],
+              byTimeOfDaySummary: [
+                {
+                  timeOfDayBucket: 'morning',
+                  sessionLogs: 3,
+                  completedSessionLogs: 2,
+                  endedEarlySessionLogs: 1,
+                  totalDurationSeconds: 1800,
+                },
+                {
+                  timeOfDayBucket: 'afternoon',
+                  sessionLogs: 1,
+                  completedSessionLogs: 1,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 900,
+                },
+                {
+                  timeOfDayBucket: 'evening',
+                  sessionLogs: 1,
+                  completedSessionLogs: 1,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 900,
+                },
+                {
+                  timeOfDayBucket: 'night',
+                  sessionLogs: 0,
+                  completedSessionLogs: 0,
+                  endedEarlySessionLogs: 0,
+                  totalDurationSeconds: 0,
+                },
+              ],
+            }),
+          };
+        }
+
+        throw new TypeError('Network request failed');
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText(/completed: 4/i)).toBeInTheDocument());
+    expect(screen.getByText(/manual log: 3/i)).toBeInTheDocument();
+  });
+
+  it('shows a calm fallback warning when the backend summary API is unavailable', async () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([createSessionLog('log-1', new Date(2026, 2, 24, 6, 0, 0, 0).toISOString(), 'auto log', 'completed', 900)])
+    );
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async () => {
+        throw new TypeError('Network request failed');
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/showing a locally derived summary because the backend summary service could not be reached/i)
+      ).toBeInTheDocument()
+    );
+    expect(screen.getAllByText(/completed: 1/i).length).toBeGreaterThan(0);
   });
 
   it('uses explicit completed and ended-early labels in overall summary card', () => {

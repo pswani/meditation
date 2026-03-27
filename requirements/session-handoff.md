@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C branch setup is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch is ready for the summaries REST slice prompt.
+Milestone C prompt 01 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has backend-backed summaries and is ready for the sankalpa REST slice prompt.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -13,6 +13,38 @@ Milestone C branch setup is complete on `codex/milestone-c-discipline-insight-fu
   - milestone review, remediation, verification, and local merge back to the parent branch
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/01-summaries-rest.md`
+
+## Milestone C prompt 01: summaries REST
+- Added and used:
+  - `requirements/execplan-milestone-c-summaries-rest.md`
+- Backend changes:
+  - added summary aggregate package under `backend/src/main/java/com/meditation/backend/summary/`
+  - added backend route:
+    - `GET /api/summaries`
+  - added optional inclusive `startAt` / `endAt` ISO filtering against persisted `session log` `endedAt`
+  - derived backend summary aggregates for:
+    - overall
+    - by meditation type
+    - by source
+    - by time-of-day bucket
+- Frontend changes:
+  - added `src/utils/summaryApi.ts` as the typed REST boundary for summary loading
+  - updated `SankalpaPage` to request backend summary data for the selected range
+  - preserved local derived summary fallback from hydrated `session log` data when the summary API is unavailable
+  - added calm summary refresh copy and explicit fallback guidance without changing the existing calm layout
+- Tests:
+  - added frontend API-boundary coverage in `src/utils/summaryApi.test.ts`
+  - updated `src/pages/SankalpaPage.test.tsx` for backend-summary success and fallback behavior
+  - added backend controller coverage in `backend/src/test/java/com/meditation/backend/summary/SummaryControllerTest.java`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/02-sankalpa-rest.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

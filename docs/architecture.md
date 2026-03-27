@@ -24,6 +24,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - full-stack wiring is now in place for:
   - custom plays
   - playlists
+  - summaries
   - timer settings
   - session logs
 - no media upload/import workflow yet
@@ -41,6 +42,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - expose REST endpoints for:
   - health
   - custom plays
+  - summaries
   - timer settings
   - session logs
   - manual session-log creation
@@ -68,6 +70,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - `backend/src/main/java/com/meditation/backend/media`
 - `backend/src/main/java/com/meditation/backend/playlist`
 - `backend/src/main/java/com/meditation/backend/settings`
+- `backend/src/main/java/com/meditation/backend/summary`
 - `backend/src/main/java/com/meditation/backend/sessionlog`
 - current custom-play REST surfaces include:
   - `/api/custom-plays`
@@ -76,6 +79,8 @@ Single-page React application with route-based screens and feature-oriented modu
 - current session-log REST surfaces include:
   - `/api/session-logs`
   - `/api/session-logs/manual`
+- current summary REST surfaces include:
+  - `/api/summaries`
 - reserved domain packages for:
   - `reference`
   - `sankalpa`

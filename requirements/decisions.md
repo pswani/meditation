@@ -2,6 +2,17 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-c summaries rest decisions
+- Add a dedicated backend summary aggregate endpoint at `/api/summaries` so the insight layer reads from the same H2-backed `session log` source of truth as History.
+- Keep summary range selection and validation in the frontend while moving aggregate derivation to the backend:
+  - overall
+  - by meditation type
+  - by source
+  - by time-of-day bucket
+- Keep the backend summary contract aligned with the current `Sankalpa` summary UI shape so the screen can migrate without a route redesign.
+- Preserve a calm local derived fallback on the `Sankalpa` screen when the summary API is temporarily unavailable, and explain that fallback plainly instead of hiding the degraded state.
+- Treat backend time-of-day bucketing as a local-runtime timezone concern for the current single-user local-development setup.
+
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
 - Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.

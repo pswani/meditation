@@ -16,12 +16,14 @@ This README is intentionally grounded in the current repository contents. It exp
   - a health endpoint
   - a seeded media metadata API
   - backend persistence for custom plays, playlists, timer settings, and session logs
+  - backend summary aggregation over persisted `session log` history
 - The frontend now includes:
   - a shared typed API client
   - a configurable API base URL strategy
   - a Vite local-dev `/api` proxy for the in-repo backend
   - live backend media loading with graceful sample fallback
 - backend-backed timer settings and session-log history with local cache fallback during hydration failures
+- backend-backed summary views on the `Sankalpa` screen with local derived fallback during summary API failures
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
 - Sankalpa CRUD flows are not yet wired to live backend REST transport.
@@ -117,6 +119,7 @@ Current backend endpoints:
 - `/api/custom-plays`
 - `/api/playlists`
 - `/api/media/custom-plays`
+- `/api/summaries`
 - `/api/session-logs/manual`
 - `/api/session-logs`
 - `/api/settings/timer`
@@ -127,6 +130,7 @@ The front end also contains REST-shaped boundary modules used as the integration
 - `src/utils/playlistApi.ts`
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
+- `src/utils/summaryApi.ts`
 - `src/utils/sessionLogApi.ts`
 - `src/utils/timerSettingsApi.ts`
 
@@ -134,6 +138,7 @@ Today:
 
 - `src/utils/customPlayApi.ts` performs live HTTP requests to `/api/custom-plays`
 - `src/utils/mediaAssetApi.ts` performs live HTTP requests to `/api/media/custom-plays` through a shared API client
+- `src/utils/summaryApi.ts` performs live HTTP requests to `/api/summaries`
 - `src/utils/sessionLogApi.ts` creates manual logs through `/api/session-logs/manual`
 - `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
@@ -146,6 +151,7 @@ Stable endpoint contracts in the frontend still include:
 - `/api/playlists`
 - `/api/sankalpas`
 - `/api/media/custom-plays`
+- `/api/summaries`
 - `/api/session-logs/manual`
 - `/api/session-logs`
 - `/api/settings/timer`
@@ -164,7 +170,7 @@ Stable endpoint contracts in the frontend still include:
 
 ### How the React front end integrates with REST APIs
 
-The frontend now has a shared REST transport foundation, with live backend fetches for the media catalog, `custom play` persistence, playlist persistence, `session log` history, and timer settings.
+The frontend now has a shared REST transport foundation, with live backend fetches for the media catalog, `custom play` persistence, playlist persistence, summaries, `session log` history, and timer settings.
 
 Important repo facts:
 
@@ -172,6 +178,7 @@ Important repo facts:
 - `src/utils/customPlayApi.ts` fetches and persists `/api/custom-plays`
 - `src/utils/playlistApi.ts` fetches and persists `/api/playlists`
 - `src/utils/mediaAssetApi.ts` fetches `/api/media/custom-plays`
+- `src/utils/summaryApi.ts` fetches `/api/summaries`
 - `src/utils/sankalpaApi.ts` remains the main local-first REST-shaped shim
 - `vite.config.ts` and `vite.config.js` now proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset
 - backend runtime configuration lives in `backend/src/main/resources/application.yml`
@@ -184,6 +191,7 @@ Current API-boundary status:
 | `src/utils/playlistApi.ts` | `/api/playlists` | fetches and persists backend playlist records |
 | `src/utils/sankalpaApi.ts` | `/api/sankalpas` | reads/writes `localStorage` |
 | `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
+| `src/utils/summaryApi.ts` | `/api/summaries` | fetches backend-derived summary aggregates with local derived fallback in the UI |
 | `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation |
 | `src/utils/timerSettingsApi.ts` | `/api/settings/timer` | fetches and persists backend timer settings |
 
@@ -193,6 +201,7 @@ This means:
   - custom plays
   - playlists
   - media catalog
+  - summaries
   - session-log history
   - timer settings
 - media loading still preserves today’s UX when the backend is unavailable
@@ -221,6 +230,7 @@ This is now an early feature slice:
 - the front end now consumes backend APIs for:
   - custom plays
   - playlists
+  - summaries
   - timer settings
   - session logs
 - sankalpas still persist locally in the browser
