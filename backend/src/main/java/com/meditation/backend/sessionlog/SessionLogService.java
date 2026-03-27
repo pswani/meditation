@@ -1,5 +1,6 @@
 package com.meditation.backend.sessionlog;
 
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -69,7 +70,7 @@ public class SessionLogService {
     return toResponse(sessionLogRepository.save(entity));
   }
 
-  public SessionLogResponse saveSessionLog(String sessionLogId, SessionLogUpsertRequest request) {
+  public SessionLogResponse saveSessionLog(String sessionLogId, SessionLogUpsertRequest request, String syncQueuedAtRaw) {
     validateRequest(sessionLogId, request);
 
     Instant startedAt = parseTimestamp(request.startedAt(), "Started at must be a valid ISO timestamp.");
@@ -84,6 +85,11 @@ public class SessionLogService {
     }
 
     SessionLogEntity existingEntity = sessionLogRepository.findById(sessionLogId).orElse(null);
+    if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getCreatedAt(), syncQueuedAtRaw)) {
+      return toResponse(existingEntity);
+    }
+
+    Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
 
     SessionLogEntity entity = new SessionLogEntity(
         request.id(),
@@ -105,7 +111,7 @@ public class SessionLogService {
         request.playlistItemCount(),
         normalizeOptionalText(request.playlistRunId()),
         playlistRunStartedAt,
-        existingEntity == null ? Instant.now() : existingEntity.getCreatedAt()
+        existingEntity == null ? mutationTimestamp : existingEntity.getCreatedAt()
     );
 
     return toResponse(sessionLogRepository.save(entity));

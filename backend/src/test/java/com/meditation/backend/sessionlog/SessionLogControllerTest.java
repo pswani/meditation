@@ -147,4 +147,55 @@ class SessionLogControllerTest {
                 """))
         .andExpect(status().isBadRequest());
   }
+
+  @Test
+  void ignoresStaleQueuedSessionLogRetries() throws Exception {
+    mockMvc.perform(put("/api/session-logs/log-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:15:00Z")
+            .content("""
+                {
+                  "id": "log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Vipassana",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meditationType").value("Vipassana"));
+
+    mockMvc.perform(put("/api/session-logs/log-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:10:00Z")
+            .content("""
+                {
+                  "id": "log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Ajapa",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 600,
+                  "status": "ended early",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meditationType").value("Vipassana"))
+        .andExpect(jsonPath("$.completedDurationSeconds").value(1200))
+        .andExpect(jsonPath("$.status").value("completed"));
+  }
 }

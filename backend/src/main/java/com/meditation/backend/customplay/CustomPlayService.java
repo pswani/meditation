@@ -1,7 +1,9 @@
 package com.meditation.backend.customplay;
 
 import com.meditation.backend.media.MediaAssetRepository;
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -32,11 +34,18 @@ public class CustomPlayService {
         .toList();
   }
 
-  public CustomPlayResponse saveCustomPlay(String customPlayId, CustomPlayUpsertRequest request) {
+  public CustomPlayResponse saveCustomPlay(String customPlayId, CustomPlayUpsertRequest request, String syncQueuedAtRaw) {
     validateRequest(customPlayId, request);
 
     CustomPlayEntity existingEntity = customPlayRepository.findById(customPlayId).orElse(null);
-    Instant now = Instant.now();
+    if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
+      return toResponse(existingEntity);
+    }
+
+    Instant mutationTimestamp = resolveMutationTimestamp(syncQueuedAtRaw, request.updatedAt());
+    Instant createdAt = existingEntity == null
+        ? resolveCreatedAt(request.createdAt(), mutationTimestamp)
+        : existingEntity.getCreatedAt();
     CustomPlayEntity entity = new CustomPlayEntity(
         request.id(),
         request.name().trim(),
@@ -47,15 +56,25 @@ public class CustomPlayService {
         normalizeOptionalText(request.mediaAssetId()),
         request.favorite(),
         normalizeOptionalText(request.recordingLabel()),
-        existingEntity == null ? now : existingEntity.getCreatedAt(),
-        now
+        createdAt,
+        mutationTimestamp
     );
 
     return toResponse(customPlayRepository.save(entity));
   }
 
-  public void deleteCustomPlay(String customPlayId) {
+  public CustomPlayDeleteResult deleteCustomPlay(String customPlayId, String syncQueuedAtRaw) {
+    CustomPlayEntity existingEntity = customPlayRepository.findById(customPlayId).orElse(null);
+    if (existingEntity == null) {
+      return new CustomPlayDeleteResult("deleted", null);
+    }
+
+    if (SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
+      return new CustomPlayDeleteResult("stale", toResponse(existingEntity));
+    }
+
     customPlayRepository.deleteById(customPlayId);
+    return new CustomPlayDeleteResult("deleted", null);
   }
 
   private CustomPlayResponse toResponse(CustomPlayEntity entity) {
@@ -115,5 +134,27 @@ public class CustomPlayService {
     }
 
     return value.trim();
+  }
+
+  private Instant resolveMutationTimestamp(String syncQueuedAtRaw, String requestUpdatedAt) {
+    Instant fallbackTimestamp = parseOptionalTimestamp(requestUpdatedAt);
+    return SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, fallbackTimestamp != null ? fallbackTimestamp : Instant.now());
+  }
+
+  private Instant resolveCreatedAt(String requestCreatedAt, Instant fallbackTimestamp) {
+    Instant createdAt = parseOptionalTimestamp(requestCreatedAt);
+    return createdAt != null ? createdAt : fallbackTimestamp;
+  }
+
+  private Instant parseOptionalTimestamp(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom play sync timestamp is invalid.");
+    }
   }
 }

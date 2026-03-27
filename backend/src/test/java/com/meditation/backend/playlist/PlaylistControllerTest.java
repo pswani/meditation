@@ -208,4 +208,64 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$[0].items[0].id").value("shared-item"))
         .andExpect(jsonPath("$[1].items[0].id").value("shared-item"));
   }
+
+  @Test
+  void ignoresStaleQueuedPlaylistMutations() throws Exception {
+    mockMvc.perform(put("/api/playlists/playlist-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:15:00Z")
+            .content("""
+                {
+                  "id": "playlist-1",
+                  "name": "Morning Sequence",
+                  "createdAt": "2026-03-27T10:15:00Z",
+                  "updatedAt": "2026-03-27T10:15:00Z",
+                  "favorite": false,
+                  "items": [
+                    {
+                      "id": "item-1",
+                      "meditationType": "Vipassana",
+                      "durationMinutes": 10
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Morning Sequence"));
+
+    mockMvc.perform(put("/api/playlists/playlist-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:10:00Z")
+            .content("""
+                {
+                  "id": "playlist-1",
+                  "name": "Stale Sequence",
+                  "createdAt": "2026-03-27T10:10:00Z",
+                  "updatedAt": "2026-03-27T10:10:00Z",
+                  "favorite": true,
+                  "items": [
+                    {
+                      "id": "item-1",
+                      "meditationType": "Ajapa",
+                      "durationMinutes": 15
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Morning Sequence"))
+        .andExpect(jsonPath("$.favorite").value(false))
+        .andExpect(jsonPath("$.items[0].meditationType").value("Vipassana"));
+
+    mockMvc.perform(delete("/api/playlists/playlist-1")
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentPlaylist.name").value("Morning Sequence"));
+
+    mockMvc.perform(get("/api/playlists"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].name").value("Morning Sequence"));
+  }
 }

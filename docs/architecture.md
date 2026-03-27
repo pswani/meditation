@@ -15,6 +15,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
 - browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
+- browser-persisted sync queue state for offline-first deferred writes
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
@@ -102,9 +103,44 @@ Single-page React application with route-based screens and feature-oriented modu
 - mobile-first
 - responsive across device classes
 - simple local-first architecture
+- offline-first write safety with calm sync visibility
 - minimal dependencies
 - predictable state
 - domain-first naming
+
+## Offline-first foundations
+- `src/features/sync/` owns app-level connectivity status and sync queue visibility.
+- `src/utils/syncQueue.ts` owns queue persistence and queue-reduction helpers.
+- Queue entries are stored in browser storage so deferred writes survive reloads.
+- The shell surfaces offline and pending-sync state as lightweight status banners instead of blocking overlays or dashboard-style widgets.
+
+## Current offline write model
+- Implemented backend-backed writes are local-first for:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- UI state updates immediately from local changes, then the queue replays those writes through the existing REST boundaries when the browser is online.
+- Queue reduction keeps only the latest relevant mutation per `(entity type, record id)` so repeated offline edits do not accumulate stale replay work.
+- Hydration overlays queued local mutations on top of the latest backend list responses so a stale backend read does not temporarily resurrect deleted records or erase unsynced edits.
+- Failed queue entries can return to a pending state for later retry, while the shell and feature-level copy stay calm and explicit about degraded sync.
+- `Sankalpa` replay now keys off the queued replay payload shape rather than queue state metadata alone, so failed-entry bookkeeping does not repeatedly re-fetch and re-enqueue the same goals.
+
+## Backend reconciliation model
+- The existing REST routes remain the sync boundary; this milestone does not introduce a second `/sync/*` API surface.
+- Queue flushes send a queued-mutation timestamp to the backend so mutable records can reject stale offline writes safely.
+- Timer settings, custom plays, and playlists now use backend-side stale-write protection:
+  - newer backend state wins over an older queued mutation
+  - stale queued deletes return the current backend-backed record so the UI can restore it with explicit warning copy instead of treating the delete as silent success
+- `Session log` replay uses stable client ids and idempotent `PUT` behavior so retrying the same queued write does not duplicate persisted history rows.
+- The current `sankalpa` flow remains create-only in the UI, so prompt 03 keeps its replay model simple and id-stable rather than adding a premature edit-conflict layer.
+
+## Frontend reconciliation boundaries
+- `src/features/timer/TimerContext.tsx` owns local-first hydration and queue flushing for timer settings, session logs, custom plays, and playlists.
+- `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
+- Route components continue to consume stable domain state and sync status rather than performing queue mutation logic directly.
+- Manual log creation is treated as local `session log` creation first, then reconciled back through the shared `session log` sync flow instead of a separate offline-only pathway.
 
 ## Suggested module layout
 - pages

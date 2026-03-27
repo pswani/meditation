@@ -1,8 +1,10 @@
 package com.meditation.backend.settings;
 
+import com.meditation.backend.sync.SyncRequestSupport;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,7 +24,10 @@ public class TimerSettingsController {
   }
 
   @PutMapping
-  public TimerSettingsResponse saveTimerSettings(@RequestBody TimerSettingsUpsertRequest request) {
-    return timerSettingsService.saveTimerSettings(request);
+  public TimerSettingsResponse saveTimerSettings(
+      @RequestBody TimerSettingsUpsertRequest request,
+      @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
+  ) {
+    return timerSettingsService.saveTimerSettings(request, syncQueuedAt);
   }
 }

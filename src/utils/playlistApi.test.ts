@@ -10,6 +10,7 @@ import {
   persistPlaylistToApi,
   PLAYLISTS_COLLECTION_ENDPOINT,
 } from './playlistApi';
+import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 
 const playlist: Playlist = {
   id: 'playlist-1',
@@ -70,19 +71,56 @@ describe('playlist api boundary', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    const saved = await persistPlaylistToApi(playlist);
+    const saved = await persistPlaylistToApi(playlist, {
+      syncQueuedAt: '2026-03-27T10:15:00.000Z',
+    });
     expect(saved).toEqual(playlist);
 
-    await expect(deletePlaylistFromApi(playlist.id)).resolves.toBeUndefined();
+    await expect(
+      deletePlaylistFromApi(playlist.id, {
+        syncQueuedAt: '2026-03-27T10:20:00.000Z',
+      })
+    ).resolves.toEqual({
+      outcome: 'deleted',
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       '/api/playlists/playlist-1',
-      expect.objectContaining({ method: 'PUT' })
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:15:00.000Z',
+        }),
+      })
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       '/api/playlists/playlist-1',
-      expect.objectContaining({ method: 'DELETE' })
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:20:00.000Z',
+        }),
+      })
     );
+  });
+
+  it('returns the current playlist when a stale delete loses reconciliation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          outcome: 'stale',
+          currentPlaylist: playlist,
+        }),
+      })
+    );
+
+    await expect(deletePlaylistFromApi(playlist.id)).resolves.toEqual({
+      outcome: 'stale',
+      currentPlaylist: playlist,
+    });
   });
 });

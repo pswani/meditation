@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -131,6 +131,7 @@ describe('PlaylistsPage UX', () => {
   });
 
   it('shows truthful delete failure guidance when backend deletion fails', async () => {
+    vi.useRealTimers();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
 
     vi.stubGlobal(
@@ -188,8 +189,78 @@ describe('PlaylistsPage UX', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText(/delete failed/i)).toBeInTheDocument();
-    expect(screen.getByText(/previous playlist state is still available locally/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Morning Sequence')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/latest playlist state remains available locally/i)).toBeInTheDocument()
+    );
     expect(screen.queryByText(/currently running/i)).not.toBeInTheDocument();
+  });
+
+  it('restores the current playlist when a queued delete is stale in the backend', async () => {
+    vi.useRealTimers();
+    localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: '',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, storedPlaylists);
+        }
+
+        if (url.endsWith('/api/playlists/playlist-1') && method === 'DELETE') {
+          return createJsonResponse(200, {
+            outcome: 'stale',
+            currentPlaylist: storedPlaylists[0],
+          });
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice/playlists']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushPlaylistsHydration();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /delete playlist/i }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      await screen.findByText(/a newer playlist version already exists in the backend, so this delete was not applied/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Morning Sequence')).toBeInTheDocument();
   });
 });

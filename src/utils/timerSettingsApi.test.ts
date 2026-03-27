@@ -6,6 +6,7 @@ import {
   persistTimerSettingsToApi,
   TIMER_SETTINGS_ENDPOINT,
 } from './timerSettingsApi';
+import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 
 describe('timer settings api boundary', () => {
   afterEach(() => {
@@ -41,33 +42,37 @@ describe('timer settings api boundary', () => {
   });
 
   it('persists timer settings through PUT', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          id: 'default',
-          durationMinutes: 30,
-          meditationType: 'Ajapa',
-          startSound: 'Soft Chime',
-          endSound: 'Temple Bell',
-          intervalEnabled: true,
-          intervalMinutes: 10,
-          intervalSound: 'Wood Block',
-        }),
-      })
-    );
-
-    const saved = await persistTimerSettingsToApi({
-      durationMinutes: 30,
-      meditationType: 'Ajapa',
-      startSound: 'Soft Chime',
-      endSound: 'Temple Bell',
-      intervalEnabled: true,
-      intervalMinutes: 10,
-      intervalSound: 'Wood Block',
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'default',
+        durationMinutes: 30,
+        meditationType: 'Ajapa',
+        startSound: 'Soft Chime',
+        endSound: 'Temple Bell',
+        intervalEnabled: true,
+        intervalMinutes: 10,
+        intervalSound: 'Wood Block',
+      }),
     });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const saved = await persistTimerSettingsToApi(
+      {
+        durationMinutes: 30,
+        meditationType: 'Ajapa',
+        startSound: 'Soft Chime',
+        endSound: 'Temple Bell',
+        intervalEnabled: true,
+        intervalMinutes: 10,
+        intervalSound: 'Wood Block',
+      },
+      {
+        syncQueuedAt: '2026-03-27T10:15:00.000Z',
+      }
+    );
 
     expect(saved.intervalEnabled).toBe(true);
     expect(saved.intervalMinutes).toBe(10);
@@ -81,5 +86,14 @@ describe('timer settings api boundary', () => {
       intervalMinutes: 10,
       intervalSound: 'Wood Block',
     })).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/settings/timer',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:15:00.000Z',
+        }),
+      })
+    );
   });
 });

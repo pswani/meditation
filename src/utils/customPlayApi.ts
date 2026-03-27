@@ -1,6 +1,7 @@
 import type { CustomPlay } from '../types/customPlay';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
 
 export const CUSTOM_PLAYS_COLLECTION_PATH = '/custom-plays';
 export const CUSTOM_PLAYS_COLLECTION_ENDPOINT = buildApiPath(CUSTOM_PLAYS_COLLECTION_PATH);
@@ -18,6 +19,34 @@ interface CustomPlayApiResponse {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+interface CustomPlayUpsertRequest {
+  readonly id: string;
+  readonly name: string;
+  readonly meditationType: CustomPlay['meditationType'];
+  readonly durationMinutes: number;
+  readonly startSound: string;
+  readonly endSound: string;
+  readonly mediaAssetId?: string;
+  readonly recordingLabel?: string;
+  readonly favorite: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+interface CustomPlayDeleteApiResponse {
+  readonly outcome: 'deleted' | 'stale';
+  readonly currentCustomPlay?: CustomPlayApiResponse | null;
+}
+
+export type CustomPlayDeleteResult =
+  | {
+      readonly outcome: 'deleted';
+    }
+  | {
+      readonly outcome: 'stale';
+      readonly currentCustomPlay: CustomPlay;
+    };
 
 function isValidIsoDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
@@ -74,6 +103,42 @@ function normalizeCustomPlayCollection(payload: unknown): CustomPlay[] {
   return payload.map(normalizeCustomPlayPayload);
 }
 
+function buildCustomPlayUpsertRequest(customPlay: CustomPlay): CustomPlayUpsertRequest {
+  return {
+    id: customPlay.id,
+    name: customPlay.name,
+    meditationType: customPlay.meditationType,
+    durationMinutes: customPlay.durationMinutes,
+    startSound: customPlay.startSound,
+    endSound: customPlay.endSound,
+    mediaAssetId: customPlay.mediaAssetId,
+    recordingLabel: customPlay.recordingLabel,
+    favorite: customPlay.favorite,
+    createdAt: customPlay.createdAt,
+    updatedAt: customPlay.updatedAt,
+  };
+}
+
+function normalizeCustomPlayDeleteResult(payload: unknown): CustomPlayDeleteResult {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Custom play delete response is invalid.');
+  }
+
+  const candidate = payload as CustomPlayDeleteApiResponse;
+  if (candidate.outcome === 'deleted') {
+    return { outcome: 'deleted' };
+  }
+
+  if (candidate.outcome === 'stale' && candidate.currentCustomPlay) {
+    return {
+      outcome: 'stale',
+      currentCustomPlay: normalizeCustomPlayPayload(candidate.currentCustomPlay),
+    };
+  }
+
+  throw new Error('Custom play delete response is invalid.');
+}
+
 export function buildCustomPlayDetailPath(customPlayId: string): string {
   return `${CUSTOM_PLAYS_COLLECTION_PATH}/${customPlayId}`;
 }
@@ -91,18 +156,26 @@ export async function listCustomPlaysFromApi(apiBaseUrl?: string): Promise<Custo
   return normalizeCustomPlayCollection(payload);
 }
 
-export async function persistCustomPlayToApi(customPlay: CustomPlay, apiBaseUrl?: string): Promise<CustomPlay> {
-  const payload = await requestJson<unknown, CustomPlay>(buildCustomPlayDetailPath(customPlay.id), {
+export async function persistCustomPlayToApi(
+  customPlay: CustomPlay,
+  options: SyncMutationRequestOptions = {}
+): Promise<CustomPlay> {
+  const payload = await requestJson<unknown, CustomPlayUpsertRequest>(buildCustomPlayDetailPath(customPlay.id), {
     method: 'PUT',
-    apiBaseUrl,
-    body: customPlay,
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
+    headers: buildSyncMutationHeaders(options.syncQueuedAt),
+    body: buildCustomPlayUpsertRequest(customPlay),
   });
 
   return normalizeCustomPlayPayload(payload);
 }
 
-export async function deleteCustomPlayFromApi(customPlayId: string, apiBaseUrl?: string): Promise<void> {
-  const url = buildCustomPlayDetailUrl(customPlayId, apiBaseUrl);
+export async function deleteCustomPlayFromApi(
+  customPlayId: string,
+  options: SyncMutationRequestOptions = {}
+): Promise<CustomPlayDeleteResult> {
+  const url = buildCustomPlayDetailUrl(customPlayId, options.apiBaseUrl);
 
   let response: Response;
   try {
@@ -110,12 +183,20 @@ export async function deleteCustomPlayFromApi(customPlayId: string, apiBaseUrl?:
       method: 'DELETE',
       headers: {
         Accept: 'application/json',
+        ...buildSyncMutationHeaders(options.syncQueuedAt),
       },
+      signal: options.signal,
     });
   } catch {
     throw new ApiClientError('Unable to reach the API right now.', url, {
       kind: 'network',
     });
+  }
+
+  if (response.status === 204) {
+    return {
+      outcome: 'deleted',
+    };
   }
 
   if (!response.ok) {
@@ -134,4 +215,7 @@ export async function deleteCustomPlayFromApi(customPlayId: string, apiBaseUrl?:
       kind: 'http',
     });
   }
+
+  const payload = await response.json();
+  return normalizeCustomPlayDeleteResult(payload);
 }

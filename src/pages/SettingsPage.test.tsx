@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncStatusProvider } from '../features/sync/SyncStatusProvider';
 import { TimerProvider } from '../features/timer/TimerContext';
 import SettingsPage from './SettingsPage';
 
@@ -18,11 +19,13 @@ function createJsonResponse(status: number, body: unknown) {
 function renderSettingsPage() {
   render(
     <MemoryRouter initialEntries={['/settings']}>
-      <TimerProvider>
-        <Routes>
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </TimerProvider>
+      <SyncStatusProvider>
+        <TimerProvider>
+          <Routes>
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </TimerProvider>
+      </SyncStatusProvider>
     </MemoryRouter>
   );
 }

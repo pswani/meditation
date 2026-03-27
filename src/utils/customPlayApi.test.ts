@@ -9,6 +9,7 @@ import {
   listCustomPlaysFromApi,
   persistCustomPlayToApi,
 } from './customPlayApi';
+import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 
 const customPlay: CustomPlay = {
   id: 'custom-play-1',
@@ -67,19 +68,56 @@ describe('custom play api boundary', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    const saved = await persistCustomPlayToApi(customPlay);
+    const saved = await persistCustomPlayToApi(customPlay, {
+      syncQueuedAt: '2026-03-27T10:15:00.000Z',
+    });
     expect(saved).toEqual(customPlay);
 
-    await expect(deleteCustomPlayFromApi(customPlay.id)).resolves.toBeUndefined();
+    await expect(
+      deleteCustomPlayFromApi(customPlay.id, {
+        syncQueuedAt: '2026-03-27T10:20:00.000Z',
+      })
+    ).resolves.toEqual({
+      outcome: 'deleted',
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       '/api/custom-plays/custom-play-1',
-      expect.objectContaining({ method: 'PUT' })
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:15:00.000Z',
+        }),
+      })
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       '/api/custom-plays/custom-play-1',
-      expect.objectContaining({ method: 'DELETE' })
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:20:00.000Z',
+        }),
+      })
     );
+  });
+
+  it('returns the current custom play when a stale delete loses reconciliation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          outcome: 'stale',
+          currentCustomPlay: customPlay,
+        }),
+      })
+    );
+
+    await expect(deleteCustomPlayFromApi(customPlay.id)).resolves.toEqual({
+      outcome: 'stale',
+      currentCustomPlay: customPlay,
+    });
   });
 });

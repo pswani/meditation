@@ -87,4 +87,61 @@ class CustomPlayControllerTest {
                 """))
         .andExpect(status().isBadRequest());
   }
+
+  @Test
+  void ignoresStaleQueuedCustomPlayMutations() throws Exception {
+    mockMvc.perform(put("/api/custom-plays/custom-play-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:15:00Z")
+            .content("""
+                {
+                  "id": "custom-play-1",
+                  "name": "Morning Focus",
+                  "meditationType": "Vipassana",
+                  "durationMinutes": 33,
+                  "startSound": "Soft Chime",
+                  "endSound": "Wood Block",
+                  "mediaAssetId": "media-vipassana-sit-20",
+                  "recordingLabel": "Breath emphasis",
+                  "favorite": false,
+                  "createdAt": "2026-03-27T10:15:00Z",
+                  "updatedAt": "2026-03-27T10:15:00Z"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Morning Focus"));
+
+    mockMvc.perform(put("/api/custom-plays/custom-play-1")
+            .contentType(APPLICATION_JSON)
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:10:00Z")
+            .content("""
+                {
+                  "id": "custom-play-1",
+                  "name": "Stale Edit",
+                  "meditationType": "Ajapa",
+                  "durationMinutes": 20,
+                  "startSound": "None",
+                  "endSound": "None",
+                  "mediaAssetId": "media-vipassana-sit-20",
+                  "recordingLabel": "",
+                  "favorite": true,
+                  "createdAt": "2026-03-27T10:10:00Z",
+                  "updatedAt": "2026-03-27T10:10:00Z"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("Morning Focus"))
+        .andExpect(jsonPath("$.favorite").value(false));
+
+    mockMvc.perform(delete("/api/custom-plays/custom-play-1")
+            .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentCustomPlay.name").value("Morning Focus"));
+
+    mockMvc.perform(get("/api/custom-plays"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].name").value("Morning Focus"));
+  }
 }

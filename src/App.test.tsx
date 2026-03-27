@@ -4,12 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { SankalpaGoal } from './types/sankalpa';
 import type { SessionLog } from './types/sessionLog';
+import { createSyncQueueEntry } from './utils/syncQueue';
 
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
+const SYNC_QUEUE_KEY = 'meditation.syncQueue.v1';
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -18,6 +20,13 @@ function createJsonResponse(status: number, body: unknown) {
     json: async () => body,
     text: async () => JSON.stringify(body),
   };
+}
+
+function setNavigatorOnline(value: boolean) {
+  Object.defineProperty(window.navigator, 'onLine', {
+    configurable: true,
+    value,
+  });
 }
 
 const meditationTypes = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
@@ -358,11 +367,30 @@ async function flushBackendHydration() {
     await Promise.resolve();
     await Promise.resolve();
   });
+
+  await waitFor(() =>
+    expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
+  );
+}
+
+async function flushAsyncEffects() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function waitForPracticeHydration() {
+  await waitFor(() =>
+    expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
+  );
+  await waitFor(() => expect(screen.queryByText(/loading custom plays from the backend/i)).not.toBeInTheDocument());
 }
 
 describe('App shell', () => {
   beforeEach(() => {
     localStorage.clear();
+    setNavigatorOnline(true);
   });
 
   afterEach(() => {
@@ -538,7 +566,8 @@ describe('App shell', () => {
     );
 
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
-    expect(setItemSpy).not.toHaveBeenCalled();
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledWith(SYNC_QUEUE_KEY, '[]');
     expect(removeItemSpy).not.toHaveBeenCalled();
   });
 
@@ -642,9 +671,184 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /quick start/i })).toBeInTheDocument();
   });
 
+  it('queues an offline manual log locally and syncs it after reconnection', async () => {
+    setNavigatorOnline(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('offline'))
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    expect(screen.getByText(/this session log will sync when the backend is reachable/i)).toBeInTheDocument();
+
+    const queuedEntries = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]');
+    expect(queuedEntries).toHaveLength(1);
+    expect(queuedEntries[0].entityType).toBe('session-log');
+
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    setNavigatorOnline(true);
+    fireEvent(window, new Event('online'));
+
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]')).toHaveLength(0));
+    expect(store.sessionLogs).toHaveLength(1);
+    expect(store.sessionLogs[0]?.source).toBe('manual log');
+  });
+
+  it('boots offline from cached history with a pending queue entry and flushes it after reconnection', async () => {
+    const queuedSessionLog: SessionLog = {
+      id: 'offline-log-1',
+      startedAt: '2026-03-26T11:35:00.000Z',
+      endedAt: '2026-03-26T12:00:00.000Z',
+      meditationType: 'Vipassana',
+      intendedDurationSeconds: 1500,
+      completedDurationSeconds: 1500,
+      status: 'completed',
+      source: 'manual log',
+      startSound: 'None',
+      endSound: 'None',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    };
+
+    localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify([queuedSessionLog]));
+    localStorage.setItem(
+      SYNC_QUEUE_KEY,
+      JSON.stringify([
+        createSyncQueueEntry({
+          entityType: 'session-log',
+          operation: 'upsert',
+          recordId: queuedSessionLog.id,
+          payload: queuedSessionLog,
+          queuedAt: '2026-03-26T12:01:00.000Z',
+        }),
+      ])
+    );
+
+    setNavigatorOnline(false);
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText(/1 change will stay on this device and sync when the backend is reachable again/i)
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+    expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
+
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    setNavigatorOnline(true);
+    fireEvent(window, new Event('online'));
+
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]')).toHaveLength(0));
+    expect(store.sessionLogs).toHaveLength(1);
+    expect(store.sessionLogs[0]?.id).toBe('offline-log-1');
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/1 change will stay on this device and sync when the backend is reachable again/i)
+      ).not.toBeInTheDocument()
+    );
+  });
+
+  it('retries only failed queued work after a partial reconnection failure', async () => {
+    setNavigatorOnline(false);
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    expect(screen.getByText(/this session log will sync when the backend is reachable/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('link', { name: /^Practice$/i })[0]);
+    await waitForPracticeHydration();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Offline Focus' } });
+    fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '20' } });
+    fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
+
+    expect(await screen.findByText(/custom play "Offline Focus" saved\./i)).toBeInTheDocument();
+    expect(screen.getByText(/saved locally while offline\. this custom play will sync when the backend is reachable/i)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]')).toHaveLength(2);
+
+    const { fetchMock: baseFetchMock, store } = createStatefulBackendFetchMock();
+    let customPlayPutAttempts = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const requestUrl = new URL(url, 'http://localhost');
+      const method = init?.method ?? 'GET';
+
+      if (requestUrl.pathname.startsWith('/api/custom-plays/') && method === 'PUT') {
+        customPlayPutAttempts += 1;
+        if (customPlayPutAttempts === 1) {
+          throw new TypeError('temporary offline');
+        }
+      }
+
+      return baseFetchMock(input, init);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    setNavigatorOnline(true);
+    fireEvent(window, new Event('online'));
+
+    await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
+    await waitFor(() => {
+      const queue = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]');
+      expect(queue).toHaveLength(1);
+      expect(queue[0].entityType).toBe('custom-play');
+      expect(queue[0].state).toBe('failed');
+    });
+    expect(store.customPlays).toHaveLength(0);
+    expect(customPlayPutAttempts).toBe(1);
+    expect(screen.getByText(/1 change still need another sync attempt/i)).toBeInTheDocument();
+    expect(screen.getByText('Offline Focus')).toBeInTheDocument();
+
+    setNavigatorOnline(false);
+    fireEvent(window, new Event('offline'));
+    setNavigatorOnline(true);
+    fireEvent(window, new Event('online'));
+
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]')).toHaveLength(0));
+    expect(store.sessionLogs).toHaveLength(1);
+    expect(store.customPlays).toHaveLength(1);
+    expect(store.customPlays[0]?.name).toBe('Offline Focus');
+    expect(customPlayPutAttempts).toBe(2);
+    await waitFor(() =>
+      expect(screen.queryByText(/1 change still need another sync attempt/i)).not.toBeInTheDocument()
+    );
+  });
+
   it('completes a timer journey through pause, resume, auto log, and History', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-25T09:00:00.000Z'));
+    const { fetchMock } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <MemoryRouter initialEntries={['/practice']}>
@@ -652,15 +856,16 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
     expect(screen.getByRole('heading', { level: 2, name: '01:00' })).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(20_000);
+      await Promise.resolve();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^pause$/i }));
@@ -668,8 +873,10 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { level: 2, name: '00:40' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^resume$/i }));
-    act(() => {
-      vi.advanceTimersByTime(40_000);
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(screen.getByRole('heading', { level: 2, name: /session completed/i })).toBeInTheDocument();
@@ -724,24 +931,28 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     fireEvent.click(screen.getByRole('button', { name: /run playlist/i }));
 
     expect(screen.getByRole('heading', { level: 2, name: 'Lunch Reset' })).toBeInTheDocument();
     expect(screen.getByText(/current meditation type: vipassana/i)).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await flushBackendHydration();
+    await flushAsyncEffects();
 
     expect(screen.getByText(/current meditation type: ajapa/i)).toBeInTheDocument();
     expect(screen.getByText(/completed so far: 1\/2 items/i)).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await flushBackendHydration();
+    await flushAsyncEffects();
 
     expect(screen.getByRole('heading', { level: 2, name: /playlist completed/i })).toBeInTheDocument();
     expect(screen.getByText(/lunch reset · 2\/2 items logged/i)).toBeInTheDocument();
@@ -759,7 +970,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
     expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);

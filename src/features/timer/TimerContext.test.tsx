@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncStatusProvider } from '../sync/SyncStatusProvider';
 import type { TimerSettings } from '../../types/timer';
 import { TimerProvider } from './TimerContext';
 import { useTimer } from './useTimer';
@@ -70,9 +71,11 @@ describe('TimerProvider persistence behavior', () => {
 
   it('does not rewrite active timer persistence on every countdown tick', () => {
     render(
-      <TimerProvider>
-        <PersistenceHarness />
-      </TimerProvider>
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
     );
 
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
@@ -121,9 +124,11 @@ describe('TimerProvider persistence behavior', () => {
     );
 
     render(
-      <TimerProvider>
-        <PersistenceHarness />
-      </TimerProvider>
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
     );
 
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');

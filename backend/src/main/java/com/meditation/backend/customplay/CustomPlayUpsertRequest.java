@@ -9,6 +9,8 @@ public record CustomPlayUpsertRequest(
     String endSound,
     String mediaAssetId,
     String recordingLabel,
-    boolean favorite
+    boolean favorite,
+    String createdAt,
+    String updatedAt
 ) {
 }

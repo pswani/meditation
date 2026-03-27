@@ -1,6 +1,7 @@
 import type { SankalpaGoal, SankalpaProgress, SankalpaStatus, TimeOfDayBucket } from '../types/sankalpa';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { buildSyncMutationHeaders } from './syncApi';
 
 export const SANKALPAS_COLLECTION_PATH = '/sankalpas';
 export const SANKALPAS_COLLECTION_ENDPOINT = buildApiPath(SANKALPAS_COLLECTION_PATH);
@@ -30,6 +31,7 @@ interface SankalpaApiOptions {
   readonly apiBaseUrl?: string;
   readonly signal?: AbortSignal;
   readonly timeZone?: string;
+  readonly syncQueuedAt?: string;
 }
 
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
@@ -166,6 +168,7 @@ export async function persistSankalpaToApi(sankalpa: SankalpaGoal, options: Sank
     method: 'PUT',
     apiBaseUrl: options.apiBaseUrl,
     signal: options.signal,
+    headers: buildSyncMutationHeaders(options.syncQueuedAt),
     body: sankalpa,
   });
 

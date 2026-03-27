@@ -1,6 +1,8 @@
 package com.meditation.backend.playlist;
 
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,18 +46,30 @@ public class PlaylistService {
   }
 
   @Transactional
-  public PlaylistResponse savePlaylist(String playlistId, PlaylistUpsertRequest request) {
+  public PlaylistResponse savePlaylist(String playlistId, PlaylistUpsertRequest request, String syncQueuedAtRaw) {
     validateRequest(playlistId, request);
 
     PlaylistEntity existingPlaylist = playlistRepository.findById(playlistId).orElse(null);
-    Instant now = Instant.now();
+    if (existingPlaylist != null && SyncRequestSupport.isStaleMutation(existingPlaylist.getUpdatedAt(), syncQueuedAtRaw)) {
+      List<PlaylistItemEntity> existingItems = playlistItemRepository
+          .findAllByPlaylistIdInOrderByPlaylistIdAscPositionIndexAsc(List.of(existingPlaylist.getId()))
+          .stream()
+          .filter((item) -> existingPlaylist.getId().equals(item.getPlaylistId()))
+          .toList();
+      return toResponse(existingPlaylist, existingItems);
+    }
+
+    Instant mutationTimestamp = resolveMutationTimestamp(syncQueuedAtRaw, request.updatedAt());
+    Instant createdAt = existingPlaylist == null
+        ? resolveCreatedAt(request.createdAt(), mutationTimestamp)
+        : existingPlaylist.getCreatedAt();
     PlaylistEntity playlist = playlistRepository.save(new PlaylistEntity(
         request.id(),
         request.name().trim(),
         request.favorite(),
         existingPlaylist == null ? 0 : existingPlaylist.getSmallGapSeconds(),
-        existingPlaylist == null ? now : existingPlaylist.getCreatedAt(),
-        now
+        createdAt,
+        mutationTimestamp
     ));
 
     playlistItemRepository.deleteAllByPlaylistId(playlist.getId());
@@ -70,7 +84,7 @@ public class PlaylistService {
           item.meditationType(),
           item.durationMinutes(),
           null,
-          now
+          mutationTimestamp
       ));
     }
 
@@ -80,8 +94,23 @@ public class PlaylistService {
   }
 
   @Transactional
-  public void deletePlaylist(String playlistId) {
+  public PlaylistDeleteResult deletePlaylist(String playlistId, String syncQueuedAtRaw) {
+    PlaylistEntity existingPlaylist = playlistRepository.findById(playlistId).orElse(null);
+    if (existingPlaylist == null) {
+      return new PlaylistDeleteResult("deleted", null);
+    }
+
+    if (SyncRequestSupport.isStaleMutation(existingPlaylist.getUpdatedAt(), syncQueuedAtRaw)) {
+      List<PlaylistItemEntity> existingItems = playlistItemRepository
+          .findAllByPlaylistIdInOrderByPlaylistIdAscPositionIndexAsc(List.of(existingPlaylist.getId()))
+          .stream()
+          .filter((item) -> existingPlaylist.getId().equals(item.getPlaylistId()))
+          .toList();
+      return new PlaylistDeleteResult("stale", toResponse(existingPlaylist, existingItems));
+    }
+
     playlistRepository.deleteById(playlistId);
+    return new PlaylistDeleteResult("deleted", null);
   }
 
   private PlaylistResponse toResponse(PlaylistEntity playlist, List<PlaylistItemEntity> items) {
@@ -146,6 +175,28 @@ public class PlaylistService {
       if (item.durationMinutes() <= 0) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item duration must be greater than 0.");
       }
+    }
+  }
+
+  private Instant resolveMutationTimestamp(String syncQueuedAtRaw, String requestUpdatedAt) {
+    Instant fallbackTimestamp = parseOptionalTimestamp(requestUpdatedAt);
+    return SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, fallbackTimestamp != null ? fallbackTimestamp : Instant.now());
+  }
+
+  private Instant resolveCreatedAt(String requestCreatedAt, Instant fallbackTimestamp) {
+    Instant createdAt = parseOptionalTimestamp(requestCreatedAt);
+    return createdAt != null ? createdAt : fallbackTimestamp;
+  }
+
+  private Instant parseOptionalTimestamp(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException exception) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist sync timestamp is invalid.");
     }
   }
 }

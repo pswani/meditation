@@ -379,10 +379,8 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByText(/progress: 2 \/ 3 session logs · 1 session log remaining/i)).toBeInTheDocument();
   });
 
-  it('does not save a sankalpa locally when the backend rejects the save request', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+  it('keeps a locally saved sankalpa visible without replaying failed sync attempts on every queue update', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
         const method = init?.method ?? 'GET';
 
@@ -500,8 +498,9 @@ describe('Sankalpa summary UX', () => {
         }
 
         throw new TypeError(`Unhandled ${method} ${url}`);
-      })
-    );
+      });
+
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <MemoryRouter initialEntries={['/goals']}>
@@ -511,7 +510,15 @@ describe('Sankalpa summary UX', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
 
-    await waitFor(() => expect(screen.getByText(/sankalpa goal type is invalid/i)).toBeInTheDocument());
-    expect(screen.queryByText(/120 min in 7 days/i)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/120 min in 7 days/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([input, init]) => {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+          return url.includes('/api/sankalpas') && (init?.method ?? 'GET') === 'PUT';
+        })
+      ).toHaveLength(1)
+    );
+    expect(screen.queryByText(/sankalpa goal type is invalid/i)).not.toBeInTheDocument();
   });
 });

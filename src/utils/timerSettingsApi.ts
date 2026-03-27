@@ -1,6 +1,7 @@
 import type { TimerSettings } from '../types/timer';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
 
 export const TIMER_SETTINGS_PATH = '/settings/timer';
 export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
@@ -71,10 +72,15 @@ export async function loadTimerSettingsFromApi(apiBaseUrl?: string): Promise<Tim
   return normalizeTimerSettingsPayload(payload);
 }
 
-export async function persistTimerSettingsToApi(settings: TimerSettings, apiBaseUrl?: string): Promise<TimerSettings> {
+export async function persistTimerSettingsToApi(
+  settings: TimerSettings,
+  options: SyncMutationRequestOptions = {}
+): Promise<TimerSettings> {
   const payload = await requestJson<unknown, TimerSettings>(TIMER_SETTINGS_PATH, {
     method: 'PUT',
-    apiBaseUrl,
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
+    headers: buildSyncMutationHeaders(options.syncQueuedAt),
     body: settings,
   });
 

@@ -2,6 +2,60 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline sync testing decisions
+- Use app-level stateful fetch-mock journeys in `src/App.test.tsx` as the main prompt 06 confidence layer, because the remaining Milestone D risk is startup and replay continuity across multiple features rather than isolated queue helpers.
+- Add only two new prompt 06 journeys:
+  - offline startup from cached queued state through reconnect success
+  - partial reconnect failure followed by a later retry success
+- Keep retry verification focused on durable user and queue outcomes:
+  - local data stays visible
+  - already synced work does not replay
+  - failed work remains queued and retries on the next online transition
+
+### 2026-03-27 milestone-d offline remediation decisions
+- Keep stale queued delete handling explicit for backend-backed mutable records by returning a `"stale"` delete outcome with the current backend record instead of treating the delete as silent success.
+- Rehydrate stale delete outcomes directly into the existing `custom play` and playlist UI flows so the latest backend-backed record is restored locally with calm conflict guidance, rather than adding a separate conflict-management surface in this milestone.
+- Make `sankalpa` replay depend only on the queued replay payload shape, not queue state metadata, so failed or in-flight bookkeeping changes do not trigger extra `/api/sankalpas` reloads or reset failed entries back to pending.
+
+### 2026-03-27 milestone-d backend reconciliation decisions
+- Keep the existing REST routes as the offline reconciliation boundary instead of introducing parallel sync-only endpoints in this prompt.
+- Send one queued-mutation timestamp from the frontend queue flush into backend writes so the server can distinguish current mutations from stale delayed retries.
+- Treat mutable backend-backed records as stale-write-protected:
+  - timer settings
+  - custom plays
+  - playlists
+- Treat stable-id write flows as retry-safe through idempotent upserts in the current single-user model:
+  - session logs
+  - current create-only sankalpa saves
+- Resolve stale queued deletes as backend no-ops rather than hard conflicts, so a newer backend-backed record is preserved and can rehydrate back into the UI on the next load.
+
+### 2026-03-27 milestone-d offline frontend sync-queue decisions
+- Make implemented backend-backed write flows local-first so the app remains usable offline without adding a second offline-only UI path:
+  - timer settings
+  - session logs, including manual logs
+  - custom plays
+  - playlists
+  - sankalpas
+- Treat locally queued writes as the frontend-visible truth until the backend confirms newer data, instead of clearing or hiding local edits while sync is pending.
+- Reconcile stale backend hydration by overlaying queued local mutations on top of fetched records, so an older list response cannot resurrect deleted `custom play` or playlist records or erase newer offline edits.
+- Reduce queued writes by entity identity and mutation intent to keep replay deterministic and bounded rather than re-sending every intermediate local edit after connectivity returns.
+- Keep offline UX calm and lightweight:
+  - shell-level offline and pending-sync visibility
+  - feature-level warning copy where a save is deferred
+  - no blocking sync modal, conflict center, or dashboard-style queue screen in this prompt
+
+### 2026-03-27 milestone-d offline architecture decisions
+- Start Milestone D with a shared frontend offline/sync foundation before wiring domain-specific queueing, so later prompts can reuse one queue model instead of adding more per-feature network logic inside `TimerContext`.
+- Use one browser-persisted sync queue for deferred writes across the implemented backend-backed domains:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- Treat the latest queued write for a given `(entity type, record id)` as the one that should survive in the queue, so offline edits do not pile up stale intermediate mutations for the same record.
+- Keep app-level connectivity and queue visibility in a dedicated `src/features/sync/` provider instead of threading those concerns through route components.
+- Surface offline and pending-sync state as lightweight shell banners only; do not introduce blocking overlays or dashboard-style sync UI in this milestone.
+
 ### 2026-03-26 milestone-c sankalpa rest decisions
 - Move `sankalpa` persistence and primary progress calculation to the backend so Home and Sankalpa read the same H2-backed source of truth.
 - Keep the frontend `SankalpaGoal` and `SankalpaProgress` shapes stable by returning backend progress entries that match the existing UI model instead of redesigning the screens.
@@ -35,6 +89,16 @@
 ### 2026-03-26 milestone-c merge decisions
 - Merge `codex/milestone-c-discipline-insight-fullstack` back into `codex/functioning` with a normal local merge commit so the milestone's review, remediation, and testing history stays intact.
 - Mark Milestone C complete on `codex/functioning` and hand off to `prompts/milestone-d-offline-sync-fullstack/00-create-branch.md` as the next exact prompt.
+
+### 2026-03-27 milestone-d offline sync branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-d-offline-sync-fullstack`.
+- Create and use the local milestone branch `codex/milestone-d-offline-sync-fullstack` for all Milestone D prompt execution before merging back to the parent branch.
+- Keep Milestone D bounded to the offline-sync full-stack slice:
+  - offline-first architecture foundations
+  - frontend offline behavior and sync queue support for implemented domains
+  - backend reconciliation and sync-safe duplicate handling
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
 
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
