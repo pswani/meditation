@@ -90,6 +90,9 @@ Compatibility redirect:
 
 ## Custom Play Media Placement
 
+- Run `npm run media:setup` to prepare both media roots used by this repo:
+  - `local-data/media/custom-plays/` for backend-served development media
+  - `public/media/custom-plays/` for frontend-only fallback checks when the backend is not serving media
 - Place local custom-play audio files under `local-data/media/custom-plays/` for backend-served development media.
 - The seeded media catalog maps those files to stable media asset ids and relative paths such as `custom-plays/vipassana-sit-20.mp3`.
 - Frontend `custom play` entries store the selected `mediaAssetId`; the backend validates that the referenced asset exists and is active before saving.
@@ -308,7 +311,10 @@ Backend dependencies are resolved when you first run the backend commands.
 npm run media:setup
 ```
 
-This ensures `public/media/custom-plays/` exists for local static custom-play files.
+This prepares both media directories used by the repo:
+
+- `public/media/custom-plays/` for frontend-only fallback checks
+- `local-data/media/custom-plays/` for backend-served media files
 
 ### Run the front end
 
@@ -322,6 +328,20 @@ Open:
 
 - on the developer machine: `http://localhost:5173/`
 - on other devices on the same Wi-Fi: `http://<LAN-IP>:5173/`
+
+Notes:
+
+- the backend CORS allowlist already supports the local dev and preview ports used by this repo:
+  - `5173`
+  - `5174`
+  - `4173`
+  - `4174`
+- if you need an isolated local full-stack run without using the default frontend port, prefer `5174` over an arbitrary port so the existing backend CORS config continues to work without extra changes
+- for an isolated frontend run pointed at a non-default backend port, this prompt verified:
+
+```bash
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+```
 
 ### Run the back end
 
@@ -339,6 +359,12 @@ Default behavior:
 - the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev`
 - the backend listens on port `8080` unless `MEDITATION_BACKEND_PORT` is set
 
+For an isolated local verification run that does not reuse the default H2 file or backend port, this prompt verified:
+
+```bash
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+```
+
 You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
 
 ### Run both together
@@ -351,7 +377,7 @@ npm run dev:all
 
 Behavior:
 
-- always prepares the media root
+- always prepares both media roots
 - starts the front end
 - starts the in-repo backend by default when `backend/pom.xml` is present
 - still supports an overridden external backend command when explicitly configured
@@ -386,7 +412,7 @@ Optional variables:
 - `MEDITATION_H2_DB_NAME`
   - optional H2 database filename prefix
 - `MEDITATION_MEDIA_ROOT`
-  - optional media root override
+  - optional frontend fallback media root override
 - `MEDITATION_MEDIA_STORAGE_ROOT`
   - optional backend media-storage root override
 
@@ -399,7 +425,9 @@ Code audit results:
 Current operational meaning:
 
 - install dependencies
-- optionally prepare `public/media/custom-plays`
+- optionally prepare both media roots:
+  - `public/media/custom-plays`
+  - `local-data/media/custom-plays`
 - start Vite
 - start Spring Boot + H2 from `backend/`
 - use backend + H2 persistence for:
@@ -430,7 +458,7 @@ npm run db:h2:reset
 What they do:
 
 - `npm run media:setup`
-  - ensures the custom-play media root exists
+  - ensures both the frontend fallback and backend-served custom-play media roots exist
 - `npm run dev:frontend`
   - prepares the media root and starts the Vite dev server
 - `npm run dev:backend`
@@ -461,7 +489,8 @@ Current repo defaults:
 - backend media path example: `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3`
 - backend H2 console in `dev` profile only: `http://localhost:8080/h2-console`
 - backend API base URL: `http://localhost:8080/api`
-- frontend same-origin API path during dev and preview: `/api`
+- frontend API path during Vite dev: `/api` through the local dev proxy when `VITE_API_BASE_URL` is unset
+- frontend API path during Vite preview: use a build created with `VITE_API_BASE_URL=http://<HOST>:<PORT>/api`, or serve the built frontend and backend from the same origin in a real deployment
 
 ### How the front end is configured to call backend APIs
 
@@ -523,6 +552,7 @@ Open on your phone or another device:
 Important note:
 
 - `localhost` on your phone means the phone itself, not your development machine
+- the preview server is network-accessible, but a connected preview build still needs an explicit `VITE_API_BASE_URL` unless the backend will be served from the same origin as the built app
 
 ### How to find the developer machine LAN IP
 
@@ -576,6 +606,7 @@ http://<LAN-IP>:5173/
 - when `VITE_API_BASE_URL` is unset, API paths default to same-origin `/api`
 - in Vite dev, `/api` is proxied to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
 - when `VITE_API_BASE_URL` is set, REST boundary helpers build URLs from that configured base
+- Vite preview does not proxy `/api`, so a connected preview build must be created with `VITE_API_BASE_URL` unless the backend is deployed on the same origin path
 - root-relative static asset paths such as `/media/custom-plays/...` remain same-origin and already work with LAN access
 
 This keeps the default setup clean for local development while avoiding hardcoded `localhost` assumptions for LAN or external backend testing.
@@ -762,6 +793,8 @@ The concrete media path convention currently used in code is:
 - backend media metadata responses use that same public path prefix
 
 ### Exact directory structure to use for local custom play media
+
+`npm run media:setup` prepares both directory trees below so local verification starts from the right paths.
 
 For backend-backed local development, place files under the backend media root:
 
@@ -1047,13 +1080,14 @@ Current reference data is source-controlled directly in TypeScript:
 
 For the current implementation, validate in this order:
 
-1. Ensure the file exists under `public/media/custom-plays/`
-2. Ensure the backend media metadata includes the file path you expect
-3. Start the app with `npm run dev:backend` and `npm run dev:frontend`
-4. Confirm the item appears in the `Media session (optional)` dropdown
-5. Save a custom play using it
-6. Confirm the saved custom play shows the media session label
-7. Optionally open the backend media URL in the browser
+1. Ensure the file exists under `local-data/media/custom-plays/` for backend-backed verification.
+2. If you also want frontend-only fallback checks without backend media serving, mirror the file under `public/media/custom-plays/`.
+3. Ensure the backend media metadata includes the file path you expect.
+4. Start the app with `npm run dev:backend` and `npm run dev:frontend`.
+5. Confirm the item appears in the `Media session (optional)` dropdown.
+6. Save a custom play using it.
+7. Confirm the saved custom play shows the media session label.
+8. Optionally open the backend media URL in the browser.
 
 "Usable" currently means linked-media selection and reference visibility, not playback.
 
@@ -1162,6 +1196,42 @@ Current verification pattern:
 7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
 8. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
 
+### Verified full-stack local workflow
+
+This prompt verified the following local full-stack flow end to end:
+
+1. Run `npm run media:setup`.
+2. Start an isolated backend:
+
+```bash
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+```
+
+3. Start the frontend on an already-allowed local dev port and point the proxy at that backend:
+
+```bash
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+```
+
+4. Open `http://127.0.0.1:5174/`.
+5. Verify the main flows:
+   - `Settings` save updates backend-backed timer defaults
+   - `History` manual log save appears immediately in recent session log entries
+   - `Practice` -> `Show Tools` -> `Custom Plays` creates and applies a `custom play`
+   - `Practice` -> `Open Playlists` creates a playlist and records an ended-early playlist `session log`
+   - `Sankalpa` saves a goal and `Home` reflects the active sankalpa snapshot plus recent activity
+
+Important distinction:
+
+- Vite dev uses the `/api` proxy
+- Vite preview does not proxy `/api`
+- if you want a production-build preview connected to a backend, rebuild first with an explicit API base URL, for example:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8081/api npm run build
+npm run preview -- --host 127.0.0.1 --port 4174
+```
+
 ## Build And Deployment
 
 ### Build production artifacts
@@ -1255,6 +1325,14 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
+```
+
+Backend verification for the in-repo Spring Boot module is also required for meaningful full-stack changes:
+
+```bash
+cd backend
+mvn -Dmaven.repo.local=../local-data/m2 test
+mvn -Dmaven.repo.local=../local-data/m2 verify
 ```
 
 Use those commands before handing off documentation or behavior changes.

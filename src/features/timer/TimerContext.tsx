@@ -6,15 +6,16 @@ import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome, PlaylistSaveResul
 import type { SessionLog } from '../../types/sessionLog';
 import type { SyncQueueEntry } from '../../types/sync';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
-import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
+import { areCustomPlaysEqual, createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { deleteCustomPlayFromApi, listCustomPlaysFromApi, persistCustomPlayToApi } from '../../utils/customPlayApi';
 import { isApiClientError } from '../../utils/apiClient';
 import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
-import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
+import { arePlaylistsEqual, createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
 import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
+import { areSessionLogsEqual } from '../../utils/sessionLog';
 import {
   enqueueSyncQueueEntry,
   markFailedSyncQueueEntriesPending,
@@ -43,6 +44,13 @@ import {
   persistTimerSettingsToApi,
 } from '../../utils/timerSettingsApi';
 import { defaultTimerSettings } from './constants';
+import {
+  applyQueuedCollectionMutations,
+  areOrderedCollectionsEqual,
+  buildQueueHydrationSignature,
+  mergeEntriesById,
+  reconcileQueueBackedCollection,
+} from './queueCollectionSync';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
 
@@ -203,51 +211,15 @@ function createTimerBootstrap(nowMs: number): TimerBootstrap {
 }
 
 function mergeSessionLogs(primary: readonly SessionLog[], secondary: readonly SessionLog[]) {
-  const entriesById = new Map<string, SessionLog>();
-
-  for (const entry of primary) {
-    entriesById.set(entry.id, entry);
-  }
-
-  for (const entry of secondary) {
-    if (!entriesById.has(entry.id)) {
-      entriesById.set(entry.id, entry);
-    }
-  }
-
-  return [...entriesById.values()].sort((left, right) => Date.parse(right.endedAt) - Date.parse(left.endedAt));
+  return mergeEntriesById(primary, secondary, (left, right) => Date.parse(right.endedAt) - Date.parse(left.endedAt));
 }
 
 function mergeCustomPlays(primary: readonly CustomPlay[], secondary: readonly CustomPlay[]) {
-  const entriesById = new Map<string, CustomPlay>();
-
-  for (const entry of primary) {
-    entriesById.set(entry.id, entry);
-  }
-
-  for (const entry of secondary) {
-    if (!entriesById.has(entry.id)) {
-      entriesById.set(entry.id, entry);
-    }
-  }
-
-  return [...entriesById.values()].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  return mergeEntriesById(primary, secondary, (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 }
 
 function mergePlaylists(primary: readonly Playlist[], secondary: readonly Playlist[]) {
-  const entriesById = new Map<string, Playlist>();
-
-  for (const entry of primary) {
-    entriesById.set(entry.id, entry);
-  }
-
-  for (const entry of secondary) {
-    if (!entriesById.has(entry.id)) {
-      entriesById.set(entry.id, entry);
-    }
-  }
-
-  return [...entriesById.values()].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  return mergeEntriesById(primary, secondary, (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 }
 
 function formatApiErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -266,18 +238,6 @@ function formatApiErrorMessage(error: unknown, fallbackMessage: string): string 
   }
 
   return fallbackMessage;
-}
-
-function areSessionLogCollectionsEqual(left: readonly SessionLog[], right: readonly SessionLog[]) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function areCustomPlayCollectionsEqual(left: readonly CustomPlay[], right: readonly CustomPlay[]) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function arePlaylistCollectionsEqual(left: readonly Playlist[], right: readonly Playlist[]) {
-  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 const TIMER_CONTEXT_SYNC_ENTITY_TYPES = ['timer-settings', 'session-log', 'custom-play', 'playlist'] as const;
@@ -307,31 +267,6 @@ function mergeQueueEntry(
   entry: Parameters<typeof enqueueSyncQueueEntry>[1]
 ) {
   updateQueue((current) => enqueueSyncQueueEntry(current, entry));
-}
-
-function applyQueuedCollectionMutations<T extends { readonly id: string }>(
-  entries: readonly T[],
-  queueEntries: readonly SyncQueueEntry[]
-): T[] {
-  let nextEntries = [...entries];
-
-  for (const queueEntry of queueEntries) {
-    if (queueEntry.operation === 'delete') {
-      nextEntries = nextEntries.filter((entry) => entry.id !== queueEntry.recordId);
-      continue;
-    }
-
-    const payload = queueEntry.payload as T;
-    const existingIndex = nextEntries.findIndex((entry) => entry.id === payload.id);
-
-    if (existingIndex >= 0) {
-      nextEntries[existingIndex] = payload;
-    } else {
-      nextEntries = [payload, ...nextEntries];
-    }
-  }
-
-  return nextEntries;
 }
 
 function applyQueuedTimerSettings(
@@ -424,6 +359,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     activeSessionStartedAt !== null &&
     bootstrap.hydration.activeSession?.startedAt === activeSessionStartedAt &&
     bootstrap.hydration.activeSession?.endAtMs === activeSessionEndAtMs;
+
   const persistedTimerRemainingSeconds = activeSessionStartedAt
     ? isPaused || isRecoveredRunningTimer
       ? activeSessionRemainingSeconds
@@ -570,6 +506,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [queue]);
 
   useEffect(() => {
+    isTimerProviderMountedRef.current = true;
+
     return () => {
       isTimerProviderMountedRef.current = false;
     };
@@ -649,10 +587,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const queuedCustomPlayEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['custom-play'],
     });
-    const hydrationKey = JSON.stringify({
-      isOnline,
-      entries: queuedCustomPlayEntries,
-    });
+    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedCustomPlayEntries);
 
     if (
       completedCustomPlayHydrationKeyRef.current === hydrationKey ||
@@ -680,28 +615,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (cancelled) {
           return;
         }
-        const filteredRemoteCustomPlays = remoteCustomPlays.filter(
-          (remotePlay) => !deletedCustomPlayIdsRef.current.has(remotePlay.id)
-        );
-        for (const remotePlay of filteredRemoteCustomPlays) {
+        const reconciliation = reconcileQueueBackedCollection({
+          remoteEntries: remoteCustomPlays,
+          localEntries: latestCustomPlaysRef.current,
+          queuedEntries: queuedCustomPlayEntries,
+          deletedRecordIds: deletedCustomPlayIdsRef.current,
+          syncedRecordIds: syncedCustomPlayIdsRef.current,
+          mergeEntries: mergeCustomPlays,
+        });
+
+        for (const remotePlay of reconciliation.filteredRemoteEntries) {
           syncedCustomPlayIdsRef.current.add(remotePlay.id);
         }
-        const queuedCustomPlayIds = new Set(queuedCustomPlayEntries.map((entry) => entry.recordId));
 
-        const localOnlyCustomPlays = latestCustomPlaysRef.current.filter(
-          (localPlay) =>
-            !filteredRemoteCustomPlays.some((remotePlay) => remotePlay.id === localPlay.id) && !queuedCustomPlayIds.has(localPlay.id)
-        );
-        const retainedLocalCustomPlays = localOnlyCustomPlays.filter((localPlay) =>
-          syncedCustomPlayIdsRef.current.has(localPlay.id)
-        );
-        const missingLocalCustomPlays = localOnlyCustomPlays.filter(
-          (localPlay) => !syncedCustomPlayIdsRef.current.has(localPlay.id)
-        );
-
-        let nextCustomPlays = mergeCustomPlays(filteredRemoteCustomPlays, retainedLocalCustomPlays);
-        if (missingLocalCustomPlays.length > 0) {
-          for (const customPlay of missingLocalCustomPlays) {
+        if (reconciliation.missingLocalEntries.length > 0) {
+          for (const customPlay of reconciliation.missingLocalEntries) {
             mergeQueueEntry(updateQueue, {
               entityType: 'custom-play',
               operation: 'upsert',
@@ -709,14 +637,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               payload: customPlay,
             });
           }
-
-          nextCustomPlays = mergeCustomPlays(nextCustomPlays, missingLocalCustomPlays);
         }
 
-        nextCustomPlays = applyQueuedCollectionMutations(nextCustomPlays, queuedCustomPlayEntries);
-
-        if (!areCustomPlayCollectionsEqual(nextCustomPlays, latestCustomPlaysRef.current)) {
-          setCustomPlays(nextCustomPlays);
+        if (
+          !areOrderedCollectionsEqual(reconciliation.nextEntries, latestCustomPlaysRef.current, areCustomPlaysEqual)
+        ) {
+          setCustomPlays(reconciliation.nextEntries);
         }
 
         if (!queuedCustomPlayEntries.some((entry) => entry.state === 'failed')) {
@@ -757,10 +683,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const queuedPlaylistEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['playlist'],
     });
-    const hydrationKey = JSON.stringify({
-      isOnline,
-      entries: queuedPlaylistEntries,
-    });
+    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedPlaylistEntries);
 
     if (completedPlaylistHydrationKeyRef.current === hydrationKey || inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
       return;
@@ -785,29 +708,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (cancelled) {
           return;
         }
-        const filteredRemotePlaylists = remotePlaylists.filter(
-          (remotePlaylist) => !deletedPlaylistIdsRef.current.has(remotePlaylist.id)
-        );
-        for (const remotePlaylist of filteredRemotePlaylists) {
+        const reconciliation = reconcileQueueBackedCollection({
+          remoteEntries: remotePlaylists,
+          localEntries: latestPlaylistsRef.current,
+          queuedEntries: queuedPlaylistEntries,
+          deletedRecordIds: deletedPlaylistIdsRef.current,
+          syncedRecordIds: syncedPlaylistIdsRef.current,
+          mergeEntries: mergePlaylists,
+        });
+
+        for (const remotePlaylist of reconciliation.filteredRemoteEntries) {
           syncedPlaylistIdsRef.current.add(remotePlaylist.id);
         }
-        const queuedPlaylistIds = new Set(queuedPlaylistEntries.map((entry) => entry.recordId));
 
-        const localOnlyPlaylists = latestPlaylistsRef.current.filter(
-          (localPlaylist) =>
-            !filteredRemotePlaylists.some((remotePlaylist) => remotePlaylist.id === localPlaylist.id) &&
-            !queuedPlaylistIds.has(localPlaylist.id)
-        );
-        const retainedLocalPlaylists = localOnlyPlaylists.filter((localPlaylist) =>
-          syncedPlaylistIdsRef.current.has(localPlaylist.id)
-        );
-        const missingLocalPlaylists = localOnlyPlaylists.filter(
-          (localPlaylist) => !syncedPlaylistIdsRef.current.has(localPlaylist.id)
-        );
-
-        let nextPlaylists = mergePlaylists(filteredRemotePlaylists, retainedLocalPlaylists);
-        if (missingLocalPlaylists.length > 0) {
-          for (const playlist of missingLocalPlaylists) {
+        if (reconciliation.missingLocalEntries.length > 0) {
+          for (const playlist of reconciliation.missingLocalEntries) {
             mergeQueueEntry(updateQueue, {
               entityType: 'playlist',
               operation: 'upsert',
@@ -815,14 +730,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               payload: playlist,
             });
           }
-
-          nextPlaylists = mergePlaylists(nextPlaylists, missingLocalPlaylists);
         }
 
-        nextPlaylists = applyQueuedCollectionMutations(nextPlaylists, queuedPlaylistEntries);
-
-        if (!arePlaylistCollectionsEqual(nextPlaylists, latestPlaylistsRef.current)) {
-          setPlaylists(nextPlaylists);
+        if (!areOrderedCollectionsEqual(reconciliation.nextEntries, latestPlaylistsRef.current, arePlaylistsEqual)) {
+          setPlaylists(reconciliation.nextEntries);
         }
 
         if (!queuedPlaylistEntries.some((entry) => entry.state === 'failed')) {
@@ -863,10 +774,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const queuedSessionLogEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['session-log'],
     });
-    const hydrationKey = JSON.stringify({
-      isOnline,
-      entries: queuedSessionLogEntries,
-    });
+    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedSessionLogEntries);
 
     if (
       completedSessionLogHydrationKeyRef.current === hydrationKey ||
@@ -901,7 +809,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           mergeSessionLogs(remoteSessionLogs, latestSessionLogsRef.current),
           queuedSessionLogEntries
         );
-        if (!areSessionLogCollectionsEqual(mergedSessionLogs, latestSessionLogsRef.current)) {
+        if (!areOrderedCollectionsEqual(mergedSessionLogs, latestSessionLogsRef.current, areSessionLogsEqual)) {
           dispatch({
             type: 'REPLACE_SESSION_LOGS',
             payload: mergedSessionLogs,
@@ -946,10 +854,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const queuedTimerSettingsEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['timer-settings'],
     });
-    const hydrationKey = JSON.stringify({
-      isOnline,
-      entries: queuedTimerSettingsEntries,
-    });
+    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedTimerSettingsEntries);
 
     if (
       completedTimerSettingsHydrationKeyRef.current === hydrationKey ||
@@ -1143,7 +1048,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
             });
             syncedSessionLogIdsRef.current.add(savedEntry.id);
             const nextSessionLogs = mergeSessionLogs([savedEntry], latestSessionLogsRef.current);
-            if (!areSessionLogCollectionsEqual(nextSessionLogs, latestSessionLogsRef.current)) {
+            if (!areOrderedCollectionsEqual(nextSessionLogs, latestSessionLogsRef.current, areSessionLogsEqual)) {
               dispatch({ type: 'REPLACE_SESSION_LOGS', payload: nextSessionLogs });
             }
             setSessionLogSyncError(null);

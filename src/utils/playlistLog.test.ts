@@ -55,6 +55,29 @@ describe('playlist logging helpers', () => {
     expect(entry.completedDurationSeconds).toBe(720);
   });
 
+  it('keeps generated playlist session log ids within the backend length limit', () => {
+    const entry = buildPlaylistItemLogEntry({
+      playlistId: 'playlist-1774637352085-r7i2bm',
+      playlistName: 'Morning Sequence',
+      playlistRunId: 'playlist-1774637352085-r7i2bm',
+      playlistRunStartedAt: '2026-03-23T10:00:00.000Z',
+      item: {
+        id: 'playlist-item-1774637333199-x1b3d4',
+        meditationType: 'Ajapa',
+        durationMinutes: 12,
+      },
+      itemPosition: 2,
+      itemCount: 3,
+      startedAt: '2026-03-23T10:10:00.000Z',
+      endedAt: new Date('2026-03-23T10:12:00.000Z'),
+      completedDurationSeconds: 120,
+      status: 'ended early',
+    });
+
+    expect(entry.id.length).toBeLessThanOrEqual(64);
+    expect(entry.id).toMatch(/^plog-/);
+  });
+
   it('clamps negative completed duration to zero', () => {
     const entry = buildPlaylistItemLogEntry({
       playlistId: 'playlist-1',

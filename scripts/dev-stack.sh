@@ -8,6 +8,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 load_local_env
 media_root=$(ensure_media_root)
+backend_media_root=$(backend_media_root_dir)
 
 backend_pid=""
 
@@ -20,7 +21,8 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-printf '%s\n' "Media root: $media_root"
+printf '%s\n' "Frontend fallback media root: $media_root"
+printf '%s\n' "Backend media root: $backend_media_root"
 
 if [ -n "$(backend_dev_cmd)" ]; then
   printf '%s\n' "Starting paired backend in the background"

@@ -1,7 +1,179 @@
 # Session Handoff
 
 ## Current status
-Milestone D is complete and merged into `codex/functioning`. The offline-first sync architecture, reconciliation behavior, remediation fixes, and milestone verification are now on the parent branch, and the next exact prompt is ready.
+Milestone E prompt 05 release readiness is complete on `codex/milestone-e-hardening-release`. The repo now has verified release-candidate handoff guidance for setup, media, backend/H2, helper commands, localhost startup, LAN reachability, and preview behavior. The milestone is ready for the merge prompt.
+
+## Milestone E branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-e-hardening-release`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone E scope:
+  - release-hardening review across usability, code quality, performance, backend hygiene, API design quality, testing quality, and deployment/readme clarity
+  - remediation of critical and important hardening findings
+  - accessibility and responsive polish across mobile, tablet, and desktop
+  - end-to-end verification, release-readiness checks, and local merge back to the parent branch
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/01-code-quality-performance-hygiene-review.md`
+
+## Milestone E prompt 01: release-hardening review
+- Added:
+  - `docs/review-release-hardening.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - `src/features/timer/TimerContext.tsx` is now the main maintainability and performance hotspot, with duplicated hydration branches and repeated JSON serialization for queue keys and collection equality checks
+    - local media setup guidance is inconsistent between `README.md`, helper scripts, and backend defaults, which can send operators to the wrong directory during full-stack verification
+  - nice-to-have issues:
+    - the repo still lacks a browser-level smoke or end-to-end harness for connected-runtime verification
+    - backend Maven verification still emits a Flyway/H2 compatibility warning even though the build passes
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/02-remediate-code-quality-performance-hygiene.md`
+
+## Milestone E prompt 02: remediation
+- Added and used:
+  - `requirements/execplan-milestone-e-hardening-remediation.md`
+  - `src/features/timer/queueCollectionSync.ts`
+- Frontend hardening changes:
+  - extracted shared queue-backed collection reconciliation helpers out of `src/features/timer/TimerContext.tsx`
+  - replaced JSON-stringification-based queue signatures and collection equality checks with reusable domain-aware helpers for `custom play`, playlist, and `session log` state
+  - kept existing local-first sync behavior intact while making the `custom play` and playlist hydration branches reuse one reconciliation path
+- Operational clarity changes:
+  - updated media-root helper scripts so `npm run media:setup` prepares both:
+    - `public/media/custom-plays`
+    - `local-data/media/custom-plays`
+  - updated `README.md` so local media setup and validation instructions match the actual helper and backend defaults
+- Tests:
+  - added focused helper coverage in `src/features/timer/queueCollectionSync.test.ts`
+  - extended domain-helper coverage in:
+    - `src/utils/customPlay.test.ts`
+    - `src/utils/playlist.test.ts`
+    - `src/utils/sessionLog.test.ts`
+- Verification:
+  - passed `npm run media:setup`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Remaining nice-to-have issues from the review:
+  - the repo still lacks a browser-level smoke or end-to-end harness
+  - backend Maven verification still emits a Flyway/H2 compatibility warning
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/03-accessibility-responsive-polish.md`
+
+## Milestone E prompt 03: accessibility and responsive polish
+- Added and used:
+  - `requirements/execplan-milestone-e-accessibility-responsive-polish.md`
+- Accessibility changes:
+  - added `aria-invalid` and `aria-describedby` wiring plus stable hint and error ids on the validation-heavy form controls in:
+    - `Practice`
+    - `Settings`
+    - manual log in `History`
+    - `custom play`
+    - playlist management
+  - kept the existing validation copy and calm interaction model while making hint text and inline errors more reliably associated with each control
+- Responsive polish:
+  - added calm two-column management layouts for `custom play` and playlist management on wider screens
+  - kept those same surfaces stacked on phone-sized layouts so controls remain touch-friendly and easy to scan
+  - refined the manual-log disclosure summary layout so the collapsed/expanded affordance reads more cleanly across breakpoints
+- Tests:
+  - added focused accessibility assertions in:
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+    - `src/pages/HistoryPage.test.tsx`
+  - updated `src/App.test.tsx` manual-log queries to stay aligned with the more descriptive accessible labels
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+  - completed a local responsive spot-check on `http://127.0.0.1:4174`
+- Known limitations:
+  - the local preview spot-check used frontend fallback states because no backend was attached to the preview server
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/04-e2e-verification.md`
+
+## Milestone E prompt 04: end-to-end verification
+- Added and used:
+  - `requirements/execplan-milestone-e-e2e-verification.md`
+- Connected local stack verified:
+  - frontend `http://127.0.0.1:5174`
+  - backend `http://127.0.0.1:8081`
+  - isolated H2 database name `meditation-prompt04`
+- Verification-driven fixes:
+  - fixed a React StrictMode lifecycle bug in `src/features/timer/TimerContext.tsx` so queue-backed sync flushes still run after the initial development mount cycle
+  - shortened playlist-generated `session log` ids in `src/utils/playlistLog.ts` so playlist auto-log and ended-early flows fit the backend `session_log.id varchar(64)` limit
+- Test coverage updates:
+  - wrapped the existing backend timer-settings rehydration app test in `StrictMode` within `src/App.test.tsx` so prompt 04 covers the real app lifecycle
+  - added focused playlist log id-length coverage in `src/utils/playlistLog.test.ts`
+- Documentation updates:
+  - updated `README.md` with the exact verified connected backend and frontend commands
+  - documented that Vite dev proxies `/api`, while Vite preview requires an explicit `VITE_API_BASE_URL`
+  - added backend Maven verification commands to the README verification snapshot
+- Live browser verification completed for:
+  - Home
+  - Settings save and reload
+  - manual log save in History
+  - `custom play` creation and timer apply
+  - playlist creation, run launch, ended-early logging, and History visibility
+  - Sankalpa creation and Home snapshot visibility
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+- Known limitations:
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/05-release-readiness.md`
+
+## Milestone E prompt 05: release readiness
+- Added and used:
+  - `requirements/execplan-milestone-e-release-readiness.md`
+- Documentation hardening:
+  - clarified in `README.md` that Vite preview is network-accessible but does not proxy `/api`
+  - clarified that connected preview checks require a build created with `VITE_API_BASE_URL`, unless the backend is served from the same origin as the built app
+  - kept the local dev, LAN, media, backend/H2, and offline/sync guidance grounded in the helper scripts and verified runtime behavior
+- Release-readiness verification:
+  - passed `npm run media:setup`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `npm run build:app`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+- Helper-command startup smoke checks:
+  - `npm run dev:backend` served backend health on `http://localhost:8080/api/health`
+  - `npm run dev:frontend` served the app on `http://localhost:5173/`
+  - the dev proxy reached backend health at `http://localhost:5173/api/health`
+  - `npm run preview:app` served the built app on `http://localhost:4173/`
+- LAN/Wi-Fi reachability verified from the developer machine using LAN address `192.168.68.76`:
+  - backend health `http://192.168.68.76:8080/api/health`
+  - dev frontend `http://192.168.68.76:5173/`
+  - preview frontend `http://192.168.68.76:4173/`
+- Release blocker check:
+  - no new blockers found for the local release-candidate handoff
+  - remaining non-blocking limitations are still:
+    - timer and playlist sound playback is UI-only
+    - richer `custom play` media-library management is not implemented
+    - `sankalpa` edit/archive/delete flows are not implemented
+    - backend Maven verification still emits the known Flyway/H2 compatibility warning even though `verify` passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/99-merge-branch.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`

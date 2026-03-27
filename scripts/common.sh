@@ -27,17 +27,28 @@ resolve_path() {
   esac
 }
 
-media_root_dir() {
+frontend_media_root_dir() {
   printf '%s\n' "$(resolve_path "${MEDITATION_MEDIA_ROOT:-public/media/custom-plays}")"
 }
 
-ensure_media_root() {
-  media_root=$(media_root_dir)
+backend_media_root_dir() {
+  printf '%s\n' "$(resolve_path "${MEDITATION_MEDIA_STORAGE_ROOT:-local-data/media}")/custom-plays"
+}
+
+ensure_media_directory() {
+  media_root=$1
   mkdir -p "$media_root"
   if [ ! -f "$media_root/.gitkeep" ]; then
     : > "$media_root/.gitkeep"
   fi
-  printf '%s\n' "$media_root"
+}
+
+ensure_media_root() {
+  frontend_media_root=$(frontend_media_root_dir)
+  backend_media_root=$(backend_media_root_dir)
+  ensure_media_directory "$frontend_media_root"
+  ensure_media_directory "$backend_media_root"
+  printf '%s\n' "$frontend_media_root"
 }
 
 backend_dir() {

@@ -59,6 +59,9 @@ export default function PracticePage() {
     }),
     [settings.intervalEnabled, startAttempted, touched, validation.errors]
   );
+  const durationMessageId = visibleErrors.durationMinutes ? 'practice-duration-error' : 'practice-duration-hint';
+  const meditationTypeMessageId = visibleErrors.meditationType ? 'practice-meditation-type-error' : 'practice-meditation-type-hint';
+  const intervalMessageId = visibleErrors.intervalMinutes ? 'practice-interval-error' : 'practice-interval-hint';
 
   useEffect(() => {
     if (visibleErrors.intervalMinutes) {
@@ -156,13 +159,19 @@ export default function PracticePage() {
             min={1}
             value={settings.durationMinutes}
             disabled={areTimerSettingsControlsDisabled}
+            aria-invalid={Boolean(visibleErrors.durationMinutes)}
+            aria-describedby={durationMessageId}
             onChange={(event) => update('durationMinutes', Number(event.target.value))}
             onBlur={() => markTouched('durationMinutes')}
           />
           {visibleErrors.durationMinutes ? (
-            <small className="error-text">{visibleErrors.durationMinutes}</small>
+            <small id={durationMessageId} className="error-text">
+              {visibleErrors.durationMinutes}
+            </small>
           ) : (
-            <small className="hint-text">Choose total session duration.</small>
+            <small id={durationMessageId} className="hint-text">
+              Choose total session duration.
+            </small>
           )}
         </label>
 
@@ -171,6 +180,8 @@ export default function PracticePage() {
           <select
             value={settings.meditationType}
             disabled={areTimerSettingsControlsDisabled}
+            aria-invalid={Boolean(visibleErrors.meditationType)}
+            aria-describedby={meditationTypeMessageId}
             onChange={(event) => update('meditationType', event.target.value as MeditationType | '')}
             onBlur={() => markTouched('meditationType')}
           >
@@ -182,9 +193,13 @@ export default function PracticePage() {
             ))}
           </select>
           {visibleErrors.meditationType ? (
-            <small className="error-text">{visibleErrors.meditationType}</small>
+            <small id={meditationTypeMessageId} className="error-text">
+              {visibleErrors.meditationType}
+            </small>
           ) : (
-            <small className="hint-text">Select meditation type before starting.</small>
+            <small id={meditationTypeMessageId} className="hint-text">
+              Select meditation type before starting.
+            </small>
           )}
         </label>
       </div>
@@ -255,13 +270,17 @@ export default function PracticePage() {
                       min={1}
                       value={settings.intervalMinutes}
                       disabled={areTimerSettingsControlsDisabled}
+                      aria-invalid={Boolean(visibleErrors.intervalMinutes)}
+                      aria-describedby={intervalMessageId}
                       onChange={(event) => update('intervalMinutes', Number(event.target.value))}
                       onBlur={() => markTouched('intervalMinutes')}
                     />
                     {visibleErrors.intervalMinutes ? (
-                      <small className="error-text">{visibleErrors.intervalMinutes}</small>
+                      <small id={intervalMessageId} className="error-text">
+                        {visibleErrors.intervalMinutes}
+                      </small>
                     ) : (
-                      <small className="hint-text">
+                      <small id={intervalMessageId} className="hint-text">
                         {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} will occur before session end.
                       </small>
                     )}

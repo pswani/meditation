@@ -49,6 +49,11 @@ describe('PracticePage UX', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     expect(screen.getByText(/meditation type is required/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveAttribute(
+      'aria-describedby',
+      'practice-meditation-type-error'
+    );
   });
 
   it('renders and dismisses entry guidance passed from route state', () => {

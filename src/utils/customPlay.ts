@@ -77,3 +77,19 @@ export function applyCustomPlayToTimerSettings(
     endSound: play.endSound,
   };
 }
+
+export function areCustomPlaysEqual(left: CustomPlay, right: CustomPlay): boolean {
+  return (
+    left.id === right.id &&
+    left.name === right.name &&
+    left.meditationType === right.meditationType &&
+    left.durationMinutes === right.durationMinutes &&
+    left.startSound === right.startSound &&
+    left.endSound === right.endSound &&
+    left.mediaAssetId === right.mediaAssetId &&
+    left.recordingLabel === right.recordingLabel &&
+    left.favorite === right.favorite &&
+    left.createdAt === right.createdAt &&
+    left.updatedAt === right.updatedAt
+  );
+}

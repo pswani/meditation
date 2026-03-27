@@ -2,6 +2,60 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e release readiness decisions
+- Clarify the README in the shared run and LAN sections that Vite preview is network-accessible but does not proxy `/api`, so connected preview checks require a build created with `VITE_API_BASE_URL` unless the backend will be served from the same origin.
+- Treat Milestone E release readiness as a local release-candidate handoff bar:
+  - helper commands run as documented
+  - media roots are prepared as documented
+  - backend, frontend, and preview startup are reachable on both localhost and the machine LAN address
+  - offline and sync behavior remains documented and covered through the current automated suite plus prompt-04 live verification
+- Record the remaining items as non-blocking limitations rather than release blockers for this milestone:
+  - timer and playlist sound playback is still UI-only
+  - richer `custom play` media-library management is still unimplemented
+  - `sankalpa` edit/archive/delete flows are still unimplemented
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though verify passes
+
+### 2026-03-27 milestone-e end-to-end verification decisions
+- Run connected local full-stack verification on backend `127.0.0.1:8081` with isolated H2 database `meditation-prompt04`, and point the frontend at that backend on supported local ports already covered by the backend CORS allowlist:
+  - Vite dev: `5173` or `5174`
+  - Vite preview: `4173` or `4174`
+- Treat React StrictMode as part of the real app lifecycle and fix `TimerContext` mount-state bookkeeping in the provider, instead of weakening StrictMode-based test coverage or special-casing development behavior.
+- Keep playlist-generated `session log` ids bounded to the backend `session_log.id varchar(64)` limit so playlist auto-log and ended-early flows remain safe against H2 persistence failures.
+- Document local runtime expectations explicitly:
+  - Vite dev proxies `/api`
+  - Vite preview does not proxy `/api` and therefore requires an explicit `VITE_API_BASE_URL` for connected full-stack checks
+
+### 2026-03-27 milestone-e accessibility and responsive polish decisions
+- Improve accessible form semantics on the highest-value validation-heavy flows first:
+  - timer setup
+  - settings
+  - manual log
+  - `custom play`
+  - playlist management
+- Keep hint text visible and connected to its control through stable `aria-describedby` ids, then swap that relationship to the inline error message only when the field becomes invalid.
+- Use wider-screen two-column layouts only for the management surfaces that naturally split into editing and review panes:
+  - `custom play`
+  - playlist management
+- Keep phone layouts stacked and touch-friendly so the responsive polish adds space on tablet and desktop without turning the app into a dense dashboard.
+
+### 2026-03-27 milestone-e hardening remediation decisions
+- Reduce `TimerContext` risk incrementally by extracting the repeated queue-backed collection reconciliation rules into a focused helper module, instead of attempting a larger provider split during this prompt.
+- Replace JSON-stringification-based queue hydration keys and collection equality checks with narrower metadata signatures and domain-aware equality helpers so sync cycles do less avoidable serialization work.
+- Make `npm run media:setup` prepare both media roots used by the repo:
+  - `public/media/custom-plays`
+  - `local-data/media/custom-plays`
+- Keep the frontend fallback and backend-served media paths both documented, because the repo still supports frontend-only sample checks while the backend serves `/media/**` from the H2-backed local stack.
+
+### 2026-03-27 milestone-e hardening release branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-e-hardening-release`.
+- Create and use the local milestone branch `codex/milestone-e-hardening-release` for all Milestone E prompt execution before merging back to the parent branch.
+- Keep Milestone E bounded to the release-hardening slice:
+  - release review across usability, code quality, performance, backend hygiene, API design, testing, and docs clarity
+  - remediation of critical and important hardening findings
+  - accessibility and responsive polish
+  - full-stack end-to-end verification and release-candidate readiness handoff
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-27 milestone-d merge decisions
 - Merge `codex/milestone-d-offline-sync-fullstack` back into `codex/functioning` with a normal local merge commit so the offline architecture, reconciliation, remediation, and testing history remain intact.
 - Mark Milestone D complete on `codex/functioning` and hand off directly to `prompts/milestone-e-hardening-release/00-create-branch.md` as the next exact prompt.

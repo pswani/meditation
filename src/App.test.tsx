@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -686,7 +687,7 @@ describe('App shell', () => {
 
     expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -777,8 +778,8 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -1073,9 +1074,11 @@ describe('App shell', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const firstRender = render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <App />
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter initialEntries={['/settings']}>
+          <App />
+        </MemoryRouter>
+      </StrictMode>
     );
 
     await flushBackendHydration();
@@ -1087,9 +1090,11 @@ describe('App shell', () => {
     firstRender.unmount();
 
     render(
-      <MemoryRouter initialEntries={['/practice']}>
-        <App />
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter initialEntries={['/practice']}>
+          <App />
+        </MemoryRouter>
+      </StrictMode>
     );
 
     expect(await screen.findByLabelText(/duration \(minutes\)/i)).toHaveValue(32);
@@ -1146,8 +1151,8 @@ describe('App shell', () => {
     );
 
     await flushBackendHydration();
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -1187,8 +1192,8 @@ describe('App shell', () => {
     );
 
     await flushBackendHydration();
-    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();

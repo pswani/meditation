@@ -8,9 +8,11 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 load_local_env
 media_root=$(ensure_media_root)
+backend_media_root=$(backend_media_root_dir)
 
 printf '%s\n' "Building frontend bundle"
-printf '%s\n' "Media root: $media_root"
+printf '%s\n' "Frontend fallback media root: $media_root"
+printf '%s\n' "Backend media root: $backend_media_root"
 
 cd "$ROOT_DIR"
 npm run build

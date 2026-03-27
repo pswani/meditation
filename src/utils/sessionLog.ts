@@ -43,3 +43,27 @@ export function formatDurationLabel(totalSeconds: number): string {
 
   return `${minutes.toFixed(1)} min`;
 }
+
+export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolean {
+  return (
+    left.id === right.id &&
+    left.startedAt === right.startedAt &&
+    left.endedAt === right.endedAt &&
+    left.meditationType === right.meditationType &&
+    left.intendedDurationSeconds === right.intendedDurationSeconds &&
+    left.completedDurationSeconds === right.completedDurationSeconds &&
+    left.status === right.status &&
+    left.source === right.source &&
+    left.startSound === right.startSound &&
+    left.endSound === right.endSound &&
+    left.intervalEnabled === right.intervalEnabled &&
+    left.intervalMinutes === right.intervalMinutes &&
+    left.intervalSound === right.intervalSound &&
+    left.playlistId === right.playlistId &&
+    left.playlistName === right.playlistName &&
+    left.playlistRunId === right.playlistRunId &&
+    left.playlistRunStartedAt === right.playlistRunStartedAt &&
+    left.playlistItemPosition === right.playlistItemPosition &&
+    left.playlistItemCount === right.playlistItemCount
+  );
+}
