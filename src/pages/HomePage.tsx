@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { useTimer } from '../features/timer/useTimer';
 import type { CustomPlay } from '../types/customPlay';
 import type { PlaylistRunStartResult } from '../types/playlist';
 import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { formatDurationLabel } from '../utils/sessionLog';
 import { getSankalpaGoalTypeLabel } from '../utils/sankalpa';
-import { listSankalpasFromApi } from '../utils/sankalpaApi';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
 
 function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
@@ -42,14 +42,12 @@ export default function HomePage() {
     settingsSyncError,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const sankalpas = useMemo(() => listSankalpasFromApi(), []);
+  const { progressEntries: sankalpaProgressEntries, isLoading: isSankalpaLoading, syncMessage: sankalpaSyncMessage } =
+    useSankalpaProgress(sessionLogs);
 
   const todaySummary = useMemo(() => deriveTodayActivitySummary(sessionLogs), [sessionLogs]);
   const recentLogs = useMemo(() => selectRecentSessionLogs(sessionLogs, 5), [sessionLogs]);
-  const topActiveSankalpa = useMemo(
-    () => selectTopActiveSankalpaProgress(sankalpas, sessionLogs),
-    [sankalpas, sessionLogs]
-  );
+  const topActiveSankalpa = useMemo(() => selectTopActiveSankalpaProgress(sankalpaProgressEntries), [sankalpaProgressEntries]);
   const favoriteCustomPlays = useMemo(() => customPlays.filter((entry) => entry.favorite).slice(0, 3), [customPlays]);
   const favoritePlaylists = useMemo(() => playlists.filter((entry) => entry.favorite).slice(0, 3), [playlists]);
 
@@ -177,6 +175,8 @@ export default function HomePage() {
               Open Sankalpa
             </button>
           </div>
+          {isSankalpaLoading ? <p className="section-subtitle">Refreshing sankalpa progress from the backend.</p> : null}
+          {sankalpaSyncMessage ? <p className="section-subtitle">{sankalpaSyncMessage}</p> : null}
           {topActiveSankalpa ? (
             <>
               <div className="history-row">

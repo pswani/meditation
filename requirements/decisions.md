@@ -2,6 +2,15 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-c sankalpa rest decisions
+- Move `sankalpa` persistence and primary progress calculation to the backend so Home and Sankalpa read the same H2-backed source of truth.
+- Keep the frontend `SankalpaGoal` and `SankalpaProgress` shapes stable by returning backend progress entries that match the existing UI model instead of redesigning the screens.
+- Preserve local `sankalpa` cache behavior as:
+  - a migration source for older browser-only goals
+  - a fallback cache when the backend is temporarily unavailable
+- Add a Flyway migration to store `sankalpa_goal.target_value` as a fractional numeric value so duration-based goals can preserve the existing `0.5` minute UI precision.
+- Use a shared frontend `useSankalpaProgress` hook so the Home snapshot and Sankalpa screen stay aligned on loading, fallback, migration, and save behavior.
+
 ### 2026-03-26 milestone-c summaries rest decisions
 - Add a dedicated backend summary aggregate endpoint at `/api/summaries` so the insight layer reads from the same H2-backed `session log` source of truth as History.
 - Keep summary range selection and validation in the frontend while moving aggregate derivation to the backend:

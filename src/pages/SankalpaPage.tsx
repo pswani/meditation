@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { SankalpaGoal, SankalpaProgress, SankalpaValidationResult } from '../types/sankalpa';
@@ -16,14 +17,12 @@ import { loadSummaryFromApi } from '../utils/summaryApi';
 import {
   createInitialSankalpaDraft,
   createSankalpaGoal,
-  deriveSankalpaProgress,
   getSankalpaGoalTypeLabel,
   partitionSankalpaProgress,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
-import { listSankalpasFromApi, persistSankalpasToApi } from '../utils/sankalpaApi';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
@@ -176,7 +175,6 @@ export default function SankalpaPage() {
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [sankalpas, setSankalpas] = useState(() => listSankalpasFromApi());
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
@@ -184,16 +182,8 @@ export default function SankalpaPage() {
   const [remoteSummarySnapshot, setRemoteSummarySnapshot] = useState<SummarySnapshotData | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryLoadMessage, setSummaryLoadMessage] = useState<string | null>(null);
-  const skipInitialSankalpaPersistRef = useRef(true);
-
-  useEffect(() => {
-    if (skipInitialSankalpaPersistRef.current) {
-      skipInitialSankalpaPersistRef.current = false;
-      return;
-    }
-
-    persistSankalpasToApi(sankalpas);
-  }, [sankalpas]);
+  const { progressEntries: sankalpaProgressEntries, isLoading: isSankalpaLoading, syncMessage: sankalpaSyncMessage, saveSankalpa } =
+    useSankalpaProgress(sessionLogs);
 
   const summaryRangeSelection = useMemo(() => {
     if (summaryRangePreset === 'all-time') {
@@ -339,14 +329,10 @@ export default function SankalpaPage() {
     return effectiveSummarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs > 0);
   }, [effectiveSummarySnapshot, showInactiveSummaryCategories]);
   const progressByStatus = useMemo(() => {
-    const now = new Date();
-    const entries = sankalpas
-      .map((goal) => deriveSankalpaProgress(goal, sessionLogs, now))
-      .sort((left, right) => Date.parse(right.goal.createdAt) - Date.parse(left.goal.createdAt));
-    return partitionSankalpaProgress(entries);
-  }, [sankalpas, sessionLogs]);
+    return partitionSankalpaProgress(sankalpaProgressEntries);
+  }, [sankalpaProgressEntries]);
 
-  function onCreateSankalpa(event: FormEvent<HTMLFormElement>) {
+  async function onCreateSankalpa(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validation = validateSankalpaDraft(draft);
     setErrors(validation.errors);
@@ -357,10 +343,10 @@ export default function SankalpaPage() {
     }
 
     const nextGoal = createSankalpaGoal(draft, new Date());
-    setSankalpas((current) => [nextGoal, ...current]);
+    const result = await saveSankalpa(nextGoal);
     setDraft(createInitialSankalpaDraft());
     setErrors(initialErrors);
-    setSaveMessage('Sankalpa saved.');
+    setSaveMessage(result.message);
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
@@ -544,6 +530,8 @@ export default function SankalpaPage() {
             <p>{saveMessage}</p>
           </div>
         ) : null}
+        {isSankalpaLoading ? <p className="section-subtitle">Refreshing sankalpa progress from the backend.</p> : null}
+        {sankalpaSyncMessage ? <p className="section-subtitle">{sankalpaSyncMessage}</p> : null}
 
         <form className="form-grid" onSubmit={onCreateSankalpa}>
           <label>

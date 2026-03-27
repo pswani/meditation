@@ -15,7 +15,7 @@ This README is intentionally grounded in the current repository contents. It exp
   - local-development CORS
   - a health endpoint
   - a seeded media metadata API
-  - backend persistence for custom plays, playlists, timer settings, and session logs
+  - backend persistence for custom plays, playlists, sankalpas, timer settings, and session logs
   - backend summary aggregation over persisted `session log` history
 - The frontend now includes:
   - a shared typed API client
@@ -23,19 +23,17 @@ This README is intentionally grounded in the current repository contents. It exp
   - a Vite local-dev `/api` proxy for the in-repo backend
   - live backend media loading with graceful sample fallback
 - backend-backed timer settings and session-log history with local cache fallback during hydration failures
+- backend-backed sankalpa persistence and progress loading with local cache fallback during backend failures
 - backend-backed summary views on the `Sankalpa` screen with local derived fallback during summary API failures
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
-- Sankalpa CRUD flows are not yet wired to live backend REST transport.
 
 ## Confirmed Full-Stack Gaps
 
 The current repository still needs all of the following before it can be considered a functioning full-stack app:
 
-- front-end HTTP integration for sankalpas
-- real REST persistence wired into the existing front-end data flows
-- replacement of the remaining front-end local-storage API shims with HTTP-backed implementations
 - richer media-file management flows beyond seeded metadata and directory conventions
+- deeper sankalpa management beyond create/list progress flows, such as edit/archive behavior
 
 ## Planned Full-Stack Target
 
@@ -103,8 +101,8 @@ The front end currently owns all of the following:
 - form validation
 - local persistence for playlists, sankalpas, and offline-friendly fallback caches
 - session log generation
-- summary derivation
-- sankalpa progress calculation
+- local summary derivation fallback
+- local sankalpa progress fallback and cache migration support
 - fallback sample media metadata for custom plays when the backend is unavailable
 
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
@@ -118,6 +116,7 @@ Current backend endpoints:
 - `/api/health`
 - `/api/custom-plays`
 - `/api/playlists`
+- `/api/sankalpas`
 - `/api/media/custom-plays`
 - `/api/summaries`
 - `/api/session-logs/manual`
@@ -143,7 +142,8 @@ Today:
 - `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
 - `src/utils/playlistApi.ts` performs live HTTP requests to `/api/playlists`
-- `src/utils/sankalpaApi.ts` still uses local-first persistence while exposing a stable REST-shaped contract
+- `src/utils/sankalpaApi.ts` performs live HTTP requests to `/api/sankalpas`
+- `src/features/sankalpa/useSankalpaProgress.ts` hydrates backend sankalpa progress while preserving local cache fallback and id-preserving migration
 
 Stable endpoint contracts in the frontend still include:
 
@@ -179,7 +179,7 @@ Important repo facts:
 - `src/utils/playlistApi.ts` fetches and persists `/api/playlists`
 - `src/utils/mediaAssetApi.ts` fetches `/api/media/custom-plays`
 - `src/utils/summaryApi.ts` fetches `/api/summaries`
-- `src/utils/sankalpaApi.ts` remains the main local-first REST-shaped shim
+- `src/utils/sankalpaApi.ts` fetches and persists `/api/sankalpas`
 - `vite.config.ts` and `vite.config.js` now proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset
 - backend runtime configuration lives in `backend/src/main/resources/application.yml`
 
@@ -189,7 +189,7 @@ Current API-boundary status:
 | --- | --- | --- |
 | `src/utils/customPlayApi.ts` | `/api/custom-plays` | fetches and persists backend `custom play` records |
 | `src/utils/playlistApi.ts` | `/api/playlists` | fetches and persists backend playlist records |
-| `src/utils/sankalpaApi.ts` | `/api/sankalpas` | reads/writes `localStorage` |
+| `src/utils/sankalpaApi.ts` | `/api/sankalpas` | fetches backend `sankalpa` progress and persists `sankalpa` goals |
 | `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
 | `src/utils/summaryApi.ts` | `/api/summaries` | fetches backend-derived summary aggregates with local derived fallback in the UI |
 | `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation |
@@ -200,6 +200,7 @@ This means:
 - the front end now sends network traffic for:
   - custom plays
   - playlists
+  - sankalpas
   - media catalog
   - summaries
   - session-log history
@@ -225,15 +226,16 @@ This is now an early feature slice:
   - custom plays
   - playlists and playlist items
   - media metadata
+  - sankalpas
   - timer settings
   - session logs
 - the front end now consumes backend APIs for:
   - custom plays
   - playlists
+  - sankalpas
   - summaries
   - timer settings
   - session logs
-- sankalpas still persist locally in the browser
 
 ## Repository Layout
 
@@ -446,7 +448,7 @@ Current behavior:
 - URL builders can derive fully qualified URLs from `VITE_API_BASE_URL`
 - when `VITE_API_BASE_URL` is unset, Vite dev proxies `/api` to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
 - `mediaAssetApi` performs live fetches and falls back to built-in sample metadata if the backend is unavailable
-- playlist persistence now uses the backend while sankalpa persistence remains local-first in browser storage
+- playlist and sankalpa persistence now use the backend, while local caches remain in place for fallback and migration
 
 This means:
 
@@ -463,7 +465,7 @@ This repository is now enough to run:
 - the frontend on another device on the same network
 - the backend health endpoint and media catalog on the developer machine
 
-The frontend now uses the live backend media catalog in this workflow, but most UI data remains device-local today.
+The frontend now uses the live backend media catalog in this workflow, and the main practice, history, playlist, summary, and sankalpa flows can all talk to the local backend.
 
 Start the dev server:
 
@@ -1091,11 +1093,12 @@ The backend foundation exposes reachable REST endpoints now:
 - `GET /api/health`
 - `GET /api/playlists`
 - `GET /api/media/custom-plays`
+- `GET /api/sankalpas`
 
 What is still true today:
 
 - the frontend now calls the media catalog endpoint
-- the sankalpa front-end API module remains a local shim
+- the sankalpa front-end API module now performs live REST requests with local cache fallback
 
 What you can verify today:
 
@@ -1196,7 +1199,7 @@ Optional build-time override when pairing the built front end with a separate ba
 - timer and playlist sound selections are still UI-only; real playback is not implemented
 - optional small gap support between playlist items is not implemented
 - custom-play media falls back to built-in sample metadata and is not yet a user-managed library
-- sankalpa REST persistence is still unimplemented
+- sankalpa editing, archival, and delete flows are still unimplemented
 
 ## Operator Notes
 
@@ -1204,10 +1207,10 @@ For someone trying to configure, run, or deploy this project today, the correct 
 
 - this repo is operational as:
   - a frontend app
-  - a backend foundation
-- it is not yet operational as a fully integrated full-stack product
-- browser local storage is still the source of truth for most user-facing feature flows
-- backend REST + H2 are now runnable infrastructure, but only for the foundation slice
+  - a meaningful local full-stack vertical slice
+- it is not yet operational as a fully rounded production full-stack product
+- browser local storage remains a fallback cache and migration source for some feature flows
+- backend REST + H2 now back the main timer, history, playlist, summary, custom play, and sankalpa slices in local development
 
 ## Verification Snapshot
 

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionLog } from '../types/sessionLog';
-import type { SankalpaGoal } from '../types/sankalpa';
+import type { SankalpaGoal, SankalpaProgress } from '../types/sankalpa';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from './home';
+import { deriveSankalpaProgress } from './sankalpa';
 
 const baseLog: SessionLog = {
   id: 'log-1',
@@ -67,40 +68,46 @@ describe('home helpers', () => {
   });
 
   it('selects the top active sankalpa by nearest deadline', () => {
-    const selected = selectTopActiveSankalpaProgress(
-      [
+    const progressEntries: SankalpaProgress[] = [
+      deriveSankalpaProgress(
         {
           ...baseGoal,
           id: 'goal-later',
           days: 21,
           targetValue: 120,
         },
+        [baseLog],
+        new Date('2026-03-24T18:00:00.000Z')
+      ),
+      deriveSankalpaProgress(
         {
           ...baseGoal,
           id: 'goal-soon',
           days: 7,
           targetValue: 120,
         },
-      ],
-      [baseLog],
-      new Date('2026-03-24T18:00:00.000Z')
-    );
+        [baseLog],
+        new Date('2026-03-24T18:00:00.000Z')
+      ),
+    ];
+
+    const selected = selectTopActiveSankalpaProgress(progressEntries);
 
     expect(selected?.goal.id).toBe('goal-soon');
   });
 
   it('returns null when there is no active sankalpa', () => {
-    const selected = selectTopActiveSankalpaProgress(
-      [
+    const selected = selectTopActiveSankalpaProgress([
+      deriveSankalpaProgress(
         {
           ...baseGoal,
           id: 'goal-completed',
           targetValue: 1,
         },
-      ],
-      [baseLog],
-      new Date('2026-03-24T18:00:00.000Z')
-    );
+        [baseLog],
+        new Date('2026-03-24T18:00:00.000Z')
+      ),
+    ]);
 
     expect(selected).toBeNull();
   });

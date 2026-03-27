@@ -13,20 +13,21 @@ Single-page React application with route-based screens and feature-oriented modu
 - feature logic in `src/features`
 - shared domain types in `src/types`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
-- backend-backed persistence for custom plays, playlists, timer settings, and session logs
-- local-first persistence through browser `localStorage` for sankalpas, plus fallback cache support for backend-backed flows
+- backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
+- browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
 
 ## Confirmed current gaps
-- sankalpa API boundary is still local-first
 - full-stack wiring is now in place for:
   - custom plays
   - playlists
+  - sankalpas
   - summaries
   - timer settings
   - session logs
+- sankalpa editing/archive flows are still not implemented
 - no media upload/import workflow yet
 - timer and playlist audio playback are still unimplemented
 
@@ -69,6 +70,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - `backend/src/main/java/com/meditation/backend/health`
 - `backend/src/main/java/com/meditation/backend/media`
 - `backend/src/main/java/com/meditation/backend/playlist`
+- `backend/src/main/java/com/meditation/backend/sankalpa`
 - `backend/src/main/java/com/meditation/backend/settings`
 - `backend/src/main/java/com/meditation/backend/summary`
 - `backend/src/main/java/com/meditation/backend/sessionlog`
@@ -76,6 +78,8 @@ Single-page React application with route-based screens and feature-oriented modu
   - `/api/custom-plays`
 - current playlist REST surfaces include:
   - `/api/playlists`
+- current sankalpa REST surfaces include:
+  - `/api/sankalpas`
 - current session-log REST surfaces include:
   - `/api/session-logs`
   - `/api/session-logs/manual`
@@ -83,7 +87,6 @@ Single-page React application with route-based screens and feature-oriented modu
   - `/api/summaries`
 - reserved domain packages for:
   - `reference`
-  - `sankalpa`
 
 ## Media storage conventions
 - backend media root is configurable through `MEDITATION_MEDIA_STORAGE_ROOT`

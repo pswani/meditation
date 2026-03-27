@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C prompt 01 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has backend-backed summaries and is ready for the sankalpa REST slice prompt.
+Milestone C prompt 02 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has backend-backed summaries plus backend-backed sankalpa persistence/progress and is ready for the discipline-and-insight review prompt.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -45,6 +45,41 @@ Milestone C prompt 01 is complete on `codex/milestone-c-discipline-insight-fulls
   - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/02-sankalpa-rest.md`
+
+## Milestone C prompt 02: sankalpa REST
+- Added and used:
+  - `requirements/execplan-milestone-c-sankalpa-rest.md`
+- Backend changes:
+  - added backend `sankalpa` package under `backend/src/main/java/com/meditation/backend/sankalpa/`
+  - added backend route:
+    - `GET /api/sankalpas`
+    - `PUT /api/sankalpas/{id}`
+  - added H2 migration:
+    - `backend/src/main/resources/db/migration/V7__allow_fractional_sankalpa_targets.sql`
+  - moved `sankalpa` goal persistence into H2 and derived progress from persisted `session log` rows
+  - preserved duration-goal precision by storing fractional `target_value`
+- Frontend changes:
+  - replaced the local-only `sankalpa` API shim in `src/utils/sankalpaApi.ts` with live REST list/upsert helpers
+  - added `src/features/sankalpa/useSankalpaProgress.ts` to centralize backend hydration, local-cache fallback, and id-preserving migration of older local goals
+  - updated `HomePage` to load the `Sankalpa Snapshot` from backend-backed progress
+  - updated `SankalpaPage` to save new goals through the backend while keeping calm fallback guidance when the backend is unavailable
+- Tests:
+  - added backend controller coverage in `backend/src/test/java/com/meditation/backend/sankalpa/SankalpaControllerTest.java`
+  - updated `src/utils/sankalpaApi.test.ts` for live REST response normalization
+  - added Home UI coverage proving the `Sankalpa Snapshot` can render backend-loaded progress
+  - updated shared helper coverage in `src/utils/home.test.ts`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - `sankalpa` editing, deletion, and archive management are still not implemented
+  - frontend local fallback still derives progress client-side when the backend is unavailable
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/03-review-discipline-insight-fullstack.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
