@@ -1,9 +1,12 @@
 import type { SessionLog } from '../types/sessionLog';
+import type { ManualLogCreateRequest } from './manualLog';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 
 export const SESSION_LOGS_COLLECTION_PATH = '/session-logs';
 export const SESSION_LOGS_COLLECTION_ENDPOINT = buildApiPath(SESSION_LOGS_COLLECTION_PATH);
+export const MANUAL_SESSION_LOGS_CREATE_PATH = '/session-logs/manual';
+export const MANUAL_SESSION_LOGS_CREATE_ENDPOINT = buildApiPath(MANUAL_SESSION_LOGS_CREATE_PATH);
 
 interface SessionLogApiResponse {
   readonly id: string;
@@ -112,6 +115,10 @@ export function buildSessionLogsCollectionUrl(apiBaseUrl?: string): string {
   return buildApiUrl(SESSION_LOGS_COLLECTION_PATH, apiBaseUrl);
 }
 
+export function buildManualSessionLogCreateUrl(apiBaseUrl?: string): string {
+  return buildApiUrl(MANUAL_SESSION_LOGS_CREATE_PATH, apiBaseUrl);
+}
+
 export function buildSessionLogDetailUrl(sessionLogId: string, apiBaseUrl?: string): string {
   return buildApiUrl(buildSessionLogDetailPath(sessionLogId), apiBaseUrl);
 }
@@ -126,6 +133,19 @@ export async function persistSessionLogToApi(sessionLog: SessionLog, apiBaseUrl?
     method: 'PUT',
     apiBaseUrl,
     body: sessionLog,
+  });
+
+  return normalizeSessionLogPayload(payload);
+}
+
+export async function createManualSessionLogInApi(
+  request: ManualLogCreateRequest,
+  apiBaseUrl?: string
+): Promise<SessionLog> {
+  const payload = await requestJson<unknown, ManualLogCreateRequest>(MANUAL_SESSION_LOGS_CREATE_PATH, {
+    method: 'POST',
+    apiBaseUrl,
+    body: request,
   });
 
   return normalizeSessionLogPayload(payload);

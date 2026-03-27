@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildManualLogEntry, validateManualLogInput } from './manualLog';
+import { buildManualLogCreateRequest, buildManualLogEntry, validateManualLogInput } from './manualLog';
 
 describe('manual log helpers', () => {
   it('validates required manual log fields', () => {
@@ -54,6 +54,18 @@ describe('manual log helpers', () => {
     expect(result.errors.sessionTimestamp).toBeUndefined();
   });
 
+  it('builds a backend create request using ISO session timestamp semantics', () => {
+    const request = buildManualLogCreateRequest({
+      durationMinutes: 25,
+      meditationType: 'Vipassana',
+      sessionTimestamp: '2026-03-23T07:00',
+    });
+
+    expect(request.durationMinutes).toBe(25);
+    expect(request.meditationType).toBe('Vipassana');
+    expect(request.sessionTimestamp).toBe(new Date('2026-03-23T07:00').toISOString());
+  });
+
   it('builds a manual log entry using session end timestamp semantics', () => {
     const log = buildManualLogEntry(
       {
@@ -82,5 +94,15 @@ describe('manual log helpers', () => {
         new Date('2026-03-23T10:00:00.000Z')
       )
     ).toThrow(/invalid/i);
+  });
+
+  it('throws when building a backend create request without a meditation type', () => {
+    expect(() =>
+      buildManualLogCreateRequest({
+        durationMinutes: 20,
+        meditationType: '',
+        sessionTimestamp: '2026-03-23T07:00',
+      })
+    ).toThrow(/meditation type/i);
   });
 });

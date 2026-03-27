@@ -2,6 +2,17 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b manual logging rest decisions
+- Add a dedicated backend create route for manual logs at `/api/session-logs/manual` while keeping the existing `PUT /api/session-logs/{id}` flow for auto-log and playlist-log sync.
+- Keep manual logs in the shared `session_log` table and shared `SessionLogResponse` contract instead of introducing a separate manual-log persistence model.
+- Make the backend the owner of manual-log construction details:
+  - generated id
+  - `source = manual log`
+  - `status = completed`
+  - derived `startedAt` and `endedAt`
+  - default sound and interval fields
+- Keep frontend manual-log validation in place for calm immediate feedback, but treat the backend-created `session log` response as the source of truth for what enters History.
+
 ### 2026-03-26 milestone-b practice composition branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-b-practice-composition-fullstack`.
 - Create and use the local milestone branch `codex/milestone-b-practice-composition-fullstack` for all Milestone B prompt execution before merging back to the parent branch.

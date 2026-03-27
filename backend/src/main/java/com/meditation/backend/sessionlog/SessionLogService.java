@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,6 +27,46 @@ public class SessionLogService {
         .stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  public SessionLogResponse createManualSessionLog(ManualSessionLogCreateRequest request) {
+    validateManualCreateRequest(request);
+
+    Instant endedAt = parseTimestamp(request.sessionTimestamp(), "Session timestamp must be a valid ISO timestamp.");
+    if (endedAt.isAfter(Instant.now())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session timestamp cannot be in the future.");
+    }
+
+    int durationSeconds = (int) Math.round(request.durationMinutes() * 60);
+    if (durationSeconds <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must resolve to at least 1 second.");
+    }
+
+    Instant createdAt = Instant.now();
+    SessionLogEntity entity = new SessionLogEntity(
+        "manual-log-" + UUID.randomUUID().toString().replace("-", ""),
+        "manual log",
+        "completed",
+        request.meditationType(),
+        endedAt.minusSeconds(durationSeconds),
+        endedAt,
+        durationSeconds,
+        durationSeconds,
+        "None",
+        "None",
+        false,
+        0,
+        "None",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        createdAt
+    );
+
+    return toResponse(sessionLogRepository.save(entity));
   }
 
   public SessionLogResponse saveSessionLog(String sessionLogId, SessionLogUpsertRequest request) {
@@ -93,6 +134,22 @@ public class SessionLogService {
         entity.getPlaylistItemCount(),
         entity.getCreatedAt()
     );
+  }
+
+  private void validateManualCreateRequest(ManualSessionLogCreateRequest request) {
+    if (request == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Manual log request is required.");
+    }
+
+    if (request.durationMinutes() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
+    }
+
+    if (!MEDITATION_TYPES.contains(request.meditationType())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
+    }
+
+    parseTimestamp(request.sessionTimestamp(), "Session timestamp must be a valid ISO timestamp.");
   }
 
   private void validateRequest(String sessionLogId, SessionLogUpsertRequest request) {

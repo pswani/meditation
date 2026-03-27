@@ -109,6 +109,7 @@ Current backend endpoints:
 
 - `/api/health`
 - `/api/media/custom-plays`
+- `/api/session-logs/manual`
 - `/api/session-logs`
 - `/api/settings/timer`
 
@@ -123,6 +124,7 @@ The front end also contains REST-shaped boundary modules used as the integration
 Today:
 
 - `src/utils/mediaAssetApi.ts` performs live HTTP requests to `/api/media/custom-plays` through a shared API client
+- `src/utils/sessionLogApi.ts` creates manual logs through `/api/session-logs/manual`
 - `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
 - `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` still use local-first persistence while exposing stable REST-shaped contracts
@@ -132,6 +134,7 @@ Stable endpoint contracts in the frontend still include:
 - `/api/playlists`
 - `/api/sankalpas`
 - `/api/media/custom-plays`
+- `/api/session-logs/manual`
 - `/api/session-logs`
 - `/api/settings/timer`
 
@@ -166,7 +169,7 @@ Current API-boundary status:
 | `src/utils/playlistApi.ts` | `/api/playlists` | reads/writes `localStorage` |
 | `src/utils/sankalpaApi.ts` | `/api/sankalpas` | reads/writes `localStorage` |
 | `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
-| `src/utils/sessionLogApi.ts` | `/api/session-logs` | fetches and persists backend session logs |
+| `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation |
 | `src/utils/timerSettingsApi.ts` | `/api/settings/timer` | fetches and persists backend timer settings |
 
 This means:

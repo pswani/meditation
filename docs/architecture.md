@@ -41,6 +41,7 @@ Single-page React application with route-based screens and feature-oriented modu
   - health
   - timer settings
   - session logs
+  - manual session-log creation
   - playlists
   - sankalpas
   - custom-play media assets
@@ -64,6 +65,9 @@ Single-page React application with route-based screens and feature-oriented modu
 - `backend/src/main/java/com/meditation/backend/media`
 - `backend/src/main/java/com/meditation/backend/settings`
 - `backend/src/main/java/com/meditation/backend/sessionlog`
+- current session-log REST surfaces include:
+  - `/api/session-logs`
+  - `/api/session-logs/manual`
 - reserved domain packages for:
   - `customplay`
   - `playlist`

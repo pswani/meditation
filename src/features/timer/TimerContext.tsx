@@ -6,12 +6,12 @@ import type { SessionLog } from '../../types/sessionLog';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { isApiClientError } from '../../utils/apiClient';
-import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
+import { buildManualLogCreateRequest, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { persistPlaylistsToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
-import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
+import { createManualSessionLogInApi, listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
 import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
@@ -1006,10 +1006,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           };
         }
 
-        const sessionLogEntry = buildManualLogEntry(input, new Date());
-
         try {
-          const savedEntry = await persistSessionLogToApi(sessionLogEntry);
+          const savedEntry = await createManualSessionLogInApi(buildManualLogCreateRequest(input));
           syncedSessionLogIdsRef.current.add(savedEntry.id);
           dispatch({
             type: 'ADD_SESSION_LOG',

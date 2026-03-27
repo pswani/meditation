@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  buildManualSessionLogCreateUrl,
   buildSessionLogDetailUrl,
   buildSessionLogsCollectionUrl,
+  createManualSessionLogInApi,
   listSessionLogsFromApi,
+  MANUAL_SESSION_LOGS_CREATE_ENDPOINT,
   persistSessionLogToApi,
   SESSION_LOGS_COLLECTION_ENDPOINT,
 } from './sessionLogApi';
@@ -92,5 +95,46 @@ describe('session log api boundary', () => {
     expect(saved.id).toBe('log-1');
     expect(saved.completedDurationSeconds).toBe(1200);
     expect(saved.status).toBe('completed');
+  });
+
+  it('creates a manual session log through the dedicated create endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'manual-log-1',
+        startedAt: '2026-03-26T11:00:00.000Z',
+        endedAt: '2026-03-26T11:20:00.000Z',
+        meditationType: 'Vipassana',
+        intendedDurationSeconds: 1200,
+        completedDurationSeconds: 1200,
+        status: 'completed',
+        source: 'manual log',
+        startSound: 'None',
+        endSound: 'None',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      }),
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const saved = await createManualSessionLogInApi({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      sessionTimestamp: '2026-03-26T11:20:00.000Z',
+    });
+
+    expect(MANUAL_SESSION_LOGS_CREATE_ENDPOINT).toBe('/api/session-logs/manual');
+    expect(buildManualSessionLogCreateUrl()).toBe('/api/session-logs/manual');
+    expect(saved.id).toBe('manual-log-1');
+    expect(saved.source).toBe('manual log');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/session-logs/manual',
+      expect.objectContaining({
+        method: 'POST',
+      })
+    );
   });
 });

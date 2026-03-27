@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone B branch setup is complete on `codex/milestone-b-practice-composition-fullstack`. The working tree is clean and ready for the practice-composition full-stack prompt sequence.
+Milestone B prompt 01 is complete on `codex/milestone-b-practice-composition-fullstack`. Manual-log creation is now a dedicated backend-owned REST flow, and the branch is ready for prompt 02 media-catalog and `custom play` work.
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
@@ -12,6 +12,38 @@ Milestone B branch setup is complete on `codex/milestone-b-practice-composition-
   - media catalog metadata + filesystem path references + `custom play` REST persistence
   - playlist and playlist-item REST persistence
   - milestone review, remediation, verification, and local merge back to the parent branch
+
+## Milestone B prompt 01: manual logging REST
+- Added and used:
+  - `requirements/execplan-milestone-b-manual-logging-rest.md`
+- Backend changes:
+  - added dedicated manual-log create endpoint:
+    - `POST /api/session-logs/manual`
+  - added backend-owned manual-log validation and record construction in `sessionlog` service code
+  - kept manual logs in the shared H2-backed `session_log` table and shared response contract
+- Frontend changes:
+  - History manual-log submission now posts manual-log input to the dedicated backend route instead of fabricating a full `session log` entry client-side
+  - `sessionLogApi` now exposes a dedicated manual-log create helper while preserving the existing generic `session log` sync helpers
+  - manual-log helpers now normalize a backend create request shape from the History form input
+- Tests:
+  - added frontend coverage for manual-log create-request normalization and the dedicated API endpoint helper
+  - added backend controller coverage for successful and invalid manual-log creation
+  - updated History test backend mocks for the new manual-log route
+  - fixed `SessionLogControllerTest` isolation by clearing stored `session log` rows between tests
+
+## Milestone B verification status
+- Passed `npm run typecheck`
+- Passed `npm run lint`
+- Passed `npm run test`
+- Passed `npm run build`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+
+## Milestone B known limitations
+- `custom play` and playlist CRUD are still local-first in the frontend.
+- Media catalog browsing still depends on the seeded backend media metadata surface plus frontend fallback assumptions.
+- Playlist-generated `session log` entries still sync through the existing generic `session log` path until playlist REST persistence lands.
+- Timer and playlist sound playback remain UI-only.
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -178,11 +210,16 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for manual logging full-stack support.
-2. Implement backend/H2/REST support for manual session logs.
-3. Wire the front end manual logging flow to the backend.
-4. Preserve clear distinction between auto and manual logs.
+1. Create an ExecPlan for media catalog and custom plays.
+2. Implement backend support for:
+   - media asset metadata in H2
+   - media file path references
+   - media root directory configuration
+   - REST endpoints for listing relevant media assets
+   - custom play persistence
+3. Wire the front end custom plays flow to the backend.
+4. Document exactly where media files should be placed and how they map to app options.
 5. Add focused tests and run full verification.
 6. Update docs and session-handoff with exact recommended next prompt.
 7. Commit with a clear message:
-   feat(composition): add manual logging full-stack support
+   feat(composition): add media catalog and custom plays rest integration
