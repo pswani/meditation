@@ -60,6 +60,11 @@
   - frontend port `5175`
 - Use that isolated runtime only for verification and keep the shipped app behavior/config unchanged.
 
+### 2026-03-26 milestone-a merge decisions
+- Merge `codex/prompts/milestone-a-core-fullstack` back into `codex/functioning` with a normal local merge commit to preserve the milestone history.
+- Treat the unrelated staged `AGENTS.md` change as out of scope for Milestone A merge work and keep it separate from the merge-related documentation update.
+- Mark Milestone A as complete on the parent branch and hand off to Milestone B branch setup as the next prompt sequence.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone A prompts 01 through 05 are complete. The core practice engine remains backend-backed and verified end to end, and the prompt 05 pass added the final test and runtime confidence needed before local merge.
+Milestone A is complete and has been merged into `codex/functioning`. The parent branch now contains the full backend-backed core practice engine slice and its verification history, and the next recommended work is Milestone B branch setup.
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -14,7 +14,15 @@ Milestone A prompts 01 through 05 are complete. The core practice engine remains
   - milestone review, remediation, verification, and local merge back to the parent branch
 - Working tree status at branch creation: clean and ready for milestone work
 
+## Merge status
+- Milestone branch merged: `codex/prompts/milestone-a-core-fullstack`
+- Parent branch updated: `codex/functioning`
+- Merge strategy used: normal local merge commit preserving milestone history
+- Merge commit on parent branch: `4457def`
+
 Prompt 01 established the H2-backed REST contracts and frontend hydration/sync path for timer settings and `session log` history. Prompt 02 completed the user-facing core practice-engine flow on top of that foundation by tightening Home and Practice launch behavior, adding fresh-mount integration coverage, and verifying the runnable local stack end to end. Prompt 03 reviewed that milestone slice without code changes and identified the bounded issues to remediate next. Prompt 04 then fixed those important issues with a small, focused remediation pass. Prompt 05 finished the milestone with a strong verification pass across automated coverage, backend persistence, and isolated live runtime checks.
+
+Milestone A now lives on the parent branch with its milestone branch history preserved.
 
 ## What was changed
 - Added and used:
@@ -69,6 +77,16 @@ Prompt 01 established the H2-backed REST contracts and frontend hydration/sync p
     - `session log` GET/PUT persistence
     - frontend `/api` proxy reachability
     - hydrated Home and Practice launch surfaces against backend-backed defaults
+
+## Milestone completion summary
+- Completed the first backend-backed vertical slice for the calm core practice journey:
+  - timer settings persistence
+  - `session log` persistence
+  - Home, Practice, active timer, History, and Settings integration
+- Closed the important review findings before merge:
+  - hydration overwrite risk on Practice and Settings
+  - optimistic Settings success feedback that could contradict backend failures
+- Finished with both automated and live verification strong enough for parent-branch merge.
 
 ## Intentional sample or helper content that remains
 - Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
@@ -141,36 +159,28 @@ Read:
 - PLANS.md
 - requirements/session-handoff.md
 - requirements/decisions.md
-- README.md
-- docs/architecture.md
-- docs/product-requirements.md
-- docs/ux-spec.md
-- docs/screen-inventory.md
 
 Then:
 
-1. Inspect the current git state and determine:
-   - the current milestone branch
-   - the parent branch recorded earlier in requirements/session-handoff.md if present
-2. Verify the milestone work is in a good state before merging:
-   - review git status
-   - ensure there are no unintended uncommitted changes
-   - run the relevant verification commands for the milestone if they have not already been run recently
-3. Merge the current milestone branch back into its parent branch locally.
-4. Prefer a normal merge that preserves milestone history unless the repo state clearly requires another safe local strategy.
-5. Switch to the parent branch and complete the merge locally.
-6. If a merge conflict occurs, resolve it carefully, rerun relevant checks, and continue.
-7. After merge, confirm:
+1. Inspect the current git branch and confirm the current branch name before making changes.
+2. Treat the current branch as the parent branch for this Milestone B.
+3. Create a new local branch for this Milestone B work from the current branch.
+4. Use a clear branch name in this format if available:
+   - `codex/milestone-b-practice-composition-fullstack`
+   If that exact name already exists locally, create a clear alternative with a short numeric suffix.
+5. Switch to the new branch.
+6. Confirm:
    - parent branch name
-   - merged milestone branch name
-   - resulting git status
-8. Update:
+   - new branch name
+   - that the working tree is ready for the milestone work
+7. Update:
    - requirements/decisions.md
    - requirements/session-handoff.md
-9. In session-handoff, record:
-   - milestone branch merged
-   - parent branch updated
-   - milestone completion summary
+8. In session-handoff, record:
+   - parent branch
+   - milestone branch
+   - milestone scope
    - exact recommended next prompt
-10. Commit any final merge-related documentation updates if needed with a clear message such as:
-    chore(branch): merge Milestone A branch into parent
+9. Do not implement milestone feature work in this step beyond branch setup and minimal documentation updates if needed.
+10. Commit documentation-only changes if any were made, with a clear message such as:
+    chore(branch): prepare local branch for Milestone B
