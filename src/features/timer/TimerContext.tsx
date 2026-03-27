@@ -2,13 +2,16 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { CustomPlay } from '../../types/customPlay';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome } from '../../types/playlist';
+import type { SessionLog } from '../../types/sessionLog';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
-import { buildManualLogEntry, validateManualLogInput } from '../../utils/manualLog';
+import { isApiClientError } from '../../utils/apiClient';
+import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { persistPlaylistsToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
+import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
 import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
@@ -22,6 +25,11 @@ import {
   saveSessionLogs,
   saveTimerSettings,
 } from '../../utils/storage';
+import {
+  areTimerSettingsEqual,
+  loadTimerSettingsFromApi,
+  persistTimerSettingsToApi,
+} from '../../utils/timerSettingsApi';
 import { defaultTimerSettings } from './constants';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
@@ -182,6 +190,44 @@ function createTimerBootstrap(nowMs: number): TimerBootstrap {
   };
 }
 
+function mergeSessionLogs(primary: readonly SessionLog[], secondary: readonly SessionLog[]) {
+  const entriesById = new Map<string, SessionLog>();
+
+  for (const entry of primary) {
+    entriesById.set(entry.id, entry);
+  }
+
+  for (const entry of secondary) {
+    if (!entriesById.has(entry.id)) {
+      entriesById.set(entry.id, entry);
+    }
+  }
+
+  return [...entriesById.values()].sort((left, right) => Date.parse(right.endedAt) - Date.parse(left.endedAt));
+}
+
+function formatApiErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (isApiClientError(error)) {
+    if (error.kind === 'network') {
+      return 'The backend could not be reached right now.';
+    }
+
+    if (error.detail && error.detail.trim().length > 0) {
+      return error.detail.trim();
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
+function areSessionLogCollectionsEqual(left: readonly SessionLog[], right: readonly SessionLog[]) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
   const [state, dispatch] = useReducer(
@@ -203,12 +249,24 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [playlistRunOutcome, setPlaylistRunOutcome] = useState<PlaylistRunOutcome | null>(null);
   const [isPlaylistRunPaused, setIsPlaylistRunPaused] = useState(bootstrap.hydration.isPlaylistRunPaused);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(bootstrap.hydration.recoveryMessage);
+  const [isSessionLogsLoading, setIsSessionLogsLoading] = useState(true);
+  const [isSessionLogSyncing, setIsSessionLogSyncing] = useState(false);
+  const [sessionLogSyncError, setSessionLogSyncError] = useState<string | null>(null);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
+  const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
+  const latestSessionLogsRef = useRef(state.sessionLogs);
+  const latestTimerSettingsRef = useRef(state.settings);
   const skipInitialTimerSettingsPersistRef = useRef(true);
   const skipInitialSessionLogsPersistRef = useRef(true);
   const skipInitialCustomPlaysPersistRef = useRef(true);
   const skipInitialPlaylistsPersistRef = useRef(true);
   const skipInitialActiveTimerPersistRef = useRef(bootstrap.skipInitialActiveTimerPersist);
   const skipInitialActivePlaylistPersistRef = useRef(bootstrap.skipInitialActivePlaylistPersist);
+  const remoteSessionLogsHydratedRef = useRef(false);
+  const syncedSessionLogIdsRef = useRef<Set<string>>(new Set());
+  const remoteSettingsHydratedRef = useRef(false);
+  const lastPersistedTimerSettingsRef = useRef<TimerSettings | null>(null);
   const activeSessionStartedAt = state.activeSession?.startedAt ?? null;
   const activeSessionStartedAtMs = state.activeSession?.startedAtMs ?? null;
   const activeSessionIntendedDurationSeconds = state.activeSession?.intendedDurationSeconds ?? null;
@@ -351,6 +409,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   );
 
   useEffect(() => {
+    latestSessionLogsRef.current = state.sessionLogs;
+  }, [state.sessionLogs]);
+
+  useEffect(() => {
+    latestTimerSettingsRef.current = state.settings;
+  }, [state.settings]);
+
+  useEffect(() => {
     if (!state.activeSession) {
       setIsPaused(false);
     }
@@ -418,6 +484,210 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       activePlaylistPersistence?.isPaused ?? false
     );
   }, [activePlaylistPersistence]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateSessionLogs() {
+      setIsSessionLogsLoading(true);
+
+      try {
+        const remoteSessionLogs = await listSessionLogsFromApi();
+        if (cancelled) {
+          return;
+        }
+
+        syncedSessionLogIdsRef.current = new Set(remoteSessionLogs.map((entry) => entry.id));
+        const mergedSessionLogs = mergeSessionLogs(remoteSessionLogs, latestSessionLogsRef.current);
+        if (!areSessionLogCollectionsEqual(mergedSessionLogs, latestSessionLogsRef.current)) {
+          dispatch({
+            type: 'REPLACE_SESSION_LOGS',
+            payload: mergedSessionLogs,
+          });
+        }
+        setSessionLogSyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        syncedSessionLogIdsRef.current = new Set();
+        setSessionLogSyncError(
+          `${formatApiErrorMessage(error, 'Session log loading failed.')} Showing the local session log cache instead.`
+        );
+      } finally {
+        if (!cancelled) {
+          remoteSessionLogsHydratedRef.current = true;
+          setIsSessionLogsLoading(false);
+        }
+      }
+    }
+
+    void hydrateSessionLogs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrap.sessionLogs]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateTimerSettings() {
+      setIsSettingsLoading(true);
+
+      try {
+        const remoteSettings = await loadTimerSettingsFromApi();
+        if (cancelled) {
+          return;
+        }
+
+        lastPersistedTimerSettingsRef.current = remoteSettings;
+
+        const shouldPromoteBootstrapSettings =
+          !areTimerSettingsEqual(latestTimerSettingsRef.current, defaultTimerSettings) &&
+          areTimerSettingsEqual(remoteSettings, defaultTimerSettings);
+
+        if (shouldPromoteBootstrapSettings) {
+          lastPersistedTimerSettingsRef.current = latestTimerSettingsRef.current;
+          void persistTimerSettingsToApi(latestTimerSettingsRef.current).catch((error) => {
+            if (cancelled) {
+              return;
+            }
+
+            setSettingsSyncError(
+              `${formatApiErrorMessage(error, 'Timer settings could not be saved to the backend.')} Using the local timer settings cache for now.`
+            );
+          });
+        } else {
+          if (!areTimerSettingsEqual(remoteSettings, latestTimerSettingsRef.current)) {
+            dispatch({ type: 'SET_SETTINGS', payload: remoteSettings });
+          }
+        }
+
+        setSettingsSyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        lastPersistedTimerSettingsRef.current = latestTimerSettingsRef.current;
+        setSettingsSyncError(
+          `${formatApiErrorMessage(error, 'Timer settings could not load from the backend.')} Using the local timer settings cache for now.`
+        );
+      } finally {
+        if (!cancelled) {
+          remoteSettingsHydratedRef.current = true;
+          setIsSettingsLoading(false);
+        }
+      }
+    }
+
+    void hydrateTimerSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrap.settings]);
+
+  useEffect(() => {
+    if (!remoteSettingsHydratedRef.current) {
+      return;
+    }
+
+    if (!state.validation.isValid) {
+      return;
+    }
+
+    if (lastPersistedTimerSettingsRef.current && areTimerSettingsEqual(lastPersistedTimerSettingsRef.current, state.settings)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function persistSettings() {
+      setIsSettingsSyncing(true);
+
+      try {
+        setSettingsSyncError(null);
+        const savedSettings = await persistTimerSettingsToApi(state.settings);
+        if (cancelled) {
+          return;
+        }
+
+        lastPersistedTimerSettingsRef.current = savedSettings;
+        setSettingsSyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setSettingsSyncError(
+          `${formatApiErrorMessage(error, 'Timer settings could not be saved to the backend.')} Local timer settings remain available in this browser.`
+        );
+      } finally {
+        if (!cancelled) {
+          setIsSettingsSyncing(false);
+        }
+      }
+    }
+
+    void persistSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.settings, state.validation.isValid]);
+
+  useEffect(() => {
+    if (!remoteSessionLogsHydratedRef.current) {
+      return;
+    }
+
+    const unsyncedSessionLogs = state.sessionLogs.filter((entry) => !syncedSessionLogIdsRef.current.has(entry.id));
+
+    if (unsyncedSessionLogs.length === 0) {
+      setIsSessionLogSyncing(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncSessionLogs() {
+      setIsSessionLogSyncing(true);
+
+      try {
+        for (const entry of unsyncedSessionLogs) {
+          const savedEntry = await persistSessionLogToApi(entry);
+          if (cancelled) {
+            return;
+          }
+
+          syncedSessionLogIdsRef.current.add(savedEntry.id);
+        }
+
+        setSessionLogSyncError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setSessionLogSyncError(
+          `${formatApiErrorMessage(error, 'Session log sync failed.')} The latest session log is still visible locally in this browser.`
+        );
+      } finally {
+        if (!cancelled) {
+          setIsSessionLogSyncing(false);
+        }
+      }
+    }
+
+    void syncSessionLogs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.sessionLogs]);
 
   useEffect(() => {
     if (!state.activeSession || isPaused) {
@@ -530,6 +800,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isPaused,
       isPlaylistRunPaused,
       recoveryMessage,
+      isSessionLogsLoading,
+      isSessionLogSyncing,
+      sessionLogSyncError,
+      isSettingsLoading,
+      isSettingsSyncing,
+      settingsSyncError,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: (draft, editId) => {
         const validation = validateCustomPlayDraft(draft);
@@ -721,18 +997,43 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         setIsPlaylistRunPaused(false);
       },
       clearPlaylistRunOutcome: () => setPlaylistRunOutcome(null),
-      addManualLog: (input) => {
+      addManualLog: async (input): Promise<ManualLogSaveResult> => {
         const validation = validateManualLogInput(input);
         if (!validation.isValid) {
-          return validation;
+          return {
+            ...validation,
+            persisted: false,
+          };
         }
 
-        dispatch({
-          type: 'ADD_SESSION_LOG',
-          payload: buildManualLogEntry(input, new Date()),
-        });
+        const sessionLogEntry = buildManualLogEntry(input, new Date());
 
-        return validation;
+        try {
+          const savedEntry = await persistSessionLogToApi(sessionLogEntry);
+          syncedSessionLogIdsRef.current.add(savedEntry.id);
+          dispatch({
+            type: 'ADD_SESSION_LOG',
+            payload: savedEntry,
+          });
+          setSessionLogSyncError(null);
+        } catch (error) {
+          const persistenceError = `${formatApiErrorMessage(
+            error,
+            'Manual log saving failed.'
+          )} The entry was not saved to the backend.`;
+          setSessionLogSyncError(persistenceError);
+
+          return {
+            ...validation,
+            persisted: false,
+            persistenceError,
+          };
+        }
+
+        return {
+          ...validation,
+          persisted: true,
+        };
       },
       startSession: () => {
         if (activePlaylistRun) {
@@ -763,7 +1064,22 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
       clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
-    [activePlaylistRun, customPlays, isPaused, isPlaylistRunPaused, playlistRunOutcome, playlists, recoveryMessage, state]
+    [
+      activePlaylistRun,
+      customPlays,
+      isPaused,
+      isPlaylistRunPaused,
+      isSessionLogsLoading,
+      isSessionLogSyncing,
+      isSettingsLoading,
+      isSettingsSyncing,
+      playlistRunOutcome,
+      playlists,
+      recoveryMessage,
+      sessionLogSyncError,
+      settingsSyncError,
+      state,
+    ]
   );
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

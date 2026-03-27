@@ -2,6 +2,64 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-a core full-stack branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-a-core-fullstack`.
+- Create and use the local milestone branch `codex/prompts/milestone-a-core-fullstack` for all Milestone A prompt execution before merging back to the parent branch.
+- Keep Milestone A bounded to the core full-stack practice engine flow:
+  - session log REST persistence
+  - timer completion record support needed by the core flow
+  - settings/preferences persistence needed by the core flow
+  - Home, Practice, active timer, and History backend integration
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
+### 2026-03-26 milestone-a session-log rest integration decisions
+- Implement the first Milestone A backend-backed core flow around:
+  - `session log` history
+  - timer settings/preferences
+- Keep the frontend `SessionLog` and `TimerSettings` shapes stable and adapt the new backend DTOs to those existing contracts instead of rewriting screen-level consumers.
+- Use backend hydration as the source of truth for timer settings and session logs, while retaining local storage as:
+  - a migration source for existing browser data
+  - a fallback cache when backend hydration fails
+- Sync new timer-generated and manual `session log` entries through the `/api/session-logs` REST boundary, with calm warning states when backend sync fails.
+- Use one seeded `timer_settings` record (`default`) for the current single-user local setup instead of introducing profile/account complexity in Milestone A.
+- Keep active timer and active playlist recovery local-only in this slice; only persisted settings and session history move to H2.
+
+### 2026-03-26 milestone-a core practice engine decisions
+- Treat backend timer-settings hydration as the gate for timer-start actions on `Home` and `Practice` so the core flow never starts from stale defaults before the H2-backed source of truth arrives.
+- Keep backend state feedback calm and local to the relevant screens:
+  - lightweight loading banners while timer defaults hydrate
+  - inline warning banners when backend sync/load fails
+  - no blocking overlay or dashboard-style status layer
+- Verify prompt 02 with the real local full-stack setup that now exists in-repo:
+  - Spring Boot dev backend
+  - H2 file-backed persistence
+  - Vite dev frontend and `/api` proxy
+  - media files served from disk through backend path references
+- Expand confidence in the core flow with stateful app-level integration tests rather than adding a new e2e framework in this slice:
+  - Home quick-start hydration gating
+  - backend timer-settings persistence across a fresh app mount
+  - ended-early timer -> `session log` -> History rehydration across a fresh app mount
+
+### 2026-03-26 milestone-a remediation decisions
+- Lock timer-setting controls on `Practice` and `Settings` until backend hydration finishes, rather than allowing editable-but-overwritable intermediate state.
+- Expose explicit timer-settings sync state from `TimerContext` so `Settings` can distinguish:
+  - loading
+  - saving in flight
+  - saved after backend confirmation
+- Keep the broader `Practice` draft-vs-defaults model unchanged in this remediation slice and defer that bigger product/state decision as a later nice-to-have improvement.
+
+### 2026-03-26 milestone-a verification decisions
+- Keep prompt 05 verification-focused and add only narrow confidence-building coverage where the milestone still had a meaningful gap:
+  - backend-backed Home quick start launching from hydrated defaults
+  - direct H2 timer-settings persistence at the repository boundary
+- Treat the locked default dev H2 file and occupied default dev ports as environment constraints, not Milestone A product failures.
+- Complete live runtime verification against an isolated local stack when the default dev runtime is busy:
+  - temporary backend H2 database name `meditation-prompt05`
+  - backend port `8081`
+  - frontend port `5175`
+- Use that isolated runtime only for verification and keep the shipped app behavior/config unchanged.
+
 ### Initial decisions
 - Use React + TypeScript + Vite for the front-end.
 - Keep V1 local-first.

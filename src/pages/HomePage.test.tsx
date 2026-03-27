@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from '../App';
@@ -8,6 +8,10 @@ const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
+
+async function waitForHomeQuickStartReady() {
+  await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
+}
 
 describe('HomePage UX', () => {
   beforeEach(() => {
@@ -118,20 +122,21 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/evening sequence/i)).toBeInTheDocument();
   });
 
-  it('shows quick-start guidance on Practice when defaults are invalid', () => {
+  it('shows quick-start guidance on Practice when defaults are invalid', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
+    await waitForHomeQuickStartReady();
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
 
     expect(screen.getByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
     expect(screen.getByText(/quick start needs valid defaults/i)).toBeInTheDocument();
   });
 
-  it('starts and routes to the active timer when quick-start defaults are valid', () => {
+  it('starts and routes to the active timer when quick-start defaults are valid', async () => {
     localStorage.setItem(
       TIMER_SETTINGS_KEY,
       JSON.stringify({
@@ -151,6 +156,7 @@ describe('HomePage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForHomeQuickStartReady();
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
     expect(screen.getByText(/stay present/i)).toBeInTheDocument();

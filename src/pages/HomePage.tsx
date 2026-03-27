@@ -36,6 +36,8 @@ export default function HomePage() {
     startSession,
     setSettings,
     startPlaylistRun,
+    isSettingsLoading,
+    settingsSyncError,
   } = useTimer();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const sankalpas = useMemo(() => listSankalpasFromApi(), []);
@@ -109,13 +111,27 @@ export default function HomePage() {
         </div>
       ) : null}
 
+      {isSettingsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading timer defaults from the backend.</p>
+        </div>
+      ) : null}
+
+      {settingsSyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{settingsSyncError}</p>
+        </div>
+      ) : null}
+
       <section className="home-panel">
         <h3 className="section-title">Quick Start</h3>
         <p className="section-subtitle">
-          Default timer: {settings.durationMinutes} min · {settings.meditationType || 'select meditation type'}
+          {isSettingsLoading
+            ? 'Loading timer defaults...'
+            : `Default timer: ${settings.durationMinutes} min · ${settings.meditationType || 'select meditation type'}`}
         </p>
         <div className="timer-actions">
-          <button type="button" onClick={quickStart}>
+          <button type="button" onClick={quickStart} disabled={isSettingsLoading}>
             {activeSession ? 'Resume Active Timer' : activePlaylistRun ? 'Resume Playlist Run' : 'Start Timer Now'}
           </button>
           <button type="button" className="secondary" onClick={() => navigate('/practice')}>

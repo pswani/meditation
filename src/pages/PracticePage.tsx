@@ -14,10 +14,24 @@ interface PracticeRouteState {
 }
 
 export default function PracticePage() {
-  const { settings, validation, activeSession, activePlaylistRun, setSettings, startSession, clearOutcome, lastOutcome } = useTimer();
+  const {
+    settings,
+    validation,
+    activeSession,
+    activePlaylistRun,
+    setSettings,
+    startSession,
+    clearOutcome,
+    lastOutcome,
+    isSessionLogSyncing,
+    sessionLogSyncError,
+    isSettingsLoading,
+    settingsSyncError,
+  } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
-  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun);
+  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || isSettingsLoading;
+  const areTimerSettingsControlsDisabled = isSettingsLoading;
   const advancedContentId = 'advanced-timer-settings';
   const practiceToolsContentId = 'practice-tools-content';
   const timerStartBlockedMessageId = 'timer-start-blocked-message';
@@ -98,11 +112,27 @@ export default function PracticePage() {
         </div>
       ) : null}
 
+      {isSettingsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading timer defaults from the backend before starting a session.</p>
+        </div>
+      ) : null}
+
+      {settingsSyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{settingsSyncError}</p>
+        </div>
+      ) : null}
+
       {lastOutcome ? (
-        <div className={`status-banner ${lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
+        <div className={`status-banner ${sessionLogSyncError ? 'warn' : lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
           <p>
-            Last session {lastOutcome.status}. An auto log was created for {formatRemainingTime(lastOutcome.completedDurationSeconds)}.
+            Last session {lastOutcome.status}.{' '}
+            {isSessionLogSyncing
+              ? `Saving ${formatRemainingTime(lastOutcome.completedDurationSeconds)} to backend history.`
+              : `An auto log was created for ${formatRemainingTime(lastOutcome.completedDurationSeconds)}.`}
           </p>
+          {sessionLogSyncError ? <p>{sessionLogSyncError}</p> : null}
           <button type="button" className="link-button" onClick={clearOutcome}>
             Dismiss
           </button>
@@ -125,6 +155,7 @@ export default function PracticePage() {
             type="number"
             min={1}
             value={settings.durationMinutes}
+            disabled={areTimerSettingsControlsDisabled}
             onChange={(event) => update('durationMinutes', Number(event.target.value))}
             onBlur={() => markTouched('durationMinutes')}
           />
@@ -139,6 +170,7 @@ export default function PracticePage() {
           <span>Meditation type</span>
           <select
             value={settings.meditationType}
+            disabled={areTimerSettingsControlsDisabled}
             onChange={(event) => update('meditationType', event.target.value as MeditationType | '')}
             onBlur={() => markTouched('meditationType')}
           >
@@ -163,6 +195,7 @@ export default function PracticePage() {
           className="advanced-toggle"
           aria-expanded={advancedOpen}
           aria-controls={advancedContentId}
+          disabled={areTimerSettingsControlsDisabled}
           onClick={() => setAdvancedOpen((current) => !current)}
         >
           {advancedOpen ? 'Hide Advanced Options' : 'Show Advanced Options'}
@@ -173,7 +206,11 @@ export default function PracticePage() {
             <div className="form-grid">
               <label>
                 <span>Start sound (optional)</span>
-                <select value={settings.startSound} onChange={(event) => update('startSound', event.target.value)}>
+                <select
+                  value={settings.startSound}
+                  disabled={areTimerSettingsControlsDisabled}
+                  onChange={(event) => update('startSound', event.target.value)}
+                >
                   {soundOptions.map((sound) => (
                     <option key={sound} value={sound}>
                       {sound}
@@ -184,7 +221,11 @@ export default function PracticePage() {
 
               <label>
                 <span>End sound (optional)</span>
-                <select value={settings.endSound} onChange={(event) => update('endSound', event.target.value)}>
+                <select
+                  value={settings.endSound}
+                  disabled={areTimerSettingsControlsDisabled}
+                  onChange={(event) => update('endSound', event.target.value)}
+                >
                   {soundOptions.map((sound) => (
                     <option key={sound} value={sound}>
                       {sound}
@@ -199,6 +240,7 @@ export default function PracticePage() {
                 <input
                   type="checkbox"
                   checked={settings.intervalEnabled}
+                  disabled={areTimerSettingsControlsDisabled}
                   onChange={(event) => update('intervalEnabled', event.target.checked)}
                 />
                 <span>Enable interval bell</span>
@@ -212,6 +254,7 @@ export default function PracticePage() {
                       type="number"
                       min={1}
                       value={settings.intervalMinutes}
+                      disabled={areTimerSettingsControlsDisabled}
                       onChange={(event) => update('intervalMinutes', Number(event.target.value))}
                       onBlur={() => markTouched('intervalMinutes')}
                     />
@@ -226,7 +269,11 @@ export default function PracticePage() {
 
                   <label>
                     <span>Interval sound</span>
-                    <select value={settings.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
+                    <select
+                      value={settings.intervalSound}
+                      disabled={areTimerSettingsControlsDisabled}
+                      onChange={(event) => update('intervalSound', event.target.value)}
+                    >
                       {soundOptions.map((sound) => (
                         <option key={sound} value={sound}>
                           {sound}
@@ -255,11 +302,15 @@ export default function PracticePage() {
       {isTimerStartBlockedByPlaylistRun ? (
         <div id={timerStartBlockedMessageId} className="status-banner warn" role="status">
           <p>
-            A playlist run is active. Resume or end the playlist run before starting a separate timer session.
+            {isSettingsLoading
+              ? 'Timer defaults are still loading from the backend. Please wait a moment before starting.'
+              : 'A playlist run is active. Resume or end the playlist run before starting a separate timer session.'}
           </p>
-          <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
-            Resume Playlist Run
-          </button>
+          {isSettingsLoading ? null : (
+            <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
+              Resume Playlist Run
+            </button>
+          )}
         </div>
       ) : null}
 

@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { meditationTypes, soundOptions, defaultTimerSettings } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { TimerSettings } from '../types/timer';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
+
+type SavePhase = 'idle' | 'awaiting-sync-start' | 'saving';
+type SaveMessageTone = 'ok' | 'status';
 
 function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings): boolean {
   return (
@@ -17,11 +20,45 @@ function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings
 }
 
 export default function SettingsPage() {
-  const { settings, setSettings } = useTimer();
+  const { settings, setSettings, isSettingsLoading, isSettingsSyncing, settingsSyncError } = useTimer();
   const [draft, setDraft] = useState<TimerSettings>(settings);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
+  const [savePhase, setSavePhase] = useState<SavePhase>('idle');
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
+  const areSettingsControlsDisabled = isSettingsLoading || isSettingsSyncing;
+
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
+
+  useEffect(() => {
+    if (savePhase === 'idle') {
+      return;
+    }
+
+    if (savePhase === 'awaiting-sync-start') {
+      if (isSettingsSyncing) {
+        setSavePhase('saving');
+      }
+      return;
+    }
+
+    if (isSettingsSyncing) {
+      return;
+    }
+
+    if (settingsSyncError) {
+      setSaveMessage(null);
+      setSavePhase('idle');
+      return;
+    }
+
+    setSaveMessage('Settings saved.');
+    setSaveMessageTone('ok');
+    setSavePhase('idle');
+  }, [isSettingsSyncing, savePhase, settingsSyncError]);
 
   const intervalCount = useMemo(
     () => (draft.intervalEnabled ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
@@ -30,6 +67,7 @@ export default function SettingsPage() {
 
   function update<K extends keyof TimerSettings>(key: K, value: TimerSettings[K]) {
     setSaveMessage(null);
+    setSavePhase('idle');
     setDraft((current) => ({
       ...current,
       [key]: value,
@@ -51,7 +89,9 @@ export default function SettingsPage() {
     }
 
     setSettings(draft);
-    setSaveMessage('Settings saved.');
+    setSaveMessage('Saving timer preferences to the backend.');
+    setSaveMessageTone('status');
+    setSavePhase('awaiting-sync-start');
   }
 
   function resetDefaults() {
@@ -61,7 +101,9 @@ export default function SettingsPage() {
     setDraft(resetValue);
     setSettings(resetValue);
     setErrors({});
-    setSaveMessage('Settings reset to app defaults.');
+    setSaveMessage('Saving app defaults to the backend.');
+    setSaveMessageTone('status');
+    setSavePhase('awaiting-sync-start');
   }
 
   return (
@@ -70,8 +112,20 @@ export default function SettingsPage() {
       <p className="page-description">Adjust default timer preferences for a steady, low-friction practice flow.</p>
 
       {saveMessage ? (
-        <div className="status-banner ok" role="status">
+        <div className={`status-banner ${saveMessageTone === 'ok' ? 'ok' : ''}`} role="status">
           <p>{saveMessage}</p>
+        </div>
+      ) : null}
+
+      {isSettingsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading timer preferences from the backend.</p>
+        </div>
+      ) : null}
+
+      {settingsSyncError ? (
+        <div className="status-banner warn" role="status">
+          <p>{settingsSyncError}</p>
         </div>
       ) : null}
 
@@ -88,6 +142,7 @@ export default function SettingsPage() {
               type="number"
               min={1}
               value={draft.durationMinutes}
+              disabled={areSettingsControlsDisabled}
               onChange={(event) => update('durationMinutes', Number(event.target.value))}
             />
             {errors.durationMinutes ? (
@@ -101,6 +156,7 @@ export default function SettingsPage() {
             <span>Default meditation type</span>
             <select
               value={draft.meditationType}
+              disabled={areSettingsControlsDisabled}
               onChange={(event) => update('meditationType', event.target.value as TimerSettings['meditationType'])}
             >
               <option value="">Select meditation type</option>
@@ -115,7 +171,11 @@ export default function SettingsPage() {
 
           <label>
             <span>Default start sound</span>
-            <select value={draft.startSound} onChange={(event) => update('startSound', event.target.value)}>
+            <select
+              value={draft.startSound}
+              disabled={areSettingsControlsDisabled}
+              onChange={(event) => update('startSound', event.target.value)}
+            >
               {soundOptions.map((sound) => (
                 <option key={sound} value={sound}>
                   {sound}
@@ -126,7 +186,11 @@ export default function SettingsPage() {
 
           <label>
             <span>Default end sound</span>
-            <select value={draft.endSound} onChange={(event) => update('endSound', event.target.value)}>
+            <select
+              value={draft.endSound}
+              disabled={areSettingsControlsDisabled}
+              onChange={(event) => update('endSound', event.target.value)}
+            >
               {soundOptions.map((sound) => (
                 <option key={sound} value={sound}>
                   {sound}
@@ -139,6 +203,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={draft.intervalEnabled}
+              disabled={areSettingsControlsDisabled}
               onChange={(event) => update('intervalEnabled', event.target.checked)}
             />
             <span>Enable interval bell by default</span>
@@ -152,6 +217,7 @@ export default function SettingsPage() {
                   type="number"
                   min={1}
                   value={draft.intervalMinutes}
+                  disabled={areSettingsControlsDisabled}
                   onChange={(event) => update('intervalMinutes', Number(event.target.value))}
                 />
                 {errors.intervalMinutes ? (
@@ -165,7 +231,11 @@ export default function SettingsPage() {
 
               <label>
                 <span>Default interval sound</span>
-                <select value={draft.intervalSound} onChange={(event) => update('intervalSound', event.target.value)}>
+                <select
+                  value={draft.intervalSound}
+                  disabled={areSettingsControlsDisabled}
+                  onChange={(event) => update('intervalSound', event.target.value)}
+                >
                   {soundOptions.map((sound) => (
                     <option key={sound} value={sound}>
                       {sound}
@@ -178,10 +248,10 @@ export default function SettingsPage() {
         </form>
 
         <div className="timer-actions">
-          <button type="button" onClick={saveDefaults} disabled={!hasUnsavedChanges}>
+          <button type="button" onClick={saveDefaults} disabled={!hasUnsavedChanges || areSettingsControlsDisabled}>
             Save Defaults
           </button>
-          <button type="button" className="secondary" onClick={resetDefaults}>
+          <button type="button" className="secondary" onClick={resetDefaults} disabled={areSettingsControlsDisabled}>
             Reset To App Defaults
           </button>
         </div>

@@ -15,7 +15,7 @@ describe('HistoryPage UX', () => {
     cleanup();
   });
 
-  it('shows timestamp helper text and save success feedback for manual log', () => {
+  it('shows timestamp helper text and save success feedback for manual log', async () => {
     render(
       <MemoryRouter initialEntries={['/history']}>
         <TimerProvider>
@@ -31,8 +31,8 @@ describe('HistoryPage UX', () => {
     fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
-    expect(screen.getByText(/manual log saved to history/i)).toBeInTheDocument();
-    expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    expect(await screen.findByText(/^manual log$/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
     expect(screen.queryByText(/manual log saved to history/i)).not.toBeInTheDocument();

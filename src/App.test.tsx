@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
@@ -8,6 +8,111 @@ const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
+
+function createJsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
+}
+
+function createStatefulBackendFetchMock(options?: {
+  settings?: {
+    durationMinutes: number;
+    meditationType: string;
+    startSound: string;
+    endSound: string;
+    intervalEnabled: boolean;
+    intervalMinutes: number;
+    intervalSound: string;
+  };
+  sessionLogs?: Array<Record<string, unknown>>;
+}) {
+  const store = {
+    settings: {
+      durationMinutes: 20,
+      meditationType: '',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+      ...(options?.settings ?? {}),
+    },
+    sessionLogs: [...(options?.sessionLogs ?? [])],
+  };
+
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const method = init?.method ?? 'GET';
+
+    if (url.endsWith('/api/settings/timer') && method === 'GET') {
+      return createJsonResponse(200, {
+        id: 'default',
+        ...store.settings,
+        updatedAt: '2026-03-26T12:00:00.000Z',
+      });
+    }
+
+    if (url.endsWith('/api/settings/timer') && method === 'PUT') {
+      store.settings = {
+        ...store.settings,
+        ...(typeof init?.body === 'string' ? JSON.parse(init.body) : {}),
+      };
+
+      return createJsonResponse(200, {
+        id: 'default',
+        ...store.settings,
+        updatedAt: '2026-03-26T12:05:00.000Z',
+      });
+    }
+
+    if (url.endsWith('/api/session-logs') && method === 'GET') {
+      return createJsonResponse(200, [...store.sessionLogs]);
+    }
+
+    if (url.includes('/api/session-logs/') && method === 'PUT') {
+      const sessionLog = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+      const existingIndex = store.sessionLogs.findIndex((entry) => entry.id === sessionLog.id);
+
+      if (existingIndex >= 0) {
+        store.sessionLogs[existingIndex] = sessionLog;
+      } else {
+        store.sessionLogs.unshift(sessionLog);
+      }
+
+      return createJsonResponse(200, sessionLog);
+    }
+
+    if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+      return createJsonResponse(200, [
+        {
+          id: 'media-vipassana-sit-20',
+          label: 'Vipassana Sit (20 min)',
+          filePath: '/media/custom-plays/vipassana-sit-20.mp3',
+          relativePath: 'custom-plays/vipassana-sit-20.mp3',
+          durationSeconds: 1200,
+          mimeType: 'audio/mpeg',
+          sizeBytes: 9200000,
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ]);
+    }
+
+    return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+  });
+
+  return { fetchMock, store };
+}
+
+async function flushBackendHydration() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
 
 describe('App shell', () => {
   beforeEach(() => {
@@ -46,16 +151,18 @@ describe('App shell', () => {
     expect(screen.getByLabelText(/default duration \(minutes\)/i)).toBeInTheDocument();
   });
 
-  it('reflects saved defaults from Settings in timer setup', () => {
+  it('reflects saved defaults from Settings in timer setup', async () => {
     render(
       <MemoryRouter initialEntries={['/settings']}>
         <App />
       </MemoryRouter>
     );
 
+    await flushBackendHydration();
     fireEvent.change(screen.getByLabelText(/default duration \(minutes\)/i), { target: { value: '32' } });
     fireEvent.change(screen.getByLabelText(/default meditation type/i), { target: { value: 'Sahaj' } });
     fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
+    expect(await screen.findByText(/settings saved/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('link', { name: /^Practice$/i })[0]);
 
@@ -64,13 +171,14 @@ describe('App shell', () => {
     expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Sahaj');
   });
 
-  it('shows a global active timer resume banner outside Practice', () => {
+  it('shows a global active timer resume banner outside Practice', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
         <App />
       </MemoryRouter>
     );
 
+    await flushBackendHydration();
     const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
@@ -288,7 +396,7 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /quick start/i })).toBeInTheDocument();
   });
 
-  it('completes a timer journey through pause, resume, auto log, and History', () => {
+  it('completes a timer journey through pause, resume, auto log, and History', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-25T09:00:00.000Z'));
 
@@ -298,6 +406,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
+    await flushBackendHydration();
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
@@ -335,7 +444,7 @@ describe('App shell', () => {
     expect(screen.getByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
   });
 
-  it('completes a playlist journey and records per-item auto logs in History', () => {
+  it('completes a playlist journey and records per-item auto logs in History', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-25T11:00:00.000Z'));
 
@@ -370,6 +479,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
+    await flushBackendHydration();
     fireEvent.click(screen.getByRole('button', { name: /run playlist/i }));
 
     expect(screen.getByRole('heading', { level: 2, name: 'Lunch Reset' })).toBeInTheDocument();
@@ -401,5 +511,163 @@ describe('App shell', () => {
     expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);
     expect(screen.getAllByText(/^auto log$/i)).toHaveLength(2);
+  });
+
+  it('holds Home quick start until backend timer settings finish loading', async () => {
+    let resolveSettings: ((value: unknown) => void) | null = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          const body = await new Promise((resolve) => {
+            resolveSettings = resolve;
+          });
+
+          return createJsonResponse(200, body);
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: /start timer now/i })).toBeDisabled();
+    expect(screen.getByText(/loading timer defaults from the backend/i)).toBeInTheDocument();
+
+    resolveSettings?.({
+      id: 'default',
+      durationMinutes: 25,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
+    expect(screen.getByText(/default timer: 25 min/i)).toBeInTheDocument();
+  });
+
+  it('starts a timer from Home after backend defaults hydrate', async () => {
+    const { fetchMock } = createStatefulBackendFetchMock({
+      settings: {
+        durationMinutes: 18,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
+    expect(screen.getByText(/default timer: 18 min/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: '18:00' })).toBeInTheDocument();
+    expect(screen.getByText(/stay present/i)).toBeInTheDocument();
+  });
+
+  it('persists backend timer settings and rehydrates them on a fresh app mount', async () => {
+    const { fetchMock } = createStatefulBackendFetchMock({
+      settings: {
+        durationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.change(await screen.findByLabelText(/default duration \(minutes\)/i), { target: { value: '32' } });
+    fireEvent.change(screen.getByLabelText(/default meditation type/i), { target: { value: 'Sahaj' } });
+    fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
+
+    await screen.findByText(/settings saved/i);
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByLabelText(/duration \(minutes\)/i)).toHaveValue(32);
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Sahaj');
+  });
+
+  it('syncs an ended-early timer session to backend history and rehydrates it on a fresh mount', async () => {
+    const { fetchMock, store } = createStatefulBackendFetchMock({
+      settings: {
+        durationMinutes: 12,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.click(await screen.findByRole('button', { name: /start session/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /end early/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /end session early confirmation/i })).getByRole('button', { name: /^end early$/i }));
+
+    await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^Vipassana$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^ended early$/i).length).toBeGreaterThan(0);
   });
 });

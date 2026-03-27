@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import App from '../App';
 
 describe('ActiveTimerPage UX', () => {
-  it('requires confirmation before ending early', () => {
+  it('requires confirmation before ending early', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
         <App />
@@ -13,6 +13,7 @@ describe('ActiveTimerPage UX', () => {
 
     const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /start session/i })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /end early/i }));

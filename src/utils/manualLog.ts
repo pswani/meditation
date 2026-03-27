@@ -16,6 +16,11 @@ export interface ManualLogValidationResult {
   };
 }
 
+export interface ManualLogSaveResult extends ManualLogValidationResult {
+  readonly persisted: boolean;
+  readonly persistenceError?: string;
+}
+
 function parseManualTimestamp(timestamp: string): number | null {
   const parsedMs = new Date(timestamp).getTime();
   if (Number.isNaN(parsedMs)) {

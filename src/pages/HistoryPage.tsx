@@ -36,12 +36,14 @@ function getPlaylistRunClusterKey(entry: SessionLog): string | null {
 }
 
 export default function HistoryPage() {
-  const { sessionLogs, addManualLog } = useTimer();
+  const { sessionLogs, addManualLog, isSessionLogsLoading, isSessionLogSyncing, sessionLogSyncError } = useTimer();
   const navigate = useNavigate();
   const [manualLog, setManualLog] = useState<ManualLogInput>(initialManualLog);
   const [manualLogOpen, setManualLogOpen] = useState(() => sessionLogs.length === 0);
   const [errors, setErrors] = useState<ManualLogValidationResult['errors']>({});
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [isSavingManualLog, setIsSavingManualLog] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | SessionLog['source']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | SessionLog['status']>('all');
   const [visibleCount, setVisibleCount] = useState(20);
@@ -63,21 +65,25 @@ export default function HistoryPage() {
     setVisibleCount(20);
   }, [sourceFilter, statusFilter]);
 
-  function submitManualLog(event: FormEvent<HTMLFormElement>) {
+  async function submitManualLog(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = addManualLog(manualLog);
+    setIsSavingManualLog(true);
+    const result = await addManualLog(manualLog);
     setErrors(result.errors);
+    setIsSavingManualLog(false);
 
-    if (result.isValid) {
+    if (result.isValid && result.persisted) {
       setManualLog({
         ...initialManualLog,
         sessionTimestamp: getDefaultTimestamp(),
       });
       setManualLogOpen(true);
       setSaveSuccessMessage('Manual log saved to history.');
+      setSaveErrorMessage(null);
     } else {
       setSaveSuccessMessage(null);
       setManualLogOpen(true);
+      setSaveErrorMessage(result.persistenceError ?? null);
     }
   }
 
@@ -91,6 +97,24 @@ export default function HistoryPage() {
         <p className="section-subtitle">
           Showing {visibleLogs.length} of {filteredLogs.length} filtered entries ({sessionLogs.length} stored).
         </p>
+
+        {isSessionLogsLoading ? (
+          <div className="status-banner" role="status">
+            <p>Loading session log history from the backend.</p>
+          </div>
+        ) : null}
+
+        {isSessionLogSyncing ? (
+          <div className="status-banner" role="status">
+            <p>Syncing recent session logs to the backend.</p>
+          </div>
+        ) : null}
+
+        {sessionLogSyncError ? (
+          <div className="status-banner warn" role="status">
+            <p>{sessionLogSyncError}</p>
+          </div>
+        ) : null}
 
         <div className="form-grid history-filters" role="group" aria-label="Filter session logs">
           <label>
@@ -190,6 +214,11 @@ export default function HistoryPage() {
                 <p>{saveSuccessMessage}</p>
               </div>
             ) : null}
+            {saveErrorMessage ? (
+              <div className="status-banner warn" role="status">
+                <p>{saveErrorMessage}</p>
+              </div>
+            ) : null}
             <form className="form-grid" onSubmit={submitManualLog}>
               <label>
                 <span>Duration (minutes)</span>
@@ -199,6 +228,7 @@ export default function HistoryPage() {
                   value={manualLog.durationMinutes}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
+                    setSaveErrorMessage(null);
                     setManualLog((current) => ({
                       ...current,
                       durationMinutes: Number(event.target.value),
@@ -214,6 +244,7 @@ export default function HistoryPage() {
                   value={manualLog.meditationType}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
+                    setSaveErrorMessage(null);
                     setManualLog((current) => ({
                       ...current,
                       meditationType: event.target.value as ManualLogInput['meditationType'],
@@ -237,6 +268,7 @@ export default function HistoryPage() {
                   value={manualLog.sessionTimestamp}
                   onChange={(event) => {
                     setSaveSuccessMessage(null);
+                    setSaveErrorMessage(null);
                     setManualLog((current) => ({
                       ...current,
                       sessionTimestamp: event.target.value,
@@ -251,7 +283,9 @@ export default function HistoryPage() {
               </label>
 
               <div className="timer-actions">
-                <button type="submit">Save Manual Log</button>
+                <button type="submit" disabled={isSavingManualLog}>
+                  {isSavingManualLog ? 'Saving Manual Log...' : 'Save Manual Log'}
+                </button>
               </div>
             </form>
           </div>

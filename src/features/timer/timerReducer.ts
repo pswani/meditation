@@ -14,6 +14,7 @@ export interface TimerState {
 
 export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
+  | { type: 'REPLACE_SESSION_LOGS'; payload: readonly SessionLog[] }
   | { type: 'START_SESSION'; nowMs: number }
   | { type: 'SYNC_TICK'; nowMs: number }
   | { type: 'PAUSE_SESSION'; nowMs: number }
@@ -22,7 +23,7 @@ export type TimerAction =
   | { type: 'ADD_SESSION_LOG'; payload: SessionLog }
   | { type: 'CLEAR_OUTCOME' };
 
-export function createInitialTimerState(settings: TimerSettings, sessionLogs: SessionLog[]): TimerState {
+export function createInitialTimerState(settings: TimerSettings, sessionLogs: readonly SessionLog[]): TimerState {
   const merged: TimerSettings = {
     ...defaultTimerSettings,
     ...settings,
@@ -75,6 +76,12 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           intervalSound: state.settings.intervalSound,
           endAtMs: action.nowMs + durationSeconds * 1000,
         },
+      };
+    }
+    case 'REPLACE_SESSION_LOGS': {
+      return {
+        ...state,
+        sessionLogs: [...action.payload],
       };
     }
     case 'SYNC_TICK': {

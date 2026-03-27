@@ -1,117 +1,176 @@
 # Session Handoff
 
 ## Current status
-Foundation remediation and testing are complete.
+Milestone A prompts 01 through 05 are complete. The core practice engine remains backend-backed and verified end to end, and the prompt 05 pass added the final test and runtime confidence needed before local merge.
 
-This slice implemented the critical and important review findings by moving the H2 console behind the local `dev` profile, removing filesystem-path leakage from `/api/health`, aligning backend CORS behavior with the documented local/LAN workflow, making `/media/**` actually serve from the backend media root, and tightening frontend media fallback behavior so backend regressions are more visible.
+## Milestone branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/prompts/milestone-a-core-fullstack`
+- Milestone scope:
+  - session log REST persistence
+  - timer completion record support needed by the core flow
+  - settings/preferences persistence needed by the core flow
+  - Home, Practice, active timer, and History backend integration
+  - milestone review, remediation, verification, and local merge back to the parent branch
+- Working tree status at branch creation: clean and ready for milestone work
+
+Prompt 01 established the H2-backed REST contracts and frontend hydration/sync path for timer settings and `session log` history. Prompt 02 completed the user-facing core practice-engine flow on top of that foundation by tightening Home and Practice launch behavior, adding fresh-mount integration coverage, and verifying the runnable local stack end to end. Prompt 03 reviewed that milestone slice without code changes and identified the bounded issues to remediate next. Prompt 04 then fixed those important issues with a small, focused remediation pass. Prompt 05 finished the milestone with a strong verification pass across automated coverage, backend persistence, and isolated live runtime checks.
 
 ## What was changed
-- Added `requirements/execplan-foundation-remediation-and-testing.md` and used it to guide the slice.
-- Hardened backend runtime config:
-  - disabled the H2 console in the default runtime
-  - added `backend/src/main/resources/application-dev.yml` for local-only H2 console access
-  - updated `scripts/common.sh` so `npm run dev:backend` starts Spring Boot with the `dev` profile
-- Tightened backend API behavior:
-  - removed `mediaRoot` and `customPlayDirectory` from `/api/health`
-  - switched CORS handling to origin patterns that match the documented local and LAN dev ports
-  - added backend `/media/**` resource serving from the configured media root
-- Tightened frontend integration behavior:
-  - extended `ApiClientError` with explicit error kinds
-  - narrowed custom-play media fallback classification into:
-    - backend unavailable
-    - backend error
-    - invalid backend response
-  - surfaced stronger custom-play integration messaging when the backend responds incorrectly
-- Strengthened tests across the foundation layer:
-  - backend default-vs-dev runtime config tests
-  - backend repository/service/controller/media-serving tests
-  - API client invalid-JSON and JSON-body tests
-  - media boundary invalid-response and backend-error tests
-  - custom-play manager integration-warning test
-- Updated `README.md`, `docs/architecture.md`, `requirements/decisions.md`, and `requirements/session-handoff.md` to reflect the hardened runtime and media-serving model.
-
-## Review findings resolved in this slice
-- Resolved the critical H2 console exposure finding by moving the console to the `dev` profile only.
-- Resolved the health payload leak by returning readiness metadata only.
-- Resolved the LAN/CORS mismatch by using local/LAN-safe origin patterns for the supported dev and preview ports.
-- Resolved the misleading media path contract by serving `/media/**` from the backend media root.
-- Resolved the over-broad frontend fallback classification by distinguishing unavailable vs invalid/server-error conditions.
+- Added and used:
+  - `requirements/execplan-milestone-a-session-log-rest.md`
+  - `requirements/execplan-milestone-a-core-practice-engine.md`
+- Prompt 01 backend-backed foundation remains in place:
+  - H2 migration `V3__add_session_log_sync_and_timer_settings.sql`
+  - REST endpoints:
+    - `/api/settings/timer`
+    - `/api/session-logs`
+  - frontend hydration and sync through `TimerContext`
+- Prompt 02 completed the screen-level core flow:
+  - `src/pages/HomePage.tsx`
+    - quick start waits for backend timer-settings hydration
+    - calm loading and warning banners surface backend state
+  - `src/pages/PracticePage.tsx`
+    - start-session action waits for hydrated timer defaults
+    - blocked guidance distinguishes backend loading from active playlist-run state
+- Expanded app-level and page-level test coverage for the backend-backed practice engine:
+  - `src/App.test.tsx`
+    - Home quick-start hydration gating
+    - backend timer-settings persistence across a fresh app mount
+    - ended-early timer -> backend history -> History rehydration across a fresh app mount
+  - `src/pages/HomePage.test.tsx`
+  - `src/pages/PracticePage.test.tsx`
+  - `src/pages/ActiveTimerPage.test.tsx`
+- Updated milestone tracking docs:
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- Prompt 03 review artifacts:
+  - created `docs/review-core-fullstack.md`
+  - recorded critical, important, and nice-to-have findings
+  - prepared prompt 04 as the exact next remediation slice
+- Prompt 04 remediation:
+  - added `requirements/execplan-milestone-a-core-remediation.md`
+  - locked `Practice` timer-setting controls while backend timer settings hydrate
+  - locked `Settings` defaults controls while backend timer settings hydrate
+  - added explicit settings-sync state so Settings save feedback only reports success after backend persistence succeeds
+  - updated focused tests for hydration locking and truthful Settings save feedback
+- Prompt 05 verification:
+  - added `requirements/execplan-milestone-a-core-testing.md`
+  - added app-level coverage proving Home quick start can launch from backend-hydrated defaults
+  - added backend repository coverage proving seeded timer settings round-trip through H2 persistence updates
+  - re-ran the full frontend and backend verification suite successfully
+  - completed isolated live runtime verification using:
+    - temporary backend port `8081`
+    - temporary frontend port `5175`
+    - temporary H2 database `meditation-prompt05`
+  - confirmed live:
+    - backend health
+    - timer settings GET/PUT persistence
+    - `session log` GET/PUT persistence
+    - frontend `/api` proxy reachability
+    - hydrated Home and Practice launch surfaces against backend-backed defaults
 
 ## Intentional sample or helper content that remains
-- Frontend persistence for playlists, sankalpas, custom plays, and session logs is still local-first outside the media catalog integration seam.
+- Frontend persistence for playlists, sankalpas, and custom plays is still local-first outside the media catalog integration seam.
 - Built-in sample media metadata remains as a fallback when the backend media endpoint is unavailable.
 - `docs/review-foundation-fullstack.md` remains as the review artifact for the completed foundation assessment.
 
 ## Verification status
-- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
-- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 - Passed `npm run typecheck`
 - Passed `npm run lint`
 - Passed `npm run test`
 - Passed `npm run build`
-- Verified `npm run dev:backend` startup with the `dev` profile active
-- Verified `npm run dev:frontend` startup
-- Verified `curl -s http://localhost:8080/api/health`
-- Verified `curl -s http://localhost:8080/api/media/custom-plays`
-- Verified `curl -i -s http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3`
-- Verified `curl -i -s http://localhost:8080/h2-console`
-- Verified `curl -s http://localhost:5173/api/media/custom-plays` through the frontend dev proxy
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+- Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Verified live local backend startup with `npm run dev:backend`
+- Verified live local frontend startup with `npm run dev:frontend`
+- Verified backend reachability with `curl -s http://localhost:8080/api/health`
+- Verified backend media catalog directly with `curl -s http://localhost:8080/api/media/custom-plays`
+- Verified frontend dev proxy reachability with `curl -s http://localhost:5173/api/media/custom-plays`
+- Verified live UI hydration in the browser on:
+  - `http://127.0.0.1:5173/`
+  - `http://127.0.0.1:5173/practice`
+- Re-ran prompt 04 focused remediation coverage for:
+  - Practice hydration locking
+  - Settings hydration locking
+  - truthful backend-backed Settings save feedback
+- Passed prompt 05 added coverage for:
+  - Home quick start launching from backend-hydrated defaults
+  - H2-backed timer settings repository persistence
+- Verified isolated live backend startup on `http://127.0.0.1:8081/api/health`
+- Verified isolated live backend timer settings on `http://127.0.0.1:8081/api/settings/timer`
+- Verified isolated live backend `session log` history on `http://127.0.0.1:8081/api/session-logs`
+- Verified isolated live frontend proxy reachability on:
+  - `http://127.0.0.1:5175/api/media/custom-plays`
+  - `http://127.0.0.1:5175/api/settings/timer`
+  - `http://127.0.0.1:5175/api/session-logs`
+- Verified isolated live Home and Practice hydration with headless Chrome on:
+  - `http://127.0.0.1:5175/`
+  - `http://127.0.0.1:5175/practice`
 
 ## Known limitations
-- Only the media API boundary is live against the backend today.
-- Playlists, sankalpas, custom-play CRUD, and session logs are still local-first in the UI.
+- Playlists, sankalpas, and custom-play CRUD are still local-first in the UI.
+- Playlist-generated `session log` entries still depend on local-only playlist data, so playlist history sync should be revisited once playlist REST persistence is added.
 - Media upload/import and authenticated admin/media-management flows are still unimplemented.
 - Timer and playlist sound playback remain UI-only.
 - The Flyway H2-version compatibility warning still appears in this environment, but tests and runtime verification passed.
+- `Practice` still writes directly into shared saved timer settings; prompt 04 intentionally deferred that larger defaults-vs-session-draft model change as a later nice-to-have.
+- `TimerContext` remains the main change-risk hotspot for future milestone work even after the targeted remediation.
+- The default local dev H2 database file and default dev ports were already busy during prompt 05, so live verification used an isolated temporary backend/frontend runtime instead of mutating the busy default environment.
+
+## Review findings summary
+- Critical:
+  - none recorded in `docs/review-core-fullstack.md`
+- Important:
+  - prompt 04 remediated both previously important issues
+- Nice-to-have:
+  - Practice currently mutates shared saved defaults immediately.
+  - `TimerContext` is carrying too many responsibilities.
+  - backend validation duplicates reference-domain values in code.
 
 ## Files updated in this slice
-- `.env.example`
-- `README.md`
-- `docs/architecture.md`
-- `docs/review-foundation-fullstack.md`
-- `backend/src/main/java/com/meditation/backend/config/**`
-- `backend/src/main/java/com/meditation/backend/health/**`
-- `backend/src/main/resources/application.yml`
-- `backend/src/main/resources/application-dev.yml`
-- `backend/src/test/java/com/meditation/backend/config/**`
-- `backend/src/test/java/com/meditation/backend/health/**`
-- `backend/src/test/java/com/meditation/backend/media/**`
-- `scripts/common.sh`
-- `src/features/customPlays/CustomPlayManager.tsx`
-- `src/features/customPlays/CustomPlayManager.test.tsx`
-- `src/utils/apiClient.ts`
-- `src/utils/apiClient.test.ts`
-- `src/utils/mediaAssetApi.ts`
-- `src/utils/mediaAssetApi.test.ts`
+- `requirements/execplan-milestone-a-core-testing.md`
+- `backend/src/test/java/com/meditation/backend/settings/TimerSettingsRepositoryTest.java`
+- `src/App.test.tsx`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-- `requirements/execplan-foundation-remediation-and-testing.md`
 
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
 - PLANS.md
+- requirements/session-handoff.md
+- requirements/decisions.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
-- requirements/roadmap.md
-- requirements/decisions.md
-- requirements/session-handoff.md
 
 Then:
 
-1. Create an ExecPlan for the first end-to-end full-stack milestone slice.
-2. Implement the backend and REST model for:
-   - session logs
-   - timer session completion records as needed
-   - settings/preferences needed by the core flow
-3. Add H2 entities/migrations/repositories/services/controllers for this slice.
-4. Wire the front end so timer completion and history use the backend through REST, with clean loading/error states.
-5. Keep current calm UX and responsiveness.
-6. Add focused backend and frontend tests.
-7. Run full relevant verification.
-8. Update docs and session-handoff with exact recommended next prompt.
-9. Commit with a clear message:
-   feat(core): add session log rest persistence and history backend integration
+1. Inspect the current git state and determine:
+   - the current milestone branch
+   - the parent branch recorded earlier in requirements/session-handoff.md if present
+2. Verify the milestone work is in a good state before merging:
+   - review git status
+   - ensure there are no unintended uncommitted changes
+   - run the relevant verification commands for the milestone if they have not already been run recently
+3. Merge the current milestone branch back into its parent branch locally.
+4. Prefer a normal merge that preserves milestone history unless the repo state clearly requires another safe local strategy.
+5. Switch to the parent branch and complete the merge locally.
+6. If a merge conflict occurs, resolve it carefully, rerun relevant checks, and continue.
+7. After merge, confirm:
+   - parent branch name
+   - merged milestone branch name
+   - resulting git status
+8. Update:
+   - requirements/decisions.md
+   - requirements/session-handoff.md
+9. In session-handoff, record:
+   - milestone branch merged
+   - parent branch updated
+   - milestone completion summary
+   - exact recommended next prompt
+10. Commit any final merge-related documentation updates if needed with a clear message such as:
+    chore(branch): merge Milestone A branch into parent
