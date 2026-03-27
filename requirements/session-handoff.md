@@ -1,7 +1,18 @@
 # Session Handoff
 
 ## Current status
-Milestone B has been merged locally into `codex/functioning`. The parent branch now contains the full practice-composition slice and is ready for Milestone C branch setup.
+Milestone C branch setup is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch is ready for the summaries REST slice prompt.
+
+## Milestone C branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-c-discipline-insight-fullstack`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone C scope:
+  - summary REST support
+  - sankalpa REST persistence and progress support
+  - milestone review, remediation, verification, and local merge back to the parent branch
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/01-summaries-rest.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

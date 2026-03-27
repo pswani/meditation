@@ -2,6 +2,15 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-c discipline insight branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
+- Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.
+- Keep Milestone C bounded to the discipline-and-insight full-stack slice:
+  - summary REST support
+  - sankalpa REST persistence and progress support
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-26 milestone-b merge decisions
 - Merge `codex/milestone-b-practice-composition-fullstack` back into `codex/functioning` with a normal local merge commit so the manual logging, custom play, media catalog, playlist, remediation, and testing history stays intact.
 - Mark Milestone B complete on `codex/functioning` and hand off to Milestone C branch setup as the next prompt sequence.
