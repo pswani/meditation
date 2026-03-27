@@ -1,4 +1,4 @@
 /**
- * Domain package reserved for future sankalpa persistence and REST work.
+ * Backend sankalpa persistence and progress REST support.
  */
 package com.meditation.backend.sankalpa;

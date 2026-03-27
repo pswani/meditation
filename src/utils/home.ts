@@ -1,6 +1,5 @@
 import type { SessionLog } from '../types/sessionLog';
-import type { SankalpaGoal, SankalpaProgress } from '../types/sankalpa';
-import { deriveSankalpaProgress } from './sankalpa';
+import type { SankalpaProgress } from '../types/sankalpa';
 
 export interface TodayActivitySummary {
   readonly sessionLogCount: number;
@@ -31,12 +30,9 @@ export function selectRecentSessionLogs(sessionLogs: readonly SessionLog[], limi
 }
 
 export function selectTopActiveSankalpaProgress(
-  goals: readonly SankalpaGoal[],
-  sessionLogs: readonly SessionLog[],
-  now: Date = new Date()
+  progressEntries: readonly SankalpaProgress[]
 ): SankalpaProgress | null {
-  const active = goals
-    .map((goal) => deriveSankalpaProgress(goal, sessionLogs, now))
+  const active = progressEntries
     .filter((entry) => entry.status === 'active')
     .sort((left, right) => {
       const leftDeadline = Date.parse(left.deadlineAt);

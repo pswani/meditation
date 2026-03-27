@@ -2,6 +2,45 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-c sankalpa rest decisions
+- Move `sankalpa` persistence and primary progress calculation to the backend so Home and Sankalpa read the same H2-backed source of truth.
+- Keep the frontend `SankalpaGoal` and `SankalpaProgress` shapes stable by returning backend progress entries that match the existing UI model instead of redesigning the screens.
+- Preserve local `sankalpa` cache behavior as:
+  - a migration source for older browser-only goals
+  - a fallback cache when the backend is temporarily unavailable
+- Add a Flyway migration to store `sankalpa_goal.target_value` as a fractional numeric value so duration-based goals can preserve the existing `0.5` minute UI precision.
+- Use a shared frontend `useSankalpaProgress` hook so the Home snapshot and Sankalpa screen stay aligned on loading, fallback, migration, and save behavior.
+
+### 2026-03-26 milestone-c summaries rest decisions
+- Add a dedicated backend summary aggregate endpoint at `/api/summaries` so the insight layer reads from the same H2-backed `session log` source of truth as History.
+- Keep summary range selection and validation in the frontend while moving aggregate derivation to the backend:
+  - overall
+  - by meditation type
+  - by source
+  - by time-of-day bucket
+- Keep the backend summary contract aligned with the current `Sankalpa` summary UI shape so the screen can migrate without a route redesign.
+- Preserve a calm local derived fallback on the `Sankalpa` screen when the summary API is temporarily unavailable, and explain that fallback plainly instead of hiding the degraded state.
+- Treat backend time-of-day bucketing as a local-runtime timezone concern for the current single-user local-development setup.
+
+### 2026-03-26 milestone-c discipline insight remediation decisions
+- Accept an optional browser-supplied IANA `timeZone` query parameter on `/api/summaries` and `/api/sankalpas` so backend time-of-day buckets stay aligned with the frontend's local fallback semantics.
+- Keep invalid time-zone input explicit and bounded by returning a `400` response instead of silently falling back to the backend host timezone.
+- Narrow local `sankalpa` save fallback to true network-unreachable failures only; backend validation or server rejections must not fork local state away from the H2-backed source of truth.
+- Surface degraded local-save fallback as a warning state and keep backend rejection feedback inline on the `Sankalpa` screen.
+
+### 2026-03-26 milestone-c discipline insight testing decisions
+- Add one stateful app-level interaction test for the highest-value Milestone C journey: a backend-backed manual log saved in `History` must surface correctly in both `summary` and `sankalpa` on the `Sankalpa` screen, including a fresh mount.
+- Add negative-path backend controller coverage for invalid `timeZone` input so the remediation boundary is tested on both successful and rejected requests without widening the milestone into new feature work.
+
+### 2026-03-26 milestone-c discipline insight branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
+- Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.
+- Keep Milestone C bounded to the discipline-and-insight full-stack slice:
+  - summary REST support
+  - sankalpa REST persistence and progress support
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-26 milestone-b merge decisions
 - Merge `codex/milestone-b-practice-composition-fullstack` back into `codex/functioning` with a normal local merge commit so the manual logging, custom play, media catalog, playlist, remediation, and testing history stays intact.
 - Mark Milestone B complete on `codex/functioning` and hand off to Milestone C branch setup as the next prompt sequence.

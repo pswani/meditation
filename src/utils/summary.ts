@@ -51,6 +51,13 @@ export interface SummarySnapshot {
   readonly byTimeOfDaySummary: SummaryByTimeOfDay[];
 }
 
+export interface SummarySnapshotData {
+  readonly overallSummary: OverallSummary;
+  readonly byTypeSummary: SummaryByType[];
+  readonly bySourceSummary: SummaryBySource[];
+  readonly byTimeOfDaySummary: SummaryByTimeOfDay[];
+}
+
 function parseDateInputToBoundaryMs(value: string, boundary: 'start' | 'end'): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null;
@@ -202,9 +209,15 @@ export function deriveSummarySnapshot(
 
   return {
     sessionLogs: filteredLogs,
-    overallSummary: deriveOverallSummary(filteredLogs),
-    byTypeSummary: deriveSummaryByType(filteredLogs),
-    bySourceSummary: deriveSummaryBySource(filteredLogs),
-    byTimeOfDaySummary: deriveSummaryByTimeOfDay(filteredLogs),
+    ...deriveSummarySnapshotData(filteredLogs),
+  };
+}
+
+export function deriveSummarySnapshotData(sessionLogs: readonly SessionLog[]): SummarySnapshotData {
+  return {
+    overallSummary: deriveOverallSummary(sessionLogs),
+    byTypeSummary: deriveSummaryByType(sessionLogs),
+    bySourceSummary: deriveSummaryBySource(sessionLogs),
+    byTimeOfDaySummary: deriveSummaryByTimeOfDay(sessionLogs),
   };
 }

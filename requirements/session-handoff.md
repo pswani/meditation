@@ -1,7 +1,147 @@
 # Session Handoff
 
 ## Current status
-Milestone B has been merged locally into `codex/functioning`. The parent branch now contains the full practice-composition slice and is ready for Milestone C branch setup.
+Milestone C prompt 05 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has the testing pass in place and is ready for the local merge prompt.
+
+## Milestone C branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-c-discipline-insight-fullstack`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone C scope:
+  - summary REST support
+  - sankalpa REST persistence and progress support
+  - milestone review, remediation, verification, and local merge back to the parent branch
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/01-summaries-rest.md`
+
+## Milestone C prompt 01: summaries REST
+- Added and used:
+  - `requirements/execplan-milestone-c-summaries-rest.md`
+- Backend changes:
+  - added summary aggregate package under `backend/src/main/java/com/meditation/backend/summary/`
+  - added backend route:
+    - `GET /api/summaries`
+  - added optional inclusive `startAt` / `endAt` ISO filtering against persisted `session log` `endedAt`
+  - derived backend summary aggregates for:
+    - overall
+    - by meditation type
+    - by source
+    - by time-of-day bucket
+- Frontend changes:
+  - added `src/utils/summaryApi.ts` as the typed REST boundary for summary loading
+  - updated `SankalpaPage` to request backend summary data for the selected range
+  - preserved local derived summary fallback from hydrated `session log` data when the summary API is unavailable
+  - added calm summary refresh copy and explicit fallback guidance without changing the existing calm layout
+- Tests:
+  - added frontend API-boundary coverage in `src/utils/summaryApi.test.ts`
+  - updated `src/pages/SankalpaPage.test.tsx` for backend-summary success and fallback behavior
+  - added backend controller coverage in `backend/src/test/java/com/meditation/backend/summary/SummaryControllerTest.java`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/02-sankalpa-rest.md`
+
+## Milestone C prompt 02: sankalpa REST
+- Added and used:
+  - `requirements/execplan-milestone-c-sankalpa-rest.md`
+- Backend changes:
+  - added backend `sankalpa` package under `backend/src/main/java/com/meditation/backend/sankalpa/`
+  - added backend route:
+    - `GET /api/sankalpas`
+    - `PUT /api/sankalpas/{id}`
+  - added H2 migration:
+    - `backend/src/main/resources/db/migration/V7__allow_fractional_sankalpa_targets.sql`
+  - moved `sankalpa` goal persistence into H2 and derived progress from persisted `session log` rows
+  - preserved duration-goal precision by storing fractional `target_value`
+- Frontend changes:
+  - replaced the local-only `sankalpa` API shim in `src/utils/sankalpaApi.ts` with live REST list/upsert helpers
+  - added `src/features/sankalpa/useSankalpaProgress.ts` to centralize backend hydration, local-cache fallback, and id-preserving migration of older local goals
+  - updated `HomePage` to load the `Sankalpa Snapshot` from backend-backed progress
+  - updated `SankalpaPage` to save new goals through the backend while keeping calm fallback guidance when the backend is unavailable
+- Tests:
+  - added backend controller coverage in `backend/src/test/java/com/meditation/backend/sankalpa/SankalpaControllerTest.java`
+  - updated `src/utils/sankalpaApi.test.ts` for live REST response normalization
+  - added Home UI coverage proving the `Sankalpa Snapshot` can render backend-loaded progress
+  - updated shared helper coverage in `src/utils/home.test.ts`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - `sankalpa` editing, deletion, and archive management are still not implemented
+  - frontend local fallback still derives progress client-side when the backend is unavailable
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/03-review-discipline-insight-fullstack.md`
+
+## Milestone C prompt 03: review
+- Added:
+  - `docs/review-discipline-insight-fullstack.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - `sankalpa` save fallback currently writes to local storage for any API failure, which can diverge the UI from the H2-backed source of truth
+    - backend time-of-day bucketing depends on server timezone and can disagree with browser-local fallback behavior
+  - nice-to-have issues:
+    - fallback `sankalpa` saves are styled like success instead of degraded persistence
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/04-remediate-discipline-insight-fullstack.md`
+
+## Milestone C prompt 04: remediation
+- Added and used:
+  - `requirements/execplan-milestone-c-discipline-insight-remediation.md`
+- Backend changes:
+  - updated `GET /api/summaries` to accept an optional `timeZone` query parameter for time-of-day aggregation
+  - updated `GET /api/sankalpas` and `PUT /api/sankalpas/{id}` to accept an optional `timeZone` query parameter for time-of-day filter evaluation
+  - added explicit invalid-time-zone validation so malformed IANA zone ids return `400` instead of silently using the backend host timezone
+- Frontend changes:
+  - added `src/utils/timeZone.ts` to resolve the browser's IANA time zone when available
+  - updated `src/utils/summaryApi.ts` and `src/utils/sankalpaApi.ts` to send the browser time zone to the backend
+  - tightened `src/features/sankalpa/useSankalpaProgress.ts` so local `sankalpa` save fallback only happens for network failures
+  - kept backend rejections as inline errors on `SankalpaPage` and styled degraded fallback feedback as a warning instead of a clean success state
+- Tests:
+  - added backend controller coverage for time-zone-aware summary bucketing and sankalpa time-of-day filtering
+  - updated frontend API-boundary tests for time-zone query handling
+  - added `SankalpaPage` coverage proving rejected backend saves do not persist local divergent goals
+  - updated `HomePage` backend snapshot coverage for the new `timeZone` query parameter
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - `sankalpa` editing, deletion, and archive management are still not implemented
+  - frontend summary fallback still derives buckets locally when the summary API is unavailable
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/05-test-discipline-insight-fullstack.md`
+
+## Milestone C prompt 05: testing
+- Added and used:
+  - `requirements/execplan-milestone-c-discipline-insight-testing.md`
+- Test additions:
+  - added a stateful app-level integration test in `src/App.test.tsx` proving a backend-backed manual log created in `History` flows through to both `summary` and `sankalpa` on the `Sankalpa` screen, including a fresh mount
+  - extended the shared app-test backend mock to derive backend summary aggregates and sankalpa progress from in-memory `session log` and `sankalpa` state
+  - added invalid `timeZone` rejection coverage in:
+    - `backend/src/test/java/com/meditation/backend/summary/SummaryControllerTest.java`
+    - `backend/src/test/java/com/meditation/backend/sankalpa/SankalpaControllerTest.java`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/99-merge-branch.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

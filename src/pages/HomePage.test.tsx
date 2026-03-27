@@ -262,4 +262,74 @@ describe('HomePage UX', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /^run$/i })).toBeEnabled());
     expect(screen.queryByText(/loading favorite playlists from the backend/i)).not.toBeInTheDocument();
   });
+
+  it('shows the sankalpa snapshot from the backend when sankalpa progress loads successfully', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.includes('/api/sankalpas') && method === 'GET') {
+          return createJsonResponse(200, [
+            {
+              goal: {
+                id: 'goal-1',
+                goalType: 'duration-based',
+                targetValue: 120,
+                days: 7,
+                meditationType: 'Vipassana',
+                createdAt: '2026-03-24T08:00:00.000Z',
+              },
+              status: 'active',
+              deadlineAt: '2026-03-31T08:00:00.000Z',
+              matchedSessionCount: 2,
+              matchedDurationSeconds: 3600,
+              targetSessionCount: 0,
+              targetDurationSeconds: 7200,
+              progressRatio: 0.5,
+            },
+          ]);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText(/duration goal/i)).toBeInTheDocument());
+    expect(screen.getByText(/60 min \/ 120 min/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no active sankalpa right now/i)).not.toBeInTheDocument();
+  });
 });

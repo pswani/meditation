@@ -1,29 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { SankalpaGoal, SankalpaProgress, SankalpaValidationResult } from '../types/sankalpa';
+import { isApiClientError } from '../utils/apiClient';
 import { formatDurationLabel } from '../utils/sessionLog';
 import {
   deriveDateInputForDayOffset,
   deriveDateRangeFromInputs,
   deriveSummarySnapshot,
+  type SummarySnapshotData,
   type SummaryDateRange,
 } from '../utils/summary';
+import { loadSummaryFromApi } from '../utils/summaryApi';
 import {
   createInitialSankalpaDraft,
   createSankalpaGoal,
-  deriveSankalpaProgress,
   getSankalpaGoalTypeLabel,
   partitionSankalpaProgress,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
-import { listSankalpasFromApi, persistSankalpasToApi } from '../utils/sankalpaApi';
+import { getUserTimeZone } from '../utils/timeZone';
 
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
+type SaveMessageTone = 'ok' | 'warn' | 'error';
 
 function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'duration-based') {
@@ -99,6 +103,24 @@ function describeSummaryRangeLabel(
   return `${formatDateInputLabel(customStartDate)} - ${formatDateInputLabel(customEndDate)}`;
 }
 
+function formatSummaryLoadMessage(error: unknown): string {
+  if (isApiClientError(error)) {
+    if (error.kind === 'network') {
+      return 'Showing a locally derived summary because the backend summary service could not be reached.';
+    }
+
+    if (error.detail && error.detail.trim().length > 0) {
+      return `Showing a locally derived summary because the backend summary service returned: ${error.detail.trim()}`;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return `Showing a locally derived summary because the backend summary service returned: ${error.message.trim()}`;
+  }
+
+  return 'Showing a locally derived summary because the backend summary service is unavailable right now.';
+}
+
 interface SankalpaSectionProps {
   readonly title: string;
   readonly emptyText: string;
@@ -144,6 +166,7 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
+  const userTimeZone = useMemo(() => getUserTimeZone(), []);
   const summaryDateDefaults = useMemo(() => {
     const today = new Date();
     return {
@@ -155,21 +178,16 @@ export default function SankalpaPage() {
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [sankalpas, setSankalpas] = useState(() => listSankalpasFromApi());
+  const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
   const [showInactiveSummaryCategories, setShowInactiveSummaryCategories] = useState(false);
-  const skipInitialSankalpaPersistRef = useRef(true);
-
-  useEffect(() => {
-    if (skipInitialSankalpaPersistRef.current) {
-      skipInitialSankalpaPersistRef.current = false;
-      return;
-    }
-
-    persistSankalpasToApi(sankalpas);
-  }, [sankalpas]);
+  const [remoteSummarySnapshot, setRemoteSummarySnapshot] = useState<SummarySnapshotData | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [summaryLoadMessage, setSummaryLoadMessage] = useState<string | null>(null);
+  const { progressEntries: sankalpaProgressEntries, isLoading: isSankalpaLoading, syncMessage: sankalpaSyncMessage, saveSankalpa } =
+    useSankalpaProgress(sessionLogs);
 
   const summaryRangeSelection = useMemo(() => {
     if (summaryRangePreset === 'all-time') {
@@ -238,46 +256,88 @@ export default function SankalpaPage() {
 
     return deriveSummarySnapshot(sessionLogs, summaryRangeSelection.range);
   }, [sessionLogs, summaryRangeSelection.range]);
+  const effectiveSummarySnapshot = remoteSummarySnapshot ?? summarySnapshot;
+
+  useEffect(() => {
+    if (!summaryRangeSelection.range) {
+      setRemoteSummarySnapshot(null);
+      setIsSummaryLoading(false);
+      setSummaryLoadMessage(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSummaryLoading(true);
+    setSummaryLoadMessage(null);
+
+    loadSummaryFromApi(
+      {
+        startAt:
+          summaryRangeSelection.range.startAtMs === null ? undefined : new Date(summaryRangeSelection.range.startAtMs).toISOString(),
+        endAt: summaryRangeSelection.range.endAtMs === null ? undefined : new Date(summaryRangeSelection.range.endAtMs).toISOString(),
+        timeZone: userTimeZone,
+      },
+      undefined,
+      controller.signal
+    )
+      .then((nextSummarySnapshot) => {
+        setRemoteSummarySnapshot(nextSummarySnapshot);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRemoteSummarySnapshot(null);
+        setSummaryLoadMessage(formatSummaryLoadMessage(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsSummaryLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [sessionLogs, summaryRangeSelection.range, userTimeZone]);
+
   const inactiveSummaryCategoriesCount = useMemo(() => {
-    if (!summarySnapshot) {
+    if (!effectiveSummarySnapshot) {
       return 0;
     }
 
-    const byTypeInactiveCount = summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs === 0).length;
-    const byTimeOfDayInactiveCount = summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs === 0).length;
+    const byTypeInactiveCount = effectiveSummarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs === 0).length;
+    const byTimeOfDayInactiveCount = effectiveSummarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs === 0).length;
     return byTypeInactiveCount + byTimeOfDayInactiveCount;
-  }, [summarySnapshot]);
+  }, [effectiveSummarySnapshot]);
   const byTypeSummaryRows = useMemo(() => {
-    if (!summarySnapshot) {
+    if (!effectiveSummarySnapshot) {
       return [];
     }
 
     if (showInactiveSummaryCategories) {
-      return summarySnapshot.byTypeSummary;
+      return effectiveSummarySnapshot.byTypeSummary;
     }
 
-    return summarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs > 0);
-  }, [showInactiveSummaryCategories, summarySnapshot]);
+    return effectiveSummarySnapshot.byTypeSummary.filter((entry) => entry.sessionLogs > 0);
+  }, [effectiveSummarySnapshot, showInactiveSummaryCategories]);
   const byTimeOfDaySummaryRows = useMemo(() => {
-    if (!summarySnapshot) {
+    if (!effectiveSummarySnapshot) {
       return [];
     }
 
     if (showInactiveSummaryCategories) {
-      return summarySnapshot.byTimeOfDaySummary;
+      return effectiveSummarySnapshot.byTimeOfDaySummary;
     }
 
-    return summarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs > 0);
-  }, [showInactiveSummaryCategories, summarySnapshot]);
+    return effectiveSummarySnapshot.byTimeOfDaySummary.filter((entry) => entry.sessionLogs > 0);
+  }, [effectiveSummarySnapshot, showInactiveSummaryCategories]);
   const progressByStatus = useMemo(() => {
-    const now = new Date();
-    const entries = sankalpas
-      .map((goal) => deriveSankalpaProgress(goal, sessionLogs, now))
-      .sort((left, right) => Date.parse(right.goal.createdAt) - Date.parse(left.goal.createdAt));
-    return partitionSankalpaProgress(entries);
-  }, [sankalpas, sessionLogs]);
+    return partitionSankalpaProgress(sankalpaProgressEntries);
+  }, [sankalpaProgressEntries]);
 
-  function onCreateSankalpa(event: FormEvent<HTMLFormElement>) {
+  async function onCreateSankalpa(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validation = validateSankalpaDraft(draft);
     setErrors(validation.errors);
@@ -288,10 +348,11 @@ export default function SankalpaPage() {
     }
 
     const nextGoal = createSankalpaGoal(draft, new Date());
-    setSankalpas((current) => [nextGoal, ...current]);
+    const result = await saveSankalpa(nextGoal);
     setDraft(createInitialSankalpaDraft());
     setErrors(initialErrors);
-    setSaveMessage('Sankalpa saved.');
+    setSaveMessageTone(result.tone);
+    setSaveMessage(result.message);
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
@@ -345,18 +406,20 @@ export default function SankalpaPage() {
 
         <p className="section-subtitle">Showing: {summaryRangeSelection.label}</p>
         {summaryRangeSelection.error ? <small className="error-text">{summaryRangeSelection.error}</small> : null}
+        {isSummaryLoading ? <small className="hint-text">Refreshing summary from the backend.</small> : null}
+        {summaryLoadMessage ? <small className="error-text">{summaryLoadMessage}</small> : null}
 
         {!hasAnySessionLogs ? (
           <div className="empty-state">
             <p>No session log entries yet.</p>
             <p>Start sessions in Practice or add a manual log in History to unlock summaries.</p>
           </div>
-        ) : summaryRangeSelection.error || !summarySnapshot ? (
+        ) : summaryRangeSelection.error || !effectiveSummarySnapshot ? (
           <div className="empty-state">
             <p>Fix custom range to view summary.</p>
             <p>Choose a start date on or before the end date.</p>
           </div>
-        ) : summarySnapshot.sessionLogs.length === 0 ? (
+        ) : effectiveSummarySnapshot.overallSummary.totalSessionLogs === 0 ? (
           <div className="empty-state">
             <p>No session log entries in this date range.</p>
             <p>Try a wider range to review your meditation summary.</p>
@@ -366,24 +429,24 @@ export default function SankalpaPage() {
             <div className="summary-grid">
               <article className="summary-card">
                 <p className="summary-label">Total session logs</p>
-                <p className="summary-value">{summarySnapshot.overallSummary.totalSessionLogs}</p>
+                <p className="summary-value">{effectiveSummarySnapshot.overallSummary.totalSessionLogs}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Total completed duration</p>
-                <p className="summary-value">{formatDurationLabel(summarySnapshot.overallSummary.totalDurationSeconds)}</p>
+                <p className="summary-value">{formatDurationLabel(effectiveSummarySnapshot.overallSummary.totalDurationSeconds)}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Average duration</p>
-                <p className="summary-value">{formatDurationLabel(summarySnapshot.overallSummary.averageDurationSeconds)}</p>
+                <p className="summary-value">{formatDurationLabel(effectiveSummarySnapshot.overallSummary.averageDurationSeconds)}</p>
               </article>
               <article className="summary-card">
                 <p className="summary-label">Completed vs ended early</p>
                 <p className="summary-value summary-value-split">
-                  <span>completed: {summarySnapshot.overallSummary.completedSessionLogs}</span>
-                  <span>ended early: {summarySnapshot.overallSummary.endedEarlySessionLogs}</span>
+                  <span>completed: {effectiveSummarySnapshot.overallSummary.completedSessionLogs}</span>
+                  <span>ended early: {effectiveSummarySnapshot.overallSummary.endedEarlySessionLogs}</span>
                 </p>
                 <p className="section-subtitle">
-                  auto log: {summarySnapshot.overallSummary.autoLogs} · manual log: {summarySnapshot.overallSummary.manualLogs}
+                  auto log: {effectiveSummarySnapshot.overallSummary.autoLogs} · manual log: {effectiveSummarySnapshot.overallSummary.manualLogs}
                 </p>
               </article>
             </div>
@@ -425,7 +488,7 @@ export default function SankalpaPage() {
               <div className="summary-by-type">
                 <h4 className="section-title">By source</h4>
                 <ul className="summary-by-type-list">
-                  {summarySnapshot.bySourceSummary.map((entry) => (
+                  {effectiveSummarySnapshot.bySourceSummary.map((entry) => (
                     <li key={entry.source} className="summary-by-type-row summary-by-source-row">
                       <span>{entry.source}</span>
                       <span className="summary-metric-list">
@@ -469,10 +532,12 @@ export default function SankalpaPage() {
         </p>
 
         {saveMessage ? (
-          <div className="status-banner ok" role="status">
+          <div className={`status-banner ${saveMessageTone === 'error' ? 'warn' : saveMessageTone}`} role="status">
             <p>{saveMessage}</p>
           </div>
         ) : null}
+        {isSankalpaLoading ? <p className="section-subtitle">Refreshing sankalpa progress from the backend.</p> : null}
+        {sankalpaSyncMessage ? <p className="section-subtitle">{sankalpaSyncMessage}</p> : null}
 
         <form className="form-grid" onSubmit={onCreateSankalpa}>
           <label>
