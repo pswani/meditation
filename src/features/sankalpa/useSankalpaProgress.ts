@@ -266,7 +266,10 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
         updateQueue((currentQueue) => markSyncQueueEntryInFlight(currentQueue, queueEntry.id, attemptedAt));
 
         try {
-          const savedProgressEntry = await persistSankalpaToApi(queueEntry.payload as SankalpaGoal, { timeZone });
+          const savedProgressEntry = await persistSankalpaToApi(queueEntry.payload as SankalpaGoal, {
+            timeZone,
+            syncQueuedAt: queueEntry.queuedAt,
+          });
           if (cancelled) {
             return;
           }

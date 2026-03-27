@@ -2,6 +2,7 @@ import type { SessionLog } from '../types/sessionLog';
 import type { ManualLogCreateRequest } from './manualLog';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
 
 export const SESSION_LOGS_COLLECTION_PATH = '/session-logs';
 export const SESSION_LOGS_COLLECTION_ENDPOINT = buildApiPath(SESSION_LOGS_COLLECTION_PATH);
@@ -128,10 +129,15 @@ export async function listSessionLogsFromApi(apiBaseUrl?: string): Promise<Sessi
   return normalizeSessionLogCollection(payload);
 }
 
-export async function persistSessionLogToApi(sessionLog: SessionLog, apiBaseUrl?: string): Promise<SessionLog> {
+export async function persistSessionLogToApi(
+  sessionLog: SessionLog,
+  options: SyncMutationRequestOptions = {}
+): Promise<SessionLog> {
   const payload = await requestJson<unknown, SessionLog>(buildSessionLogDetailPath(sessionLog.id), {
     method: 'PUT',
-    apiBaseUrl,
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
+    headers: buildSyncMutationHeaders(options.syncQueuedAt),
     body: sessionLog,
   });
 

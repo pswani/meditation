@@ -1,5 +1,6 @@
 package com.meditation.backend.settings;
 
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +27,7 @@ public class TimerSettingsService {
     return toResponse(entity);
   }
 
-  public TimerSettingsResponse saveTimerSettings(TimerSettingsUpsertRequest request) {
+  public TimerSettingsResponse saveTimerSettings(TimerSettingsUpsertRequest request, String syncQueuedAtRaw) {
     validateRequest(request);
 
     TimerSettingsEntity entity = timerSettingsRepository.findById(DEFAULT_SETTINGS_ID)
@@ -42,7 +43,12 @@ public class TimerSettingsService {
             Instant.now()
         ));
 
-    entity.updateFrom(request, Instant.now());
+    if (SyncRequestSupport.isStaleMutation(entity.getUpdatedAt(), syncQueuedAtRaw)) {
+      return toResponse(entity);
+    }
+
+    Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
+    entity.updateFrom(request, mutationTimestamp);
 
     return toResponse(timerSettingsRepository.save(entity));
   }

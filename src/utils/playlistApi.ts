@@ -1,6 +1,7 @@
 import type { Playlist } from '../types/playlist';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
 
 export const PLAYLISTS_COLLECTION_PATH = '/playlists';
 export const PLAYLISTS_COLLECTION_ENDPOINT = buildApiPath(PLAYLISTS_COLLECTION_PATH);
@@ -23,6 +24,8 @@ interface PlaylistApiResponse {
 interface PlaylistUpsertRequest {
   readonly id: string;
   readonly name: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
   readonly items: readonly {
     readonly id: string;
     readonly meditationType: Playlist['items'][number]['meditationType'];
@@ -97,6 +100,8 @@ function buildPlaylistUpsertRequest(playlist: Playlist): PlaylistUpsertRequest {
   return {
     id: playlist.id,
     name: playlist.name,
+    createdAt: playlist.createdAt,
+    updatedAt: playlist.updatedAt,
     favorite: playlist.favorite,
     items: playlist.items.map((item) => ({
       id: item.id,
@@ -127,18 +132,26 @@ export async function listPlaylistsFromApi(apiBaseUrl?: string): Promise<Playlis
   return normalizePlaylistCollection(payload);
 }
 
-export async function persistPlaylistToApi(playlist: Playlist, apiBaseUrl?: string): Promise<Playlist> {
+export async function persistPlaylistToApi(
+  playlist: Playlist,
+  options: SyncMutationRequestOptions = {}
+): Promise<Playlist> {
   const payload = await requestJson<unknown, PlaylistUpsertRequest>(buildPlaylistDetailPath(playlist.id), {
     method: 'PUT',
-    apiBaseUrl,
+    apiBaseUrl: options.apiBaseUrl,
+    signal: options.signal,
+    headers: buildSyncMutationHeaders(options.syncQueuedAt),
     body: buildPlaylistUpsertRequest(playlist),
   });
 
   return normalizePlaylistPayload(payload);
 }
 
-export async function deletePlaylistFromApi(playlistId: string, apiBaseUrl?: string): Promise<void> {
-  const url = buildPlaylistDetailUrl(playlistId, apiBaseUrl);
+export async function deletePlaylistFromApi(
+  playlistId: string,
+  options: SyncMutationRequestOptions = {}
+): Promise<void> {
+  const url = buildPlaylistDetailUrl(playlistId, options.apiBaseUrl);
 
   let response: Response;
   try {
@@ -146,7 +159,9 @@ export async function deletePlaylistFromApi(playlistId: string, apiBaseUrl?: str
       method: 'DELETE',
       headers: {
         Accept: 'application/json',
+        ...buildSyncMutationHeaders(options.syncQueuedAt),
       },
+      signal: options.signal,
     });
   } catch {
     throw new ApiClientError('Unable to reach the API right now.', url, {

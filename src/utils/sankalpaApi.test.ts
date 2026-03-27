@@ -8,6 +8,7 @@ import {
   persistSankalpaToApi,
   SANKALPAS_COLLECTION_ENDPOINT,
 } from './sankalpaApi';
+import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 
 describe('sankalpa api boundary', () => {
   beforeEach(() => {
@@ -78,29 +79,28 @@ describe('sankalpa api boundary', () => {
   });
 
   it('persists a sankalpa through the detail api boundary', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          goal: {
-            id: 'goal-1',
-            goalType: 'duration-based',
-            targetValue: 12.5,
-            days: 7,
-            createdAt: '2026-03-24T08:00:00.000Z',
-          },
-          status: 'active',
-          deadlineAt: '2026-03-31T08:00:00.000Z',
-          matchedSessionCount: 0,
-          matchedDurationSeconds: 0,
-          targetSessionCount: 0,
-          targetDurationSeconds: 750,
-          progressRatio: 0,
-        }),
-      })
-    );
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        goal: {
+          id: 'goal-1',
+          goalType: 'duration-based',
+          targetValue: 12.5,
+          days: 7,
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+        status: 'active',
+        deadlineAt: '2026-03-31T08:00:00.000Z',
+        matchedSessionCount: 0,
+        matchedDurationSeconds: 0,
+        targetSessionCount: 0,
+        targetDurationSeconds: 750,
+        progressRatio: 0,
+      }),
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
 
     await expect(
       persistSankalpaToApi(
@@ -111,7 +111,10 @@ describe('sankalpa api boundary', () => {
           days: 7,
           createdAt: '2026-03-24T08:00:00.000Z',
         },
-        { timeZone: 'America/Chicago' }
+        {
+          timeZone: 'America/Chicago',
+          syncQueuedAt: '2026-03-27T10:15:00.000Z',
+        }
       )
     ).resolves.toMatchObject({
       goal: {
@@ -120,5 +123,14 @@ describe('sankalpa api boundary', () => {
       },
       targetDurationSeconds: 750,
     });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/sankalpas/goal-1?timeZone=America%2FChicago',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:15:00.000Z',
+        }),
+      })
+    );
   });
 });

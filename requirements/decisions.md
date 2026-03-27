@@ -2,6 +2,18 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d backend reconciliation decisions
+- Keep the existing REST routes as the offline reconciliation boundary instead of introducing parallel sync-only endpoints in this prompt.
+- Send one queued-mutation timestamp from the frontend queue flush into backend writes so the server can distinguish current mutations from stale delayed retries.
+- Treat mutable backend-backed records as stale-write-protected:
+  - timer settings
+  - custom plays
+  - playlists
+- Treat stable-id write flows as retry-safe through idempotent upserts in the current single-user model:
+  - session logs
+  - current create-only sankalpa saves
+- Resolve stale queued deletes as backend no-ops rather than hard conflicts, so a newer backend-backed record is preserved and can rehydrate back into the UI on the next load.
+
 ### 2026-03-27 milestone-d offline frontend sync-queue decisions
 - Make implemented backend-backed write flows local-first so the app remains usable offline without adding a second offline-only UI path:
   - timer settings

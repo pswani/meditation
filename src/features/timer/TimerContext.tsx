@@ -1128,7 +1128,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         try {
           if (queueEntry.entityType === 'timer-settings' && queueEntry.operation === 'upsert') {
             setIsSettingsSyncing(true);
-            const savedSettings = await persistTimerSettingsToApi(queueEntry.payload as TimerSettings);
+            const savedSettings = await persistTimerSettingsToApi(queueEntry.payload as TimerSettings, {
+              syncQueuedAt: queueEntry.queuedAt,
+            });
             lastPersistedTimerSettingsRef.current = savedSettings;
             setSettingsSyncError(null);
             setIsSettingsSyncing(false);
@@ -1136,7 +1138,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
           if (queueEntry.entityType === 'session-log' && queueEntry.operation === 'upsert') {
             setIsSessionLogSyncing(true);
-            const savedEntry = await persistSessionLogToApi(queueEntry.payload as SessionLog);
+            const savedEntry = await persistSessionLogToApi(queueEntry.payload as SessionLog, {
+              syncQueuedAt: queueEntry.queuedAt,
+            });
             syncedSessionLogIdsRef.current.add(savedEntry.id);
             const nextSessionLogs = mergeSessionLogs([savedEntry], latestSessionLogsRef.current);
             if (!areSessionLogCollectionsEqual(nextSessionLogs, latestSessionLogsRef.current)) {
@@ -1149,11 +1153,15 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           if (queueEntry.entityType === 'custom-play') {
             setIsCustomPlaySyncing(true);
             if (queueEntry.operation === 'delete') {
-              await deleteCustomPlayFromApi(queueEntry.recordId);
+              await deleteCustomPlayFromApi(queueEntry.recordId, {
+                syncQueuedAt: queueEntry.queuedAt,
+              });
               syncedCustomPlayIdsRef.current.delete(queueEntry.recordId);
               deletedCustomPlayIdsRef.current.add(queueEntry.recordId);
             } else {
-              const savedCustomPlay = await persistCustomPlayToApi(queueEntry.payload as CustomPlay);
+              const savedCustomPlay = await persistCustomPlayToApi(queueEntry.payload as CustomPlay, {
+                syncQueuedAt: queueEntry.queuedAt,
+              });
               syncedCustomPlayIdsRef.current.add(savedCustomPlay.id);
               deletedCustomPlayIdsRef.current.delete(savedCustomPlay.id);
               setCustomPlays((current) =>
@@ -1169,11 +1177,15 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           if (queueEntry.entityType === 'playlist') {
             setIsPlaylistSyncing(true);
             if (queueEntry.operation === 'delete') {
-              await deletePlaylistFromApi(queueEntry.recordId);
+              await deletePlaylistFromApi(queueEntry.recordId, {
+                syncQueuedAt: queueEntry.queuedAt,
+              });
               syncedPlaylistIdsRef.current.delete(queueEntry.recordId);
               deletedPlaylistIdsRef.current.add(queueEntry.recordId);
             } else {
-              const savedPlaylist = await persistPlaylistToApi(queueEntry.payload as Playlist);
+              const savedPlaylist = await persistPlaylistToApi(queueEntry.payload as Playlist, {
+                syncQueuedAt: queueEntry.queuedAt,
+              });
               syncedPlaylistIdsRef.current.add(savedPlaylist.id);
               deletedPlaylistIdsRef.current.delete(savedPlaylist.id);
               setPlaylists((current) =>

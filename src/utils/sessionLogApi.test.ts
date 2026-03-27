@@ -9,6 +9,7 @@ import {
   persistSessionLogToApi,
   SESSION_LOGS_COLLECTION_ENDPOINT,
 } from './sessionLogApi';
+import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 
 describe('session log api boundary', () => {
   afterEach(() => {
@@ -81,20 +82,30 @@ describe('session log api boundary', () => {
       intervalSound: 'None',
     };
 
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => sessionLog,
-      })
-    );
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => sessionLog,
+    });
 
-    const saved = await persistSessionLogToApi(sessionLog);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const saved = await persistSessionLogToApi(sessionLog, {
+      syncQueuedAt: '2026-03-27T10:15:00.000Z',
+    });
 
     expect(saved.id).toBe('log-1');
     expect(saved.completedDurationSeconds).toBe(1200);
     expect(saved.status).toBe('completed');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/session-logs/log-1',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:15:00.000Z',
+        }),
+      })
+    );
   });
 
   it('creates a manual session log through the dedicated create endpoint', async () => {

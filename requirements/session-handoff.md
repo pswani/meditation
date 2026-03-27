@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 02 is complete on `codex/milestone-d-offline-sync-fullstack`. Implemented frontend domains now behave as local-first offline flows with a shared sync queue, and prompt 03 can now add backend reconciliation support.
+Milestone D prompt 03 is complete on `codex/milestone-d-offline-sync-fullstack`. Offline queue replay now has sync-safe backend reconciliation behavior, and prompt 04 can review the milestone for remaining gaps.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -65,6 +65,36 @@ Milestone D prompt 02 is complete on `codex/milestone-d-offline-sync-fullstack`.
   - conflict resolution still assumes the current single-user local-development model
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/03-sync-endpoints-and-reconciliation.md`
+
+## Milestone D prompt 03: sync endpoints and reconciliation
+- Added and used:
+  - `requirements/execplan-milestone-d-sync-endpoints-and-reconciliation.md`
+- Frontend sync-boundary changes:
+  - added `src/utils/syncApi.ts` so queued flushes can send one shared sync timestamp header through the existing REST helpers
+  - updated timer settings, `session log`, `custom play`, playlist, and `sankalpa` API helpers to attach queued-mutation metadata during replay
+  - updated `TimerContext` and `useSankalpaProgress` queue flushes to pass queue timestamps into backend writes
+- Backend reconciliation changes:
+  - kept the existing REST routes and added sync-safe behavior instead of introducing separate sync endpoints
+  - made timer settings reject stale queued writes in favor of newer backend-backed state
+  - made `custom play` and playlist upserts preserve client creation timestamps for offline-created data and ignore stale queued updates or deletes
+  - made `session log` upserts retry-safe through stable-id replay and stale queued retry protection
+  - kept the current `sankalpa` replay model simple and id-stable because the UI still exposes create-only saves in this milestone
+- Tests:
+  - updated frontend API-boundary tests to prove queued sync metadata is sent on replay
+  - added backend controller coverage for stale queued timer-settings, `custom play`, playlist, and `session log` mutations
+  - tightened `TimerSettingsControllerTest` isolation by resetting the default row before each test
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - deletion reconciliation does not use tombstones, so newer backend-backed records reappear on the next hydration rather than surfacing a dedicated conflict workflow
+  - multi-device or multi-user conflict resolution is still intentionally out of scope for this milestone
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/04-review-offline-sync-fullstack.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
