@@ -489,7 +489,8 @@ Current repo defaults:
 - backend media path example: `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3`
 - backend H2 console in `dev` profile only: `http://localhost:8080/h2-console`
 - backend API base URL: `http://localhost:8080/api`
-- frontend same-origin API path during dev and preview: `/api`
+- frontend API path during Vite dev: `/api` through the local dev proxy when `VITE_API_BASE_URL` is unset
+- frontend API path during Vite preview: use a build created with `VITE_API_BASE_URL=http://<HOST>:<PORT>/api`, or serve the built frontend and backend from the same origin in a real deployment
 
 ### How the front end is configured to call backend APIs
 
@@ -551,6 +552,7 @@ Open on your phone or another device:
 Important note:
 
 - `localhost` on your phone means the phone itself, not your development machine
+- the preview server is network-accessible, but a connected preview build still needs an explicit `VITE_API_BASE_URL` unless the backend will be served from the same origin as the built app
 
 ### How to find the developer machine LAN IP
 
@@ -604,6 +606,7 @@ http://<LAN-IP>:5173/
 - when `VITE_API_BASE_URL` is unset, API paths default to same-origin `/api`
 - in Vite dev, `/api` is proxied to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
 - when `VITE_API_BASE_URL` is set, REST boundary helpers build URLs from that configured base
+- Vite preview does not proxy `/api`, so a connected preview build must be created with `VITE_API_BASE_URL` unless the backend is deployed on the same origin path
 - root-relative static asset paths such as `/media/custom-plays/...` remain same-origin and already work with LAN access
 
 This keeps the default setup clean for local development while avoiding hardcoded `localhost` assumptions for LAN or external backend testing.

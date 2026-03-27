@@ -2,6 +2,19 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e release readiness decisions
+- Clarify the README in the shared run and LAN sections that Vite preview is network-accessible but does not proxy `/api`, so connected preview checks require a build created with `VITE_API_BASE_URL` unless the backend will be served from the same origin.
+- Treat Milestone E release readiness as a local release-candidate handoff bar:
+  - helper commands run as documented
+  - media roots are prepared as documented
+  - backend, frontend, and preview startup are reachable on both localhost and the machine LAN address
+  - offline and sync behavior remains documented and covered through the current automated suite plus prompt-04 live verification
+- Record the remaining items as non-blocking limitations rather than release blockers for this milestone:
+  - timer and playlist sound playback is still UI-only
+  - richer `custom play` media-library management is still unimplemented
+  - `sankalpa` edit/archive/delete flows are still unimplemented
+  - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though verify passes
+
 ### 2026-03-27 milestone-e end-to-end verification decisions
 - Run connected local full-stack verification on backend `127.0.0.1:8081` with isolated H2 database `meditation-prompt04`, and point the frontend at that backend on supported local ports already covered by the backend CORS allowlist:
   - Vite dev: `5173` or `5174`

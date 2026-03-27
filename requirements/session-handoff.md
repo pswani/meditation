@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone E prompt 04 end-to-end verification is complete on `codex/milestone-e-hardening-release`. The app now has connected local full-stack verification coverage, two verification-driven bug fixes, and updated run guidance that matches the working local stack. The next exact prompt is ready.
+Milestone E prompt 05 release readiness is complete on `codex/milestone-e-hardening-release`. The repo now has verified release-candidate handoff guidance for setup, media, backend/H2, helper commands, localhost startup, LAN reachability, and preview behavior. The milestone is ready for the merge prompt.
 
 ## Milestone E branch setup
 - Parent branch: `codex/functioning`
@@ -139,6 +139,41 @@ Milestone E prompt 04 end-to-end verification is complete on `codex/milestone-e-
   - backend Maven verification still emits the existing Flyway/H2 compatibility warning even though the build passes
 - Exact recommended next prompt:
   - `prompts/milestone-e-hardening-release/05-release-readiness.md`
+
+## Milestone E prompt 05: release readiness
+- Added and used:
+  - `requirements/execplan-milestone-e-release-readiness.md`
+- Documentation hardening:
+  - clarified in `README.md` that Vite preview is network-accessible but does not proxy `/api`
+  - clarified that connected preview checks require a build created with `VITE_API_BASE_URL`, unless the backend is served from the same origin as the built app
+  - kept the local dev, LAN, media, backend/H2, and offline/sync guidance grounded in the helper scripts and verified runtime behavior
+- Release-readiness verification:
+  - passed `npm run media:setup`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `npm run build:app`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test` from `/Users/prashantwani/wrk/meditation/backend`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` from `/Users/prashantwani/wrk/meditation/backend`
+- Helper-command startup smoke checks:
+  - `npm run dev:backend` served backend health on `http://localhost:8080/api/health`
+  - `npm run dev:frontend` served the app on `http://localhost:5173/`
+  - the dev proxy reached backend health at `http://localhost:5173/api/health`
+  - `npm run preview:app` served the built app on `http://localhost:4173/`
+- LAN/Wi-Fi reachability verified from the developer machine using LAN address `192.168.68.76`:
+  - backend health `http://192.168.68.76:8080/api/health`
+  - dev frontend `http://192.168.68.76:5173/`
+  - preview frontend `http://192.168.68.76:4173/`
+- Release blocker check:
+  - no new blockers found for the local release-candidate handoff
+  - remaining non-blocking limitations are still:
+    - timer and playlist sound playback is UI-only
+    - richer `custom play` media-library management is not implemented
+    - `sankalpa` edit/archive/delete flows are not implemented
+    - backend Maven verification still emits the known Flyway/H2 compatibility warning even though `verify` passes
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/99-merge-branch.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
