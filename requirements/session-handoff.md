@@ -1,7 +1,19 @@
 # Session Handoff
 
 ## Current status
-Milestone D is complete and merged into `codex/functioning`. The offline-first sync architecture, reconciliation behavior, remediation fixes, and milestone verification are now on the parent branch, and the next exact prompt is ready.
+Milestone E branch setup is complete on `codex/milestone-e-hardening-release`. The parent branch remains `codex/functioning`, the working tree is ready for milestone work, and the next exact prompt is ready.
+
+## Milestone E branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-e-hardening-release`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone E scope:
+  - release-hardening review across usability, code quality, performance, backend hygiene, API design quality, testing quality, and deployment/readme clarity
+  - remediation of critical and important hardening findings
+  - accessibility and responsive polish across mobile, tablet, and desktop
+  - end-to-end verification, release-readiness checks, and local merge back to the parent branch
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/01-code-quality-performance-hygiene-review.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`

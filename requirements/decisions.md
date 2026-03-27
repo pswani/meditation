@@ -2,6 +2,16 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e hardening release branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-e-hardening-release`.
+- Create and use the local milestone branch `codex/milestone-e-hardening-release` for all Milestone E prompt execution before merging back to the parent branch.
+- Keep Milestone E bounded to the release-hardening slice:
+  - release review across usability, code quality, performance, backend hygiene, API design, testing, and docs clarity
+  - remediation of critical and important hardening findings
+  - accessibility and responsive polish
+  - full-stack end-to-end verification and release-candidate readiness handoff
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-27 milestone-d merge decisions
 - Merge `codex/milestone-d-offline-sync-fullstack` back into `codex/functioning` with a normal local merge commit so the offline architecture, reconciliation, remediation, and testing history remain intact.
 - Mark Milestone D complete on `codex/functioning` and hand off directly to `prompts/milestone-e-hardening-release/00-create-branch.md` as the next exact prompt.
