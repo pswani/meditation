@@ -2,6 +2,18 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline architecture decisions
+- Start Milestone D with a shared frontend offline/sync foundation before wiring domain-specific queueing, so later prompts can reuse one queue model instead of adding more per-feature network logic inside `TimerContext`.
+- Use one browser-persisted sync queue for deferred writes across the implemented backend-backed domains:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- Treat the latest queued write for a given `(entity type, record id)` as the one that should survive in the queue, so offline edits do not pile up stale intermediate mutations for the same record.
+- Keep app-level connectivity and queue visibility in a dedicated `src/features/sync/` provider instead of threading those concerns through route components.
+- Surface offline and pending-sync state as lightweight shell banners only; do not introduce blocking overlays or dashboard-style sync UI in this milestone.
+
 ### 2026-03-27 milestone-d offline sync branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-d-offline-sync-fullstack`.
 - Create and use the local milestone branch `codex/milestone-d-offline-sync-fullstack` for all Milestone D prompt execution before merging back to the parent branch.

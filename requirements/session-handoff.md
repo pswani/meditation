@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D branch setup is complete on `codex/milestone-d-offline-sync-fullstack`. Offline-first architecture work is the active next step.
+Milestone D prompt 01 is complete on `codex/milestone-d-offline-sync-fullstack`. Frontend offline/sync foundations are in place, and prompt 02 can now wire them into domain behavior.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -14,6 +14,29 @@ Milestone D branch setup is complete on `codex/milestone-d-offline-sync-fullstac
   - milestone review, remediation, verification, and local merge back to the parent branch
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/01-offline-architecture.md`
+
+## Milestone D prompt 01: offline architecture
+- Added and used:
+  - `requirements/execplan-milestone-d-offline-architecture.md`
+- Frontend architecture changes:
+  - added shared sync types in `src/types/sync.ts`
+  - added browser-persisted sync queue helpers in `src/utils/syncQueue.ts`
+  - added app-level connectivity and queue visibility under `src/features/sync/`
+  - wrapped the app in `SyncStatusProvider` so later prompts can reuse one shared offline/sync context
+  - updated `AppShell` to show calm offline and pending-sync status banners
+- Documentation changes:
+  - updated `README.md` to describe the offline-first sync foundations
+  - updated `docs/architecture.md` with the new offline/sync module boundaries
+- Tests:
+  - added queue persistence and queue-state coverage in `src/utils/syncQueue.test.ts`
+  - added sync-provider coverage in `src/features/sync/SyncStatusProvider.test.tsx`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/02-offline-frontend-and-sync-queue.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`

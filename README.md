@@ -25,6 +25,10 @@ This README is intentionally grounded in the current repository contents. It exp
 - backend-backed timer settings and session-log history with local cache fallback during hydration failures
 - backend-backed sankalpa persistence and progress loading with local cache fallback during backend failures
 - backend-backed summary views on the `Sankalpa` screen with local derived fallback during summary API failures
+- shared offline-first sync foundations:
+  - browser-persisted sync queue storage
+  - app-level online/offline status tracking
+  - calm shell messaging for offline and pending-sync states
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
 
@@ -100,12 +104,14 @@ The front end currently owns all of the following:
 - timer and playlist runtime state
 - form validation
 - local persistence for playlists, sankalpas, and offline-friendly fallback caches
+- sync queue persistence for offline-created or deferred backend writes
 - session log generation
 - local summary derivation fallback
 - local sankalpa progress fallback and cache migration support
 - fallback sample media metadata for custom plays when the backend is unavailable
 
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
+Shared app-level sync visibility now lives alongside that in `src/features/sync/`, keeping connection state and pending-sync summary work out of route components.
 
 ### Back-end responsibilities
 
@@ -207,6 +213,7 @@ This means:
   - timer settings
 - media loading still preserves today’s UX when the backend is unavailable
 - `custom play`, playlist, `session log`, and timer-settings hydration still preserve a local cache for smoother migration and failure fallback
+- the app now has a shared sync queue foundation for deferred writes when live backend connectivity is not available
 - swapping in the remaining live backend support should continue through these utility modules instead of rewriting screens
 
 ### How H2 is used in this project

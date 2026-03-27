@@ -1,12 +1,38 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useTimer } from '../features/timer/useTimer';
 import { getActiveNavItem, primaryNavItems } from './routes';
+
+function buildSyncStatusMessage(isOnline: boolean, pendingCount: number, failedCount: number): string | null {
+  if (!isOnline) {
+    if (pendingCount > 0) {
+      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device and sync when the backend is reachable again.`;
+    }
+
+    return 'You are offline. Saved data already on this device remains available.';
+  }
+
+  if (failedCount > 0) {
+    return `${failedCount} change${failedCount === 1 ? '' : 's'} still need another sync attempt.`;
+  }
+
+  if (pendingCount > 0) {
+    return `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync with the backend.`;
+  }
+
+  return null;
+}
 
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeSession, activePlaylistRun, recoveryMessage, clearRecoveryMessage } = useTimer();
+  const {
+    isOnline,
+    summary: { nextRetryCount, failedCount },
+  } = useSyncStatus();
   const activeNavItem = getActiveNavItem(location.pathname);
+  const syncStatusMessage = buildSyncStatusMessage(isOnline, nextRetryCount, failedCount);
 
   return (
     <div className="app-shell">
@@ -72,6 +98,11 @@ export default function AppShell() {
               <button type="button" className="link-button" onClick={clearRecoveryMessage}>
                 Dismiss
               </button>
+            </div>
+          ) : null}
+          {syncStatusMessage ? (
+            <div className={`status-banner ${!isOnline || failedCount > 0 ? 'warn' : ''}`} role="status" aria-live="polite">
+              <p>{syncStatusMessage}</p>
             </div>
           ) : null}
         </header>

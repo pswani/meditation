@@ -15,6 +15,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
 - browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
+- browser-persisted sync queue state for offline-first deferred writes
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
@@ -102,9 +103,16 @@ Single-page React application with route-based screens and feature-oriented modu
 - mobile-first
 - responsive across device classes
 - simple local-first architecture
+- offline-first write safety with calm sync visibility
 - minimal dependencies
 - predictable state
 - domain-first naming
+
+## Offline-first foundations
+- `src/features/sync/` owns app-level connectivity status and sync queue visibility.
+- `src/utils/syncQueue.ts` owns queue persistence and queue-reduction helpers.
+- Queue entries are stored in browser storage so deferred writes survive reloads.
+- The shell surfaces offline and pending-sync state as lightweight status banners instead of blocking overlays or dashboard-style widgets.
 
 ## Suggested module layout
 - pages
