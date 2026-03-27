@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncStatusProvider } from '../sync/SyncStatusProvider';
 import { TimerProvider } from '../timer/TimerContext';
 import PracticePage from '../../pages/PracticePage';
 
@@ -11,6 +12,13 @@ function createJsonResponse(status: number, body: unknown) {
     json: async () => body,
     text: async () => JSON.stringify(body),
   };
+}
+
+async function waitForPracticeToolsReady() {
+  await waitFor(() =>
+    expect(screen.queryByText(/loading timer defaults from the backend before starting a session/i)).not.toBeInTheDocument()
+  );
+  await waitFor(() => expect(screen.queryByText(/loading custom plays from the backend/i)).not.toBeInTheDocument());
 }
 
 describe('CustomPlayManager UX', () => {
@@ -102,14 +110,17 @@ describe('CustomPlayManager UX', () => {
   it('applies custom play values to timer setup and confirms deletion', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
+    await waitForPracticeToolsReady();
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
 
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
@@ -157,14 +168,17 @@ describe('CustomPlayManager UX', () => {
   it('shows explicit success feedback after updating a custom play', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
+    await waitForPracticeToolsReady();
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Evening Reset' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Sahaj' } });
@@ -193,14 +207,17 @@ describe('CustomPlayManager UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
+    await waitForPracticeToolsReady();
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
 
     expect(await screen.findByText(/backend media session data is invalid/i)).toBeInTheDocument();

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncStatusProvider } from '../features/sync/SyncStatusProvider';
 import { TimerProvider } from '../features/timer/TimerContext';
 import PracticePage from './PracticePage';
 
@@ -33,11 +34,13 @@ describe('PracticePage UX', () => {
   it('keeps required meditation type error hidden until start attempt', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -60,11 +63,13 @@ describe('PracticePage UX', () => {
           },
         ]}
       >
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -76,11 +81,13 @@ describe('PracticePage UX', () => {
   it('keeps management-heavy practice tools collapsed until requested', () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -99,11 +106,13 @@ describe('PracticePage UX', () => {
   it('exposes explicit expanded state for advanced timer settings', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -149,11 +158,13 @@ describe('PracticePage UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -194,11 +205,13 @@ describe('PracticePage UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/practice" element={<PracticePage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 

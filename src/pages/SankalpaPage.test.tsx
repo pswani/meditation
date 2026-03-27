@@ -379,7 +379,7 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByText(/progress: 2 \/ 3 session logs · 1 session log remaining/i)).toBeInTheDocument();
   });
 
-  it('does not save a sankalpa locally when the backend rejects the save request', async () => {
+  it('keeps a locally saved sankalpa visible when backend sync later rejects it', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -512,6 +512,6 @@ describe('Sankalpa summary UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
 
     await waitFor(() => expect(screen.getByText(/sankalpa goal type is invalid/i)).toBeInTheDocument());
-    expect(screen.queryByText(/120 min in 7 days/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/120 min in 7 days/i)).toBeInTheDocument();
   });
 });

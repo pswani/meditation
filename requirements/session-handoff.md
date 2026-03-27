@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 01 is complete on `codex/milestone-d-offline-sync-fullstack`. Frontend offline/sync foundations are in place, and prompt 02 can now wire them into domain behavior.
+Milestone D prompt 02 is complete on `codex/milestone-d-offline-sync-fullstack`. Implemented frontend domains now behave as local-first offline flows with a shared sync queue, and prompt 03 can now add backend reconciliation support.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -37,6 +37,34 @@ Milestone D prompt 01 is complete on `codex/milestone-d-offline-sync-fullstack`.
   - passed `npm run build`
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/02-offline-frontend-and-sync-queue.md`
+
+## Milestone D prompt 02: offline frontend and sync queue
+- Added and used:
+  - `requirements/execplan-milestone-d-offline-frontend-sync-queue.md`
+- Frontend behavior changes:
+  - made timer settings saves local-first and queue-backed so changes remain visible offline and replay through `/api/settings/timer`
+  - made `session log` creation and update flows local-first, including manual logs, with deferred sync through `/api/session-logs`
+  - made `custom play` and playlist save, delete, and favorite flows local-first while preserving backend-backed hydration
+  - made `sankalpa` saves local-first and queue-backed while keeping calm fallback guidance on the `Sankalpa` screen
+  - updated hydration to overlay queued local mutations on backend data so stale backend reads do not erase unsynced edits or resurrect deleted records
+  - kept shell and feature copy calm and explicit when sync is pending or the browser is offline
+- Architecture and implementation notes:
+  - `src/features/timer/TimerContext.tsx` now owns queue-backed hydration and replay for timer settings, `session log`, `custom play`, and playlist entities
+  - `src/features/sankalpa/useSankalpaProgress.ts` now owns queue-backed `sankalpa` replay and offline loading behavior
+  - `src/utils/syncQueue.ts` now includes helpers for selecting queue-visible records and returning failed entries to pending retry state
+- Tests:
+  - updated app-level offline and pending-sync coverage in `src/App.test.tsx`
+  - updated timer, `custom play`, `History`, playlist, `Sankalpa`, `Practice`, and `Settings` tests to assert local-first offline behavior and calm deferred-sync messaging
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Known limitations:
+  - backend reconciliation and duplicate-safe replay handling are not implemented yet
+  - conflict resolution still assumes the current single-user local-development model
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/03-sync-endpoints-and-reconciliation.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`

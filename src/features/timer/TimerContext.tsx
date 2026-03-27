@@ -1,18 +1,28 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useSyncStatus } from '../sync/useSyncStatus';
 import type { CustomPlay, CustomPlaySaveResult } from '../../types/customPlay';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome, PlaylistSaveResult } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
+import type { SyncQueueEntry } from '../../types/sync';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
 import { createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
 import { deleteCustomPlayFromApi, listCustomPlaysFromApi, persistCustomPlayToApi } from '../../utils/customPlayApi';
 import { isApiClientError } from '../../utils/apiClient';
-import { buildManualLogCreateRequest, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
+import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
 import { createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
-import { createManualSessionLogInApi, listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
+import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
+import {
+  enqueueSyncQueueEntry,
+  markFailedSyncQueueEntriesPending,
+  markSyncQueueEntryFailed,
+  markSyncQueueEntryInFlight,
+  removeSyncQueueEntry,
+  selectSyncQueueEntries,
+} from '../../utils/syncQueue';
 import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
@@ -270,7 +280,73 @@ function arePlaylistCollectionsEqual(left: readonly Playlist[], right: readonly 
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+const TIMER_CONTEXT_SYNC_ENTITY_TYPES = ['timer-settings', 'session-log', 'custom-play', 'playlist'] as const;
+
+function isNetworkError(error: unknown): boolean {
+  return isApiClientError(error) && error.kind === 'network';
+}
+
+function buildOfflineCacheMessage(entityLabel: string, hasLocalData: boolean): string | null {
+  if (!hasLocalData) {
+    return null;
+  }
+
+  return `Showing locally saved ${entityLabel} while you are offline.`;
+}
+
+function buildQueuedSaveMessage(entityLabel: string): string {
+  return `Saved locally while offline. This ${entityLabel} will sync when the backend is reachable.`;
+}
+
+function buildQueuedDeleteMessage(entityLabel: string): string {
+  return `Removed locally while offline. This ${entityLabel} change will sync when the backend is reachable.`;
+}
+
+function mergeQueueEntry(
+  updateQueue: (updater: (current: readonly SyncQueueEntry[]) => readonly SyncQueueEntry[]) => void,
+  entry: Parameters<typeof enqueueSyncQueueEntry>[1]
+) {
+  updateQueue((current) => enqueueSyncQueueEntry(current, entry));
+}
+
+function applyQueuedCollectionMutations<T extends { readonly id: string }>(
+  entries: readonly T[],
+  queueEntries: readonly SyncQueueEntry[]
+): T[] {
+  let nextEntries = [...entries];
+
+  for (const queueEntry of queueEntries) {
+    if (queueEntry.operation === 'delete') {
+      nextEntries = nextEntries.filter((entry) => entry.id !== queueEntry.recordId);
+      continue;
+    }
+
+    const payload = queueEntry.payload as T;
+    const existingIndex = nextEntries.findIndex((entry) => entry.id === payload.id);
+
+    if (existingIndex >= 0) {
+      nextEntries[existingIndex] = payload;
+    } else {
+      nextEntries = [payload, ...nextEntries];
+    }
+  }
+
+  return nextEntries;
+}
+
+function applyQueuedTimerSettings(
+  settings: TimerSettings,
+  queueEntries: readonly SyncQueueEntry[]
+): TimerSettings {
+  const latestQueuedSettingsEntry = [...queueEntries]
+    .reverse()
+    .find((entry) => entry.entityType === 'timer-settings' && entry.operation === 'upsert');
+
+  return latestQueuedSettingsEntry ? (latestQueuedSettingsEntry.payload as TimerSettings) : settings;
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
+  const { isOnline, queue, updateQueue } = useSyncStatus();
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
   const [state, dispatch] = useReducer(
     timerReducer,
@@ -307,6 +383,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const latestCustomPlaysRef = useRef(customPlays);
   const latestPlaylistsRef = useRef(playlists);
   const latestTimerSettingsRef = useRef(state.settings);
+  const latestSyncQueueRef = useRef(queue);
+  const isTimerProviderMountedRef = useRef(true);
   const skipInitialTimerSettingsPersistRef = useRef(true);
   const skipInitialSessionLogsPersistRef = useRef(true);
   const skipInitialCustomPlaysPersistRef = useRef(true);
@@ -315,8 +393,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const skipInitialActivePlaylistPersistRef = useRef(bootstrap.skipInitialActivePlaylistPersist);
   const remoteSessionLogsHydratedRef = useRef(false);
   const syncedSessionLogIdsRef = useRef<Set<string>>(new Set());
+  const syncedCustomPlayIdsRef = useRef<Set<string>>(new Set());
+  const deletedCustomPlayIdsRef = useRef<Set<string>>(new Set());
+  const syncedPlaylistIdsRef = useRef<Set<string>>(new Set());
+  const deletedPlaylistIdsRef = useRef<Set<string>>(new Set());
   const remoteSettingsHydratedRef = useRef(false);
   const lastPersistedTimerSettingsRef = useRef<TimerSettings | null>(null);
+  const isFlushingSyncQueueRef = useRef(false);
+  const completedCustomPlayHydrationKeyRef = useRef<string | null>(null);
+  const inFlightCustomPlayHydrationKeyRef = useRef<string | null>(null);
+  const completedPlaylistHydrationKeyRef = useRef<string | null>(null);
+  const inFlightPlaylistHydrationKeyRef = useRef<string | null>(null);
+  const completedSessionLogHydrationKeyRef = useRef<string | null>(null);
+  const inFlightSessionLogHydrationKeyRef = useRef<string | null>(null);
+  const completedTimerSettingsHydrationKeyRef = useRef<string | null>(null);
+  const inFlightTimerSettingsHydrationKeyRef = useRef<string | null>(null);
   const activeSessionStartedAt = state.activeSession?.startedAt ?? null;
   const activeSessionStartedAtMs = state.activeSession?.startedAtMs ?? null;
   const activeSessionIntendedDurationSeconds = state.activeSession?.intendedDurationSeconds ?? null;
@@ -475,6 +566,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [state.settings]);
 
   useEffect(() => {
+    latestSyncQueueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    return () => {
+      isTimerProviderMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!state.activeSession) {
       setIsPaused(false);
     }
@@ -545,42 +646,82 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const queuedCustomPlayEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
+      entityTypes: ['custom-play'],
+    });
+    const hydrationKey = JSON.stringify({
+      isOnline,
+      entries: queuedCustomPlayEntries,
+    });
+
+    if (
+      completedCustomPlayHydrationKeyRef.current === hydrationKey ||
+      inFlightCustomPlayHydrationKeyRef.current === hydrationKey
+    ) {
+      return;
+    }
+
+    inFlightCustomPlayHydrationKeyRef.current = hydrationKey;
 
     async function hydrateCustomPlays() {
       setIsCustomPlaysLoading(true);
+
+      if (!isOnline) {
+        if (!cancelled) {
+          setCustomPlaySyncError(buildOfflineCacheMessage('custom plays', bootstrap.customPlays.length > 0));
+          setIsCustomPlaySyncing(false);
+          setIsCustomPlaysLoading(false);
+        }
+        return;
+      }
 
       try {
         const remoteCustomPlays = await listCustomPlaysFromApi();
         if (cancelled) {
           return;
         }
+        const filteredRemoteCustomPlays = remoteCustomPlays.filter(
+          (remotePlay) => !deletedCustomPlayIdsRef.current.has(remotePlay.id)
+        );
+        for (const remotePlay of filteredRemoteCustomPlays) {
+          syncedCustomPlayIdsRef.current.add(remotePlay.id);
+        }
+        const queuedCustomPlayIds = new Set(queuedCustomPlayEntries.map((entry) => entry.recordId));
 
-        const missingLocalCustomPlays = bootstrap.customPlays.filter(
-          (localPlay) => !remoteCustomPlays.some((remotePlay) => remotePlay.id === localPlay.id)
+        const localOnlyCustomPlays = latestCustomPlaysRef.current.filter(
+          (localPlay) =>
+            !filteredRemoteCustomPlays.some((remotePlay) => remotePlay.id === localPlay.id) && !queuedCustomPlayIds.has(localPlay.id)
+        );
+        const retainedLocalCustomPlays = localOnlyCustomPlays.filter((localPlay) =>
+          syncedCustomPlayIdsRef.current.has(localPlay.id)
+        );
+        const missingLocalCustomPlays = localOnlyCustomPlays.filter(
+          (localPlay) => !syncedCustomPlayIdsRef.current.has(localPlay.id)
         );
 
-        let nextCustomPlays = remoteCustomPlays;
+        let nextCustomPlays = mergeCustomPlays(filteredRemoteCustomPlays, retainedLocalCustomPlays);
         if (missingLocalCustomPlays.length > 0) {
-          setIsCustomPlaySyncing(true);
-
-          const promotedCustomPlays: CustomPlay[] = [];
           for (const customPlay of missingLocalCustomPlays) {
-            const savedCustomPlay = await persistCustomPlayToApi(customPlay);
-            if (cancelled) {
-              return;
-            }
-
-            promotedCustomPlays.push(savedCustomPlay);
+            mergeQueueEntry(updateQueue, {
+              entityType: 'custom-play',
+              operation: 'upsert',
+              recordId: customPlay.id,
+              payload: customPlay,
+            });
           }
 
-          nextCustomPlays = mergeCustomPlays(remoteCustomPlays, promotedCustomPlays);
+          nextCustomPlays = mergeCustomPlays(nextCustomPlays, missingLocalCustomPlays);
         }
+
+        nextCustomPlays = applyQueuedCollectionMutations(nextCustomPlays, queuedCustomPlayEntries);
 
         if (!areCustomPlayCollectionsEqual(nextCustomPlays, latestCustomPlaysRef.current)) {
           setCustomPlays(nextCustomPlays);
         }
 
-        setCustomPlaySyncError(null);
+        if (!queuedCustomPlayEntries.some((entry) => entry.state === 'failed')) {
+          setCustomPlaySyncError(null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -591,8 +732,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         );
       } finally {
         if (!cancelled) {
+          completedCustomPlayHydrationKeyRef.current = hydrationKey;
           setIsCustomPlaySyncing(false);
           setIsCustomPlaysLoading(false);
+        }
+        if (inFlightCustomPlayHydrationKeyRef.current === hydrationKey) {
+          inFlightCustomPlayHydrationKeyRef.current = null;
         }
       }
     }
@@ -601,47 +746,88 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (inFlightCustomPlayHydrationKeyRef.current === hydrationKey) {
+        inFlightCustomPlayHydrationKeyRef.current = null;
+      }
     };
-  }, [bootstrap.customPlays]);
+  }, [bootstrap.customPlays, isOnline, updateQueue]);
 
   useEffect(() => {
     let cancelled = false;
+    const queuedPlaylistEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
+      entityTypes: ['playlist'],
+    });
+    const hydrationKey = JSON.stringify({
+      isOnline,
+      entries: queuedPlaylistEntries,
+    });
+
+    if (completedPlaylistHydrationKeyRef.current === hydrationKey || inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
+      return;
+    }
+
+    inFlightPlaylistHydrationKeyRef.current = hydrationKey;
 
     async function hydratePlaylists() {
       setIsPlaylistsLoading(true);
+
+      if (!isOnline) {
+        if (!cancelled) {
+          setPlaylistSyncError(buildOfflineCacheMessage('playlists', bootstrap.playlists.length > 0));
+          setIsPlaylistSyncing(false);
+          setIsPlaylistsLoading(false);
+        }
+        return;
+      }
 
       try {
         const remotePlaylists = await listPlaylistsFromApi();
         if (cancelled) {
           return;
         }
+        const filteredRemotePlaylists = remotePlaylists.filter(
+          (remotePlaylist) => !deletedPlaylistIdsRef.current.has(remotePlaylist.id)
+        );
+        for (const remotePlaylist of filteredRemotePlaylists) {
+          syncedPlaylistIdsRef.current.add(remotePlaylist.id);
+        }
+        const queuedPlaylistIds = new Set(queuedPlaylistEntries.map((entry) => entry.recordId));
 
-        const missingLocalPlaylists = bootstrap.playlists.filter(
-          (localPlaylist) => !remotePlaylists.some((remotePlaylist) => remotePlaylist.id === localPlaylist.id)
+        const localOnlyPlaylists = latestPlaylistsRef.current.filter(
+          (localPlaylist) =>
+            !filteredRemotePlaylists.some((remotePlaylist) => remotePlaylist.id === localPlaylist.id) &&
+            !queuedPlaylistIds.has(localPlaylist.id)
+        );
+        const retainedLocalPlaylists = localOnlyPlaylists.filter((localPlaylist) =>
+          syncedPlaylistIdsRef.current.has(localPlaylist.id)
+        );
+        const missingLocalPlaylists = localOnlyPlaylists.filter(
+          (localPlaylist) => !syncedPlaylistIdsRef.current.has(localPlaylist.id)
         );
 
-        let nextPlaylists = remotePlaylists;
+        let nextPlaylists = mergePlaylists(filteredRemotePlaylists, retainedLocalPlaylists);
         if (missingLocalPlaylists.length > 0) {
-          setIsPlaylistSyncing(true);
-
-          const promotedPlaylists: Playlist[] = [];
           for (const playlist of missingLocalPlaylists) {
-            const savedPlaylist = await persistPlaylistToApi(playlist);
-            if (cancelled) {
-              return;
-            }
-
-            promotedPlaylists.push(savedPlaylist);
+            mergeQueueEntry(updateQueue, {
+              entityType: 'playlist',
+              operation: 'upsert',
+              recordId: playlist.id,
+              payload: playlist,
+            });
           }
 
-          nextPlaylists = mergePlaylists(remotePlaylists, promotedPlaylists);
+          nextPlaylists = mergePlaylists(nextPlaylists, missingLocalPlaylists);
         }
+
+        nextPlaylists = applyQueuedCollectionMutations(nextPlaylists, queuedPlaylistEntries);
 
         if (!arePlaylistCollectionsEqual(nextPlaylists, latestPlaylistsRef.current)) {
           setPlaylists(nextPlaylists);
         }
 
-        setPlaylistSyncError(null);
+        if (!queuedPlaylistEntries.some((entry) => entry.state === 'failed')) {
+          setPlaylistSyncError(null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -652,8 +838,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         );
       } finally {
         if (!cancelled) {
+          completedPlaylistHydrationKeyRef.current = hydrationKey;
           setIsPlaylistSyncing(false);
           setIsPlaylistsLoading(false);
+        }
+        if (inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
+          inFlightPlaylistHydrationKeyRef.current = null;
         }
       }
     }
@@ -662,14 +852,43 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
+        inFlightPlaylistHydrationKeyRef.current = null;
+      }
     };
-  }, [bootstrap.playlists]);
+  }, [bootstrap.playlists, isOnline, updateQueue]);
 
   useEffect(() => {
     let cancelled = false;
+    const queuedSessionLogEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
+      entityTypes: ['session-log'],
+    });
+    const hydrationKey = JSON.stringify({
+      isOnline,
+      entries: queuedSessionLogEntries,
+    });
+
+    if (
+      completedSessionLogHydrationKeyRef.current === hydrationKey ||
+      inFlightSessionLogHydrationKeyRef.current === hydrationKey
+    ) {
+      return;
+    }
+
+    inFlightSessionLogHydrationKeyRef.current = hydrationKey;
 
     async function hydrateSessionLogs() {
       setIsSessionLogsLoading(true);
+
+      if (!isOnline) {
+        if (!cancelled) {
+          syncedSessionLogIdsRef.current = new Set();
+          setSessionLogSyncError(buildOfflineCacheMessage('session logs', bootstrap.sessionLogs.length > 0));
+          remoteSessionLogsHydratedRef.current = true;
+          setIsSessionLogsLoading(false);
+        }
+        return;
+      }
 
       try {
         const remoteSessionLogs = await listSessionLogsFromApi();
@@ -678,14 +897,19 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         syncedSessionLogIdsRef.current = new Set(remoteSessionLogs.map((entry) => entry.id));
-        const mergedSessionLogs = mergeSessionLogs(remoteSessionLogs, latestSessionLogsRef.current);
+        const mergedSessionLogs = applyQueuedCollectionMutations(
+          mergeSessionLogs(remoteSessionLogs, latestSessionLogsRef.current),
+          queuedSessionLogEntries
+        );
         if (!areSessionLogCollectionsEqual(mergedSessionLogs, latestSessionLogsRef.current)) {
           dispatch({
             type: 'REPLACE_SESSION_LOGS',
             payload: mergedSessionLogs,
           });
         }
-        setSessionLogSyncError(null);
+        if (!queuedSessionLogEntries.some((entry) => entry.state === 'failed')) {
+          setSessionLogSyncError(null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -697,8 +921,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         );
       } finally {
         if (!cancelled) {
+          completedSessionLogHydrationKeyRef.current = hydrationKey;
           remoteSessionLogsHydratedRef.current = true;
           setIsSessionLogsLoading(false);
+        }
+        if (inFlightSessionLogHydrationKeyRef.current === hydrationKey) {
+          inFlightSessionLogHydrationKeyRef.current = null;
         }
       }
     }
@@ -707,14 +935,43 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (inFlightSessionLogHydrationKeyRef.current === hydrationKey) {
+        inFlightSessionLogHydrationKeyRef.current = null;
+      }
     };
-  }, [bootstrap.sessionLogs]);
+  }, [bootstrap.sessionLogs, isOnline]);
 
   useEffect(() => {
     let cancelled = false;
+    const queuedTimerSettingsEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
+      entityTypes: ['timer-settings'],
+    });
+    const hydrationKey = JSON.stringify({
+      isOnline,
+      entries: queuedTimerSettingsEntries,
+    });
+
+    if (
+      completedTimerSettingsHydrationKeyRef.current === hydrationKey ||
+      inFlightTimerSettingsHydrationKeyRef.current === hydrationKey
+    ) {
+      return;
+    }
+
+    inFlightTimerSettingsHydrationKeyRef.current = hydrationKey;
 
     async function hydrateTimerSettings() {
       setIsSettingsLoading(true);
+
+      if (!isOnline) {
+        if (!cancelled) {
+          lastPersistedTimerSettingsRef.current = bootstrap.settings;
+          setSettingsSyncError('Using locally saved timer settings while you are offline.');
+          remoteSettingsHydratedRef.current = true;
+          setIsSettingsLoading(false);
+        }
+        return;
+      }
 
       try {
         const remoteSettings = await loadTimerSettingsFromApi();
@@ -727,25 +984,23 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         const shouldPromoteBootstrapSettings =
           !areTimerSettingsEqual(latestTimerSettingsRef.current, defaultTimerSettings) &&
           areTimerSettingsEqual(remoteSettings, defaultTimerSettings);
+        const hasQueuedTimerSettings = queuedTimerSettingsEntries.length > 0;
 
-        if (shouldPromoteBootstrapSettings) {
-          lastPersistedTimerSettingsRef.current = latestTimerSettingsRef.current;
-          void persistTimerSettingsToApi(latestTimerSettingsRef.current).catch((error) => {
-            if (cancelled) {
-              return;
-            }
-
-            setSettingsSyncError(
-              `${formatApiErrorMessage(error, 'Timer settings could not be saved to the backend.')} Using the local timer settings cache for now.`
-            );
-          });
+        if (shouldPromoteBootstrapSettings || hasQueuedTimerSettings) {
+          lastPersistedTimerSettingsRef.current = remoteSettings;
+          const queuedSettings = applyQueuedTimerSettings(latestTimerSettingsRef.current, queuedTimerSettingsEntries);
+          if (!areTimerSettingsEqual(queuedSettings, latestTimerSettingsRef.current)) {
+            dispatch({ type: 'SET_SETTINGS', payload: queuedSettings });
+          }
         } else {
           if (!areTimerSettingsEqual(remoteSettings, latestTimerSettingsRef.current)) {
             dispatch({ type: 'SET_SETTINGS', payload: remoteSettings });
           }
         }
 
-        setSettingsSyncError(null);
+        if (!queuedTimerSettingsEntries.some((entry) => entry.state === 'failed')) {
+          setSettingsSyncError(null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -757,8 +1012,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         );
       } finally {
         if (!cancelled) {
+          completedTimerSettingsHydrationKeyRef.current = hydrationKey;
           remoteSettingsHydratedRef.current = true;
           setIsSettingsLoading(false);
+        }
+        if (inFlightTimerSettingsHydrationKeyRef.current === hydrationKey) {
+          inFlightTimerSettingsHydrationKeyRef.current = null;
         }
       }
     }
@@ -767,8 +1026,11 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (inFlightTimerSettingsHydrationKeyRef.current === hydrationKey) {
+        inFlightTimerSettingsHydrationKeyRef.current = null;
+      }
     };
-  }, [bootstrap.settings]);
+  }, [bootstrap.settings, isOnline]);
 
   useEffect(() => {
     if (!remoteSettingsHydratedRef.current) {
@@ -783,41 +1045,17 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
-    let cancelled = false;
+    mergeQueueEntry(updateQueue, {
+      entityType: 'timer-settings',
+      operation: 'upsert',
+      recordId: 'default',
+      payload: state.settings,
+    });
 
-    async function persistSettings() {
-      setIsSettingsSyncing(true);
-
-      try {
-        setSettingsSyncError(null);
-        const savedSettings = await persistTimerSettingsToApi(state.settings);
-        if (cancelled) {
-          return;
-        }
-
-        lastPersistedTimerSettingsRef.current = savedSettings;
-        setSettingsSyncError(null);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setSettingsSyncError(
-          `${formatApiErrorMessage(error, 'Timer settings could not be saved to the backend.')} Local timer settings remain available in this browser.`
-        );
-      } finally {
-        if (!cancelled) {
-          setIsSettingsSyncing(false);
-        }
-      }
+    if (!isOnline) {
+      setSettingsSyncError(buildQueuedSaveMessage('timer settings'));
     }
-
-    void persistSettings();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [state.settings, state.validation.isValid]);
+  }, [isOnline, state.settings, state.validation.isValid, updateQueue]);
 
   useEffect(() => {
     if (!remoteSessionLogsHydratedRef.current) {
@@ -827,47 +1065,171 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const unsyncedSessionLogs = state.sessionLogs.filter((entry) => !syncedSessionLogIdsRef.current.has(entry.id));
 
     if (unsyncedSessionLogs.length === 0) {
-      setIsSessionLogSyncing(false);
       return;
     }
 
-    let cancelled = false;
+    const queuedSessionLogIds = new Set(
+      selectSyncQueueEntries(queue, {
+        entityTypes: ['session-log'],
+      }).map((entry) => entry.recordId)
+    );
 
-    async function syncSessionLogs() {
-      setIsSessionLogSyncing(true);
+    for (const entry of unsyncedSessionLogs) {
+      if (queuedSessionLogIds.has(entry.id)) {
+        continue;
+      }
 
-      try {
-        for (const entry of unsyncedSessionLogs) {
-          const savedEntry = await persistSessionLogToApi(entry);
-          if (cancelled) {
-            return;
-          }
+      mergeQueueEntry(updateQueue, {
+        entityType: 'session-log',
+        operation: 'upsert',
+        recordId: entry.id,
+        payload: entry,
+      });
+    }
 
-          syncedSessionLogIdsRef.current.add(savedEntry.id);
-        }
+    if (!isOnline) {
+      setSessionLogSyncError(buildQueuedSaveMessage('session log'));
+    }
+  }, [isOnline, queue, state.sessionLogs, updateQueue]);
 
-        setSessionLogSyncError(null);
-      } catch (error) {
-        if (cancelled) {
+  useEffect(() => {
+    if (!isOnline) {
+      return;
+    }
+
+    updateQueue((currentQueue) => markFailedSyncQueueEntriesPending(currentQueue, TIMER_CONTEXT_SYNC_ENTITY_TYPES));
+  }, [isOnline, updateQueue]);
+
+  useEffect(() => {
+    if (!isOnline || isFlushingSyncQueueRef.current) {
+      return;
+    }
+
+    const pendingEntries = selectSyncQueueEntries(queue, {
+      entityTypes: TIMER_CONTEXT_SYNC_ENTITY_TYPES,
+      states: ['pending'],
+    });
+
+    if (pendingEntries.length === 0) {
+      return;
+    }
+
+    isFlushingSyncQueueRef.current = true;
+
+    async function flushSyncQueue() {
+      for (const queueEntry of pendingEntries) {
+        if (!isTimerProviderMountedRef.current) {
           return;
         }
 
-        setSessionLogSyncError(
-          `${formatApiErrorMessage(error, 'Session log sync failed.')} The latest session log is still visible locally in this browser.`
-        );
-      } finally {
-        if (!cancelled) {
-          setIsSessionLogSyncing(false);
+        const attemptedAt = new Date().toISOString();
+        updateQueue((currentQueue) => markSyncQueueEntryInFlight(currentQueue, queueEntry.id, attemptedAt));
+
+        try {
+          if (queueEntry.entityType === 'timer-settings' && queueEntry.operation === 'upsert') {
+            setIsSettingsSyncing(true);
+            const savedSettings = await persistTimerSettingsToApi(queueEntry.payload as TimerSettings);
+            lastPersistedTimerSettingsRef.current = savedSettings;
+            setSettingsSyncError(null);
+            setIsSettingsSyncing(false);
+          }
+
+          if (queueEntry.entityType === 'session-log' && queueEntry.operation === 'upsert') {
+            setIsSessionLogSyncing(true);
+            const savedEntry = await persistSessionLogToApi(queueEntry.payload as SessionLog);
+            syncedSessionLogIdsRef.current.add(savedEntry.id);
+            const nextSessionLogs = mergeSessionLogs([savedEntry], latestSessionLogsRef.current);
+            if (!areSessionLogCollectionsEqual(nextSessionLogs, latestSessionLogsRef.current)) {
+              dispatch({ type: 'REPLACE_SESSION_LOGS', payload: nextSessionLogs });
+            }
+            setSessionLogSyncError(null);
+            setIsSessionLogSyncing(false);
+          }
+
+          if (queueEntry.entityType === 'custom-play') {
+            setIsCustomPlaySyncing(true);
+            if (queueEntry.operation === 'delete') {
+              await deleteCustomPlayFromApi(queueEntry.recordId);
+              syncedCustomPlayIdsRef.current.delete(queueEntry.recordId);
+              deletedCustomPlayIdsRef.current.add(queueEntry.recordId);
+            } else {
+              const savedCustomPlay = await persistCustomPlayToApi(queueEntry.payload as CustomPlay);
+              syncedCustomPlayIdsRef.current.add(savedCustomPlay.id);
+              deletedCustomPlayIdsRef.current.delete(savedCustomPlay.id);
+              setCustomPlays((current) =>
+                current.some((play) => play.id === savedCustomPlay.id)
+                  ? current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play))
+                  : current
+              );
+            }
+            setCustomPlaySyncError(null);
+            setIsCustomPlaySyncing(false);
+          }
+
+          if (queueEntry.entityType === 'playlist') {
+            setIsPlaylistSyncing(true);
+            if (queueEntry.operation === 'delete') {
+              await deletePlaylistFromApi(queueEntry.recordId);
+              syncedPlaylistIdsRef.current.delete(queueEntry.recordId);
+              deletedPlaylistIdsRef.current.add(queueEntry.recordId);
+            } else {
+              const savedPlaylist = await persistPlaylistToApi(queueEntry.payload as Playlist);
+              syncedPlaylistIdsRef.current.add(savedPlaylist.id);
+              deletedPlaylistIdsRef.current.delete(savedPlaylist.id);
+              setPlaylists((current) =>
+                current.some((playlist) => playlist.id === savedPlaylist.id)
+                  ? current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist))
+                  : current
+              );
+            }
+            setPlaylistSyncError(null);
+            setIsPlaylistSyncing(false);
+          }
+
+          updateQueue((currentQueue) => removeSyncQueueEntry(currentQueue, queueEntry.id));
+        } catch (error) {
+          if (!isTimerProviderMountedRef.current) {
+            return;
+          }
+
+          const failureMessage = formatApiErrorMessage(error, 'Sync failed.');
+          updateQueue((currentQueue) => markSyncQueueEntryFailed(currentQueue, queueEntry.id, attemptedAt, failureMessage));
+
+          if (queueEntry.entityType === 'timer-settings') {
+            setSettingsSyncError(
+              `${failureMessage} Local timer settings remain available in this browser.`
+            );
+            setIsSettingsSyncing(false);
+          }
+
+          if (queueEntry.entityType === 'session-log') {
+            setSessionLogSyncError(`${failureMessage} The latest session log is still visible locally in this browser.`);
+            setIsSessionLogSyncing(false);
+          }
+
+          if (queueEntry.entityType === 'custom-play') {
+            setCustomPlaySyncError(`${failureMessage} The latest custom play state remains available locally.`);
+            setIsCustomPlaySyncing(false);
+          }
+
+          if (queueEntry.entityType === 'playlist') {
+            setPlaylistSyncError(`${failureMessage} The latest playlist state remains available locally.`);
+            setIsPlaylistSyncing(false);
+          }
+
+          if (isNetworkError(error)) {
+            break;
+          }
         }
       }
     }
 
-    void syncSessionLogs();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [state.sessionLogs]);
+    void flushSyncQueue().finally(() => {
+      if (isTimerProviderMountedRef.current) {
+        isFlushingSyncQueueRef.current = false;
+      }
+    });
+  }, [isOnline, queue, updateQueue]);
 
   useEffect(() => {
     if (!state.activeSession || isPaused) {
@@ -1015,54 +1377,52 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         const candidate = existingPlay ? updateCustomPlay(existingPlay, draft, now) : createCustomPlay(draft, now);
-        setIsCustomPlaySyncing(true);
+        deletedCustomPlayIdsRef.current.delete(candidate.id);
+        setCustomPlays((current) => {
+          if (existingPlay) {
+            return current.map((play) => (play.id === candidate.id ? candidate : play));
+          }
 
-        try {
-          const savedCustomPlay = await persistCustomPlayToApi(candidate);
-          setCustomPlays((current) => {
-            if (existingPlay) {
-              return current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play));
-            }
+          return mergeCustomPlays([candidate], current);
+        });
+        mergeQueueEntry(updateQueue, {
+          entityType: 'custom-play',
+          operation: 'upsert',
+          recordId: candidate.id,
+          payload: candidate,
+        });
 
-            return [savedCustomPlay, ...current];
-          });
+        if (!isOnline) {
+          setCustomPlaySyncError(buildQueuedSaveMessage('custom play'));
+        } else {
           setCustomPlaySyncError(null);
-
-          return {
-            ...validation,
-            persisted: true,
-          };
-        } catch (error) {
-          const persistenceError = `${formatApiErrorMessage(
-            error,
-            'Custom play saving failed.'
-          )} The custom play was not saved to the backend.`;
-          setCustomPlaySyncError(persistenceError);
-          return {
-            ...validation,
-            persisted: false,
-            persistenceError,
-          };
-        } finally {
-          setIsCustomPlaySyncing(false);
         }
+
+        return {
+          ...validation,
+          persisted: true,
+        };
       },
       deleteCustomPlay: async (playId) => {
-        setIsCustomPlaySyncing(true);
-
-        try {
-          await deleteCustomPlayFromApi(playId);
-          setCustomPlays((current) => current.filter((play) => play.id !== playId));
-          setCustomPlaySyncError(null);
-          return true;
-        } catch (error) {
-          setCustomPlaySyncError(
-            `${formatApiErrorMessage(error, 'Custom play deletion failed.')} The custom play is still available in this browser.`
-          );
+        if (!customPlays.some((play) => play.id === playId)) {
           return false;
-        } finally {
-          setIsCustomPlaySyncing(false);
         }
+
+        setCustomPlays((current) => current.filter((play) => play.id !== playId));
+        mergeQueueEntry(updateQueue, {
+          entityType: 'custom-play',
+          operation: 'delete',
+          recordId: playId,
+          payload: null,
+        });
+
+        if (!isOnline) {
+          setCustomPlaySyncError(buildQueuedDeleteMessage('custom play'));
+        } else {
+          setCustomPlaySyncError(null);
+        }
+
+        return true;
       },
       toggleFavoriteCustomPlay: async (playId) => {
         const existingPlay = customPlays.find((play) => play.id === playId);
@@ -1075,23 +1435,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           favorite: !existingPlay.favorite,
           updatedAt: new Date().toISOString(),
         };
-        setIsCustomPlaySyncing(true);
+        deletedCustomPlayIdsRef.current.delete(candidate.id);
+        setCustomPlays((current) => current.map((play) => (play.id === candidate.id ? candidate : play)));
+        mergeQueueEntry(updateQueue, {
+          entityType: 'custom-play',
+          operation: 'upsert',
+          recordId: candidate.id,
+          payload: candidate,
+        });
 
-        try {
-          const savedCustomPlay = await persistCustomPlayToApi(candidate);
-          setCustomPlays((current) =>
-            current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play))
-          );
+        if (!isOnline) {
+          setCustomPlaySyncError(buildQueuedSaveMessage('custom play'));
+        } else {
           setCustomPlaySyncError(null);
-          return true;
-        } catch (error) {
-          setCustomPlaySyncError(
-            `${formatApiErrorMessage(error, 'Custom play update failed.')} The previous custom play state is still available locally.`
-          );
-          return false;
-        } finally {
-          setIsCustomPlaySyncing(false);
         }
+        return true;
       },
       savePlaylist: async (draft, editId): Promise<PlaylistSaveResult> => {
         const validation = validatePlaylistDraft(draft);
@@ -1121,37 +1479,31 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           candidate = createPlaylist(draft, now);
         }
 
-        setIsPlaylistSyncing(true);
+        setPlaylists((current) => {
+          if (editId) {
+            return current.map((playlist) => (playlist.id === candidate.id ? candidate : playlist));
+          }
 
-        try {
-          const savedPlaylist = await persistPlaylistToApi(candidate);
-          setPlaylists((current) => {
-            if (editId) {
-              return current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist));
-            }
+          return mergePlaylists([candidate], current);
+        });
+        deletedPlaylistIdsRef.current.delete(candidate.id);
+        mergeQueueEntry(updateQueue, {
+          entityType: 'playlist',
+          operation: 'upsert',
+          recordId: candidate.id,
+          payload: candidate,
+        });
 
-            return mergePlaylists([savedPlaylist], current);
-          });
+        if (!isOnline) {
+          setPlaylistSyncError(buildQueuedSaveMessage('playlist'));
+        } else {
           setPlaylistSyncError(null);
-
-          return {
-            ...validation,
-            persisted: true,
-          };
-        } catch (error) {
-          const persistenceError = `${formatApiErrorMessage(
-            error,
-            'Playlist saving failed.'
-          )} The previous playlist state is still available locally.`;
-          setPlaylistSyncError(persistenceError);
-          return {
-            ...validation,
-            persisted: false,
-            persistenceError,
-          };
-        } finally {
-          setIsPlaylistSyncing(false);
         }
+
+        return {
+          ...validation,
+          persisted: true,
+        };
       },
       deletePlaylist: async (playlistId) => {
         const result = evaluatePlaylistDelete(playlistId, activePlaylistRun);
@@ -1159,26 +1511,20 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           return result;
         }
 
-        setIsPlaylistSyncing(true);
+        setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
+        mergeQueueEntry(updateQueue, {
+          entityType: 'playlist',
+          operation: 'delete',
+          recordId: playlistId,
+          payload: null,
+        });
 
-        try {
-          await deletePlaylistFromApi(playlistId);
-          setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
+        if (!isOnline) {
+          setPlaylistSyncError(buildQueuedDeleteMessage('playlist'));
+        } else {
           setPlaylistSyncError(null);
-          return result;
-        } catch (error) {
-          const persistenceError = `${formatApiErrorMessage(
-            error,
-            'Playlist deletion failed.'
-          )} The previous playlist state is still available locally.`;
-          setPlaylistSyncError(persistenceError);
-          return {
-            deleted: false,
-            persistenceError,
-          };
-        } finally {
-          setIsPlaylistSyncing(false);
         }
+        return result;
       },
       toggleFavoritePlaylist: async (playlistId) => {
         const existingPlaylist = playlists.find((playlist) => playlist.id === playlistId);
@@ -1191,23 +1537,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           favorite: !existingPlaylist.favorite,
           updatedAt: new Date().toISOString(),
         };
-        setIsPlaylistSyncing(true);
+        deletedPlaylistIdsRef.current.delete(candidate.id);
+        setPlaylists((current) => current.map((playlist) => (playlist.id === candidate.id ? candidate : playlist)));
+        mergeQueueEntry(updateQueue, {
+          entityType: 'playlist',
+          operation: 'upsert',
+          recordId: candidate.id,
+          payload: candidate,
+        });
 
-        try {
-          const savedPlaylist = await persistPlaylistToApi(candidate);
-          setPlaylists((current) =>
-            current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist))
-          );
+        if (!isOnline) {
+          setPlaylistSyncError(buildQueuedSaveMessage('playlist'));
+        } else {
           setPlaylistSyncError(null);
-          return true;
-        } catch (error) {
-          setPlaylistSyncError(
-            `${formatApiErrorMessage(error, 'Playlist update failed.')} The previous playlist state is still available locally.`
-          );
-          return false;
-        } finally {
-          setIsPlaylistSyncing(false);
         }
+        return true;
       },
       startPlaylistRun: (playlistId) => {
         const startResult = evaluatePlaylistRunStart({
@@ -1342,26 +1686,22 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           };
         }
 
-        try {
-          const savedEntry = await createManualSessionLogInApi(buildManualLogCreateRequest(input));
-          syncedSessionLogIdsRef.current.add(savedEntry.id);
-          dispatch({
-            type: 'ADD_SESSION_LOG',
-            payload: savedEntry,
-          });
-          setSessionLogSyncError(null);
-        } catch (error) {
-          const persistenceError = `${formatApiErrorMessage(
-            error,
-            'Manual log saving failed.'
-          )} The entry was not saved to the backend.`;
-          setSessionLogSyncError(persistenceError);
+        const queuedEntry = buildManualLogEntry(input, new Date());
+        dispatch({
+          type: 'ADD_SESSION_LOG',
+          payload: queuedEntry,
+        });
+        mergeQueueEntry(updateQueue, {
+          entityType: 'session-log',
+          operation: 'upsert',
+          recordId: queuedEntry.id,
+          payload: queuedEntry,
+        });
 
-          return {
-            ...validation,
-            persisted: false,
-            persistenceError,
-          };
+        if (!isOnline) {
+          setSessionLogSyncError(buildQueuedSaveMessage('manual log'));
+        } else {
+          setSessionLogSyncError(null);
         }
 
         return {
@@ -1402,6 +1742,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       activePlaylistRun,
       customPlays,
       customPlaySyncError,
+      isOnline,
       isPaused,
       isCustomPlaysLoading,
       isCustomPlaySyncing,
@@ -1419,6 +1760,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       sessionLogSyncError,
       settingsSyncError,
       state,
+      updateQueue,
     ]
   );
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
@@ -121,6 +122,10 @@ function formatSummaryLoadMessage(error: unknown): string {
   return 'Showing a locally derived summary because the backend summary service is unavailable right now.';
 }
 
+function formatOfflineSummaryMessage(): string {
+  return 'Showing a locally derived summary while you are offline.';
+}
+
 interface SankalpaSectionProps {
   readonly title: string;
   readonly emptyText: string;
@@ -166,6 +171,7 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
+  const { isOnline } = useSyncStatus();
   const userTimeZone = useMemo(() => getUserTimeZone(), []);
   const summaryDateDefaults = useMemo(() => {
     const today = new Date();
@@ -266,6 +272,13 @@ export default function SankalpaPage() {
       return;
     }
 
+    if (!isOnline) {
+      setRemoteSummarySnapshot(null);
+      setIsSummaryLoading(false);
+      setSummaryLoadMessage(formatOfflineSummaryMessage());
+      return;
+    }
+
     const controller = new AbortController();
     setIsSummaryLoading(true);
     setSummaryLoadMessage(null);
@@ -300,7 +313,7 @@ export default function SankalpaPage() {
     return () => {
       controller.abort();
     };
-  }, [sessionLogs, summaryRangeSelection.range, userTimeZone]);
+  }, [isOnline, sessionLogs, summaryRangeSelection.range, userTimeZone]);
 
   const inactiveSummaryCategoriesCount = useMemo(() => {
     if (!effectiveSummarySnapshot) {

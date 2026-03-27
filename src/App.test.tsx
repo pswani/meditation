@@ -10,6 +10,7 @@ const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
+const SYNC_QUEUE_KEY = 'meditation.syncQueue.v1';
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -18,6 +19,13 @@ function createJsonResponse(status: number, body: unknown) {
     json: async () => body,
     text: async () => JSON.stringify(body),
   };
+}
+
+function setNavigatorOnline(value: boolean) {
+  Object.defineProperty(window.navigator, 'onLine', {
+    configurable: true,
+    value,
+  });
 }
 
 const meditationTypes = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
@@ -358,11 +366,23 @@ async function flushBackendHydration() {
     await Promise.resolve();
     await Promise.resolve();
   });
+
+  await waitFor(() =>
+    expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
+  );
+}
+
+async function flushAsyncEffects() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 }
 
 describe('App shell', () => {
   beforeEach(() => {
     localStorage.clear();
+    setNavigatorOnline(true);
   });
 
   afterEach(() => {
@@ -538,7 +558,8 @@ describe('App shell', () => {
     );
 
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
-    expect(setItemSpy).not.toHaveBeenCalled();
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledWith(SYNC_QUEUE_KEY, '[]');
     expect(removeItemSpy).not.toHaveBeenCalled();
   });
 
@@ -642,9 +663,46 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /quick start/i })).toBeInTheDocument();
   });
 
+  it('queues an offline manual log locally and syncs it after reconnection', async () => {
+    setNavigatorOnline(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('offline'))
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Vipassana' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    expect(screen.getByText(/this session log will sync when the backend is reachable/i)).toBeInTheDocument();
+
+    const queuedEntries = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]');
+    expect(queuedEntries).toHaveLength(1);
+    expect(queuedEntries[0].entityType).toBe('session-log');
+
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    setNavigatorOnline(true);
+    fireEvent(window, new Event('online'));
+
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) ?? '[]')).toHaveLength(0));
+    expect(store.sessionLogs).toHaveLength(1);
+    expect(store.sessionLogs[0]?.source).toBe('manual log');
+  });
+
   it('completes a timer journey through pause, resume, auto log, and History', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-25T09:00:00.000Z'));
+    const { fetchMock } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <MemoryRouter initialEntries={['/practice']}>
@@ -652,15 +710,16 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
     expect(screen.getByRole('heading', { level: 2, name: '01:00' })).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(20_000);
+      await Promise.resolve();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^pause$/i }));
@@ -668,8 +727,10 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { level: 2, name: '00:40' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^resume$/i }));
-    act(() => {
-      vi.advanceTimersByTime(40_000);
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(screen.getByRole('heading', { level: 2, name: /session completed/i })).toBeInTheDocument();
@@ -724,24 +785,28 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     fireEvent.click(screen.getByRole('button', { name: /run playlist/i }));
 
     expect(screen.getByRole('heading', { level: 2, name: 'Lunch Reset' })).toBeInTheDocument();
     expect(screen.getByText(/current meditation type: vipassana/i)).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await flushBackendHydration();
+    await flushAsyncEffects();
 
     expect(screen.getByText(/current meditation type: ajapa/i)).toBeInTheDocument();
     expect(screen.getByText(/completed so far: 1\/2 items/i)).toBeInTheDocument();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await flushBackendHydration();
+    await flushAsyncEffects();
 
     expect(screen.getByRole('heading', { level: 2, name: /playlist completed/i })).toBeInTheDocument();
     expect(screen.getByText(/lunch reset · 2\/2 items logged/i)).toBeInTheDocument();
@@ -759,7 +824,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushBackendHydration();
+    await flushAsyncEffects();
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
     expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);

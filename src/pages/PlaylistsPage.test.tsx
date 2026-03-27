@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -131,6 +131,7 @@ describe('PlaylistsPage UX', () => {
   });
 
   it('shows truthful delete failure guidance when backend deletion fails', async () => {
+    vi.useRealTimers();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
 
     vi.stubGlobal(
@@ -188,8 +189,10 @@ describe('PlaylistsPage UX', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText(/delete failed/i)).toBeInTheDocument();
-    expect(screen.getByText(/previous playlist state is still available locally/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Morning Sequence')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/latest playlist state remains available locally/i)).toBeInTheDocument()
+    );
     expect(screen.queryByText(/currently running/i)).not.toBeInTheDocument();
   });
 });

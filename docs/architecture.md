@@ -114,6 +114,24 @@ Single-page React application with route-based screens and feature-oriented modu
 - Queue entries are stored in browser storage so deferred writes survive reloads.
 - The shell surfaces offline and pending-sync state as lightweight status banners instead of blocking overlays or dashboard-style widgets.
 
+## Current offline write model
+- Implemented backend-backed writes are local-first for:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- UI state updates immediately from local changes, then the queue replays those writes through the existing REST boundaries when the browser is online.
+- Queue reduction keeps only the latest relevant mutation per `(entity type, record id)` so repeated offline edits do not accumulate stale replay work.
+- Hydration overlays queued local mutations on top of the latest backend list responses so a stale backend read does not temporarily resurrect deleted records or erase unsynced edits.
+- Failed queue entries can return to a pending state for later retry, while the shell and feature-level copy stay calm and explicit about degraded sync.
+
+## Frontend reconciliation boundaries
+- `src/features/timer/TimerContext.tsx` owns local-first hydration and queue flushing for timer settings, session logs, custom plays, and playlists.
+- `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
+- Route components continue to consume stable domain state and sync status rather than performing queue mutation logic directly.
+- Manual log creation is treated as local `session log` creation first, then reconciled back through the shared `session log` sync flow instead of a separate offline-only pathway.
+
 ## Suggested module layout
 - pages
 - components

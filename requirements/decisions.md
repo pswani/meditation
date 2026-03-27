@@ -2,6 +2,21 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline frontend sync-queue decisions
+- Make implemented backend-backed write flows local-first so the app remains usable offline without adding a second offline-only UI path:
+  - timer settings
+  - session logs, including manual logs
+  - custom plays
+  - playlists
+  - sankalpas
+- Treat locally queued writes as the frontend-visible truth until the backend confirms newer data, instead of clearing or hiding local edits while sync is pending.
+- Reconcile stale backend hydration by overlaying queued local mutations on top of fetched records, so an older list response cannot resurrect deleted `custom play` or playlist records or erase newer offline edits.
+- Reduce queued writes by entity identity and mutation intent to keep replay deterministic and bounded rather than re-sending every intermediate local edit after connectivity returns.
+- Keep offline UX calm and lightweight:
+  - shell-level offline and pending-sync visibility
+  - feature-level warning copy where a save is deferred
+  - no blocking sync modal, conflict center, or dashboard-style queue screen in this prompt
+
 ### 2026-03-27 milestone-d offline architecture decisions
 - Start Milestone D with a shared frontend offline/sync foundation before wiring domain-specific queueing, so later prompts can reuse one queue model instead of adding more per-feature network logic inside `TimerContext`.
 - Use one browser-persisted sync queue for deferred writes across the implemented backend-backed domains:
@@ -13,16 +28,6 @@
 - Treat the latest queued write for a given `(entity type, record id)` as the one that should survive in the queue, so offline edits do not pile up stale intermediate mutations for the same record.
 - Keep app-level connectivity and queue visibility in a dedicated `src/features/sync/` provider instead of threading those concerns through route components.
 - Surface offline and pending-sync state as lightweight shell banners only; do not introduce blocking overlays or dashboard-style sync UI in this milestone.
-
-### 2026-03-27 milestone-d offline sync branch setup decisions
-- Treat `codex/functioning` as the parent branch for `milestone-d-offline-sync-fullstack`.
-- Create and use the local milestone branch `codex/milestone-d-offline-sync-fullstack` for all Milestone D prompt execution before merging back to the parent branch.
-- Keep Milestone D bounded to the offline-sync full-stack slice:
-  - offline-first architecture foundations
-  - frontend offline behavior and sync queue support for implemented domains
-  - backend reconciliation and sync-safe duplicate handling
-  - milestone review, remediation, verification, and local merge-back
-- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
 
 ### 2026-03-26 milestone-c sankalpa rest decisions
 - Move `sankalpa` persistence and primary progress calculation to the backend so Home and Sankalpa read the same H2-backed source of truth.
@@ -57,6 +62,16 @@
 ### 2026-03-26 milestone-c merge decisions
 - Merge `codex/milestone-c-discipline-insight-fullstack` back into `codex/functioning` with a normal local merge commit so the milestone's review, remediation, and testing history stays intact.
 - Mark Milestone C complete on `codex/functioning` and hand off to `prompts/milestone-d-offline-sync-fullstack/00-create-branch.md` as the next exact prompt.
+
+### 2026-03-27 milestone-d offline sync branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-d-offline-sync-fullstack`.
+- Create and use the local milestone branch `codex/milestone-d-offline-sync-fullstack` for all Milestone D prompt execution before merging back to the parent branch.
+- Keep Milestone D bounded to the offline-sync full-stack slice:
+  - offline-first architecture foundations
+  - frontend offline behavior and sync queue support for implemented domains
+  - backend reconciliation and sync-safe duplicate handling
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
 
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.

@@ -188,8 +188,55 @@ export function markSyncQueueEntryPending(queue: readonly SyncQueueEntry[], entr
   );
 }
 
+export function markFailedSyncQueueEntriesPending(
+  queue: readonly SyncQueueEntry[],
+  entityTypes?: readonly SyncEntityType[]
+): SyncQueueEntry[] {
+  const allowedTypes = entityTypes ? new Set(entityTypes) : null;
+
+  return queue.map((entry) => {
+    if (entry.state !== 'failed') {
+      return entry;
+    }
+
+    if (allowedTypes && !allowedTypes.has(entry.entityType)) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      state: 'pending',
+    };
+  });
+}
+
 export function removeSyncQueueEntry(queue: readonly SyncQueueEntry[], entryId: string): SyncQueueEntry[] {
   return queue.filter((entry) => entry.id !== entryId);
+}
+
+export function selectSyncQueueEntries(
+  queue: readonly SyncQueueEntry[],
+  options?: {
+    readonly entityTypes?: readonly SyncEntityType[];
+    readonly states?: readonly SyncQueueEntry['state'][];
+  }
+): SyncQueueEntry[] {
+  const allowedTypes = options?.entityTypes ? new Set(options.entityTypes) : null;
+  const allowedStates = options?.states ? new Set(options.states) : null;
+
+  return sortSyncQueueEntries(
+    queue.filter((entry) => {
+      if (allowedTypes && !allowedTypes.has(entry.entityType)) {
+        return false;
+      }
+
+      if (allowedStates && !allowedStates.has(entry.state)) {
+        return false;
+      }
+
+      return true;
+    })
+  );
 }
 
 export function summarizeSyncQueue(queue: readonly SyncQueueEntry[]): SyncQueueSummary {

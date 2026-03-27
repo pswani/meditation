@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { SyncQueueEntry } from '../../types/sync';
 import { loadSyncQueue, saveSyncQueue, summarizeSyncQueue, SYNC_QUEUE_STORAGE_KEY } from '../../utils/syncQueue';
 import { SyncStatusContext, type SyncStatusProviderProps } from './syncContextObject';
@@ -42,19 +42,19 @@ export function SyncStatusProvider({ children }: SyncStatusProviderProps) {
     };
   }, []);
 
-  function replaceQueue(nextQueue: readonly SyncQueueEntry[]) {
+  const replaceQueue = useCallback((nextQueue: readonly SyncQueueEntry[]) => {
     const sortedQueue = [...nextQueue];
     saveSyncQueue(sortedQueue);
     setQueue(sortedQueue);
-  }
+  }, []);
 
-  function updateQueue(updater: (current: readonly SyncQueueEntry[]) => readonly SyncQueueEntry[]) {
+  const updateQueue = useCallback((updater: (current: readonly SyncQueueEntry[]) => readonly SyncQueueEntry[]) => {
     setQueue((currentQueue) => {
       const nextQueue = [...updater(currentQueue)];
       saveSyncQueue(nextQueue);
       return nextQueue;
     });
-  }
+  }, []);
 
   return (
     <SyncStatusContext.Provider

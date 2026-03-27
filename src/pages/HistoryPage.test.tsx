@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SyncStatusProvider } from '../features/sync/SyncStatusProvider';
 import { TimerProvider } from '../features/timer/TimerContext';
 import HistoryPage from './HistoryPage';
 
@@ -82,11 +83,13 @@ describe('HistoryPage UX', () => {
   it('shows timestamp helper text and save success feedback for manual log', async () => {
     render(
       <MemoryRouter initialEntries={['/history']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/history" element={<HistoryPage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -126,11 +129,13 @@ describe('HistoryPage UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/history']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/history" element={<HistoryPage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -172,11 +177,13 @@ describe('HistoryPage UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/history']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/history" element={<HistoryPage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 
@@ -233,11 +240,13 @@ describe('HistoryPage UX', () => {
 
     render(
       <MemoryRouter initialEntries={['/history']}>
-        <TimerProvider>
-          <Routes>
-            <Route path="/history" element={<HistoryPage />} />
-          </Routes>
-        </TimerProvider>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
       </MemoryRouter>
     );
 

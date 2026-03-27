@@ -29,6 +29,12 @@ This README is intentionally grounded in the current repository contents. It exp
   - browser-persisted sync queue storage
   - app-level online/offline status tracking
   - calm shell messaging for offline and pending-sync states
+- local-first offline write behavior for:
+  - timer settings
+  - session logs, including manual logs
+  - custom plays
+  - playlists
+  - sankalpas
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
 
@@ -105,6 +111,7 @@ The front end currently owns all of the following:
 - form validation
 - local persistence for playlists, sankalpas, and offline-friendly fallback caches
 - sync queue persistence for offline-created or deferred backend writes
+- local-first optimistic updates for implemented backend-backed domains while sync is pending
 - session log generation
 - local summary derivation fallback
 - local sankalpa progress fallback and cache migration support
@@ -112,6 +119,7 @@ The front end currently owns all of the following:
 
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
 Shared app-level sync visibility now lives alongside that in `src/features/sync/`, keeping connection state and pending-sync summary work out of route components.
+The queue-backed offline behavior now keeps local edits visible immediately and flushes them back through the existing REST boundaries when the backend becomes reachable again.
 
 ### Back-end responsibilities
 
@@ -214,6 +222,14 @@ This means:
 - media loading still preserves today’s UX when the backend is unavailable
 - `custom play`, playlist, `session log`, and timer-settings hydration still preserve a local cache for smoother migration and failure fallback
 - the app now has a shared sync queue foundation for deferred writes when live backend connectivity is not available
+- implemented write flows now stay usable offline by updating local state first and queueing backend reconciliation for:
+  - timer settings
+  - session logs
+  - custom plays
+  - playlists
+  - sankalpas
+- queued writes are reduced by entity id so stale intermediate edits do not keep replaying after a newer local change exists
+- list hydration overlays queued local records so stale backend reads do not immediately erase the latest offline-visible state
 - swapping in the remaining live backend support should continue through these utility modules instead of rewriting screens
 
 ### How H2 is used in this project
@@ -382,11 +398,12 @@ Current operational meaning:
 - use backend + H2 persistence for:
   - custom plays
   - playlists
+  - sankalpas
   - timer settings
   - session logs
 - fetch custom-play media metadata from the backend when available
-- keep sankalpas local-first until later REST migration slices are implemented
-- keep browser local storage as a migration/fallback cache for custom plays, playlists, timer settings, and session logs
+- keep browser local storage as a migration/fallback cache for custom plays, playlists, sankalpas, timer settings, and session logs
+- keep the sync queue available for deferred offline writes across the implemented backend-backed domains
 - optionally override the API base with `VITE_API_BASE_URL`
 
 ### App-level helper commands
