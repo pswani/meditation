@@ -1,4 +1,4 @@
 /**
- * Domain package reserved for future playlist persistence and REST work.
+ * Playlist persistence and REST support.
  */
 package com.meditation.backend.playlist;

@@ -15,7 +15,7 @@ This README is intentionally grounded in the current repository contents. It exp
   - local-development CORS
   - a health endpoint
   - a seeded media metadata API
-  - backend persistence for timer settings and session logs
+  - backend persistence for custom plays, playlists, timer settings, and session logs
 - The frontend now includes:
   - a shared typed API client
   - a configurable API base URL strategy
@@ -24,13 +24,13 @@ This README is intentionally grounded in the current repository contents. It exp
 - backend-backed timer settings and session-log history with local cache fallback during hydration failures
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
-- Playlist and sankalpa CRUD flows are not yet wired to live backend REST transport.
+- Sankalpa CRUD flows are not yet wired to live backend REST transport.
 
 ## Confirmed Full-Stack Gaps
 
 The current repository still needs all of the following before it can be considered a functioning full-stack app:
 
-- front-end HTTP integration for playlists and sankalpas
+- front-end HTTP integration for sankalpas
 - real REST persistence wired into the existing front-end data flows
 - replacement of the remaining front-end local-storage API shims with HTTP-backed implementations
 - richer media-file management flows beyond seeded metadata and directory conventions
@@ -115,6 +115,7 @@ Current backend endpoints:
 
 - `/api/health`
 - `/api/custom-plays`
+- `/api/playlists`
 - `/api/media/custom-plays`
 - `/api/session-logs/manual`
 - `/api/session-logs`
@@ -136,7 +137,8 @@ Today:
 - `src/utils/sessionLogApi.ts` creates manual logs through `/api/session-logs/manual`
 - `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
-- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` still use local-first persistence while exposing stable REST-shaped contracts
+- `src/utils/playlistApi.ts` performs live HTTP requests to `/api/playlists`
+- `src/utils/sankalpaApi.ts` still uses local-first persistence while exposing a stable REST-shaped contract
 
 Stable endpoint contracts in the frontend still include:
 
@@ -162,14 +164,15 @@ Stable endpoint contracts in the frontend still include:
 
 ### How the React front end integrates with REST APIs
 
-The frontend now has a shared REST transport foundation, with live backend fetches for the media catalog, `custom play` persistence, `session log` history, and timer settings.
+The frontend now has a shared REST transport foundation, with live backend fetches for the media catalog, `custom play` persistence, playlist persistence, `session log` history, and timer settings.
 
 Important repo facts:
 
 - `src/utils/apiClient.ts` is the shared typed JSON request layer
 - `src/utils/customPlayApi.ts` fetches and persists `/api/custom-plays`
+- `src/utils/playlistApi.ts` fetches and persists `/api/playlists`
 - `src/utils/mediaAssetApi.ts` fetches `/api/media/custom-plays`
-- `src/utils/playlistApi.ts` and `src/utils/sankalpaApi.ts` remain local-first shims
+- `src/utils/sankalpaApi.ts` remains the main local-first REST-shaped shim
 - `vite.config.ts` and `vite.config.js` now proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset
 - backend runtime configuration lives in `backend/src/main/resources/application.yml`
 
@@ -178,7 +181,7 @@ Current API-boundary status:
 | File | Exposed contract | Current implementation |
 | --- | --- | --- |
 | `src/utils/customPlayApi.ts` | `/api/custom-plays` | fetches and persists backend `custom play` records |
-| `src/utils/playlistApi.ts` | `/api/playlists` | reads/writes `localStorage` |
+| `src/utils/playlistApi.ts` | `/api/playlists` | fetches and persists backend playlist records |
 | `src/utils/sankalpaApi.ts` | `/api/sankalpas` | reads/writes `localStorage` |
 | `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
 | `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation |
@@ -188,11 +191,12 @@ This means:
 
 - the front end now sends network traffic for:
   - custom plays
+  - playlists
   - media catalog
   - session-log history
   - timer settings
 - media loading still preserves today’s UX when the backend is unavailable
-- `custom play`, `session log`, and timer-settings hydration still preserve a local cache for smoother migration and failure fallback
+- `custom play`, playlist, `session log`, and timer-settings hydration still preserve a local cache for smoother migration and failure fallback
 - swapping in the remaining live backend support should continue through these utility modules instead of rewriting screens
 
 ### How H2 is used in this project
@@ -210,14 +214,16 @@ This is now an early feature slice:
 
 - H2 now stores:
   - custom plays
+  - playlists and playlist items
   - media metadata
   - timer settings
   - session logs
 - the front end now consumes backend APIs for:
   - custom plays
+  - playlists
   - timer settings
   - session logs
-- playlists and sankalpas still persist locally in the browser
+- sankalpas still persist locally in the browser
 
 ## Repository Layout
 
@@ -356,11 +362,12 @@ Current operational meaning:
 - start Spring Boot + H2 from `backend/`
 - use backend + H2 persistence for:
   - custom plays
+  - playlists
   - timer settings
   - session logs
 - fetch custom-play media metadata from the backend when available
-- keep playlists and sankalpas local-first until later REST migration slices are implemented
-- keep browser local storage as a migration/fallback cache for custom plays, timer settings, and session logs
+- keep sankalpas local-first until later REST migration slices are implemented
+- keep browser local storage as a migration/fallback cache for custom plays, playlists, timer settings, and session logs
 - optionally override the API base with `VITE_API_BASE_URL`
 
 ### App-level helper commands
@@ -429,7 +436,7 @@ Current behavior:
 - URL builders can derive fully qualified URLs from `VITE_API_BASE_URL`
 - when `VITE_API_BASE_URL` is unset, Vite dev proxies `/api` to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
 - `mediaAssetApi` performs live fetches and falls back to built-in sample metadata if the backend is unavailable
-- playlist and sankalpa persistence remain local-first in browser storage
+- playlist persistence now uses the backend while sankalpa persistence remains local-first in browser storage
 
 This means:
 
@@ -1072,12 +1079,13 @@ Current manual verification checklist:
 The backend foundation exposes reachable REST endpoints now:
 
 - `GET /api/health`
+- `GET /api/playlists`
 - `GET /api/media/custom-plays`
 
 What is still true today:
 
 - the frontend now calls the media catalog endpoint
-- the playlist and sankalpa front-end API modules remain local shims
+- the sankalpa front-end API module remains a local shim
 
 What you can verify today:
 
@@ -1178,7 +1186,7 @@ Optional build-time override when pairing the built front end with a separate ba
 - timer and playlist sound selections are still UI-only; real playback is not implemented
 - optional small gap support between playlist items is not implemented
 - custom-play media falls back to built-in sample metadata and is not yet a user-managed library
-- playlist and sankalpa REST persistence are still unimplemented
+- sankalpa REST persistence is still unimplemented
 
 ## Operator Notes
 

@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone B prompt 02 is complete on `codex/milestone-b-practice-composition-fullstack`. Media catalog-backed `custom play` persistence now runs through H2 + REST, and the branch is ready for prompt 03 playlist full-stack work.
+Milestone B prompt 03 is complete on `codex/milestone-b-practice-composition-fullstack`. Playlist persistence now runs through H2 + REST with history-safe delete behavior, and the branch is ready for prompt 04 milestone review work.
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
@@ -55,6 +55,36 @@ Milestone B prompt 02 is complete on `codex/milestone-b-practice-composition-ful
   - updated `CustomPlayManager` tests for backend-backed save/delete/favorite flows and loading/sync states
   - added backend repository and controller tests for `custom play` list/save/delete validation paths
 
+## Milestone B prompt 03: playlists REST
+- Added and used:
+  - `requirements/execplan-milestone-b-playlists-rest.md`
+- Backend changes:
+  - added H2 migration `V5__add_playlist_rest_support.sql`
+    - adds stable `playlist_item.external_id` support for browser-created playlist-item ids
+    - updates playlist-delete behavior so historical `session log` rows keep readable playlist context while `playlist_id` can null out safely
+  - added backend playlist repository, item repository, service, controller, request, and response contracts under `backend/src/main/java/com/meditation/backend/playlist/`
+  - added backend routes:
+    - `GET /api/playlists`
+    - `PUT /api/playlists/{id}`
+    - `DELETE /api/playlists/{id}`
+- Frontend changes:
+  - replaced the local-only playlist seam in `src/utils/playlistApi.ts` with live playlist list/upsert/delete HTTP helpers
+  - updated `TimerContext` to hydrate playlists from the backend, promote older local playlists on first load, and keep browser cache fallback behavior
+  - made playlist save, delete, and favorite actions async so playlist management feedback reflects backend persistence truthfully
+  - kept active playlist-run recovery local-first while playlist definitions now come from backend hydration
+- Playlist logging behavior:
+  - kept per-item playlist `session log` behavior intact through the existing generic `session log` sync path
+  - preserved readable History context after playlist deletion through stored snapshot metadata:
+    - `playlistName`
+    - `playlistRunId`
+    - `playlistRunStartedAt`
+    - item position/count
+- UX and tests:
+  - added calm load/sync banners for backend-backed playlist management
+  - preserved cached playlist run launching while backend hydration is in flight
+  - added frontend API-boundary tests for playlist list/upsert/delete transport
+  - added backend repository/controller coverage for playlist persistence and history-safe delete behavior
+
 ## Milestone B verification status
 - Passed `npm run typecheck`
 - Passed `npm run lint`
@@ -64,9 +94,9 @@ Milestone B prompt 02 is complete on `codex/milestone-b-practice-composition-ful
 - Passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
 
 ## Milestone B known limitations
-- Playlist and sankalpa CRUD are still local-first in the frontend.
+- Sankalpa CRUD is still local-first in the frontend.
 - Media catalog browsing still depends on the seeded backend media metadata surface plus frontend fallback assumptions.
-- Playlist-generated `session log` entries still sync through the existing generic `session log` path until playlist REST persistence lands.
+- Playlist-generated `session log` entries still sync through the existing generic `session log` path, now against backend-backed playlist ids and snapshot metadata.
 - Timer and playlist sound playback remain UI-only.
 
 ## Milestone branch setup
@@ -155,7 +185,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 - Finished with both automated and live verification strong enough for parent-branch merge.
 
 ## Intentional sample or helper content that remains
-- Frontend persistence for playlists and sankalpas is still local-first outside the completed media catalog and `custom play` seam.
+- Frontend persistence for sankalpas is still local-first outside the completed media catalog, `custom play`, and playlist seams.
 - Built-in sample media metadata remains as a fallback when the backend media endpoint is unavailable.
 - `docs/review-foundation-fullstack.md` remains as the review artifact for the completed foundation assessment.
 
@@ -193,8 +223,7 @@ Milestone A now lives on the parent branch with its milestone branch history pre
   - `http://127.0.0.1:5175/practice`
 
 ## Known limitations
-- Playlists and sankalpas are still local-first in the UI.
-- Playlist-generated `session log` entries still depend on local-only playlist data, so playlist history sync should be revisited once playlist REST persistence is added.
+- Sankalpas are still local-first in the UI.
 - Media upload/import and authenticated admin/media-management flows are still unimplemented.
 - Timer and playlist sound playback remain UI-only.
 - The Flyway H2-version compatibility warning still appears in this environment, but tests and runtime verification passed.
@@ -222,7 +251,6 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 ## Exact recommended next prompt
 Read:
 - AGENTS.md
-- PLANS.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
@@ -234,11 +262,16 @@ Read:
 
 Then:
 
-1. Create an ExecPlan for playlists full-stack support.
-2. Implement backend/H2/REST support for playlists and playlist items.
-3. Wire front-end playlist management and run flows to the backend where appropriate.
-4. Define and implement playlist logging behavior cleanly.
-5. Add focused tests and run full verification.
-6. Update docs and session-handoff with exact recommended next prompt.
-7. Commit with a clear message:
-   feat(composition): add playlists full-stack support
+1. Review Milestone B from:
+   - UX/usability
+   - media setup clarity
+   - code quality
+   - REST design
+   - backend hygiene
+   - performance and maintainability
+2. Identify critical, important, and nice-to-have issues.
+3. Do not implement code changes.
+4. Write findings into:
+   - docs/review-practice-composition-fullstack.md
+   - requirements/session-handoff.md
+5. Include exact recommended next prompt.

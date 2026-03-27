@@ -24,6 +24,9 @@ export default function PlaylistManager() {
     deletePlaylist,
     toggleFavoritePlaylist,
     startPlaylistRun,
+    isPlaylistsLoading,
+    isPlaylistSyncing,
+    playlistSyncError,
   } = useTimer();
   const [draft, setDraft] = useState<PlaylistDraft>(() => createInitialPlaylistDraft());
   const [errors, setErrors] = useState<PlaylistValidationResult['errors']>(initialErrors);
@@ -31,18 +34,25 @@ export default function PlaylistManager() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [playlistFeedback, setPlaylistFeedback] = useState<string | null>(null);
 
+  const controlsDisabled = isPlaylistsLoading || isPlaylistSyncing;
+
   function updateDraft(next: PlaylistDraft) {
     setDraft(next);
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = savePlaylist(draft, editId ?? undefined);
+    const playlistName = draft.name.trim() || 'Playlist';
+    const feedbackMessage = editId ? `Playlist "${playlistName}" updated.` : `Playlist "${playlistName}" saved.`;
+    const result = await savePlaylist(draft, editId ?? undefined);
     setErrors(result.errors);
 
-    if (result.isValid) {
+    if (result.isValid && result.persisted) {
       setDraft(createInitialPlaylistDraft());
       setEditId(null);
+      setPendingDeleteId(null);
+      setPlaylistFeedback(feedbackMessage);
+    } else if (!result.isValid) {
       setPlaylistFeedback(null);
     }
   }
@@ -107,13 +117,49 @@ export default function PlaylistManager() {
     }
   }
 
+  async function confirmDelete(playlistId: string) {
+    const deleteResult = await deletePlaylist(playlistId);
+    if (!deleteResult.deleted) {
+      setPlaylistFeedback('This playlist is currently running. End the run before deleting it.');
+      return;
+    }
+
+    setPendingDeleteId(null);
+    setPlaylistFeedback(null);
+
+    if (editId === playlistId) {
+      cancelEdit();
+    }
+  }
+
   return (
     <section className="playlist-panel">
       <h3 className="section-title">Playlists</h3>
       <p className="section-subtitle">Create ordered playlist flows and run them in sequence.</p>
 
-      {playlistFeedback ? (
+      {isPlaylistsLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading playlists from the backend.</p>
+        </div>
+      ) : null}
+
+      {isPlaylistSyncing ? (
+        <div className="status-banner" role="status">
+          <p>Saving playlists to the backend.</p>
+        </div>
+      ) : null}
+
+      {playlistSyncError ? (
         <div className="status-banner warn" role="status">
+          <p>{playlistSyncError}</p>
+        </div>
+      ) : null}
+
+      {playlistFeedback ? (
+        <div
+          className={`status-banner ${playlistFeedback.includes('saved') || playlistFeedback.includes('updated') ? 'ok' : 'warn'}`}
+          role="status"
+        >
           <p>{playlistFeedback}</p>
         </div>
       ) : null}
@@ -122,8 +168,12 @@ export default function PlaylistManager() {
         <label>
           <span>Playlist name</span>
           <input
+            disabled={controlsDisabled}
             value={draft.name}
-            onChange={(event) => updateDraft({ ...draft, name: event.target.value })}
+            onChange={(event) => {
+              setPlaylistFeedback(null);
+              updateDraft({ ...draft, name: event.target.value });
+            }}
             placeholder="Morning Sequence"
           />
           {errors.name ? <small className="error-text">{errors.name}</small> : null}
@@ -135,6 +185,7 @@ export default function PlaylistManager() {
             <button
               type="button"
               className="secondary"
+              disabled={controlsDisabled}
               onClick={() =>
                 updateDraft({
                   ...draft,
@@ -155,8 +206,10 @@ export default function PlaylistManager() {
                 <label>
                   <span>Item {index + 1} meditation type</span>
                   <select
+                    disabled={controlsDisabled}
                     value={item.meditationType}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      setPlaylistFeedback(null);
                       updateDraft({
                         ...draft,
                         items: draft.items.map((entry) =>
@@ -164,8 +217,8 @@ export default function PlaylistManager() {
                             ? { ...entry, meditationType: event.target.value as PlaylistDraft['items'][number]['meditationType'] }
                             : entry
                         ),
-                      })
-                    }
+                      });
+                    }}
                   >
                     <option value="">Select meditation type</option>
                     {meditationTypes.map((meditationType) => (
@@ -182,8 +235,10 @@ export default function PlaylistManager() {
                   <input
                     type="number"
                     min={1}
+                    disabled={controlsDisabled}
                     value={item.durationMinutes}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      setPlaylistFeedback(null);
                       updateDraft({
                         ...draft,
                         items: draft.items.map((entry) =>
@@ -191,8 +246,8 @@ export default function PlaylistManager() {
                             ? { ...entry, durationMinutes: Number(event.target.value) }
                             : entry
                         ),
-                      })
-                    }
+                      });
+                    }}
                   />
                   {itemErrors?.durationMinutes ? <small className="error-text">{itemErrors.durationMinutes}</small> : null}
                 </label>
@@ -207,7 +262,7 @@ export default function PlaylistManager() {
                         items: movePlaylistDraftItem(draft.items, index, -1),
                       })
                     }
-                    disabled={index === 0}
+                    disabled={controlsDisabled || index === 0}
                     aria-label={`Move item ${index + 1} up`}
                     title="Move up"
                   >
@@ -222,7 +277,7 @@ export default function PlaylistManager() {
                         items: movePlaylistDraftItem(draft.items, index, 1),
                       })
                     }
-                    disabled={index === draft.items.length - 1}
+                    disabled={controlsDisabled || index === draft.items.length - 1}
                     aria-label={`Move item ${index + 1} down`}
                     title="Move down"
                   >
@@ -232,6 +287,7 @@ export default function PlaylistManager() {
                     type="button"
                     className="secondary compact-control"
                     onClick={() => removeDraftItem(item.id)}
+                    disabled={controlsDisabled}
                     aria-label={`Remove item ${index + 1}`}
                     title="Remove item"
                   >
@@ -248,9 +304,11 @@ export default function PlaylistManager() {
         </p>
 
         <div className="timer-actions">
-          <button type="submit">{editId ? 'Update Playlist' : 'Create Playlist'}</button>
+          <button type="submit" disabled={controlsDisabled}>
+            {editId ? 'Update Playlist' : 'Create Playlist'}
+          </button>
           {editId ? (
-            <button type="button" className="secondary" onClick={cancelEdit}>
+            <button type="button" className="secondary" onClick={cancelEdit} disabled={controlsDisabled}>
               Cancel Edit
             </button>
           ) : null}
@@ -297,21 +355,26 @@ export default function PlaylistManager() {
                       Open Active Run
                     </button>
                   ) : (
-                    <button type="button" onClick={() => runPlaylist(playlist.id)}>
+                    <button type="button" onClick={() => runPlaylist(playlist.id)} disabled={isPlaylistSyncing}>
                       Run Playlist
                     </button>
                   )}
-                  <button type="button" className="secondary" onClick={() => startEdit(playlist.id)}>
+                  <button type="button" className="secondary" onClick={() => startEdit(playlist.id)} disabled={controlsDisabled}>
                     Edit
                   </button>
-                  <button type="button" className="secondary" onClick={() => toggleFavoritePlaylist(playlist.id)}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void toggleFavoritePlaylist(playlist.id)}
+                    disabled={controlsDisabled}
+                  >
                     {playlist.favorite ? 'Unfavorite' : 'Favorite'}
                   </button>
                   <button
                     type="button"
                     className="secondary"
                     onClick={() => setPendingDeleteId(playlist.id)}
-                    disabled={isActivePlaylist}
+                    disabled={controlsDisabled || isActivePlaylist}
                     title={isActivePlaylist ? 'Cannot delete an actively running playlist' : 'Delete playlist'}
                   >
                     Delete
@@ -322,21 +385,15 @@ export default function PlaylistManager() {
                   <div className="confirm-sheet" role="dialog" aria-label={`Delete playlist ${playlist.name} confirmation`}>
                     <p>Delete playlist "{playlist.name}"?</p>
                     <div className="timer-actions">
-                      <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>
-                        Keep Playlist
-                      </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const deleteResult = deletePlaylist(playlist.id);
-                          if (!deleteResult.deleted) {
-                            setPlaylistFeedback('This playlist is currently running. End the run before deleting it.');
-                          } else {
-                            setPlaylistFeedback(null);
-                          }
-                          setPendingDeleteId(null);
-                        }}
+                        className="secondary"
+                        onClick={() => setPendingDeleteId(null)}
+                        disabled={controlsDisabled}
                       >
+                        Keep Playlist
+                      </button>
+                      <button type="button" onClick={() => void confirmDelete(playlist.id)} disabled={controlsDisabled}>
                         Delete Playlist
                       </button>
                     </div>

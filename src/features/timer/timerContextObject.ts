@@ -5,9 +5,9 @@ import type {
   PlaylistDeleteResult,
   Playlist,
   PlaylistDraft,
+  PlaylistSaveResult,
   PlaylistRunStartResult,
   PlaylistRunOutcome,
-  PlaylistValidationResult,
 } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { TimerSettings } from '../../types/timer';
@@ -34,6 +34,9 @@ export interface TimerContextValue {
   readonly isCustomPlaysLoading: boolean;
   readonly isCustomPlaySyncing: boolean;
   readonly customPlaySyncError: string | null;
+  readonly isPlaylistsLoading: boolean;
+  readonly isPlaylistSyncing: boolean;
+  readonly playlistSyncError: string | null;
   readonly isSettingsLoading: boolean;
   readonly isSettingsSyncing: boolean;
   readonly settingsSyncError: string | null;
@@ -41,9 +44,9 @@ export interface TimerContextValue {
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => Promise<CustomPlaySaveResult>;
   readonly deleteCustomPlay: (playId: string) => Promise<boolean>;
   readonly toggleFavoriteCustomPlay: (playId: string) => Promise<boolean>;
-  readonly savePlaylist: (draft: PlaylistDraft, editId?: string) => PlaylistValidationResult;
-  readonly deletePlaylist: (playlistId: string) => PlaylistDeleteResult;
-  readonly toggleFavoritePlaylist: (playlistId: string) => void;
+  readonly savePlaylist: (draft: PlaylistDraft, editId?: string) => Promise<PlaylistSaveResult>;
+  readonly deletePlaylist: (playlistId: string) => Promise<PlaylistDeleteResult>;
+  readonly toggleFavoritePlaylist: (playlistId: string) => Promise<boolean>;
   readonly startPlaylistRun: (playlistId: string) => PlaylistRunStartResult;
   readonly pausePlaylistRun: () => void;
   readonly resumePlaylistRun: () => void;

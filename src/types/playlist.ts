@@ -36,6 +36,11 @@ export interface PlaylistValidationResult {
   };
 }
 
+export interface PlaylistSaveResult extends PlaylistValidationResult {
+  readonly persisted: boolean;
+  readonly persistenceError?: string;
+}
+
 export interface ActivePlaylistRun {
   readonly runId: string;
   readonly playlistId: string;

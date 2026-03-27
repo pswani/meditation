@@ -2,6 +2,23 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b playlists rest decisions
+- Move playlist persistence to backend-owned H2 + REST while keeping the existing frontend `Playlist` and `PlaylistItem` shapes stable for screen consumers.
+- Reuse the existing `playlist` and `playlist_item` tables, but add a stable string `external_id` for playlist items so older browser-created item ids migrate cleanly.
+- Keep playlist-generated `session log` behavior at per-item granularity through the existing `session log` sync path:
+  - each reached item logs an `auto log`
+  - completed items log `completed`
+  - ending early logs the active item as `ended early`
+  - unstarted future items do not log
+- Preserve readable historical playlist context even after a playlist is deleted by storing snapshot fields (`playlistName`, run metadata, item position/count`) on `session log` rows and letting `playlist_id` null out on delete.
+- Preserve browser `localStorage` for:
+  - first-hydration migration of older local playlists
+  - fallback cache continuity when backend hydration fails
+- Keep playlist management feedback calm and local to the Practice/playlist surfaces:
+  - loading banners during backend hydration
+  - inline warning banners on backend failures
+  - truthful save/update/delete feedback only after backend confirmation
+
 ### 2026-03-26 milestone-b media catalog custom plays rest decisions
 - Keep the existing backend `media asset` catalog, configured media-root filesystem conventions, and seeded custom-play metadata as the source of truth for selectable recordings in this slice.
 - Move `custom play` persistence to backend-owned H2 + REST while keeping the existing frontend `CustomPlay` shape stable and adapting the new backend contract to it.
