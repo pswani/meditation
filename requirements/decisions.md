@@ -2,6 +2,16 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline sync testing decisions
+- Use app-level stateful fetch-mock journeys in `src/App.test.tsx` as the main prompt 06 confidence layer, because the remaining Milestone D risk is startup and replay continuity across multiple features rather than isolated queue helpers.
+- Add only two new prompt 06 journeys:
+  - offline startup from cached queued state through reconnect success
+  - partial reconnect failure followed by a later retry success
+- Keep retry verification focused on durable user and queue outcomes:
+  - local data stays visible
+  - already synced work does not replay
+  - failed work remains queued and retries on the next online transition
+
 ### 2026-03-27 milestone-d offline remediation decisions
 - Keep stale queued delete handling explicit for backend-backed mutable records by returning a `"stale"` delete outcome with the current backend record instead of treating the delete as silent success.
 - Rehydrate stale delete outcomes directly into the existing `custom play` and playlist UI flows so the latest backend-backed record is restored locally with calm conflict guidance, rather than adding a separate conflict-management surface in this milestone.

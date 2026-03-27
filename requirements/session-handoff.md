@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 05 is complete on `codex/milestone-d-offline-sync-fullstack`. The important offline-sync remediation work is in place, verified, and ready for prompt 06 test expansion.
+Milestone D prompt 06 is complete on `codex/milestone-d-offline-sync-fullstack`. The offline-first and reconciliation flows now have expanded end-to-end verification coverage, and the milestone is ready for the final merge prompt.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -140,6 +140,26 @@ Milestone D prompt 05 is complete on `codex/milestone-d-offline-sync-fullstack`.
   - `session log` stale protection is still intentionally scoped to the current append-style retry flow
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/06-test-offline-sync-fullstack.md`
+
+## Milestone D prompt 06: testing
+- Added and used:
+  - `requirements/execplan-milestone-d-offline-sync-testing.md`
+- Test additions:
+  - added app-level offline-startup coverage in `src/App.test.tsx` proving cached `session log` state remains visible while offline and flushes successfully after reconnection
+  - added app-level partial-failure coverage in `src/App.test.tsx` proving queued offline work can succeed partially, keep failed work visible, and retry only the failed entry on the next online transition
+  - reused the existing stateful backend fetch mock so prompt 06 strengthens milestone confidence without introducing a second test harness
+- Coverage summary for prompt 06:
+  - online startup is covered through existing Home, Practice, Settings, and fresh-mount backend hydration tests
+  - offline startup, offline actions, reconnection, sync success, and partial-failure retry now have explicit app-level coverage
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/99-merge-branch.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
