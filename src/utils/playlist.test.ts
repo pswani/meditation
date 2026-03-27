@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arePlaylistsEqual,
   computePlaylistTotalDurationMinutes,
   createInitialPlaylistDraft,
   movePlaylistDraftItem,
@@ -70,5 +71,30 @@ describe('playlist helpers', () => {
 
     expect(movePlaylistDraftItem(items, -1, 1).map((item) => item.id)).toEqual(['a', 'b']);
     expect(movePlaylistDraftItem(items, 1, 1).map((item) => item.id)).toEqual(['a', 'b']);
+  });
+
+  it('compares playlists by ordered item content', () => {
+    const left = {
+      id: 'playlist-1',
+      name: 'Morning',
+      favorite: false,
+      createdAt: '2026-03-24T10:00:00.000Z',
+      updatedAt: '2026-03-24T10:10:00.000Z',
+      items: [
+        { id: 'item-1', meditationType: 'Vipassana' as const, durationMinutes: 10 },
+        { id: 'item-2', meditationType: 'Ajapa' as const, durationMinutes: 15 },
+      ],
+    };
+
+    expect(arePlaylistsEqual(left, { ...left, items: [...left.items] })).toBe(true);
+    expect(
+      arePlaylistsEqual(left, {
+        ...left,
+        items: [
+          { id: 'item-2', meditationType: 'Ajapa' as const, durationMinutes: 15 },
+          { id: 'item-1', meditationType: 'Vipassana' as const, durationMinutes: 10 },
+        ],
+      })
+    ).toBe(false);
   });
 });

@@ -2,6 +2,14 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e hardening remediation decisions
+- Reduce `TimerContext` risk incrementally by extracting the repeated queue-backed collection reconciliation rules into a focused helper module, instead of attempting a larger provider split during this prompt.
+- Replace JSON-stringification-based queue hydration keys and collection equality checks with narrower metadata signatures and domain-aware equality helpers so sync cycles do less avoidable serialization work.
+- Make `npm run media:setup` prepare both media roots used by the repo:
+  - `public/media/custom-plays`
+  - `local-data/media/custom-plays`
+- Keep the frontend fallback and backend-served media paths both documented, because the repo still supports frontend-only sample checks while the backend serves `/media/**` from the H2-backed local stack.
+
 ### 2026-03-27 milestone-e hardening release branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-e-hardening-release`.
 - Create and use the local milestone branch `codex/milestone-e-hardening-release` for all Milestone E prompt execution before merging back to the parent branch.

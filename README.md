@@ -90,6 +90,9 @@ Compatibility redirect:
 
 ## Custom Play Media Placement
 
+- Run `npm run media:setup` to prepare both media roots used by this repo:
+  - `local-data/media/custom-plays/` for backend-served development media
+  - `public/media/custom-plays/` for frontend-only fallback checks when the backend is not serving media
 - Place local custom-play audio files under `local-data/media/custom-plays/` for backend-served development media.
 - The seeded media catalog maps those files to stable media asset ids and relative paths such as `custom-plays/vipassana-sit-20.mp3`.
 - Frontend `custom play` entries store the selected `mediaAssetId`; the backend validates that the referenced asset exists and is active before saving.
@@ -308,7 +311,10 @@ Backend dependencies are resolved when you first run the backend commands.
 npm run media:setup
 ```
 
-This ensures `public/media/custom-plays/` exists for local static custom-play files.
+This prepares both media directories used by the repo:
+
+- `public/media/custom-plays/` for frontend-only fallback checks
+- `local-data/media/custom-plays/` for backend-served media files
 
 ### Run the front end
 
@@ -351,7 +357,7 @@ npm run dev:all
 
 Behavior:
 
-- always prepares the media root
+- always prepares both media roots
 - starts the front end
 - starts the in-repo backend by default when `backend/pom.xml` is present
 - still supports an overridden external backend command when explicitly configured
@@ -386,7 +392,7 @@ Optional variables:
 - `MEDITATION_H2_DB_NAME`
   - optional H2 database filename prefix
 - `MEDITATION_MEDIA_ROOT`
-  - optional media root override
+  - optional frontend fallback media root override
 - `MEDITATION_MEDIA_STORAGE_ROOT`
   - optional backend media-storage root override
 
@@ -399,7 +405,9 @@ Code audit results:
 Current operational meaning:
 
 - install dependencies
-- optionally prepare `public/media/custom-plays`
+- optionally prepare both media roots:
+  - `public/media/custom-plays`
+  - `local-data/media/custom-plays`
 - start Vite
 - start Spring Boot + H2 from `backend/`
 - use backend + H2 persistence for:
@@ -430,7 +438,7 @@ npm run db:h2:reset
 What they do:
 
 - `npm run media:setup`
-  - ensures the custom-play media root exists
+  - ensures both the frontend fallback and backend-served custom-play media roots exist
 - `npm run dev:frontend`
   - prepares the media root and starts the Vite dev server
 - `npm run dev:backend`
@@ -763,6 +771,8 @@ The concrete media path convention currently used in code is:
 
 ### Exact directory structure to use for local custom play media
 
+`npm run media:setup` prepares both directory trees below so local verification starts from the right paths.
+
 For backend-backed local development, place files under the backend media root:
 
 ```text
@@ -1047,13 +1057,14 @@ Current reference data is source-controlled directly in TypeScript:
 
 For the current implementation, validate in this order:
 
-1. Ensure the file exists under `public/media/custom-plays/`
-2. Ensure the backend media metadata includes the file path you expect
-3. Start the app with `npm run dev:backend` and `npm run dev:frontend`
-4. Confirm the item appears in the `Media session (optional)` dropdown
-5. Save a custom play using it
-6. Confirm the saved custom play shows the media session label
-7. Optionally open the backend media URL in the browser
+1. Ensure the file exists under `local-data/media/custom-plays/` for backend-backed verification.
+2. If you also want frontend-only fallback checks without backend media serving, mirror the file under `public/media/custom-plays/`.
+3. Ensure the backend media metadata includes the file path you expect.
+4. Start the app with `npm run dev:backend` and `npm run dev:frontend`.
+5. Confirm the item appears in the `Media session (optional)` dropdown.
+6. Save a custom play using it.
+7. Confirm the saved custom play shows the media session label.
+8. Optionally open the backend media URL in the browser.
 
 "Usable" currently means linked-media selection and reference visibility, not playback.
 

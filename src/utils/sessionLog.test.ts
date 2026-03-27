@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAutoLogEntry, formatDurationLabel } from './sessionLog';
+import { areSessionLogsEqual, buildAutoLogEntry, formatDurationLabel } from './sessionLog';
 import type { ActiveSession } from '../types/timer';
 
 const activeSession: ActiveSession = {
@@ -65,5 +65,19 @@ describe('formatDurationLabel', () => {
 
   it('formats non-integer minute durations with one decimal', () => {
     expect(formatDurationLabel(90)).toBe('1.5 min');
+  });
+});
+
+describe('areSessionLogsEqual', () => {
+  it('compares session logs by persisted fields', () => {
+    const baseline = buildAutoLogEntry({
+      session: activeSession,
+      endedAt: new Date('2026-03-23T10:20:00.000Z'),
+      completedDurationSeconds: 1200,
+      status: 'completed',
+    });
+
+    expect(areSessionLogsEqual(baseline, { ...baseline })).toBe(true);
+    expect(areSessionLogsEqual(baseline, { ...baseline, completedDurationSeconds: 600 })).toBe(false);
   });
 });

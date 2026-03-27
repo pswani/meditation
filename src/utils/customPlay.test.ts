@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TimerSettings } from '../types/timer';
-import { applyCustomPlayToTimerSettings, createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from './customPlay';
+import {
+  applyCustomPlayToTimerSettings,
+  areCustomPlaysEqual,
+  createCustomPlay,
+  updateCustomPlay,
+  validateCustomPlayDraft,
+} from './customPlay';
 
 describe('custom play helpers', () => {
   it('validates required custom play fields', () => {
@@ -114,5 +120,23 @@ describe('custom play helpers', () => {
     expect(created.name).toBe('Evening Winddown');
     expect(created.recordingLabel).toBe('gentle close');
     expect(created.mediaAssetId).toBe('');
+  });
+
+  it('compares custom plays by stable domain fields instead of object identity', () => {
+    const baseline = createCustomPlay(
+      {
+        name: 'Evening Winddown',
+        meditationType: 'Sahaj',
+        durationMinutes: 18,
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        mediaAssetId: '',
+        recordingLabel: '',
+      },
+      new Date('2026-03-24T10:00:00.000Z')
+    );
+
+    expect(areCustomPlaysEqual(baseline, { ...baseline })).toBe(true);
+    expect(areCustomPlaysEqual(baseline, { ...baseline, favorite: true })).toBe(false);
   });
 });

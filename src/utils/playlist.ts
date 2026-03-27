@@ -1,5 +1,13 @@
 import type { Playlist, PlaylistDraft, PlaylistDraftItem, PlaylistValidationResult } from '../types/playlist';
 
+function arePlaylistItemsEqual(left: Playlist['items'][number], right: Playlist['items'][number]): boolean {
+  return (
+    left.id === right.id &&
+    left.meditationType === right.meditationType &&
+    left.durationMinutes === right.durationMinutes
+  );
+}
+
 export function createPlaylistDraftItem(overrides?: Partial<PlaylistDraftItem>): PlaylistDraftItem {
   return {
     id: `playlist-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -95,4 +103,19 @@ export function updatePlaylist(existing: Playlist, draft: PlaylistDraft, now: Da
     })),
     updatedAt: now.toISOString(),
   };
+}
+
+export function arePlaylistsEqual(left: Playlist, right: Playlist): boolean {
+  if (
+    left.id !== right.id ||
+    left.name !== right.name ||
+    left.favorite !== right.favorite ||
+    left.createdAt !== right.createdAt ||
+    left.updatedAt !== right.updatedAt ||
+    left.items.length !== right.items.length
+  ) {
+    return false;
+  }
+
+  return left.items.every((item, index) => arePlaylistItemsEqual(item, right.items[index]!));
 }

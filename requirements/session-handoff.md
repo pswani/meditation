@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone E branch setup is complete on `codex/milestone-e-hardening-release`. The parent branch remains `codex/functioning`, the working tree is ready for milestone work, and the next exact prompt is ready.
+Milestone E prompt 02 remediation is complete on `codex/milestone-e-hardening-release`. The important release-hardening issues are remediated, the updated setup flow is verified, and the next exact prompt is ready.
 
 ## Milestone E branch setup
 - Parent branch: `codex/functioning`
@@ -14,6 +14,60 @@ Milestone E branch setup is complete on `codex/milestone-e-hardening-release`. T
   - end-to-end verification, release-readiness checks, and local merge back to the parent branch
 - Exact recommended next prompt:
   - `prompts/milestone-e-hardening-release/01-code-quality-performance-hygiene-review.md`
+
+## Milestone E prompt 01: release-hardening review
+- Added:
+  - `docs/review-release-hardening.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - `src/features/timer/TimerContext.tsx` is now the main maintainability and performance hotspot, with duplicated hydration branches and repeated JSON serialization for queue keys and collection equality checks
+    - local media setup guidance is inconsistent between `README.md`, helper scripts, and backend defaults, which can send operators to the wrong directory during full-stack verification
+  - nice-to-have issues:
+    - the repo still lacks a browser-level smoke or end-to-end harness for connected-runtime verification
+    - backend Maven verification still emits a Flyway/H2 compatibility warning even though the build passes
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/02-remediate-code-quality-performance-hygiene.md`
+
+## Milestone E prompt 02: remediation
+- Added and used:
+  - `requirements/execplan-milestone-e-hardening-remediation.md`
+  - `src/features/timer/queueCollectionSync.ts`
+- Frontend hardening changes:
+  - extracted shared queue-backed collection reconciliation helpers out of `src/features/timer/TimerContext.tsx`
+  - replaced JSON-stringification-based queue signatures and collection equality checks with reusable domain-aware helpers for `custom play`, playlist, and `session log` state
+  - kept existing local-first sync behavior intact while making the `custom play` and playlist hydration branches reuse one reconciliation path
+- Operational clarity changes:
+  - updated media-root helper scripts so `npm run media:setup` prepares both:
+    - `public/media/custom-plays`
+    - `local-data/media/custom-plays`
+  - updated `README.md` so local media setup and validation instructions match the actual helper and backend defaults
+- Tests:
+  - added focused helper coverage in `src/features/timer/queueCollectionSync.test.ts`
+  - extended domain-helper coverage in:
+    - `src/utils/customPlay.test.ts`
+    - `src/utils/playlist.test.ts`
+    - `src/utils/sessionLog.test.ts`
+- Verification:
+  - passed `npm run media:setup`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Remaining nice-to-have issues from the review:
+  - the repo still lacks a browser-level smoke or end-to-end harness
+  - backend Maven verification still emits a Flyway/H2 compatibility warning
+- Exact recommended next prompt:
+  - `prompts/milestone-e-hardening-release/03-accessibility-responsive-polish.md`
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
