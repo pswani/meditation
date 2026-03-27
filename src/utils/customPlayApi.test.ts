@@ -77,7 +77,9 @@ describe('custom play api boundary', () => {
       deleteCustomPlayFromApi(customPlay.id, {
         syncQueuedAt: '2026-03-27T10:20:00.000Z',
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({
+      outcome: 'deleted',
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       '/api/custom-plays/custom-play-1',
@@ -98,5 +100,24 @@ describe('custom play api boundary', () => {
         }),
       })
     );
+  });
+
+  it('returns the current custom play when a stale delete loses reconciliation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          outcome: 'stale',
+          currentCustomPlay: customPlay,
+        }),
+      })
+    );
+
+    await expect(deleteCustomPlayFromApi(customPlay.id)).resolves.toEqual({
+      outcome: 'stale',
+      currentCustomPlay: customPlay,
+    });
   });
 });

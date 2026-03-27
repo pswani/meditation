@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 04 is complete on `codex/milestone-d-offline-sync-fullstack`. The offline-sync slice has now been reviewed, and prompt 05 should remediate the most important queue and delete-conflict gaps.
+Milestone D prompt 05 is complete on `codex/milestone-d-offline-sync-fullstack`. The important offline-sync remediation work is in place, verified, and ready for prompt 06 test expansion.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -109,6 +109,37 @@ Milestone D prompt 04 is complete on `codex/milestone-d-offline-sync-fullstack`.
     - `session log` stale-retry protection is only strong enough for the current append-style flow
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/05-remediate-offline-sync-fullstack.md`
+
+## Milestone D prompt 05: remediation
+- Added and used:
+  - `requirements/execplan-milestone-d-offline-sync-remediation.md`
+- Frontend remediation changes:
+  - updated `src/features/timer/TimerContext.tsx` so stale queued deletes for `custom play` and playlist records restore the latest backend-backed record locally and show calm inline warning copy instead of silently succeeding
+  - updated `src/utils/customPlayApi.ts` and `src/utils/playlistApi.ts` so delete requests can distinguish true deletes from explicit `"stale"` outcomes returned by the backend
+  - updated `src/features/sankalpa/useSankalpaProgress.ts` so replay tracking ignores queue state-only churn and does not re-enqueue already queued `sankalpa` goals during backend hydration
+- Backend remediation changes:
+  - updated `/api/custom-plays/{id}` and `/api/playlists/{id}` delete handling to return an explicit stale-delete result payload when a queued delete loses to newer backend-backed state
+  - kept true successful deletes at `204 No Content` so the REST boundary stays clean for non-conflict cases
+- Tests:
+  - added focused frontend UX coverage for stale delete restoration in:
+    - `src/features/customPlays/CustomPlayManager.test.tsx`
+    - `src/pages/PlaylistsPage.test.tsx`
+  - added helper-level replay coverage in:
+    - `src/features/sankalpa/useSankalpaProgress.test.ts`
+  - updated existing sankalpa app coverage to assert failed sync attempts are not replayed repeatedly on queue metadata churn
+  - updated backend controller tests and frontend API-boundary tests for explicit stale delete outcomes
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Known limitations:
+  - stale-write protection still depends on client-supplied queued timestamps in the current local-development model
+  - `session log` stale protection is still intentionally scoped to the current append-style retry flow
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/06-test-offline-sync-fullstack.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`

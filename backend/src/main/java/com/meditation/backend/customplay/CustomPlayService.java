@@ -63,17 +63,18 @@ public class CustomPlayService {
     return toResponse(customPlayRepository.save(entity));
   }
 
-  public void deleteCustomPlay(String customPlayId, String syncQueuedAtRaw) {
+  public CustomPlayDeleteResult deleteCustomPlay(String customPlayId, String syncQueuedAtRaw) {
     CustomPlayEntity existingEntity = customPlayRepository.findById(customPlayId).orElse(null);
     if (existingEntity == null) {
-      return;
+      return new CustomPlayDeleteResult("deleted", null);
     }
 
     if (SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
-      return;
+      return new CustomPlayDeleteResult("stale", toResponse(existingEntity));
     }
 
     customPlayRepository.deleteById(customPlayId);
+    return new CustomPlayDeleteResult("deleted", null);
   }
 
   private CustomPlayResponse toResponse(CustomPlayEntity entity) {

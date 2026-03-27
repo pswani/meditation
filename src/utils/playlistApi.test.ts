@@ -80,7 +80,9 @@ describe('playlist api boundary', () => {
       deletePlaylistFromApi(playlist.id, {
         syncQueuedAt: '2026-03-27T10:20:00.000Z',
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({
+      outcome: 'deleted',
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       '/api/playlists/playlist-1',
@@ -101,5 +103,24 @@ describe('playlist api boundary', () => {
         }),
       })
     );
+  });
+
+  it('returns the current playlist when a stale delete loses reconciliation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          outcome: 'stale',
+          currentPlaylist: playlist,
+        }),
+      })
+    );
+
+    await expect(deletePlaylistFromApi(playlist.id)).resolves.toEqual({
+      outcome: 'stale',
+      currentPlaylist: playlist,
+    });
   });
 });

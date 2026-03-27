@@ -38,7 +38,7 @@ This README is intentionally grounded in the current repository contents. It exp
 - sync-safe backend reconciliation for queued offline writes:
   - stale queued updates do not overwrite newer backend-backed timer settings, custom plays, or playlists
   - `session log` retries remain idempotent through stable client ids
-  - queued deletes for mutable records are ignored when the backend already holds a newer version
+  - stale queued deletes for `custom play` and playlist records now return the current backend-backed record so the UI can restore it with explicit warning guidance
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound selections exist in the UI, but actual audio playback is still not implemented.
 
@@ -235,6 +235,7 @@ This means:
 - queued writes are reduced by entity id so stale intermediate edits do not keep replaying after a newer local change exists
 - list hydration overlays queued local records so stale backend reads do not immediately erase the latest offline-visible state
 - queued flushes now send sync metadata so the backend can safely ignore stale timer-settings, `custom play`, and playlist mutations instead of blindly overwriting newer H2-backed state
+- `sankalpa` replay now ignores queue state-only churn, preventing repeated `/api/sankalpas` reloads or failed-entry resets when only retry bookkeeping changes
 - `session log` and current `sankalpa` replay continue through id-stable upserts so retries do not duplicate records in the current single-user model
 - swapping in the remaining live backend support should continue through these utility modules instead of rewriting screens
 

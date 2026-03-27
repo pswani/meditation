@@ -259,7 +259,9 @@ class PlaylistControllerTest {
 
     mockMvc.perform(delete("/api/playlists/playlist-1")
             .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
-        .andExpect(status().isNoContent());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentPlaylist.name").value("Morning Sequence"));
 
     mockMvc.perform(get("/api/playlists"))
         .andExpect(status().isOk())

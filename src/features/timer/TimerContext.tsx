@@ -1153,11 +1153,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           if (queueEntry.entityType === 'custom-play') {
             setIsCustomPlaySyncing(true);
             if (queueEntry.operation === 'delete') {
-              await deleteCustomPlayFromApi(queueEntry.recordId, {
+              const deleteResult = await deleteCustomPlayFromApi(queueEntry.recordId, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
-              syncedCustomPlayIdsRef.current.delete(queueEntry.recordId);
-              deletedCustomPlayIdsRef.current.add(queueEntry.recordId);
+              if (deleteResult.outcome === 'stale') {
+                syncedCustomPlayIdsRef.current.add(deleteResult.currentCustomPlay.id);
+                deletedCustomPlayIdsRef.current.delete(deleteResult.currentCustomPlay.id);
+                setCustomPlays((current) => mergeCustomPlays([deleteResult.currentCustomPlay], current));
+                setCustomPlaySyncError(
+                  'A newer custom play version already exists in the backend, so this delete was not applied.'
+                );
+              } else {
+                syncedCustomPlayIdsRef.current.delete(queueEntry.recordId);
+                deletedCustomPlayIdsRef.current.add(queueEntry.recordId);
+                setCustomPlaySyncError(null);
+              }
             } else {
               const savedCustomPlay = await persistCustomPlayToApi(queueEntry.payload as CustomPlay, {
                 syncQueuedAt: queueEntry.queuedAt,
@@ -1169,19 +1179,29 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
                   ? current.map((play) => (play.id === savedCustomPlay.id ? savedCustomPlay : play))
                   : current
               );
+              setCustomPlaySyncError(null);
             }
-            setCustomPlaySyncError(null);
             setIsCustomPlaySyncing(false);
           }
 
           if (queueEntry.entityType === 'playlist') {
             setIsPlaylistSyncing(true);
             if (queueEntry.operation === 'delete') {
-              await deletePlaylistFromApi(queueEntry.recordId, {
+              const deleteResult = await deletePlaylistFromApi(queueEntry.recordId, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
-              syncedPlaylistIdsRef.current.delete(queueEntry.recordId);
-              deletedPlaylistIdsRef.current.add(queueEntry.recordId);
+              if (deleteResult.outcome === 'stale') {
+                syncedPlaylistIdsRef.current.add(deleteResult.currentPlaylist.id);
+                deletedPlaylistIdsRef.current.delete(deleteResult.currentPlaylist.id);
+                setPlaylists((current) => mergePlaylists([deleteResult.currentPlaylist], current));
+                setPlaylistSyncError(
+                  'A newer playlist version already exists in the backend, so this delete was not applied.'
+                );
+              } else {
+                syncedPlaylistIdsRef.current.delete(queueEntry.recordId);
+                deletedPlaylistIdsRef.current.add(queueEntry.recordId);
+                setPlaylistSyncError(null);
+              }
             } else {
               const savedPlaylist = await persistPlaylistToApi(queueEntry.payload as Playlist, {
                 syncQueuedAt: queueEntry.queuedAt,
@@ -1193,8 +1213,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
                   ? current.map((playlist) => (playlist.id === savedPlaylist.id ? savedPlaylist : playlist))
                   : current
               );
+              setPlaylistSyncError(null);
             }
-            setPlaylistSyncError(null);
             setIsPlaylistSyncing(false);
           }
 

@@ -94,17 +94,23 @@ public class PlaylistService {
   }
 
   @Transactional
-  public void deletePlaylist(String playlistId, String syncQueuedAtRaw) {
+  public PlaylistDeleteResult deletePlaylist(String playlistId, String syncQueuedAtRaw) {
     PlaylistEntity existingPlaylist = playlistRepository.findById(playlistId).orElse(null);
     if (existingPlaylist == null) {
-      return;
+      return new PlaylistDeleteResult("deleted", null);
     }
 
     if (SyncRequestSupport.isStaleMutation(existingPlaylist.getUpdatedAt(), syncQueuedAtRaw)) {
-      return;
+      List<PlaylistItemEntity> existingItems = playlistItemRepository
+          .findAllByPlaylistIdInOrderByPlaylistIdAscPositionIndexAsc(List.of(existingPlaylist.getId()))
+          .stream()
+          .filter((item) -> existingPlaylist.getId().equals(item.getPlaylistId()))
+          .toList();
+      return new PlaylistDeleteResult("stale", toResponse(existingPlaylist, existingItems));
     }
 
     playlistRepository.deleteById(playlistId);
+    return new PlaylistDeleteResult("deleted", null);
   }
 
   private PlaylistResponse toResponse(PlaylistEntity playlist, List<PlaylistItemEntity> items) {

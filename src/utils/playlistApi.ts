@@ -34,6 +34,20 @@ interface PlaylistUpsertRequest {
   readonly favorite: boolean;
 }
 
+interface PlaylistDeleteApiResponse {
+  readonly outcome: 'deleted' | 'stale';
+  readonly currentPlaylist?: PlaylistApiResponse | null;
+}
+
+export type PlaylistDeleteResult =
+  | {
+      readonly outcome: 'deleted';
+    }
+  | {
+      readonly outcome: 'stale';
+      readonly currentPlaylist: Playlist;
+    };
+
 function isValidIsoDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
 }
@@ -111,6 +125,26 @@ function buildPlaylistUpsertRequest(playlist: Playlist): PlaylistUpsertRequest {
   };
 }
 
+function normalizePlaylistDeleteResult(payload: unknown): PlaylistDeleteResult {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Playlist delete response is invalid.');
+  }
+
+  const candidate = payload as PlaylistDeleteApiResponse;
+  if (candidate.outcome === 'deleted') {
+    return { outcome: 'deleted' };
+  }
+
+  if (candidate.outcome === 'stale' && candidate.currentPlaylist) {
+    return {
+      outcome: 'stale',
+      currentPlaylist: normalizePlaylistPayload(candidate.currentPlaylist),
+    };
+  }
+
+  throw new Error('Playlist delete response is invalid.');
+}
+
 export function buildPlaylistDetailPath(playlistId: string): string {
   return `${PLAYLISTS_COLLECTION_PATH}/${playlistId}`;
 }
@@ -150,7 +184,7 @@ export async function persistPlaylistToApi(
 export async function deletePlaylistFromApi(
   playlistId: string,
   options: SyncMutationRequestOptions = {}
-): Promise<void> {
+): Promise<PlaylistDeleteResult> {
   const url = buildPlaylistDetailUrl(playlistId, options.apiBaseUrl);
 
   let response: Response;
@@ -169,6 +203,12 @@ export async function deletePlaylistFromApi(
     });
   }
 
+  if (response.status === 204) {
+    return {
+      outcome: 'deleted',
+    };
+  }
+
   if (!response.ok) {
     let detail: string | null = null;
 
@@ -185,4 +225,7 @@ export async function deletePlaylistFromApi(
       kind: 'http',
     });
   }
+
+  const payload = await response.json();
+  return normalizePlaylistDeleteResult(payload);
 }

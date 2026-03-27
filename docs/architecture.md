@@ -125,13 +125,14 @@ Single-page React application with route-based screens and feature-oriented modu
 - Queue reduction keeps only the latest relevant mutation per `(entity type, record id)` so repeated offline edits do not accumulate stale replay work.
 - Hydration overlays queued local mutations on top of the latest backend list responses so a stale backend read does not temporarily resurrect deleted records or erase unsynced edits.
 - Failed queue entries can return to a pending state for later retry, while the shell and feature-level copy stay calm and explicit about degraded sync.
+- `Sankalpa` replay now keys off the queued replay payload shape rather than queue state metadata alone, so failed-entry bookkeeping does not repeatedly re-fetch and re-enqueue the same goals.
 
 ## Backend reconciliation model
 - The existing REST routes remain the sync boundary; this milestone does not introduce a second `/sync/*` API surface.
 - Queue flushes send a queued-mutation timestamp to the backend so mutable records can reject stale offline writes safely.
 - Timer settings, custom plays, and playlists now use backend-side stale-write protection:
   - newer backend state wins over an older queued mutation
-  - stale queued deletes become no-ops instead of removing newer records
+  - stale queued deletes return the current backend-backed record so the UI can restore it with explicit warning copy instead of treating the delete as silent success
 - `Session log` replay uses stable client ids and idempotent `PUT` behavior so retrying the same queued write does not duplicate persisted history rows.
 - The current `sankalpa` flow remains create-only in the UI, so prompt 03 keeps its replay model simple and id-stable rather than adding a premature edit-conflict layer.
 

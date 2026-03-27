@@ -2,6 +2,11 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-d offline remediation decisions
+- Keep stale queued delete handling explicit for backend-backed mutable records by returning a `"stale"` delete outcome with the current backend record instead of treating the delete as silent success.
+- Rehydrate stale delete outcomes directly into the existing `custom play` and playlist UI flows so the latest backend-backed record is restored locally with calm conflict guidance, rather than adding a separate conflict-management surface in this milestone.
+- Make `sankalpa` replay depend only on the queued replay payload shape, not queue state metadata, so failed or in-flight bookkeeping changes do not trigger extra `/api/sankalpas` reloads or reset failed entries back to pending.
+
 ### 2026-03-27 milestone-d backend reconciliation decisions
 - Keep the existing REST routes as the offline reconciliation boundary instead of introducing parallel sync-only endpoints in this prompt.
 - Send one queued-mutation timestamp from the frontend queue flush into backend writes so the server can distinguish current mutations from stale delayed retries.

@@ -135,7 +135,9 @@ class CustomPlayControllerTest {
 
     mockMvc.perform(delete("/api/custom-plays/custom-play-1")
             .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
-        .andExpect(status().isNoContent());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentCustomPlay.name").value("Morning Focus"));
 
     mockMvc.perform(get("/api/custom-plays"))
         .andExpect(status().isOk())

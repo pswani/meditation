@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSyncStatus } from '../sync/useSyncStatus';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
+import type { SyncQueueEntry } from '../../types/sync';
 import { isApiClientError } from '../../utils/apiClient';
 import { deriveSankalpaProgress } from '../../utils/sankalpa';
 import { listSankalpaProgressFromApi, persistSankalpaToApi } from '../../utils/sankalpaApi';
@@ -28,6 +29,8 @@ interface UseSankalpaProgressResult {
   readonly saveSankalpa: (goal: SankalpaGoal) => Promise<SankalpaSaveResult>;
 }
 
+type SankalpaReplayEntry = Pick<SyncQueueEntry, 'operation' | 'recordId' | 'payload'>;
+
 function sortProgressEntries(progressEntries: readonly SankalpaProgress[]): SankalpaProgress[] {
   return [...progressEntries].sort((left, right) => Date.parse(right.goal.createdAt) - Date.parse(left.goal.createdAt));
 }
@@ -52,6 +55,30 @@ function mergeProgressEntries(
 function deriveLocalProgress(goals: readonly SankalpaGoal[], sessionLogs: readonly SessionLog[]): SankalpaProgress[] {
   const now = new Date();
   return sortProgressEntries(goals.map((goal) => deriveSankalpaProgress(goal, sessionLogs, now)));
+}
+
+export function selectSankalpaReplayEntries(queue: readonly SyncQueueEntry[]): SankalpaReplayEntry[] {
+  return selectSyncQueueEntries(queue, {
+    entityTypes: ['sankalpa'],
+  }).map((entry) => ({
+    operation: entry.operation,
+    recordId: entry.recordId,
+    payload: entry.payload,
+  }));
+}
+
+export function buildSankalpaReplayKey(entries: readonly SankalpaReplayEntry[]): string {
+  return JSON.stringify(entries);
+}
+
+export function findMissingSankalpaGoalsToQueue(
+  cachedGoals: readonly SankalpaGoal[],
+  remoteGoalIds: ReadonlySet<string>,
+  queuedEntries: readonly SankalpaReplayEntry[]
+): SankalpaGoal[] {
+  const queuedGoalIds = new Set(queuedEntries.map((entry) => entry.recordId));
+
+  return cachedGoals.filter((goal) => !remoteGoalIds.has(goal.id) && !queuedGoalIds.has(goal.id));
 }
 
 function syncLocalCache(progressEntries: readonly SankalpaProgress[]): void {
@@ -110,6 +137,9 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
   const progressEntriesRef = useRef<SankalpaProgress[]>([]);
   const isFlushingQueueRef = useRef(false);
   const timeZone = useMemo(() => getUserTimeZone(), []);
+  const sankalpaReplayEntries = useMemo(() => selectSankalpaReplayEntries(queue), [queue]);
+  const sankalpaReplayKey = useMemo(() => buildSankalpaReplayKey(sankalpaReplayEntries), [sankalpaReplayEntries]);
+  const sankalpaReplayEntriesRef = useRef(sankalpaReplayEntries);
 
   useEffect(() => {
     goalsRef.current = goals;
@@ -121,6 +151,10 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
   useEffect(() => {
     progressEntriesRef.current = progressEntries;
   }, [progressEntries]);
+
+  useEffect(() => {
+    sankalpaReplayEntriesRef.current = sankalpaReplayEntries;
+  }, [sankalpaReplayEntries]);
 
   useEffect(() => {
     if (!isOnline) {
@@ -136,11 +170,9 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     listSankalpaProgressFromApi({ signal: controller.signal, timeZone })
       .then(async (remoteProgressEntriesResponse) => {
         const cachedGoals = goalsRef.current;
-        const queuedSankalpaEntries = selectSyncQueueEntries(queue, {
-          entityTypes: ['sankalpa'],
-        });
+        const replayEntries = sankalpaReplayEntriesRef.current;
         const remoteGoalIds = new Set(remoteProgressEntriesResponse.map((entry) => entry.goal.id));
-        const missingCachedGoals = cachedGoals.filter((goal) => !remoteGoalIds.has(goal.id));
+        const missingCachedGoals = findMissingSankalpaGoalsToQueue(cachedGoals, remoteGoalIds, replayEntries);
         let mergedProgressEntries = remoteProgressEntriesResponse;
 
         if (missingCachedGoals.length > 0) {
@@ -159,7 +191,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
           mergedProgressEntries = sortProgressEntries(remoteProgressEntriesResponse);
         }
 
-        for (const queueEntry of queuedSankalpaEntries) {
+        for (const queueEntry of replayEntries) {
           if (queueEntry.operation !== 'upsert') {
             continue;
           }
@@ -196,7 +228,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     return () => {
       controller.abort();
     };
-  }, [isOnline, queue, sessionLogs, timeZone, updateQueue]);
+  }, [isOnline, sankalpaReplayKey, sessionLogs, timeZone, updateQueue]);
 
   async function saveSankalpa(goal: SankalpaGoal): Promise<SankalpaSaveResult> {
     const nextGoals = [...goalsRef.current.filter((entry) => entry.id !== goal.id), goal].sort(
