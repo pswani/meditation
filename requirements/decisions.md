@@ -2,6 +2,14 @@
 
 ## Decision log
 
+### 2026-03-27 milestone-e merge decisions
+- Merge `codex/milestone-e-hardening-release` back into `codex/functioning` with a normal local merge commit so the review, remediation, accessibility, end-to-end verification, and release-readiness history remain intact.
+- Mark Milestone E complete on `codex/functioning` after the merge because:
+  - the hardening findings were addressed in scope
+  - the connected local full-stack flows were verified live
+  - the release-candidate handoff guidance and helper commands were re-verified on localhost and LAN-accessible URLs
+- Treat the checked-in milestone prompt sequence as complete after `prompts/milestone-e-hardening-release/99-merge-branch.md`; there is no further prompt file in this repository for Milestone E.
+
 ### 2026-03-27 milestone-e release readiness decisions
 - Clarify the README in the shared run and LAN sections that Vite preview is network-accessible but does not proxy `/api`, so connected preview checks require a build created with `VITE_API_BASE_URL` unless the backend will be served from the same origin.
 - Treat Milestone E release readiness as a local release-candidate handoff bar:
