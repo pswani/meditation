@@ -1,7 +1,17 @@
 # Session Handoff
 
 ## Current status
-Milestone A is complete and has been merged into `codex/functioning`. The parent branch now contains the full backend-backed core practice engine slice and its verification history, and the next recommended work is Milestone B branch setup.
+Milestone B branch setup is complete on `codex/milestone-b-practice-composition-fullstack`. The working tree is clean and ready for the practice-composition full-stack prompt sequence.
+
+## Milestone B branch setup
+- Parent branch: `codex/functioning`
+- Milestone branch: `codex/milestone-b-practice-composition-fullstack`
+- Working tree status at branch setup: clean and ready for milestone work
+- Milestone B scope:
+  - manual `session log` REST persistence for manual logging
+  - media catalog metadata + filesystem path references + `custom play` REST persistence
+  - playlist and playlist-item REST persistence
+  - milestone review, remediation, verification, and local merge back to the parent branch
 
 ## Milestone branch setup
 - Parent branch: `codex/functioning`
@@ -157,30 +167,22 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 Read:
 - AGENTS.md
 - PLANS.md
+- README.md
+- docs/architecture.md
+- docs/product-requirements.md
+- docs/ux-spec.md
+- docs/screen-inventory.md
+- requirements/roadmap.md
 - requirements/session-handoff.md
 - requirements/decisions.md
 
 Then:
 
-1. Inspect the current git branch and confirm the current branch name before making changes.
-2. Treat the current branch as the parent branch for this Milestone B.
-3. Create a new local branch for this Milestone B work from the current branch.
-4. Use a clear branch name in this format if available:
-   - `codex/milestone-b-practice-composition-fullstack`
-   If that exact name already exists locally, create a clear alternative with a short numeric suffix.
-5. Switch to the new branch.
-6. Confirm:
-   - parent branch name
-   - new branch name
-   - that the working tree is ready for the milestone work
-7. Update:
-   - requirements/decisions.md
-   - requirements/session-handoff.md
-8. In session-handoff, record:
-   - parent branch
-   - milestone branch
-   - milestone scope
-   - exact recommended next prompt
-9. Do not implement milestone feature work in this step beyond branch setup and minimal documentation updates if needed.
-10. Commit documentation-only changes if any were made, with a clear message such as:
-    chore(branch): prepare local branch for Milestone B
+1. Create an ExecPlan for manual logging full-stack support.
+2. Implement backend/H2/REST support for manual session logs.
+3. Wire the front end manual logging flow to the backend.
+4. Preserve clear distinction between auto and manual logs.
+5. Add focused tests and run full verification.
+6. Update docs and session-handoff with exact recommended next prompt.
+7. Commit with a clear message:
+   feat(composition): add manual logging full-stack support

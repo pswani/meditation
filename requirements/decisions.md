@@ -2,6 +2,16 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b practice composition branch setup decisions
+- Treat `codex/functioning` as the parent branch for `milestone-b-practice-composition-fullstack`.
+- Create and use the local milestone branch `codex/milestone-b-practice-composition-fullstack` for all Milestone B prompt execution before merging back to the parent branch.
+- Keep Milestone B bounded to the practice-composition full-stack slice:
+  - manual `session log` REST persistence for manual logging
+  - media catalog and `custom play` REST persistence
+  - playlist and playlist-item REST persistence
+  - milestone review, remediation, verification, and local merge-back
+- Preserve strict prompt-file execution order and avoid unrelated refactors while the milestone branch is active.
+
 ### 2026-03-26 milestone-a core full-stack branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-a-core-fullstack`.
 - Create and use the local milestone branch `codex/prompts/milestone-a-core-fullstack` for all Milestone A prompt execution before merging back to the parent branch.
