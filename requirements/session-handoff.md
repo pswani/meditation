@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone D prompt 03 is complete on `codex/milestone-d-offline-sync-fullstack`. Offline queue replay now has sync-safe backend reconciliation behavior, and prompt 04 can review the milestone for remaining gaps.
+Milestone D prompt 04 is complete on `codex/milestone-d-offline-sync-fullstack`. The offline-sync slice has now been reviewed, and prompt 05 should remediate the most important queue and delete-conflict gaps.
 
 ## Milestone D branch setup
 - Parent branch: `codex/functioning`
@@ -95,6 +95,20 @@ Milestone D prompt 03 is complete on `codex/milestone-d-offline-sync-fullstack`.
   - multi-device or multi-user conflict resolution is still intentionally out of scope for this milestone
 - Exact recommended next prompt:
   - `prompts/milestone-d-offline-sync-fullstack/04-review-offline-sync-fullstack.md`
+
+## Milestone D prompt 04: review
+- Added:
+  - `docs/review-offline-sync-fullstack.md`
+- Review result:
+  - critical issues: none
+  - important issues:
+    - `sankalpa` queue replay re-fetches and re-enqueues on every queue mutation, which can reset failed entries and create unnecessary backend traffic
+    - stale queued deletes for `custom play` and playlist records currently resolve as silent success, so deleted records can later reappear without an explicit conflict message
+  - nice-to-have issues:
+    - stale-write protection currently depends on client-supplied queued timestamps rather than a server receipt or monotonic version
+    - `session log` stale-retry protection is only strong enough for the current append-style flow
+- Exact recommended next prompt:
+  - `prompts/milestone-d-offline-sync-fullstack/05-remediate-offline-sync-fullstack.md`
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
