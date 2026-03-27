@@ -103,6 +103,11 @@ class SummaryControllerTest {
             .queryParam("endAt", "2026-03-26T11:00:00Z")
             .accept(APPLICATION_JSON))
         .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/summaries")
+            .queryParam("timeZone", "Mars/Olympus")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

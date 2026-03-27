@@ -28,6 +28,10 @@
 - Narrow local `sankalpa` save fallback to true network-unreachable failures only; backend validation or server rejections must not fork local state away from the H2-backed source of truth.
 - Surface degraded local-save fallback as a warning state and keep backend rejection feedback inline on the `Sankalpa` screen.
 
+### 2026-03-26 milestone-c discipline insight testing decisions
+- Add one stateful app-level interaction test for the highest-value Milestone C journey: a backend-backed manual log saved in `History` must surface correctly in both `summary` and `sankalpa` on the `Sankalpa` screen, including a fresh mount.
+- Add negative-path backend controller coverage for invalid `timeZone` input so the remediation boundary is tested on both successful and rejected requests without widening the milestone into new feature work.
+
 ### 2026-03-26 milestone-c discipline insight branch setup decisions
 - Treat `codex/functioning` as the parent branch for `milestone-c-discipline-insight-fullstack`.
 - Create and use the local milestone branch `codex/milestone-c-discipline-insight-fullstack` for all Milestone C prompt execution before merging back to the parent branch.

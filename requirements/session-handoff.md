@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone C prompt 04 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has the review remediations in place and is ready for the Milestone C testing prompt.
+Milestone C prompt 05 is complete on `codex/milestone-c-discipline-insight-fullstack`. The milestone branch now has the testing pass in place and is ready for the local merge prompt.
 
 ## Milestone C branch setup
 - Parent branch: `codex/functioning`
@@ -123,6 +123,25 @@ Milestone C prompt 04 is complete on `codex/milestone-c-discipline-insight-fulls
   - frontend summary fallback still derives buckets locally when the summary API is unavailable
 - Exact recommended next prompt:
   - `prompts/milestone-c-discipline-insight-fullstack/05-test-discipline-insight-fullstack.md`
+
+## Milestone C prompt 05: testing
+- Added and used:
+  - `requirements/execplan-milestone-c-discipline-insight-testing.md`
+- Test additions:
+  - added a stateful app-level integration test in `src/App.test.tsx` proving a backend-backed manual log created in `History` flows through to both `summary` and `sankalpa` on the `Sankalpa` screen, including a fresh mount
+  - extended the shared app-test backend mock to derive backend summary aggregates and sankalpa progress from in-memory `session log` and `sankalpa` state
+  - added invalid `timeZone` rejection coverage in:
+    - `backend/src/test/java/com/meditation/backend/summary/SummaryControllerTest.java`
+    - `backend/src/test/java/com/meditation/backend/sankalpa/SankalpaControllerTest.java`
+- Verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 test`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `prompts/milestone-c-discipline-insight-fullstack/99-merge-branch.md`
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`

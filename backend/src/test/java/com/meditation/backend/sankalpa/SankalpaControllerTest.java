@@ -114,6 +114,25 @@ class SankalpaControllerTest {
                 }
                 """))
         .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/sankalpas")
+            .queryParam("timeZone", "Mars/Olympus")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(put("/api/sankalpas/goal-1")
+            .queryParam("timeZone", "Mars/Olympus")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-1",
+                  "goalType": "duration-based",
+                  "targetValue": 12.5,
+                  "days": 5,
+                  "createdAt": "2026-03-24T08:00:00Z"
+                }
+                """))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
+import type { SankalpaGoal } from './types/sankalpa';
+import type { SessionLog } from './types/sessionLog';
 
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
@@ -18,6 +20,143 @@ function createJsonResponse(status: number, body: unknown) {
   };
 }
 
+const meditationTypes = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
+const sessionLogSources = ['auto log', 'manual log'] as const;
+const timeOfDayBuckets = ['morning', 'afternoon', 'evening', 'night'] as const;
+
+function getHourInTimeZone(isoTimestamp: string, timeZone?: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hourCycle: 'h23',
+    timeZone: timeZone ?? 'UTC',
+  }).formatToParts(new Date(isoTimestamp));
+  const hourPart = parts.find((part) => part.type === 'hour');
+
+  return hourPart ? Number(hourPart.value) : new Date(isoTimestamp).getUTCHours();
+}
+
+function getTimeOfDayBucket(sessionLog: SessionLog, timeZone?: string): (typeof timeOfDayBuckets)[number] {
+  const hour = getHourInTimeZone(sessionLog.endedAt, timeZone);
+  if (hour >= 5 && hour < 12) {
+    return 'morning';
+  }
+  if (hour >= 12 && hour < 17) {
+    return 'afternoon';
+  }
+  if (hour >= 17 && hour < 21) {
+    return 'evening';
+  }
+  return 'night';
+}
+
+function deriveSummaryResponse(
+  sessionLogs: readonly SessionLog[],
+  options?: { startAt?: string | null; endAt?: string | null; timeZone?: string }
+) {
+  const startAtMs = options?.startAt ? Date.parse(options.startAt) : null;
+  const endAtMs = options?.endAt ? Date.parse(options.endAt) : null;
+  const filteredLogs = sessionLogs.filter((sessionLog) => {
+    const endedAtMs = Date.parse(sessionLog.endedAt);
+    if (startAtMs !== null && endedAtMs < startAtMs) {
+      return false;
+    }
+    if (endAtMs !== null && endedAtMs > endAtMs) {
+      return false;
+    }
+    return true;
+  });
+  const completedSessionLogs = filteredLogs.filter((entry) => entry.status === 'completed').length;
+  const totalDurationSeconds = filteredLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0);
+
+  return {
+    overallSummary: {
+      totalSessionLogs: filteredLogs.length,
+      completedSessionLogs,
+      endedEarlySessionLogs: filteredLogs.length - completedSessionLogs,
+      totalDurationSeconds,
+      averageDurationSeconds: filteredLogs.length === 0 ? 0 : Math.round(totalDurationSeconds / filteredLogs.length),
+      autoLogs: filteredLogs.filter((entry) => entry.source === 'auto log').length,
+      manualLogs: filteredLogs.filter((entry) => entry.source === 'manual log').length,
+    },
+    byTypeSummary: meditationTypes.map((meditationType) => {
+      const matchingLogs = filteredLogs.filter((entry) => entry.meditationType === meditationType);
+      return {
+        meditationType,
+        sessionLogs: matchingLogs.length,
+        totalDurationSeconds: matchingLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0),
+      };
+    }),
+    bySourceSummary: sessionLogSources.map((source) => {
+      const matchingLogs = filteredLogs.filter((entry) => entry.source === source);
+      const matchingCompletedLogs = matchingLogs.filter((entry) => entry.status === 'completed').length;
+      return {
+        source,
+        sessionLogs: matchingLogs.length,
+        completedSessionLogs: matchingCompletedLogs,
+        endedEarlySessionLogs: matchingLogs.length - matchingCompletedLogs,
+        totalDurationSeconds: matchingLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0),
+      };
+    }),
+    byTimeOfDaySummary: timeOfDayBuckets.map((timeOfDayBucket) => {
+      const matchingLogs = filteredLogs.filter((entry) => getTimeOfDayBucket(entry, options?.timeZone) === timeOfDayBucket);
+      const matchingCompletedLogs = matchingLogs.filter((entry) => entry.status === 'completed').length;
+      return {
+        timeOfDayBucket,
+        sessionLogs: matchingLogs.length,
+        completedSessionLogs: matchingCompletedLogs,
+        endedEarlySessionLogs: matchingLogs.length - matchingCompletedLogs,
+        totalDurationSeconds: matchingLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0),
+      };
+    }),
+  };
+}
+
+function deriveSankalpaProgressResponses(
+  sankalpas: readonly SankalpaGoal[],
+  sessionLogs: readonly SessionLog[],
+  timeZone?: string
+) {
+  const nowMs = Date.parse('2026-03-26T12:00:00.000Z');
+
+  return [...sankalpas]
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+    .map((goal) => {
+      const createdAtMs = Date.parse(goal.createdAt);
+      const deadlineAtMs = createdAtMs + goal.days * 24 * 60 * 60 * 1000;
+      const matchingLogs = sessionLogs.filter((sessionLog) => {
+        const endedAtMs = Date.parse(sessionLog.endedAt);
+        if (endedAtMs < createdAtMs || endedAtMs > deadlineAtMs) {
+          return false;
+        }
+        if (goal.meditationType && sessionLog.meditationType !== goal.meditationType) {
+          return false;
+        }
+        if (goal.timeOfDayBucket && getTimeOfDayBucket(sessionLog, timeZone) !== goal.timeOfDayBucket) {
+          return false;
+        }
+        return true;
+      });
+      const matchedSessionCount = matchingLogs.length;
+      const matchedDurationSeconds = matchingLogs.reduce((total, entry) => total + entry.completedDurationSeconds, 0);
+      const targetSessionCount = goal.goalType === 'session-count-based' ? Math.round(goal.targetValue) : 0;
+      const targetDurationSeconds = goal.goalType === 'duration-based' ? Math.round(goal.targetValue * 60) : 0;
+      const targetValue = goal.goalType === 'duration-based' ? targetDurationSeconds : targetSessionCount;
+      const progressValue = goal.goalType === 'duration-based' ? matchedDurationSeconds : matchedSessionCount;
+
+      return {
+        goal,
+        status:
+          progressValue >= targetValue ? 'completed' : nowMs > deadlineAtMs ? 'expired' : 'active',
+        deadlineAt: new Date(deadlineAtMs).toISOString(),
+        matchedSessionCount,
+        matchedDurationSeconds,
+        targetSessionCount,
+        targetDurationSeconds,
+        progressRatio: targetValue === 0 ? 0 : Math.min(progressValue / targetValue, 1),
+      };
+    });
+}
+
 function createStatefulBackendFetchMock(options?: {
   settings?: {
     durationMinutes: number;
@@ -28,9 +167,10 @@ function createStatefulBackendFetchMock(options?: {
     intervalMinutes: number;
     intervalSound: string;
   };
-  sessionLogs?: Array<Record<string, unknown>>;
+  sessionLogs?: SessionLog[];
   customPlays?: Array<Record<string, unknown>>;
   playlists?: Array<Record<string, unknown>>;
+  sankalpas?: SankalpaGoal[];
 }) {
   const store = {
     settings: {
@@ -46,13 +186,15 @@ function createStatefulBackendFetchMock(options?: {
     sessionLogs: [...(options?.sessionLogs ?? [])],
     customPlays: [...(options?.customPlays ?? [])],
     playlists: [...(options?.playlists ?? [])],
+    sankalpas: [...(options?.sankalpas ?? [])],
   };
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const requestUrl = new URL(url, 'http://localhost');
     const method = init?.method ?? 'GET';
 
-    if (url.endsWith('/api/settings/timer') && method === 'GET') {
+    if (requestUrl.pathname === '/api/settings/timer' && method === 'GET') {
       return createJsonResponse(200, {
         id: 'default',
         ...store.settings,
@@ -60,7 +202,7 @@ function createStatefulBackendFetchMock(options?: {
       });
     }
 
-    if (url.endsWith('/api/settings/timer') && method === 'PUT') {
+    if (requestUrl.pathname === '/api/settings/timer' && method === 'PUT') {
       store.settings = {
         ...store.settings,
         ...(typeof init?.body === 'string' ? JSON.parse(init.body) : {}),
@@ -73,11 +215,11 @@ function createStatefulBackendFetchMock(options?: {
       });
     }
 
-    if (url.endsWith('/api/session-logs') && method === 'GET') {
+    if (requestUrl.pathname === '/api/session-logs' && method === 'GET') {
       return createJsonResponse(200, [...store.sessionLogs]);
     }
 
-    if (url.endsWith('/api/session-logs/manual') && method === 'POST') {
+    if (requestUrl.pathname === '/api/session-logs/manual' && method === 'POST') {
       const requestBody =
         typeof init?.body === 'string'
           ? (JSON.parse(init.body) as {
@@ -113,7 +255,7 @@ function createStatefulBackendFetchMock(options?: {
       return createJsonResponse(200, sessionLog);
     }
 
-    if (url.includes('/api/session-logs/') && method === 'PUT') {
+    if (requestUrl.pathname.startsWith('/api/session-logs/') && method === 'PUT') {
       const sessionLog = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
       const existingIndex = store.sessionLogs.findIndex((entry) => entry.id === sessionLog.id);
 
@@ -126,11 +268,11 @@ function createStatefulBackendFetchMock(options?: {
       return createJsonResponse(200, sessionLog);
     }
 
-    if (url.endsWith('/api/custom-plays') && method === 'GET') {
+    if (requestUrl.pathname === '/api/custom-plays' && method === 'GET') {
       return createJsonResponse(200, [...store.customPlays]);
     }
 
-    if (url.includes('/api/custom-plays/') && method === 'PUT') {
+    if (requestUrl.pathname.startsWith('/api/custom-plays/') && method === 'PUT') {
       const customPlay = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
       const existingIndex = store.customPlays.findIndex((entry) => entry.id === customPlay.id);
 
@@ -143,17 +285,17 @@ function createStatefulBackendFetchMock(options?: {
       return createJsonResponse(200, customPlay);
     }
 
-    if (url.includes('/api/custom-plays/') && method === 'DELETE') {
-      const customPlayId = url.split('/').at(-1);
+    if (requestUrl.pathname.startsWith('/api/custom-plays/') && method === 'DELETE') {
+      const customPlayId = requestUrl.pathname.split('/').at(-1);
       store.customPlays = store.customPlays.filter((entry) => entry.id !== customPlayId);
       return createJsonResponse(204, {});
     }
 
-    if (url.endsWith('/api/playlists') && method === 'GET') {
+    if (requestUrl.pathname === '/api/playlists' && method === 'GET') {
       return createJsonResponse(200, [...store.playlists]);
     }
 
-    if (url.includes('/api/playlists/') && method === 'PUT') {
+    if (requestUrl.pathname.startsWith('/api/playlists/') && method === 'PUT') {
       const playlist = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
       const existingIndex = store.playlists.findIndex((entry) => entry.id === playlist.id);
 
@@ -166,13 +308,13 @@ function createStatefulBackendFetchMock(options?: {
       return createJsonResponse(200, playlist);
     }
 
-    if (url.includes('/api/playlists/') && method === 'DELETE') {
-      const playlistId = url.split('/').at(-1);
+    if (requestUrl.pathname.startsWith('/api/playlists/') && method === 'DELETE') {
+      const playlistId = requestUrl.pathname.split('/').at(-1);
       store.playlists = store.playlists.filter((entry) => entry.id !== playlistId);
       return createJsonResponse(204, {});
     }
 
-    if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+    if (requestUrl.pathname === '/api/media/custom-plays' && method === 'GET') {
       return createJsonResponse(200, [
         {
           id: 'media-vipassana-sit-20',
@@ -185,6 +327,24 @@ function createStatefulBackendFetchMock(options?: {
           updatedAt: '2026-03-24T08:00:00.000Z',
         },
       ]);
+    }
+
+    if (requestUrl.pathname === '/api/summaries' && method === 'GET') {
+      return createJsonResponse(
+        200,
+        deriveSummaryResponse(store.sessionLogs, {
+          startAt: requestUrl.searchParams.get('startAt'),
+          endAt: requestUrl.searchParams.get('endAt'),
+          timeZone: requestUrl.searchParams.get('timeZone') ?? undefined,
+        })
+      );
+    }
+
+    if (requestUrl.pathname === '/api/sankalpas' && method === 'GET') {
+      return createJsonResponse(
+        200,
+        deriveSankalpaProgressResponses(store.sankalpas, store.sessionLogs, requestUrl.searchParams.get('timeZone') ?? undefined)
+      );
     }
 
     return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
@@ -792,6 +952,52 @@ describe('App shell', () => {
     expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
     expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^Ajapa$/i).length).toBeGreaterThan(0);
+  });
+
+  it('feeds a backend manual log into summary and sankalpa progress on the Sankalpa screen, including a fresh mount', async () => {
+    const { fetchMock, store } = createStatefulBackendFetchMock({
+      sankalpas: [
+        {
+          id: 'goal-ajapa',
+          goalType: 'session-count-based',
+          targetValue: 1,
+          days: 7,
+          meditationType: 'Ajapa',
+          createdAt: '2026-03-24T08:00:00.000Z',
+        },
+      ],
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
+
+    fireEvent.click(screen.getAllByRole('link', { name: /^Sankalpa$/i })[0]);
+
+    expect(await screen.findByText(/manual log: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/progress: 1 \/ 1 session logs · 0 session logs remaining/i)).toBeInTheDocument();
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/manual log: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 session log in 7 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/progress: 1 \/ 1 session logs · 0 session logs remaining/i)).toBeInTheDocument();
   });
 
   it('persists a backend custom play and rehydrates it on a fresh app mount', async () => {
