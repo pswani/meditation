@@ -2,6 +2,14 @@
 
 ## Decision log
 
+### 2026-03-26 milestone-b testing decisions
+- Use app-level stateful fetch-mock coverage in `src/App.test.tsx` as the main prompt 06 confidence layer for Milestone B, because the remaining risk is backend-backed persistence and fresh-mount hydration continuity rather than isolated reducer or component logic.
+- Strengthen test confidence with backend-backed rehydration journeys for:
+  - manual log -> History
+  - custom play -> Practice tools
+  - playlist run -> History
+- Keep prompt 06 bounded to test additions and milestone documentation only; do not introduce new feature behavior outside what the tests need to exercise.
+
 ### 2026-03-26 milestone-b remediation decisions
 - Treat backend playlist hydration as the source-of-truth gate for playlist-run launch actions on both `Practice` and `Home`; expose an explicit `playlists loading` block reason and disable launch buttons while hydration is still in flight.
 - Keep backend playlist persistence failures distinct from active-run delete blocks by returning expressive delete results from `TimerContext` and reserving the “currently running” message for the real run-conflict case only.

@@ -1,7 +1,7 @@
 # Session Handoff
 
 ## Current status
-Milestone B prompt 05 is complete on `codex/milestone-b-practice-composition-fullstack`. The important review findings have been remediated, full frontend/backend verification passed, and the branch is ready for prompt 06 milestone testing.
+Milestone B prompt 06 is complete on `codex/milestone-b-practice-composition-fullstack`. The milestone test pass is recorded, the full verification suite passed again, and the branch is ready for prompt 99 merge work.
 
 ## Milestone B branch setup
 - Parent branch: `codex/functioning`
@@ -123,6 +123,24 @@ Milestone B prompt 05 is complete on `codex/milestone-b-practice-composition-ful
   - prompt 05 remediated all three important review findings
 - Nice-to-have:
   - `TimerContext` still carries too many milestone responsibilities and remains a future maintainability slice
+
+## Milestone B prompt 06: testing
+- Added and used:
+  - `requirements/execplan-milestone-b-practice-composition-testing.md`
+- Test additions:
+  - expanded `src/App.test.tsx` with backend-backed fresh-mount integration coverage for:
+    - manual log creation -> History rehydration
+    - custom play creation -> Practice rehydration
+    - playlist run auto logs -> History rehydration
+  - extended the existing stateful backend fetch mock only as far as needed to cover Milestone B manual-log, custom-play, and playlist persistence seams
+- Verification:
+  - re-ran:
+    - `npm run typecheck`
+    - `npm run lint`
+    - `npm run test`
+    - `npm run build`
+    - `mvn -Dmaven.repo.local=../local-data/m2 test`
+    - `mvn -Dmaven.repo.local=../local-data/m2 verify`
 
 ## Milestone B verification status
 - Passed `npm run typecheck`
@@ -291,26 +309,38 @@ Milestone A now lives on the parent branch with its milestone branch history pre
 Read:
 - AGENTS.md
 - PLANS.md
+- requirements/session-handoff.md
+- requirements/decisions.md
 - README.md
 - docs/architecture.md
 - docs/product-requirements.md
 - docs/ux-spec.md
 - docs/screen-inventory.md
-- requirements/roadmap.md
-- requirements/decisions.md
-- requirements/session-handoff.md
 
 Then:
 
-1. Create an ExecPlan for a strong test pass on Milestone B.
-2. Thoroughly test:
-   - manual logging
-   - custom plays
-   - media catalog handling
-   - playlists
-   - history integration for those features
-3. Improve coverage where needed with focused maintainable tests only.
-4. Run full relevant verification.
-5. Update docs and session-handoff with exact recommended next prompt.
-6. Commit with a clear message:
-   test(composition): verify practice composition full-stack flows
+1. Inspect the current git state and determine:
+   - the current milestone branch
+   - the parent branch recorded earlier in requirements/session-handoff.md if present
+2. Verify the milestone work is in a good state before merging:
+   - review git status
+   - ensure there are no unintended uncommitted changes
+   - run the relevant verification commands for the milestone if they have not already been run recently
+3. Merge the current milestone branch back into its parent branch locally.
+4. Prefer a normal merge that preserves milestone history unless the repo state clearly requires another safe local strategy.
+5. Switch to the parent branch and complete the merge locally.
+6. If a merge conflict occurs, resolve it carefully, rerun relevant checks, and continue.
+7. After merge, confirm:
+   - parent branch name
+   - merged milestone branch name
+   - resulting git status
+8. Update:
+   - requirements/decisions.md
+   - requirements/session-handoff.md
+9. In session-handoff, record:
+   - milestone branch merged
+   - parent branch updated
+   - milestone completion summary
+   - exact recommended next prompt
+10. Commit any final merge-related documentation updates if needed with a clear message such as:
+   chore(branch): merge Milestone B branch into parent

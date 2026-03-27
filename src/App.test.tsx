@@ -29,6 +29,8 @@ function createStatefulBackendFetchMock(options?: {
     intervalSound: string;
   };
   sessionLogs?: Array<Record<string, unknown>>;
+  customPlays?: Array<Record<string, unknown>>;
+  playlists?: Array<Record<string, unknown>>;
 }) {
   const store = {
     settings: {
@@ -42,6 +44,8 @@ function createStatefulBackendFetchMock(options?: {
       ...(options?.settings ?? {}),
     },
     sessionLogs: [...(options?.sessionLogs ?? [])],
+    customPlays: [...(options?.customPlays ?? [])],
+    playlists: [...(options?.playlists ?? [])],
   };
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -73,6 +77,42 @@ function createStatefulBackendFetchMock(options?: {
       return createJsonResponse(200, [...store.sessionLogs]);
     }
 
+    if (url.endsWith('/api/session-logs/manual') && method === 'POST') {
+      const requestBody =
+        typeof init?.body === 'string'
+          ? (JSON.parse(init.body) as {
+              durationMinutes: number;
+              meditationType: string;
+              sessionTimestamp: string;
+            })
+          : {
+              durationMinutes: 0,
+              meditationType: '',
+              sessionTimestamp: new Date().toISOString(),
+            };
+      const completedDurationSeconds = Math.round(requestBody.durationMinutes * 60);
+      const endedAt = new Date(requestBody.sessionTimestamp);
+      const startedAt = new Date(endedAt.getTime() - completedDurationSeconds * 1000);
+      const sessionLog = {
+        id: `manual-log-${store.sessionLogs.length + 1}`,
+        startedAt: startedAt.toISOString(),
+        endedAt: endedAt.toISOString(),
+        meditationType: requestBody.meditationType,
+        intendedDurationSeconds: completedDurationSeconds,
+        completedDurationSeconds,
+        status: 'completed',
+        source: 'manual log',
+        startSound: 'None',
+        endSound: 'None',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      };
+
+      store.sessionLogs.unshift(sessionLog);
+      return createJsonResponse(200, sessionLog);
+    }
+
     if (url.includes('/api/session-logs/') && method === 'PUT') {
       const sessionLog = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
       const existingIndex = store.sessionLogs.findIndex((entry) => entry.id === sessionLog.id);
@@ -84,6 +124,52 @@ function createStatefulBackendFetchMock(options?: {
       }
 
       return createJsonResponse(200, sessionLog);
+    }
+
+    if (url.endsWith('/api/custom-plays') && method === 'GET') {
+      return createJsonResponse(200, [...store.customPlays]);
+    }
+
+    if (url.includes('/api/custom-plays/') && method === 'PUT') {
+      const customPlay = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+      const existingIndex = store.customPlays.findIndex((entry) => entry.id === customPlay.id);
+
+      if (existingIndex >= 0) {
+        store.customPlays[existingIndex] = customPlay;
+      } else {
+        store.customPlays.unshift(customPlay);
+      }
+
+      return createJsonResponse(200, customPlay);
+    }
+
+    if (url.includes('/api/custom-plays/') && method === 'DELETE') {
+      const customPlayId = url.split('/').at(-1);
+      store.customPlays = store.customPlays.filter((entry) => entry.id !== customPlayId);
+      return createJsonResponse(204, {});
+    }
+
+    if (url.endsWith('/api/playlists') && method === 'GET') {
+      return createJsonResponse(200, [...store.playlists]);
+    }
+
+    if (url.includes('/api/playlists/') && method === 'PUT') {
+      const playlist = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
+      const existingIndex = store.playlists.findIndex((entry) => entry.id === playlist.id);
+
+      if (existingIndex >= 0) {
+        store.playlists[existingIndex] = playlist;
+      } else {
+        store.playlists.unshift(playlist);
+      }
+
+      return createJsonResponse(200, playlist);
+    }
+
+    if (url.includes('/api/playlists/') && method === 'DELETE') {
+      const playlistId = url.split('/').at(-1);
+      store.playlists = store.playlists.filter((entry) => entry.id !== playlistId);
+      return createJsonResponse(204, {});
     }
 
     if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
@@ -447,10 +533,8 @@ describe('App shell', () => {
   it('completes a playlist journey and records per-item auto logs in History', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-25T11:00:00.000Z'));
-
-    localStorage.setItem(
-      PLAYLISTS_KEY,
-      JSON.stringify([
+    const { fetchMock, store } = createStatefulBackendFetchMock({
+      playlists: [
         {
           id: 'playlist-1',
           name: 'Lunch Reset',
@@ -470,10 +554,11 @@ describe('App shell', () => {
             },
           ],
         },
-      ])
-    );
+      ],
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
-    render(
+    const firstRender = render(
       <MemoryRouter initialEntries={['/practice/playlists']}>
         <App />
       </MemoryRouter>
@@ -488,6 +573,7 @@ describe('App shell', () => {
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
+    await flushBackendHydration();
 
     expect(screen.getByText(/current meditation type: ajapa/i)).toBeInTheDocument();
     expect(screen.getByText(/completed so far: 1\/2 items/i)).toBeInTheDocument();
@@ -495,18 +581,25 @@ describe('App shell', () => {
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
+    await flushBackendHydration();
 
     expect(screen.getByRole('heading', { level: 2, name: /playlist completed/i })).toBeInTheDocument();
     expect(screen.getByText(/lunch reset · 2\/2 items logged/i)).toBeInTheDocument();
 
-    const storedLogs = JSON.parse(localStorage.getItem(SESSION_LOGS_KEY) ?? '[]');
-    expect(storedLogs).toHaveLength(2);
-    expect(storedLogs.every((entry: { source: string; status: string; playlistName?: string }) => entry.source === 'auto log')).toBe(true);
-    expect(storedLogs.every((entry: { status: string }) => entry.status === 'completed')).toBe(true);
-    expect(storedLogs.every((entry: { playlistName?: string }) => entry.playlistName === 'Lunch Reset')).toBe(true);
+    expect(store.sessionLogs).toHaveLength(2);
+    expect(store.sessionLogs.every((entry: { source: string; status: string; playlistName?: string }) => entry.source === 'auto log')).toBe(true);
+    expect(store.sessionLogs.every((entry: { status: string }) => entry.status === 'completed')).toBe(true);
+    expect(store.sessionLogs.every((entry: { playlistName?: string }) => entry.playlistName === 'Lunch Reset')).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: /view history/i }));
+    firstRender.unmount();
 
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
     expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);
@@ -669,5 +762,71 @@ describe('App shell', () => {
     expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^Vipassana$/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^ended early$/i).length).toBeGreaterThan(0);
+  });
+
+  it('syncs a manual log to backend history and rehydrates it on a fresh mount', async () => {
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.change(screen.getByLabelText(/^Meditation type$/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)$/i), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+    expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^Ajapa$/i).length).toBeGreaterThan(0);
+  });
+
+  it('persists a backend custom play and rehydrates it on a fresh app mount', async () => {
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Sunrise Sit' } });
+    fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '24' } });
+    await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
+    fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
+    fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
+
+    expect(await screen.findByText(/custom play "Sunrise Sit" saved\./i)).toBeInTheDocument();
+    await waitFor(() => expect(store.customPlays).toHaveLength(1));
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+
+    expect(screen.getByText('Sunrise Sit')).toBeInTheDocument();
+    expect(await screen.findByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
   });
 });
