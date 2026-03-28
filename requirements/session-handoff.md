@@ -1,6 +1,52 @@
 # Session Handoff
 
 ## Current status
+Production deployment guidance is now explicit. The repo now has script-first packaging and backend runtime helpers for a production-oriented deployment shape where nginx serves the frontend build and reverse-proxies the Spring Boot backend.
+
+## 2026-03-28 production deployment scripting
+- Added and updated:
+  - `requirements/execplan-production-deployment-scripting.md`
+  - `README.md`
+  - `docs/architecture.md`
+  - `.env.example`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - `scripts/common.sh`
+  - `scripts/render-nginx-config.sh`
+  - `scripts/package-deploy.sh`
+  - `scripts/prod-backend-start.sh`
+  - `scripts/prod-backend-stop.sh`
+  - `scripts/prod-backend-restart.sh`
+  - `scripts/prod-backend-status.sh`
+  - `scripts/prod-backend-logs.sh`
+- Deployment workflow changes:
+  - production frontend deployment is now documented as a static build served by nginx, not by Vite dev or preview
+  - `./scripts/package-deploy.sh` now builds and assembles:
+    - frontend static files
+    - backend jar
+    - nginx site config
+    - backend env example
+  - `./scripts/render-nginx-config.sh` now renders an nginx site config that serves the frontend bundle and proxies `/api` plus `/media` to the backend
+  - `./scripts/prod-backend-start.sh`, `stop`, `restart`, `status`, and `logs` now manage the packaged backend jar in a production-oriented runtime directory
+- Important implementation notes:
+  - nginx remains operator-managed; the repo scripts manage the backend jar and generate nginx config, but do not install or restart nginx
+  - the prod backend scripts default to loopback binding through `MEDITATION_BACKEND_BIND_HOST=127.0.0.1`
+  - the prod backend scripts use the packaged jar under `local-data/deploy/backend/meditation-backend.jar` when present, otherwise they fall back to the latest built jar in `backend/target/`
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `./scripts/render-nginx-config.sh`
+  - passed `./scripts/package-deploy.sh --skip-build`
+  - passed `./scripts/prod-backend-start.sh` in a persistent shell session
+  - passed `./scripts/prod-backend-status.sh` in a persistent shell session
+  - passed `curl -s http://127.0.0.1:8080/api/health` in a persistent shell session
+  - passed `./scripts/prod-backend-stop.sh` in a persistent shell session
+- Exact recommended next prompt:
+  - `Implement a bounded deployment-hardening slice for the meditation app. Add an operator-safe production env template, tighten the generated nginx config with optional HTTPS and cache-control knobs, add focused shell-script smoke checks for the production packaging and backend lifecycle helpers, update README plus architecture/decisions/session-handoff, run typecheck/lint/test/build and the new script checks, and commit with a clear message. Exclude containerization, CI/CD, and cloud-specific infrastructure.`
+
+## Current status prior to this slice
 Real timer sound playback is now implemented for the timer flow. The app now plays mapped local sound files for session start, interval cues, natural completion, and early stop, and the `sound:add` workflow can register playable timer sound mappings in addition to selectable labels.
 
 ## 2026-03-27 real timer sound playback

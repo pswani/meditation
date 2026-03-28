@@ -75,6 +75,14 @@ backend_health_url() {
   printf 'http://127.0.0.1:%s/api/health\n' "$(backend_port)"
 }
 
+backend_bind_host() {
+  printf '%s\n' "${MEDITATION_BACKEND_BIND_HOST:-127.0.0.1}"
+}
+
+backend_bound_health_url() {
+  printf 'http://%s:%s/api/health\n' "$(backend_bind_host)" "$(backend_port)"
+}
+
 ensure_media_directory() {
   media_root=$1
   mkdir -p "$media_root"
@@ -379,4 +387,73 @@ h2_db_dir() {
 
 h2_db_name() {
   printf '%s\n' "${MEDITATION_H2_DB_NAME:-meditation}"
+}
+
+backend_target_dir() {
+  dir=$(backend_dir)
+
+  if [ -z "$dir" ]; then
+    printf '\n'
+    return
+  fi
+
+  printf '%s\n' "$dir/target"
+}
+
+deploy_dir() {
+  printf '%s\n' "$(resolve_path "${MEDITATION_DEPLOY_DIR:-local-data/deploy}")"
+}
+
+deploy_frontend_dir() {
+  printf '%s\n' "$(deploy_dir)/frontend"
+}
+
+deploy_backend_dir() {
+  printf '%s\n' "$(deploy_dir)/backend"
+}
+
+deploy_nginx_dir() {
+  printf '%s\n' "$(deploy_dir)/nginx"
+}
+
+deploy_backend_jar_path() {
+  printf '%s\n' "$(deploy_backend_dir)/meditation-backend.jar"
+}
+
+deploy_backend_env_example_path() {
+  printf '%s\n' "$(deploy_backend_dir)/meditation-backend.env.example"
+}
+
+deploy_nginx_config_path() {
+  printf '%s\n' "$(deploy_nginx_dir)/meditation.conf"
+}
+
+nginx_server_name() {
+  printf '%s\n' "${MEDITATION_NGINX_SERVER_NAME:-_}"
+}
+
+nginx_listen_port() {
+  printf '%s\n' "${MEDITATION_NGINX_LISTEN_PORT:-80}"
+}
+
+backend_jar_path() {
+  if [ -n "${MEDITATION_BACKEND_JAR_PATH:-}" ]; then
+    printf '%s\n' "$(resolve_path "$MEDITATION_BACKEND_JAR_PATH")"
+    return
+  fi
+
+  packaged_jar=$(deploy_backend_jar_path)
+  if [ -f "$packaged_jar" ]; then
+    printf '%s\n' "$packaged_jar"
+    return
+  fi
+
+  target_dir=$(backend_target_dir)
+  if [ -z "$target_dir" ] || [ ! -d "$target_dir" ]; then
+    printf '\n'
+    return
+  fi
+
+  jar_path=$(find "$target_dir" -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | sort | tail -n 1)
+  printf '%s\n' "$jar_path"
 }

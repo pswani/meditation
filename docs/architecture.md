@@ -4,7 +4,7 @@
 Single-page React application with route-based screens and feature-oriented modules.
 
 ## Current runtime architecture
-- React SPA served by Vite
+- React SPA built by Vite for static deployment
 - Spring Boot backend foundation under `backend/`
 - default backend runtime with developer-only surfaces disabled
 - `dev` backend profile for local-only conveniences such as the H2 console
@@ -19,6 +19,13 @@ Single-page React application with route-based screens and feature-oriented modu
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
 - H2 + Flyway backing the backend foundation
+
+## Recommended production topology
+- serve the frontend production build from a static web server such as nginx
+- reverse-proxy `/api/**` and `/media/**` from that web server to the Spring Boot backend
+- run the backend on a loopback bind such as `127.0.0.1:8080`
+- keep H2 files and backend media files on the application host filesystem
+- reserve Vite dev and preview servers for local development and verification only
 
 ## Confirmed current gaps
 - full-stack wiring is now in place for:

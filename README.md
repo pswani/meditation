@@ -90,7 +90,7 @@ Compatibility redirect:
 
 ## Custom Play Media Placement
 
-- Run `npm run media:setup` to prepare both media roots used by this repo:
+- Run `./scripts/setup-media-root.sh` to prepare both media roots used by this repo:
   - `local-data/media/custom-plays/` for backend-served development media
   - `public/media/custom-plays/` for frontend-only fallback checks when the backend is not serving media
 - The same setup command also prepares timer sound roots:
@@ -458,6 +458,13 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/app-status.sh` | `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, and the current H2 file location. |
 | `./scripts/app-logs.sh --tail 40` | `npm run logs:app -- --tail 40` | Check managed logs | Tails the managed frontend and backend logs, with optional component selection and line count. |
 | `./scripts/preview-local.sh` | `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
+| `./scripts/package-deploy.sh` | none | Build a deployable prod bundle | Builds the frontend and backend, then assembles a deploy bundle with static frontend files, backend jar, nginx config, and backend env example under `local-data/deploy/` by default. |
+| `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate prod nginx config | Renders an nginx site config that serves the frontend `dist` bundle and proxies `/api` and `/media` to the Spring Boot backend. |
+| `./scripts/prod-backend-start.sh` | none | Start the prod backend jar | Starts the packaged Spring Boot backend jar in the background using a production-oriented runtime directory and health checks. |
+| `./scripts/prod-backend-stop.sh` | none | Stop the prod backend jar | Stops the backend process started by `./scripts/prod-backend-start.sh`. |
+| `./scripts/prod-backend-restart.sh` | none | Restart the prod backend jar | Restarts the backend process managed by the prod lifecycle scripts. |
+| `./scripts/prod-backend-status.sh` | none | Inspect prod backend health | Prints the backend PID, jar path, health URL, health state, log path, and database file location. |
+| `./scripts/prod-backend-logs.sh --tail 40` | none | Tail prod backend logs | Tails the backend log written by the prod lifecycle scripts. |
 | `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
 
 ### Environment and configuration variables
@@ -487,6 +494,10 @@ Optional variables:
   - optional override for backend build
 - `MEDITATION_RUNTIME_DIR`
   - optional runtime directory for managed PID files and logs
+- `MEDITATION_DEPLOY_DIR`
+  - optional deployment bundle output directory for `./scripts/package-deploy.sh`
+- `MEDITATION_BACKEND_BIND_HOST`
+  - optional backend bind address for prod backend scripts and generated nginx upstream config
 - `MEDITATION_FRONTEND_DEV_HOST`
   - optional host override for `npm run dev:frontend` and `npm run start:app`
 - `MEDITATION_FRONTEND_DEV_PORT`
@@ -499,10 +510,16 @@ Optional variables:
   - optional H2 file directory for reset/init helper flows
 - `MEDITATION_H2_DB_NAME`
   - optional H2 database filename prefix
+- `MEDITATION_BACKEND_JAR_PATH`
+  - optional jar override for the prod backend lifecycle scripts
 - `MEDITATION_MEDIA_ROOT`
   - optional frontend fallback media root override
 - `MEDITATION_MEDIA_STORAGE_ROOT`
   - optional backend media-storage root override
+- `MEDITATION_NGINX_SERVER_NAME`
+  - optional `server_name` value in the generated nginx config
+- `MEDITATION_NGINX_LISTEN_PORT`
+  - optional `listen` port in the generated nginx config
 
 Code audit results:
 
@@ -547,6 +564,13 @@ node ./scripts/add-custom-play-media.mjs --help
 ./scripts/app-status.sh
 ./scripts/app-logs.sh
 ./scripts/preview-local.sh
+./scripts/package-deploy.sh
+./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf
+./scripts/prod-backend-start.sh
+./scripts/prod-backend-stop.sh
+./scripts/prod-backend-restart.sh
+./scripts/prod-backend-status.sh
+./scripts/prod-backend-logs.sh
 ./scripts/h2-reset.sh
 ```
 
@@ -582,6 +606,25 @@ What they do:
   - tails the managed process logs
 - `./scripts/preview-local.sh`
   - rebuilds the frontend and starts a production-like Vite preview server
+- `./scripts/package-deploy.sh`
+  - builds the frontend and backend, then assembles a deploy bundle under `local-data/deploy`
+  - writes:
+    - frontend static files
+    - backend jar
+    - nginx site config
+    - backend env example
+- `./scripts/render-nginx-config.sh --output ...`
+  - renders an nginx site config that serves the production frontend bundle with SPA fallback and proxies `/api` plus `/media` to the backend
+- `./scripts/prod-backend-start.sh`
+  - starts the packaged backend jar in the background using `local-data/runtime-production` unless `MEDITATION_RUNTIME_DIR` is overridden
+- `./scripts/prod-backend-stop.sh`
+  - stops the packaged backend jar started by the prod backend scripts
+- `./scripts/prod-backend-restart.sh`
+  - restarts the packaged backend jar
+- `./scripts/prod-backend-status.sh`
+  - prints prod backend pid, health, log, jar, and database details
+- `./scripts/prod-backend-logs.sh`
+  - tails the prod backend log
 - `./scripts/h2-reset.sh`
   - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows
 
@@ -1380,6 +1423,21 @@ MEDITATION_FRONTEND_PREVIEW_HOST=127.0.0.1 MEDITATION_FRONTEND_PREVIEW_PORT=4174
 
 ## Build And Deployment
 
+### Recommended production topology
+
+Use this production shape for the current repo:
+
+- nginx serves the frontend production build from `dist/`
+- nginx reverse-proxies `/api` and `/media` to the Spring Boot backend
+- the Spring Boot backend runs as the application server on a loopback bind such as `127.0.0.1:8080`
+- H2 and the backend media root live on disk on the application host
+
+This means:
+
+- do not run the frontend with `vite`, `vite preview`, or any npm dev server in production
+- do not use an npm server as the production frontend host
+- use a real static web server or CDN for the frontend, with nginx as the recommended self-managed option in this repo
+
 ### Build production artifacts
 
 ```bash
@@ -1397,7 +1455,26 @@ Notes:
 
 - `./scripts/build-local.sh` is the script-first build entry point for this repo
 - it runs the frontend production build and then executes the configured backend build command when a backend is present
+- the frontend artifact meant for deployment is the production build in `dist/`, not the Vite dev server
 - if you want a frontend-only build without the helper script, `npm run build` still runs `tsc -b && vite build`
+
+### Package a production deploy bundle
+
+```bash
+./scripts/package-deploy.sh
+```
+
+This produces a deployment bundle under `local-data/deploy/` by default:
+
+```text
+local-data/deploy/
+  frontend/                       Static frontend production files
+  backend/meditation-backend.jar  Packaged Spring Boot jar
+  backend/meditation-backend.env.example
+  nginx/meditation.conf           nginx site config for the bundle
+```
+
+Use `./scripts/package-deploy.sh --skip-build` when the build artifacts already exist and you only want to refresh the assembled deployment bundle.
 
 ### Preview the production build locally
 
@@ -1413,15 +1490,53 @@ Optional npm wrapper: `npm run preview:app`
 
 The repo now produces:
 
-- a static frontend build
+- a static frontend production build
 - a packaged Spring Boot backend artifact
 
 Important assumptions:
 
-- deploy the contents of `dist/`
+- deploy the contents of `dist/` for the frontend production app, or use `./scripts/package-deploy.sh` and deploy `local-data/deploy/frontend/`
+- do not deploy `./scripts/dev-frontend.sh` or any Vite dev-server workflow as the frontend runtime
+- do not use `vite preview` as the production frontend server
 - configure SPA history fallback so routes like `/practice` and `/history` return `index.html`
-- deploy the backend jar from `backend/target/`
+- deploy the backend jar from `backend/target/`, or use the packaged copy at `local-data/deploy/backend/meditation-backend.jar`
 - run Flyway-backed backend startup before considering the API healthy
+
+### Production backend lifecycle
+
+The frontend should be served by nginx, while the backend can be managed with the prod lifecycle scripts in this repo:
+
+```bash
+./scripts/prod-backend-start.sh
+./scripts/prod-backend-status.sh
+./scripts/prod-backend-logs.sh --tail 40
+./scripts/prod-backend-restart.sh
+./scripts/prod-backend-stop.sh
+```
+
+Notes:
+
+- these scripts manage the backend jar only; nginx remains operator-managed
+- the prod backend scripts default to `local-data/runtime-production/` for pid files and logs
+- the prod backend scripts use `local-data/deploy/backend/meditation-backend.jar` when present, otherwise they fall back to the latest built jar under `backend/target/`
+- by default the backend binds to `127.0.0.1` through `MEDITATION_BACKEND_BIND_HOST`, which matches the generated nginx reverse-proxy config
+
+### nginx configuration
+
+Render the nginx site config directly from the repo settings:
+
+```bash
+./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf
+```
+
+The generated config:
+
+- serves the frontend static files from the packaged deploy bundle
+- uses `try_files` so SPA routes fall back to `index.html`
+- proxies `/api/` to the backend
+- proxies `/media/` to the backend
+
+This repo does not automate TLS certificates; add your environment’s HTTPS and certificate configuration on top of the generated site config.
 
 ### Static assets and media in deployment
 
@@ -1443,10 +1558,17 @@ Current likely runtime configuration:
 - frontend:
   - optional `VITE_API_BASE_URL`
 - backend:
+  - `MEDITATION_BACKEND_BIND_HOST`
   - `MEDITATION_BACKEND_PORT`
   - `MEDITATION_H2_DB_DIR`
   - `MEDITATION_H2_DB_NAME`
   - `MEDITATION_MEDIA_STORAGE_ROOT`
+  - `MEDITATION_BACKEND_JAR_PATH`
+  - `MEDITATION_RUNTIME_DIR`
+- nginx bundle generation:
+  - `MEDITATION_DEPLOY_DIR`
+  - `MEDITATION_NGINX_SERVER_NAME`
+  - `MEDITATION_NGINX_LISTEN_PORT`
 
 Optional build-time override when pairing the built front end with a separate backend:
 

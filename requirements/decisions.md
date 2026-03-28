@@ -2,6 +2,19 @@
 
 ## Decision log
 
+### 2026-03-28 production deployment scripting decisions
+- Treat nginx as the recommended self-managed production frontend server for this repo:
+  - serve the static frontend production build from `dist/`
+  - use SPA history fallback to `index.html`
+  - reverse-proxy `/api/**` and `/media/**` to the Spring Boot backend
+- Keep production deployment script-first and repo-local by adding:
+  - one deploy-bundle assembly script
+  - one nginx config rendering script
+  - focused backend production lifecycle scripts
+- Manage only the backend application lifecycle from repo scripts in production-oriented flows; nginx remains operator-managed outside the repo.
+- Default production backend bind host to `127.0.0.1` so the generated nginx config can proxy to a loopback-only backend by default.
+- Assemble the production deployment bundle under `local-data/deploy/` so operators can inspect exactly what the repo expects to ship without mutating the tracked source tree.
+
 ### 2026-03-27 timer sound playback decisions
 - Keep selectable sound labels in `src/data/soundOptions.json`, but move playable file resolution into a separate `src/data/timerSoundCatalog.json` source of truth so timer settings, `custom play` sound labels, and session logs stay label-based while runtime playback gets a stable file mapping.
 - Resolve timer sounds through `/media/sounds/<filename>` so the same runtime URL works for:
