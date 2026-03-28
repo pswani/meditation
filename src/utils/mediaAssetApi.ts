@@ -1,4 +1,5 @@
 import type { MediaAssetMetadata } from '../types/mediaAsset';
+import sampleCustomPlayMediaCatalog from '../data/customPlayMediaCatalog.json';
 import { ApiClientError, isApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 
@@ -31,35 +32,7 @@ export interface MediaAssetCatalogResult {
   readonly errorKind: MediaAssetCatalogIssue | null;
 }
 
-const sampleMediaAssetCatalog: readonly MediaAssetApiResponse[] = [
-  {
-    id: 'media-vipassana-sit-20',
-    label: 'Vipassana Sit (20 min)',
-    filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/vipassana-sit-20.mp3`,
-    durationSeconds: 1200,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 9_200_000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-  {
-    id: 'media-ajapa-breath-15',
-    label: 'Ajapa Breath Cycle (15 min)',
-    filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/ajapa-breath-15.mp3`,
-    durationSeconds: 900,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 6_900_000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-  {
-    id: 'media-tratak-focus-10',
-    label: 'Tratak Focus Bellset (10 min)',
-    filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/tratak-focus-10.mp3`,
-    durationSeconds: 600,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 4_500_000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-];
+const sampleMediaAssetCatalog = sampleCustomPlayMediaCatalog as readonly MediaAssetApiResponse[];
 
 let cachedMediaAssetCatalog: MediaAssetMetadata[] = sampleMediaAssetCatalog.map((entry) => ({ ...entry }));
 let cachedMediaAssetCatalogSource: MediaAssetCatalogSource = 'sample-fallback';

@@ -1,6 +1,44 @@
 # Session Handoff
 
 ## Current status
+Sound and prerecorded-media registration scripts are now implemented. The repo includes documented CLIs for adding timer sound labels and prerecorded `custom play` media assets, with backend media additions flowing through new Flyway migrations instead of manual seed rewrites.
+
+## 2026-03-27 sound and prerecorded-media registration scripts
+- Added and updated:
+  - `requirements/execplan-media-registration-scripts.md`
+  - `docs/media-registration-scripts.md`
+  - `scripts/media-registration-utils.mjs`
+  - `scripts/add-sound-option.mjs`
+  - `scripts/add-custom-play-media.mjs`
+  - `package.json`
+  - `README.md`
+  - `src/data/meditationTypes.json`
+  - `src/data/soundOptions.json`
+  - `src/data/customPlayMediaCatalog.json`
+  - `src/features/timer/constants.ts`
+  - `src/utils/mediaAssetApi.ts`
+  - `src/test/setup.ts`
+- Workflow changes:
+  - `npm run sound:add -- --label "..."` adds a new selectable timer sound label
+  - `npm run media:add:custom-play -- ...` registers a prerecorded `custom play` media asset, updates the frontend fallback catalog, and creates a new backend Flyway migration
+  - both scripts support `--help`
+  - both scripts support `--dry-run`
+- Important implementation notes:
+  - sound registration does not implement playback
+  - prerecorded-media registration intentionally creates a new migration instead of editing `V2__seed_reference_data.sql`
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - verified `npm run sound:add -- --help`
+  - verified `npm run sound:add -- --label "Crystal Bowl" --dry-run`
+  - verified `npm run media:add:custom-play -- --help`
+  - verified `npm run media:add:custom-play -- --id media-sahaj-evening-25 --label "Sahaj Evening Sit (25 min)" --meditation-type Sahaj --filename sahaj-evening-25.mp3 --duration-minutes 25 --size-bytes 11000000 --dry-run`
+- Exact recommended next prompt:
+  - `Implement a small automated smoke-test harness for the media registration CLIs. Include focused verification that dry-run output is stable, JSON catalogs remain sorted/valid, generated migration filenames increment correctly, docs stay aligned, and the required project verification commands still pass.`
+
+## Current status prior to this slice
 Managed local app-stack scripting is now implemented on top of the existing full-stack repo. The workspace has build, start, stop, restart, status, and log helpers for the local frontend/backend stack, with the embedded-H2 lifecycle documented explicitly.
 
 ## 2026-03-27 managed local app-stack scripting

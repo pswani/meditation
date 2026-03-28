@@ -2,6 +2,11 @@
 
 ## Decision log
 
+### 2026-03-27 sound and prerecorded-media registration scripting decisions
+- Store editable timer sound labels and frontend fallback prerecorded-media entries in JSON source files so operator scripts can update one clear source of truth without fragile multi-file manual edits.
+- Keep new prerecorded-media backend data append-only by generating a brand-new Flyway migration for each added asset instead of editing `V2__seed_reference_data.sql`, because existing local H2 databases may already have applied that migration.
+- Let the sound-registration script optionally stage a file under `sounds/` for future playback work, but document clearly that the current application still treats sound options as labels only and does not play those files.
+
 ### 2026-03-27 managed local app-stack scripting decisions
 - Keep the existing foreground `dev:frontend`, `dev:backend`, and `dev:all` commands for direct development work, and add a separate managed app-stack layer for background start/stop/restart operations.
 - Use the Vite dev server for the managed frontend startup instead of Vite preview so the existing `/api` proxy continues to work without requiring a build-time `VITE_API_BASE_URL`.

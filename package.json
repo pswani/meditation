@@ -18,6 +18,8 @@
     "preview": "vite preview",
     "preview:app": "./scripts/preview-local.sh",
     "media:setup": "./scripts/setup-media-root.sh",
+    "media:add:custom-play": "node ./scripts/add-custom-play-media.mjs",
+    "sound:add": "node ./scripts/add-sound-option.mjs",
     "db:h2:reset": "./scripts/h2-reset.sh",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

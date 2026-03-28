@@ -1,8 +1,9 @@
 import type { MeditationType } from '../../types/timer';
+import meditationTypesCatalog from '../../data/meditationTypes.json';
+import soundOptionsCatalog from '../../data/soundOptions.json';
 
-export const meditationTypes: readonly MeditationType[] = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'];
-
-export const soundOptions: readonly string[] = ['None', 'Temple Bell', 'Soft Chime', 'Wood Block'];
+export const meditationTypes = meditationTypesCatalog as readonly MeditationType[];
+export const soundOptions = soundOptionsCatalog as readonly string[];
 
 export const defaultTimerSettings = {
   durationMinutes: 20,

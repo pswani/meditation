@@ -96,6 +96,7 @@ Compatibility redirect:
 - Place local custom-play audio files under `local-data/media/custom-plays/` for backend-served development media.
 - The seeded media catalog maps those files to stable media asset ids and relative paths such as `custom-plays/vipassana-sit-20.mp3`.
 - Frontend `custom play` entries store the selected `mediaAssetId`; the backend validates that the referenced asset exists and is active before saving.
+- For scripted registration and parameter docs, see [docs/media-registration-scripts.md](/Users/prashantwani/wrk/meditation/docs/media-registration-scripts.md).
 
 ## Architecture
 
@@ -489,6 +490,8 @@ Use these commands for the cleanest local workflow:
 
 ```bash
 npm run media:setup
+npm run sound:add -- --help
+npm run media:add:custom-play -- --help
 npm run dev:frontend
 npm run dev:backend
 npm run dev:all
@@ -506,6 +509,10 @@ What they do:
 
 - `npm run media:setup`
   - ensures both the frontend fallback and backend-served custom-play media roots exist
+- `npm run sound:add -- --help`
+  - shows the CLI for adding a selectable timer sound label
+- `npm run media:add:custom-play -- --help`
+  - shows the CLI for registering a prerecorded `custom play` meditation asset
 - `npm run dev:frontend`
   - prepares the media root and starts the Vite dev server
 - `npm run dev:backend`
@@ -781,9 +788,9 @@ The backend now seeds:
 
 Current reference or sample data also still exists in TypeScript modules:
 
-- meditation types: `src/types/timer.ts` and `src/features/timer/constants.ts`
-- sound options: `src/features/timer/constants.ts`
-- fallback custom-play media metadata used only when the backend is unavailable: `src/utils/mediaAssetApi.ts`
+- meditation types: `src/types/timer.ts`, `src/features/timer/constants.ts`, and `src/data/meditationTypes.json`
+- sound options: `src/features/timer/constants.ts` and `src/data/soundOptions.json`
+- fallback custom-play media metadata used only when the backend is unavailable: `src/data/customPlayMediaCatalog.json`
 
 ### How the app stores media metadata today
 
@@ -795,7 +802,7 @@ Current behavior:
 - backend migrations store relative media paths such as `custom-plays/vipassana-sit-20.mp3`
 - backend API responses expose public media paths such as `/media/custom-plays/vipassana-sit-20.mp3`
 - the backend serves `/media/**` from the configured media root
-- `src/utils/mediaAssetApi.ts` still contains a built-in sample fallback catalog for backend-unavailable cases
+- `src/data/customPlayMediaCatalog.json` contains the built-in sample fallback catalog for backend-unavailable cases
 - each media entry has:
   - `id`
   - `label`
@@ -895,7 +902,7 @@ Backend convention:
 Custom play media paths are referenced in two places today:
 
 1. In backend-seeded `media_asset` rows created by Flyway
-2. In the frontend fallback metadata catalog in `src/utils/mediaAssetApi.ts`
+2. In the frontend fallback metadata catalog in `src/data/customPlayMediaCatalog.json`
 
 Example stored value:
 
@@ -925,18 +932,18 @@ Current frontend custom play records still store only `mediaAssetId`, and the UI
 
 For the current backend-backed foundation, the registration flow is:
 
-1. Put the file under `local-data/media/custom-plays/` or your configured backend media root.
-2. Add or update the corresponding backend metadata row through Flyway seed data or a future admin/import workflow.
-3. Run `npm run dev:backend`.
-4. Run `npm run dev:frontend`.
+1. Run `npm run media:add:custom-play -- --help` to review the parameters.
+2. Register the asset with `npm run media:add:custom-play -- ...`.
+3. Restart the backend so Flyway applies the generated migration.
+4. Run `npm run dev:frontend` if needed.
 5. Open `Practice` -> `Show Tools` -> `Custom Plays`.
 6. Select the entry from `Media session (optional)`.
 7. Save a custom play.
 
 Current fallback-only shortcut:
 
-1. Put the file under `public/media/custom-plays/`.
-2. Add a fallback entry in `src/utils/mediaAssetApi.ts` only if you explicitly need backend-unavailable sample behavior.
+1. Use `npm run media:add:custom-play -- ... --skip-frontend-copy` only if you explicitly do not want the public fallback copy.
+2. Otherwise let the script mirror the file into `public/media/custom-plays/` for backend-unavailable fallback behavior.
 
 What "use it" means today:
 
@@ -955,7 +962,7 @@ What it does not mean yet:
 There are two separate concepts in the current code:
 
 1. Timer sound options
-   - defined in `src/features/timer/constants.ts`
+   - defined in `src/data/soundOptions.json` and exposed through `src/features/timer/constants.ts`
    - values:
      - `None`
      - `Temple Bell`
@@ -966,7 +973,7 @@ There are two separate concepts in the current code:
 
 2. Custom play media sessions
    - defined primarily by backend metadata responses
-   - backed by fallback metadata entries in `src/utils/mediaAssetApi.ts` when the backend is unavailable
+   - backed by fallback metadata entries in `src/data/customPlayMediaCatalog.json` when the backend is unavailable
    - selected by `mediaAssetId`
    - persisted into custom plays as `mediaAssetId`
 
@@ -990,45 +997,34 @@ No runtime validation enforces this yet, but MP3 is the only format represented 
 
 ### Example: add a new custom play media file end to end
 
-1. Create the file:
+1. Run:
 
-```text
-local-data/media/custom-plays/sahaj-evening-25.mp3
+```bash
+npm run media:add:custom-play -- \
+  --id media-sahaj-evening-25 \
+  --label "Sahaj Evening Sit (25 min)" \
+  --meditation-type Sahaj \
+  --file /absolute/path/to/sahaj-evening-25.mp3 \
+  --duration-minutes 25
 ```
 
-2. Add corresponding metadata through backend seed/admin flow.
-
-If you specifically need fallback sample behavior while the backend is unavailable, you can also add it to `src/utils/mediaAssetApi.ts`:
-
-```ts
-{
-  id: 'media-sahaj-evening-25',
-  label: 'Sahaj Evening Sit (25 min)',
-  filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/sahaj-evening-25.mp3`,
-  durationSeconds: 1500,
-  mimeType: 'audio/mpeg',
-  sizeBytes: 11_000_000,
-  updatedAt: '2026-03-25T08:00:00.000Z',
-}
-```
-
-3. Start the app:
+2. Start or restart the app:
 
 ```bash
 npm run dev:backend
 npm run dev:frontend
 ```
 
-4. In the UI, go to `Practice` -> `Show Tools` -> `Custom Plays`.
+3. In the UI, go to `Practice` -> `Show Tools` -> `Custom Plays`.
 
-5. Create or edit a custom play and choose `Sahaj Evening Sit (25 min)` from `Media session (optional)`.
+4. Create or edit a custom play and choose `Sahaj Evening Sit (25 min)` from `Media session (optional)`.
 
-6. Save the custom play and confirm the UI shows:
+5. Save the custom play and confirm the UI shows:
 
 - the media session label
 - a linked media session reference for the saved custom play
 
-7. Optional backend media-path check:
+6. Optional backend media-path check:
 
 Open `http://localhost:8080/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:8080/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev:backend` is running.
 
@@ -1058,12 +1054,22 @@ Why multiple files:
 
 ### Add a new sound option
 
-Current front-end steps:
+Current scripted flow:
 
-1. Add the label to `soundOptions` in `src/features/timer/constants.ts`
-2. Update `defaultTimerSettings` if you want it to become a default
-3. Update any custom play defaults if needed
-4. Run tests
+1. Review the CLI:
+
+```bash
+npm run sound:add -- --help
+```
+
+2. Add the label:
+
+```bash
+npm run sound:add -- --label "Crystal Bowl"
+```
+
+3. Update `defaultTimerSettings` in `src/features/timer/constants.ts` only if you want it to become a default.
+4. Run tests.
 
 The UI will then automatically expose the new option in:
 
@@ -1078,16 +1084,10 @@ Current limitation:
 
 ### Example: add a new sound option in the current repo
 
-Change `src/features/timer/constants.ts`:
+Run:
 
-```ts
-export const soundOptions: readonly string[] = [
-  'None',
-  'Temple Bell',
-  'Soft Chime',
-  'Wood Block',
-  'Crystal Bowl',
-];
+```bash
+npm run sound:add -- --label "Crystal Bowl"
 ```
 
 What happens immediately:
@@ -1130,9 +1130,9 @@ The backend now has a Flyway seed layer for meditation types and sample media me
 
 Current reference data is source-controlled directly in TypeScript:
 
-- meditation types: `src/features/timer/constants.ts`
-- sound options: `src/features/timer/constants.ts`
-- fallback custom-play media catalog: `src/utils/mediaAssetApi.ts`
+- meditation types: `src/features/timer/constants.ts` and `src/data/meditationTypes.json`
+- sound options: `src/features/timer/constants.ts` and `src/data/soundOptions.json`
+- fallback custom-play media catalog: `src/data/customPlayMediaCatalog.json`
 
 ### Validate that a new media file is visible and usable
 

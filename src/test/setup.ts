@@ -1,6 +1,7 @@
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { afterEach, beforeEach, expect, vi } from 'vitest';
+import sampleCustomPlayMediaCatalog from '../data/customPlayMediaCatalog.json';
 
 const defaultTimerSettingsResponse = {
   id: 'default',
@@ -14,38 +15,10 @@ const defaultTimerSettingsResponse = {
   updatedAt: '2026-03-26T12:00:00.000Z',
 };
 
-const defaultMediaCatalogResponse = [
-  {
-    id: 'media-vipassana-sit-20',
-    label: 'Vipassana Sit (20 min)',
-    filePath: '/media/custom-plays/vipassana-sit-20.mp3',
-    relativePath: 'custom-plays/vipassana-sit-20.mp3',
-    durationSeconds: 1200,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 9200000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-  {
-    id: 'media-ajapa-breath-15',
-    label: 'Ajapa Breath Cycle (15 min)',
-    filePath: '/media/custom-plays/ajapa-breath-15.mp3',
-    relativePath: 'custom-plays/ajapa-breath-15.mp3',
-    durationSeconds: 900,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 6900000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-  {
-    id: 'media-tratak-focus-10',
-    label: 'Tratak Focus Bellset (10 min)',
-    filePath: '/media/custom-plays/tratak-focus-10.mp3',
-    relativePath: 'custom-plays/tratak-focus-10.mp3',
-    durationSeconds: 600,
-    mimeType: 'audio/mpeg',
-    sizeBytes: 4500000,
-    updatedAt: '2026-03-24T08:00:00.000Z',
-  },
-];
+const defaultMediaCatalogResponse = sampleCustomPlayMediaCatalog.map((entry) => ({
+  ...entry,
+  relativePath: entry.filePath.startsWith('/media/') ? entry.filePath.slice('/media/'.length) : entry.filePath,
+}));
 
 function createJsonResponse(status: number, body: unknown) {
   return {
