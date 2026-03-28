@@ -312,7 +312,7 @@ Backend dependencies are resolved when you first run the backend commands.
 ### Prepare local media root
 
 ```bash
-npm run media:setup
+./scripts/setup-media-root.sh
 ```
 
 This prepares both media directories used by the repo:
@@ -320,10 +320,12 @@ This prepares both media directories used by the repo:
 - `public/media/custom-plays/` for frontend-only fallback checks
 - `local-data/media/custom-plays/` for backend-served media files
 
+Optional npm wrapper: `npm run media:setup`
+
 ### Run the front end
 
 ```bash
-npm run dev:frontend
+./scripts/dev-frontend.sh
 ```
 
 The Vite dev server is configured to bind to the local network on port `5173`.
@@ -344,8 +346,13 @@ Notes:
 - for an isolated frontend run pointed at a non-default backend port, this prompt verified:
 
 ```bash
-VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+MEDITATION_FRONTEND_DEV_HOST=127.0.0.1 \
+MEDITATION_FRONTEND_DEV_PORT=5174 \
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 \
+./scripts/dev-frontend.sh
 ```
+
+Optional npm wrapper: `npm run dev:frontend`
 
 ### Run the back end
 
@@ -354,7 +361,7 @@ The repo now includes an in-repo backend module under `backend/`.
 The cleanest way to start it is:
 
 ```bash
-npm run dev:backend
+./scripts/dev-backend.sh
 ```
 
 Default behavior:
@@ -366,17 +373,19 @@ Default behavior:
 For an isolated local verification run that does not reuse the default H2 file or backend port, this prompt verified:
 
 ```bash
-MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 ./scripts/dev-backend.sh
 ```
 
 You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
+
+Optional npm wrapper: `npm run dev:backend`
 
 ### Run both together
 
 Use the app-level helper:
 
 ```bash
-npm run dev:all
+./scripts/dev-stack.sh
 ```
 
 Behavior:
@@ -386,9 +395,41 @@ Behavior:
 - starts the in-repo backend by default when `backend/pom.xml` is present
 - still supports an overridden external backend command when explicitly configured
 
+Optional npm wrapper: `npm run dev:all`
+
 ### Start and stop the managed local stack
 
 Use the managed stack helpers when you want background processes, PID files, health checks, and logs:
+
+```bash
+./scripts/app-start.sh
+./scripts/app-status.sh
+./scripts/app-logs.sh --tail 40
+./scripts/app-restart.sh
+./scripts/app-restart.sh --no-db
+./scripts/app-stop.sh
+```
+
+Behavior:
+
+- `./scripts/app-start.sh`
+  - prepares both media roots
+  - starts the backend dev server in the background
+  - waits for backend health before starting the frontend dev server
+  - writes PID files and logs under `local-data/runtime/`
+- `./scripts/app-stop.sh`
+  - stops only the managed frontend and backend processes started by `./scripts/app-start.sh`
+- `./scripts/app-restart.sh`
+  - restarts the managed frontend and backend together
+- `./scripts/app-restart.sh --no-db`
+  - restarts only the frontend so the current backend process and embedded H2 state stay up
+  - this repo uses file-backed H2 inside the backend process, so there is no separate DB daemon to restart independently
+- `./scripts/app-status.sh`
+  - shows managed PID, URL, health, and log-path details
+- `./scripts/app-logs.sh`
+  - tails the managed frontend and backend logs
+
+Optional npm wrappers:
 
 ```bash
 npm run start:app
@@ -399,46 +440,25 @@ npm run restart:app -- --no-db
 npm run stop:app
 ```
 
-Behavior:
-
-- `npm run start:app`
-  - prepares both media roots
-  - starts the backend dev server in the background
-  - waits for backend health before starting the frontend dev server
-  - writes PID files and logs under `local-data/runtime/`
-- `npm run stop:app`
-  - stops only the managed frontend and backend processes started by `npm run start:app`
-- `npm run restart:app`
-  - restarts the managed frontend and backend together
-- `npm run restart:app -- --no-db`
-  - restarts only the frontend so the current backend process and embedded H2 state stay up
-  - this repo uses file-backed H2 inside the backend process, so there is no separate DB daemon to restart independently
-- `npm run status:app`
-  - shows managed PID, URL, health, and log-path details
-- `npm run logs:app`
-  - tails the managed frontend and backend logs
-
 ### Script reference
 
-The repo includes both direct dev scripts and managed app lifecycle scripts.
+The scripts under `scripts/` are the primary entry points for local build and server lifecycle management. The `npm run ...` commands are convenience wrappers around the same flows.
 
-| Command | When to use it | What it does |
-| --- | --- | --- |
-| `npm run dev:frontend` | Frontend-only local UI work | Ensures local media roots exist, then starts the Vite dev server on `MEDITATION_FRONTEND_DEV_HOST:MEDITATION_FRONTEND_DEV_PORT` or `0.0.0.0:5173`. |
-| `npm run dev:backend` | Backend-only local API work | Starts the configured backend dev command, which defaults to the in-repo Spring Boot app with the `dev` profile on port `8080`. |
-| `npm run dev:all` | Foreground full-stack local work | Starts the backend in the background for the current shell session, then runs the frontend dev server in the foreground. |
-| `npm run build` | Frontend-only production build | Runs `tsc -b` and `vite build` to generate the frontend bundle in `dist/`. |
-| `npm run build:app` | Full local build verification | Builds the frontend bundle and, when a backend build command is configured, also runs backend verify/package work. |
-| `npm run start:app` | Managed background local stack | Starts the backend and frontend as background processes, waits for health checks, and writes PID files plus logs under `local-data/runtime/`. |
-| `npm run stop:app` | Stop managed processes | Stops only the managed frontend and backend processes created by `npm run start:app`. |
-| `npm run restart:app` | Restart the managed stack | Stops and restarts the managed frontend and backend together. |
-| `npm run restart:app -- --no-db` | Restart UI without cycling the backend | Restarts only the managed frontend, leaving the current backend process and embedded H2 state running. |
-| `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, and the current H2 file location. |
-| `npm run logs:app -- --tail 40` | Check managed logs | Tails the managed frontend and backend logs, with optional component selection and line count. |
-| `npm run preview` | Basic Vite preview | Serves the current frontend production build locally. |
-| `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
-| `npm run media:setup` | Media directory prep | Creates the frontend fallback and backend-served media roots for `custom-plays` and `sounds`. |
-| `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
+| Script | npm wrapper | When to use it | What it does |
+| --- | --- | --- | --- |
+| `./scripts/setup-media-root.sh` | `npm run media:setup` | Media directory prep | Creates the frontend fallback and backend-served media roots for `custom-plays` and `sounds`. |
+| `./scripts/dev-frontend.sh` | `npm run dev:frontend` | Frontend-only local UI work | Ensures local media roots exist, then starts the Vite dev server on `MEDITATION_FRONTEND_DEV_HOST:MEDITATION_FRONTEND_DEV_PORT` or `0.0.0.0:5173`. |
+| `./scripts/dev-backend.sh` | `npm run dev:backend` | Backend-only local API work | Starts the configured backend dev command, which defaults to the in-repo Spring Boot app with the `dev` profile on port `8080`. |
+| `./scripts/dev-stack.sh` | `npm run dev:all` | Foreground full-stack local work | Starts the backend in the background for the current shell session, then runs the frontend dev server in the foreground. |
+| `./scripts/build-local.sh` | `npm run build:app` | Full local build verification | Builds the frontend bundle and, when a backend build command is configured, also runs backend verify/package work. |
+| `./scripts/app-start.sh` | `npm run start:app` | Managed background local stack | Starts the backend and frontend as background processes, waits for health checks, and writes PID files plus logs under `local-data/runtime/`. |
+| `./scripts/app-stop.sh` | `npm run stop:app` | Stop managed processes | Stops only the managed frontend and backend processes created by `./scripts/app-start.sh`. |
+| `./scripts/app-restart.sh` | `npm run restart:app` | Restart the managed stack | Stops and restarts the managed frontend and backend together. |
+| `./scripts/app-restart.sh --no-db` | `npm run restart:app -- --no-db` | Restart UI without cycling the backend | Restarts only the managed frontend, leaving the current backend process and embedded H2 state running. |
+| `./scripts/app-status.sh` | `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, and the current H2 file location. |
+| `./scripts/app-logs.sh --tail 40` | `npm run logs:app -- --tail 40` | Check managed logs | Tails the managed frontend and backend logs, with optional component selection and line count. |
+| `./scripts/preview-local.sh` | `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
+| `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
 
 ### Environment and configuration variables
 
@@ -511,62 +531,61 @@ Current operational meaning:
 
 ### App-level helper commands
 
-Use these commands for the cleanest local workflow:
+Use these scripts for the cleanest local workflow:
 
 ```bash
-npm run media:setup
-npm run sound:add -- --help
-npm run media:add:custom-play -- --help
-npm run dev:frontend
-npm run dev:backend
-npm run dev:all
-npm run build
-npm run build:app
-npm run start:app
-npm run stop:app
-npm run restart:app
-npm run status:app
-npm run logs:app
-npm run preview:app
-npm run db:h2:reset
+./scripts/setup-media-root.sh
+node ./scripts/add-sound-option.mjs --help
+node ./scripts/add-custom-play-media.mjs --help
+./scripts/dev-frontend.sh
+./scripts/dev-backend.sh
+./scripts/dev-stack.sh
+./scripts/build-local.sh
+./scripts/app-start.sh
+./scripts/app-stop.sh
+./scripts/app-restart.sh
+./scripts/app-status.sh
+./scripts/app-logs.sh
+./scripts/preview-local.sh
+./scripts/h2-reset.sh
 ```
 
 What they do:
 
-- `npm run media:setup`
+- `./scripts/setup-media-root.sh`
   - ensures both the frontend fallback and backend-served media roots exist for:
     - `custom-plays`
     - `sounds`
-- `npm run sound:add -- --help`
+- `node ./scripts/add-sound-option.mjs --help`
   - shows the CLI for adding a timer sound label and optional playback mapping
-- `npm run media:add:custom-play -- --help`
+- `node ./scripts/add-custom-play-media.mjs --help`
   - shows the CLI for registering a prerecorded `custom play` meditation asset
-- `npm run dev:frontend`
+- `./scripts/dev-frontend.sh`
   - prepares the media root and starts the Vite dev server
-- `npm run dev:backend`
+- `./scripts/dev-backend.sh`
   - runs the in-repo backend by default and still allows explicit overrides
   - starts the backend with the `dev` profile so local-only developer surfaces stay available without being part of the default runtime
-- `npm run dev:all`
+- `./scripts/dev-stack.sh`
   - starts the frontend plus the backend
-- `npm run build:app`
+- `./scripts/build-local.sh`
   - builds the frontend and runs backend verification/package work
-- `npm run build`
-  - runs the frontend TypeScript build and Vite production bundle only
-- `npm run start:app`
+- `./scripts/app-start.sh`
   - starts the managed frontend and backend in the background and records runtime state under `local-data/runtime`
-- `npm run stop:app`
+- `./scripts/app-stop.sh`
   - stops the managed frontend and backend
-- `npm run restart:app`
+- `./scripts/app-restart.sh`
   - restarts the managed frontend and backend
-  - pass `-- --no-db` to leave the current backend process and embedded H2 state running while cycling only the frontend
-- `npm run status:app`
+  - pass `--no-db` to leave the current backend process and embedded H2 state running while cycling only the frontend
+- `./scripts/app-status.sh`
   - prints the managed process, health, and log status
-- `npm run logs:app`
+- `./scripts/app-logs.sh`
   - tails the managed process logs
-- `npm run preview:app`
+- `./scripts/preview-local.sh`
   - rebuilds the frontend and starts a production-like Vite preview server
-- `npm run db:h2:reset`
+- `./scripts/h2-reset.sh`
   - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows
+
+If you prefer npm aliases, the lifecycle commands above also exist in `package.json` as thin wrappers around the same scripts.
 
 Important note:
 
@@ -1324,17 +1343,20 @@ Current verification pattern:
 
 This prompt verified the following local full-stack flow end to end:
 
-1. Run `npm run media:setup`.
+1. Run `./scripts/setup-media-root.sh`.
 2. Start an isolated backend:
 
 ```bash
-MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 npm run dev:backend
+MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 ./scripts/dev-backend.sh
 ```
 
 3. Start the frontend on an already-allowed local dev port and point the proxy at that backend:
 
 ```bash
-VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 5174
+MEDITATION_FRONTEND_DEV_HOST=127.0.0.1 \
+MEDITATION_FRONTEND_DEV_PORT=5174 \
+VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 \
+./scripts/dev-frontend.sh
 ```
 
 4. Open `http://127.0.0.1:5174/`.
@@ -1352,8 +1374,8 @@ Important distinction:
 - if you want a production-build preview connected to a backend, rebuild first with an explicit API base URL, for example:
 
 ```bash
-VITE_API_BASE_URL=http://127.0.0.1:8081/api npm run build
-npm run preview -- --host 127.0.0.1 --port 4174
+VITE_API_BASE_URL=http://127.0.0.1:8081/api ./scripts/build-local.sh
+MEDITATION_FRONTEND_PREVIEW_HOST=127.0.0.1 MEDITATION_FRONTEND_PREVIEW_PORT=4174 ./scripts/preview-local.sh
 ```
 
 ## Build And Deployment
@@ -1361,9 +1383,7 @@ npm run preview -- --host 127.0.0.1 --port 4174
 ### Build production artifacts
 
 ```bash
-npm run build
-# or, to build frontend + backend verification/package work:
-npm run build:app
+./scripts/build-local.sh
 ```
 
 Build output goes to:
@@ -1375,16 +1395,19 @@ backend/target/
 
 Notes:
 
-- `npm run build` produces the frontend production bundle only
-- `npm run build:app` runs `npm run build` first, then executes the configured backend build command when a backend is present
+- `./scripts/build-local.sh` is the script-first build entry point for this repo
+- it runs the frontend production build and then executes the configured backend build command when a backend is present
+- if you want a frontend-only build without the helper script, `npm run build` still runs `tsc -b && vite build`
 
 ### Preview the production build locally
 
 ```bash
-npm run preview:app
+./scripts/preview-local.sh
 ```
 
 The preview server is configured to bind to the local network on port `4173`.
+
+Optional npm wrapper: `npm run preview:app`
 
 ### Deployment assumptions
 
