@@ -40,6 +40,7 @@ export interface TimerContextValue {
   readonly isSettingsLoading: boolean;
   readonly isSettingsSyncing: boolean;
   readonly settingsSyncError: string | null;
+  readonly timerSoundPlaybackMessage: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => Promise<CustomPlaySaveResult>;
   readonly deleteCustomPlay: (playId: string) => Promise<boolean>;
@@ -58,6 +59,7 @@ export interface TimerContextValue {
   readonly resumeSession: () => void;
   readonly endSessionEarly: () => void;
   readonly clearOutcome: () => void;
+  readonly clearTimerSoundPlaybackMessage: () => void;
   readonly clearRecoveryMessage: () => void;
 }
 

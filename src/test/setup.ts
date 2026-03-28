@@ -20,6 +20,18 @@ const defaultMediaCatalogResponse = sampleCustomPlayMediaCatalog.map((entry) => 
   relativePath: entry.filePath.startsWith('/media/') ? entry.filePath.slice('/media/'.length) : entry.filePath,
 }));
 
+class TestAudio {
+  preload = 'auto';
+  currentTime = 0;
+
+  constructor(readonly src: string) {}
+
+  play() {
+    void this.src;
+    return Promise.resolve();
+  }
+}
+
 function createJsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
@@ -33,6 +45,7 @@ expect.extend(matchers);
 
 beforeEach(() => {
   localStorage.clear();
+  vi.stubGlobal('Audio', TestAudio as unknown as typeof Audio);
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

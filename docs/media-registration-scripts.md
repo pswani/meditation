@@ -5,7 +5,7 @@ Use these helpers when you want to add:
 - a new prerecorded `custom play` meditation asset
 
 They are intentionally honest about the current product state:
-- timer sound playback is still not implemented
+- timer sound playback now uses a label -> `/media/sounds/<filename>` mapping
 - prerecorded meditations are currently used as linked media metadata for `custom play`
 
 ## Commands
@@ -16,12 +16,20 @@ They are intentionally honest about the current product state:
 npm run sound:add -- --label "Crystal Bowl"
 ```
 
-Optional file-staging example:
+Playable sound example with automatic copy:
 
 ```bash
 npm run sound:add -- \
   --label "Crystal Bowl" \
-  --file /absolute/path/to/crystal-bowl.mp3
+  --file /absolute/path/to/crystal-bowl.wav
+```
+
+Mapping-only example when the file is already staged under the repo media roots:
+
+```bash
+npm run sound:add -- \
+  --label "Crystal Bowl" \
+  --filename crystal-bowl.wav
 ```
 
 Parameters:
@@ -31,10 +39,10 @@ Parameters:
   - the user-facing label added to the timer sound dropdowns
 - `--file`
   - optional
-  - source audio file to copy into the repo's `sounds/` media roots for future playback work
+  - source audio file to copy into the repo's `sounds/` media roots
 - `--filename`
   - optional
-  - target filename when copying a sound file
+  - target filename for playback mapping and file copy
   - defaults to the basename of `--file`
 - `--skip-copy`
   - optional flag
@@ -46,14 +54,22 @@ Parameters:
 What it changes:
 
 - updates [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
+- updates [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json) when `--file` or `--filename` is provided
 - optionally copies the file to:
   - `local-data/media/sounds/`
   - `public/media/sounds/`
 
-What it does not do:
+How playback wiring works:
 
-- it does not wire the label to playback
-- it does not make the timer or playlist play the copied file
+- timer setup, saved timer settings, active timer runtime, and `custom play` -> timer apply all keep using the stored label
+- the runtime resolves that label through `src/data/timerSoundCatalog.json`
+- the mapped file is then requested from `/media/sounds/<filename>`
+
+Current limitations:
+
+- if you add only a label and omit both `--file` and `--filename`, the timer will fail safely because the label has no playback mapping yet
+- browser autoplay policies can still block playback
+- playlist runtime playback is still not implemented
 
 ## Add a prerecorded meditation
 
@@ -156,6 +172,7 @@ Why it creates a new migration:
 These files are now the editable catalogs used by the scripts:
 
 - [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
+- [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
 - [`src/data/customPlayMediaCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/customPlayMediaCatalog.json)
 
 The scripts update those files so the repo stays consistent without manual copy-paste edits across multiple modules.

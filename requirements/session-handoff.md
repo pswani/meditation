@@ -1,7 +1,63 @@
 # Session Handoff
 
 ## Current status
-Sound and prerecorded-media registration scripts are now implemented. The repo includes documented CLIs for adding timer sound labels and prerecorded `custom play` media assets, with backend media additions flowing through new Flyway migrations instead of manual seed rewrites.
+Real timer sound playback is now implemented for the timer flow. The app now plays mapped local sound files for session start, interval cues, natural completion, and early stop, and the `sound:add` workflow can register playable timer sound mappings in addition to selectable labels.
+
+## 2026-03-27 real timer sound playback
+- Added and updated:
+  - `requirements/execplan-timer-sound-playback.md`
+  - `README.md`
+  - `docs/architecture.md`
+  - `docs/media-registration-scripts.md`
+  - `requirements/roadmap.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - `scripts/add-sound-option.mjs`
+  - `scripts/common.sh`
+  - `scripts/media-registration-utils.mjs`
+  - `scripts/setup-media-root.sh`
+  - `src/data/timerSoundCatalog.json`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/features/timer/timerContextObject.ts`
+  - `src/features/timer/timerSoundCatalog.ts`
+  - `src/features/timer/timerSoundPlayback.ts`
+  - `src/features/timer/timerSoundCatalog.test.ts`
+  - `src/features/timer/timerSoundPlayback.test.tsx`
+  - `src/pages/ActiveTimerPage.tsx`
+  - `src/test/setup.ts`
+  - tracked timer sound files in `public/media/sounds/`
+- Behavior changes:
+  - timer start sound now plays once when a session begins
+  - interval sound now plays from elapsed timer milestones rather than render timing
+  - end sound now plays once on natural completion and on intentional early stop
+  - pause/resume preserves interval correctness and does not replay the start sound
+  - recovered active sessions do not replay already-passed cues on hydration
+  - timer playback failures now surface one calm warning while keeping the session usable
+- Media and workflow changes:
+  - timer sound labels resolve through `src/data/timerSoundCatalog.json`
+  - runtime playback requests `/media/sounds/<filename>`
+  - `npm run media:setup` now prepares and mirrors timer sound roots for both:
+    - `public/media/sounds/`
+    - `local-data/media/sounds/`
+  - `npm run sound:add -- --file ...` or `--filename ...` now updates the playback mapping as well as the selectable label list
+- Verification completed:
+  - passed `npm run media:setup`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - completed a local browser verification on `http://127.0.0.1:5173/practice`
+  - confirmed runtime requests for:
+    - `/media/sounds/soft-chime.wav` on session start
+    - `/media/sounds/wood-block.wav` on interval cue
+    - `/media/sounds/temple-bell.wav` on session completion
+    - one additional `/media/sounds/temple-bell.wav` request on intentional early stop
+- Important limitations:
+  - the local browser verification confirmed sound-file requests through the real runtime path, but automated verification could not listen to audible output directly
+  - browser autoplay rules can still block playback depending on the interaction context
+  - playlist runtime playback is still not implemented
+- Exact recommended next prompt:
+  - `Implement a bounded vertical slice for timer sound preview controls in the meditation app. Add tap-safe preview actions beside the existing sound selectors in Practice timer setup, Settings, and Custom Plays using the shared timer sound catalog and playback helper. Keep the UX calm and mobile-friendly, fail safely when audio is blocked or missing, add focused tests, update README plus decisions/session-handoff, run typecheck/lint/test/build, do a local browser check, and commit with a clear message. Exclude playlist runtime playback, uploads, and backend media APIs.`
 
 ## 2026-03-27 sound and prerecorded-media registration scripts
 - Added and updated:

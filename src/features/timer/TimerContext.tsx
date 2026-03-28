@@ -51,6 +51,11 @@ import {
   mergeEntriesById,
   reconcileQueueBackedCollection,
 } from './queueCollectionSync';
+import {
+  buildTimerSoundPlaybackMessage,
+  createTimerSoundPlayer,
+  getElapsedIntervalCueCount,
+} from './timerSoundPlayback';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
 
@@ -314,6 +319,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
+  const [timerSoundPlaybackMessage, setTimerSoundPlaybackMessage] = useState<string | null>(null);
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestCustomPlaysRef = useRef(customPlays);
   const latestPlaylistsRef = useRef(playlists);
@@ -343,6 +349,20 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const inFlightSessionLogHydrationKeyRef = useRef<string | null>(null);
   const completedTimerSettingsHydrationKeyRef = useRef<string | null>(null);
   const inFlightTimerSettingsHydrationKeyRef = useRef<string | null>(null);
+  const timerSoundPlayerRef = useRef(createTimerSoundPlayer());
+  const initialRecoveredActiveSessionIdRef = useRef(bootstrap.hydration.activeSession?.startedAt ?? null);
+  const activeSessionSoundStateRef = useRef<{
+    sessionId: string | null;
+    startHandled: boolean;
+    lastIntervalCueCount: number;
+  }>({
+    sessionId: null,
+    startHandled: false,
+    lastIntervalCueCount: 0,
+  });
+  const lastActiveSessionRef = useRef(state.activeSession);
+  const handledSoundPlaybackMessageKeyRef = useRef<string | null>(null);
+  const handledTimerOutcomeEndedAtRef = useRef<string | null>(null);
   const activeSessionStartedAt = state.activeSession?.startedAt ?? null;
   const activeSessionStartedAtMs = state.activeSession?.startedAtMs ?? null;
   const activeSessionIntendedDurationSeconds = state.activeSession?.intendedDurationSeconds ?? null;
@@ -1183,6 +1203,81 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [state.activeSession, isPaused]);
 
   useEffect(() => {
+    async function playTimerSound(label: string, cue: 'start' | 'interval' | 'end') {
+      const result = await timerSoundPlayerRef.current.play(label, cue);
+      if (result.status !== 'failed') {
+        return;
+      }
+
+      const messageKey = `${result.cue}:${result.label}:${result.reason}:${result.filePath ?? 'none'}`;
+      if (handledSoundPlaybackMessageKeyRef.current === messageKey) {
+        return;
+      }
+
+      handledSoundPlaybackMessageKeyRef.current = messageKey;
+      setTimerSoundPlaybackMessage(buildTimerSoundPlaybackMessage(result));
+    }
+
+    const activeSession = state.activeSession;
+    const soundState = activeSessionSoundStateRef.current;
+    const nowMs = Date.now();
+
+    if (activeSession) {
+      const isRecoveredSession = activeSession.startedAt === initialRecoveredActiveSessionIdRef.current;
+
+      if (soundState.sessionId !== activeSession.startedAt) {
+        soundState.sessionId = activeSession.startedAt;
+        soundState.startHandled = isRecoveredSession;
+        soundState.lastIntervalCueCount = isRecoveredSession
+          ? getElapsedIntervalCueCount(activeSession, nowMs, isPaused)
+          : 0;
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setTimerSoundPlaybackMessage(null);
+      }
+
+      lastActiveSessionRef.current = activeSession;
+      handledTimerOutcomeEndedAtRef.current = null;
+
+      if (!soundState.startHandled) {
+        soundState.startHandled = true;
+        void playTimerSound(activeSession.startSound, 'start');
+      }
+
+      // Interval playback follows actual elapsed session milestones so pause/resume and timer drift do not double-fire cues.
+      if (activeSession.intervalEnabled && !isPaused) {
+        const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs, isPaused);
+        if (elapsedIntervalCueCount > soundState.lastIntervalCueCount) {
+          soundState.lastIntervalCueCount = elapsedIntervalCueCount;
+          void playTimerSound(activeSession.intervalSound, 'interval');
+        }
+      }
+
+      if (isRecoveredSession) {
+        initialRecoveredActiveSessionIdRef.current = null;
+      }
+
+      return;
+    }
+
+    soundState.sessionId = null;
+    soundState.startHandled = false;
+    soundState.lastIntervalCueCount = 0;
+
+    if (!state.lastOutcome) {
+      handledTimerOutcomeEndedAtRef.current = null;
+      lastActiveSessionRef.current = null;
+      return;
+    }
+
+    if (!lastActiveSessionRef.current || handledTimerOutcomeEndedAtRef.current === state.lastOutcome.endedAt) {
+      return;
+    }
+
+    handledTimerOutcomeEndedAtRef.current = state.lastOutcome.endedAt;
+    void playTimerSound(lastActiveSessionRef.current.endSound, 'end');
+  }, [isPaused, state.activeSession, state.lastOutcome]);
+
+  useEffect(() => {
     if (!activePlaylistRun || isPlaylistRunPaused) {
       return;
     }
@@ -1291,6 +1386,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSettingsLoading,
       isSettingsSyncing,
       settingsSyncError,
+      timerSoundPlaybackMessage,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: async (draft, editId): Promise<CustomPlaySaveResult> => {
         const validation = validateCustomPlayDraft(draft);
@@ -1673,6 +1769,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         setIsPaused(false);
       },
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
+      clearTimerSoundPlaybackMessage: () => {
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setTimerSoundPlaybackMessage(null);
+      },
       clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
     [
@@ -1697,6 +1797,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       sessionLogSyncError,
       settingsSyncError,
       state,
+      timerSoundPlaybackMessage,
       updateQueue,
     ]
   );

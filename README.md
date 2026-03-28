@@ -40,7 +40,7 @@ This README is intentionally grounded in the current repository contents. It exp
   - `session log` retries remain idempotent through stable client ids
   - stale queued deletes for `custom play` and playlist records now return the current backend-backed record so the UI can restore it with explicit warning guidance
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
-- Timer sound selections exist in the UI, but actual audio playback is still not implemented.
+- Timer sound playback is now wired for session start, interval cues, and session end in the timer flow.
 
 ## Confirmed Full-Stack Gaps
 
@@ -93,6 +93,9 @@ Compatibility redirect:
 - Run `npm run media:setup` to prepare both media roots used by this repo:
   - `local-data/media/custom-plays/` for backend-served development media
   - `public/media/custom-plays/` for frontend-only fallback checks when the backend is not serving media
+- The same setup command also prepares timer sound roots:
+  - `local-data/media/sounds/`
+  - `public/media/sounds/`
 - Place local custom-play audio files under `local-data/media/custom-plays/` for backend-served development media.
 - The seeded media catalog maps those files to stable media asset ids and relative paths such as `custom-plays/vipassana-sit-20.mp3`.
 - Frontend `custom play` entries store the selected `mediaAssetId`; the backend validates that the referenced asset exists and is active before saving.
@@ -508,9 +511,11 @@ npm run db:h2:reset
 What they do:
 
 - `npm run media:setup`
-  - ensures both the frontend fallback and backend-served custom-play media roots exist
+  - ensures both the frontend fallback and backend-served media roots exist for:
+    - `custom-plays`
+    - `sounds`
 - `npm run sound:add -- --help`
-  - shows the CLI for adding a selectable timer sound label
+  - shows the CLI for adding a timer sound label and optional playback mapping
 - `npm run media:add:custom-play -- --help`
   - shows the CLI for registering a prerecorded `custom play` meditation asset
 - `npm run dev:frontend`
@@ -847,15 +852,15 @@ The backend foundation now includes schema and seeded reference/media data, but 
 
 Important current limitations:
 
-- no audio files are checked into this repo
-- timer sound options are labels only
-- no code maps timer sounds to actual media files
-- no audio playback service exists
+- playlist runtime audio playback is still not implemented
+- browser autoplay policies can still block timer sounds until the user starts a session with an allowed interaction
+- labels added without a playback mapping fail safely and keep the timer usable
 
 The concrete media path convention currently used in code is:
 
 - `src/utils/mediaAssetApi.ts` defines `CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays'`
 - backend media metadata responses use that same public path prefix
+- `src/features/timer/timerSoundCatalog.ts` resolves timer sound labels to `/media/sounds/<filename>`
 
 ### Exact directory structure to use for local custom play media
 
@@ -881,13 +886,18 @@ public/
       vipassana-sit-20.mp3
       ajapa-breath-15.mp3
       tratak-focus-10.mp3
+    sounds/
+      temple-bell.wav
+      soft-chime.wav
+      wood-block.wav
 ```
 
 Why there are two useful locations:
 
 - the backend now serves `/media/**` from `local-data/media` by default
 - Vite still serves `public/` files from the frontend site root during frontend-only dev
-- the repo still does not include real audio files in either location
+- the repo ships tracked fallback timer sound files in `public/media/sounds/`
+- `npm run media:setup` mirrors those shipped timer sounds into `local-data/media/sounds/` for backend-served local development
 
 ### How media file paths are referenced in H2
 
@@ -963,13 +973,15 @@ There are two separate concepts in the current code:
 
 1. Timer sound options
    - defined in `src/data/soundOptions.json` and exposed through `src/features/timer/constants.ts`
+   - playable timer sound files are mapped in `src/data/timerSoundCatalog.json`
    - values:
      - `None`
      - `Temple Bell`
      - `Soft Chime`
      - `Wood Block`
    - used by timer setup, settings, custom plays, and session logs
-   - not currently mapped to file paths
+   - resolved to `/media/sounds/<filename>` during timer playback
+   - `None` remains silent and never loads a file
 
 2. Custom play media sessions
    - defined primarily by backend metadata responses
@@ -985,15 +997,20 @@ Current code conventions suggest:
 - filenames: lowercase kebab-case, for example `vipassana-sit-20.mp3`
 - paths: root-relative under `/media/custom-plays`
 - labels: human-readable practice-facing titles, for example `Vipassana Sit (20 min)`
+- timer sound filenames: lowercase kebab-case under `/media/sounds/`, for example `temple-bell.wav`
 
 ### Supported formats
 
-Current catalog entries use:
+Current shipped entries use:
 
-- file extension: `.mp3`
-- MIME type: `audio/mpeg`
+- timer sounds:
+  - file extension: `.wav`
+  - path prefix: `/media/sounds/`
+- custom play media:
+  - file extension: `.mp3`
+  - MIME type: `audio/mpeg`
 
-No runtime validation enforces this yet, but MP3 is the only format represented in the current implementation.
+No runtime validation enforces a single timer-sound format yet, but the initial shipped timer sounds use `.wav` and the current custom-play media catalog uses `.mp3`.
 
 ### Example: add a new custom play media file end to end
 
@@ -1062,43 +1079,65 @@ Current scripted flow:
 npm run sound:add -- --help
 ```
 
-2. Add the label:
+2. Add a playable sound with a file copy:
 
 ```bash
-npm run sound:add -- --label "Crystal Bowl"
+npm run sound:add -- \
+  --label "Crystal Bowl" \
+  --file /absolute/path/to/crystal-bowl.wav
 ```
 
-3. Update `defaultTimerSettings` in `src/features/timer/constants.ts` only if you want it to become a default.
-4. Run tests.
+3. Or add the label plus mapping when the file is already staged:
 
-The UI will then automatically expose the new option in:
+```bash
+npm run sound:add -- \
+  --label "Crystal Bowl" \
+  --filename crystal-bowl.wav
+```
+
+4. Update `defaultTimerSettings` in `src/features/timer/constants.ts` only if you want it to become a default.
+5. Run tests.
+
+The UI will automatically expose the new option in:
 
 - Practice timer setup
 - Settings
 - Custom Plays
 
-Current limitation:
+The timer playback mapping will update automatically when you pass `--file` or `--filename`, using:
 
-- this only adds a selectable label
-- there is still no file mapping or playback implementation
+- [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
+- [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
+
+Current limitations:
+
+- if you omit both `--file` and `--filename`, the label is selectable but not playable yet
+- browser autoplay rules can still block playback until the session is started through an allowed user interaction
+- playlist runtime playback is still not implemented
 
 ### Example: add a new sound option in the current repo
 
 Run:
 
 ```bash
-npm run sound:add -- --label "Crystal Bowl"
+npm run sound:add -- \
+  --label "Crystal Bowl" \
+  --file /absolute/path/to/crystal-bowl.wav
 ```
 
 What happens immediately:
 
 - `Crystal Bowl` appears in the relevant selects
 - saved timer settings, session logs, and custom plays can store that string
+- `src/data/timerSoundCatalog.json` maps it to `/media/sounds/crystal-bowl.wav`
+- the file is copied to:
+  - `public/media/sounds/crystal-bowl.wav`
+  - `local-data/media/sounds/crystal-bowl.wav`
 
-What does not happen yet:
+What still may not happen:
 
-- there is still no `Crystal Bowl` audio file mapping
-- the app will not play it until a sound-playback layer is implemented
+- the browser may still block playback if it rejects audio for the current interaction context
+- playlist runtime playback remains outside this slice
 
 ### Add a new enum-backed option and wire it through backend, database, API, and front end
 
@@ -1249,10 +1288,12 @@ Current verification pattern:
 2. Open `http://localhost:8080/api/health`.
 3. Open `http://localhost:8080/api/media/custom-plays`.
 4. Open `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
+5. Open `http://localhost:8080/media/sounds/temple-bell.wav` to confirm the backend sound path resolves.
 5. Start the front end with `npm run dev:frontend`.
 6. Open `http://localhost:5173/api/media/custom-plays` to confirm the dev proxy reaches the backend.
-7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
-8. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
+7. In the app, start a short timer with `Soft Chime`, `Temple Bell`, and interval cues enabled, then confirm sounds fire once at start, each interval milestone, and session end.
+8. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+9. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
 
 ### Verified full-stack local workflow
 

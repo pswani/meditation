@@ -2,6 +2,19 @@
 
 ## Decision log
 
+### 2026-03-27 timer sound playback decisions
+- Keep selectable sound labels in `src/data/soundOptions.json`, but move playable file resolution into a separate `src/data/timerSoundCatalog.json` source of truth so timer settings, `custom play` sound labels, and session logs stay label-based while runtime playback gets a stable file mapping.
+- Resolve timer sounds through `/media/sounds/<filename>` so the same runtime URL works for:
+  - frontend fallback files in `public/media/sounds/`
+  - backend-served local files in `local-data/media/sounds/`
+- Ship the initial timer sound files in `public/media/sounds/` and make `npm run media:setup` mirror them into `local-data/media/sounds/`, because `local-data/` remains ignored and should stay local-development-only.
+- Keep timer sound playback orchestration in `TimerContext` with focused helper utilities and ref-based milestone tracking, instead of expanding reducer state or embedding playback logic in route JSX.
+- Fail calmly when audio cannot play:
+  - keep the timer flow running
+  - show one lightweight truthful warning
+  - avoid duplicate warnings for the same playback failure state
+- Treat recovered active sessions as already-started playback state so app hydration does not replay the start sound or already-passed interval cues.
+
 ### 2026-03-27 sound and prerecorded-media registration scripting decisions
 - Store editable timer sound labels and frontend fallback prerecorded-media entries in JSON source files so operator scripts can update one clear source of truth without fragile multi-file manual edits.
 - Keep new prerecorded-media backend data append-only by generating a brand-new Flyway migration for each added asset instead of editing `V2__seed_reference_data.sql`, because existing local H2 databases may already have applied that migration.

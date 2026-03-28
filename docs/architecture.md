@@ -30,7 +30,7 @@ Single-page React application with route-based screens and feature-oriented modu
   - session logs
 - sankalpa editing/archive flows are still not implemented
 - no media upload/import workflow yet
-- timer and playlist audio playback are still unimplemented
+- playlist runtime audio playback is still unimplemented
 
 ## Chosen full-stack target architecture
 - keep the current React front end and route model

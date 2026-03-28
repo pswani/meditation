@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 
 export const ROOT_DIR = path.resolve(__dirname, '..');
 export const SOUND_OPTIONS_FILE = path.join(ROOT_DIR, 'src/data/soundOptions.json');
+export const TIMER_SOUND_CATALOG_FILE = path.join(ROOT_DIR, 'src/data/timerSoundCatalog.json');
 export const MEDITATION_TYPES_FILE = path.join(ROOT_DIR, 'src/data/meditationTypes.json');
 export const CUSTOM_PLAY_MEDIA_CATALOG_FILE = path.join(ROOT_DIR, 'src/data/customPlayMediaCatalog.json');
 export const MIGRATIONS_DIR = path.join(ROOT_DIR, 'backend/src/main/resources/db/migration');

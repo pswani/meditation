@@ -31,8 +31,16 @@ frontend_media_root_dir() {
   printf '%s\n' "$(resolve_path "${MEDITATION_MEDIA_ROOT:-public/media/custom-plays}")"
 }
 
+frontend_sound_root_dir() {
+  printf '%s\n' "$(dirname "$(frontend_media_root_dir)")/sounds"
+}
+
 backend_media_root_dir() {
   printf '%s\n' "$(resolve_path "${MEDITATION_MEDIA_STORAGE_ROOT:-local-data/media}")/custom-plays"
+}
+
+backend_sound_root_dir() {
+  printf '%s\n' "$(dirname "$(backend_media_root_dir)")/sounds"
 }
 
 frontend_dev_host() {
@@ -78,8 +86,12 @@ ensure_media_directory() {
 ensure_media_root() {
   frontend_media_root=$(frontend_media_root_dir)
   backend_media_root=$(backend_media_root_dir)
+  frontend_sound_root=$(frontend_sound_root_dir)
+  backend_sound_root=$(backend_sound_root_dir)
   ensure_media_directory "$frontend_media_root"
   ensure_media_directory "$backend_media_root"
+  ensure_media_directory "$frontend_sound_root"
+  ensure_media_directory "$backend_sound_root"
   printf '%s\n' "$frontend_media_root"
 }
 

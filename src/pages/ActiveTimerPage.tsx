@@ -12,6 +12,8 @@ export default function ActiveTimerPage() {
     endSessionEarly,
     lastOutcome,
     clearOutcome,
+    timerSoundPlaybackMessage,
+    clearTimerSoundPlaybackMessage,
     isSessionLogSyncing,
     sessionLogSyncError,
   } = useTimer();
@@ -48,6 +50,14 @@ export default function ActiveTimerPage() {
               <p>An auto log was added to history.</p>
             </div>
           )}
+          {timerSoundPlaybackMessage ? (
+            <div className="status-banner warn" role="status">
+              <p>{timerSoundPlaybackMessage}</p>
+              <button type="button" className="link-button" onClick={clearTimerSoundPlaybackMessage}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
           <div className="timer-actions">
             <button
               type="button"
@@ -83,6 +93,15 @@ export default function ActiveTimerPage() {
       <p className={`session-state ${isPaused ? 'paused' : ''}`}>{isPaused ? 'Paused' : 'In Session'}</p>
       <h2 className="timer-clock">{formatRemainingTime(activeSession.remainingSeconds)}</h2>
       <p className="page-description">Stay present. Pause or resume anytime, or end early if needed.</p>
+
+      {timerSoundPlaybackMessage ? (
+        <div className="status-banner warn" role="status">
+          <p>{timerSoundPlaybackMessage}</p>
+          <button type="button" className="link-button" onClick={clearTimerSoundPlaybackMessage}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className="timer-actions">
         {isPaused ? (
