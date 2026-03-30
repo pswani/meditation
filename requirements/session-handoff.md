@@ -1,6 +1,56 @@
 # Session Handoff
 
 ## Current status
+Production deployment guidance now includes a production-only Mac Mini path. The repo has a runbook plus scripts to prepare a macOS host, install the packaged frontend/backend bundle, render nginx and `launchd` config, and optionally request TLS certificates with Certbot without relying on Vite dev or preview at runtime.
+
+## 2026-03-29 mac mini production runbook
+- Added and updated:
+  - `requirements/execplan-macos-production-runbook.md`
+  - `docs/mac-mini-production-runbook.md`
+  - `README.md`
+  - `.env.example`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - `scripts/common.sh`
+  - `scripts/render-nginx-config.sh`
+  - `scripts/render-launchd-plist.sh`
+  - `scripts/prod-backend-run.sh`
+  - `scripts/prod-backend-start.sh`
+  - `scripts/prod-macos-setup.sh`
+- Production workflow changes:
+  - `./scripts/prod-macos-setup.sh prepare-host` now documents and automates the Mac Mini prerequisite setup path:
+    - Homebrew bootstrap when missing
+    - `nginx`, `certbot`, and `openjdk@21` installation
+    - production directory creation under `/opt/meditation` by default
+  - `./scripts/prod-macos-setup.sh install-app` now installs the packaged production bundle into a stable on-host layout, renders nginx for the installed frontend path, installs a backend `launchd` plist, starts or restarts the backend service, starts or restarts nginx, and can request TLS certificates through Certbot
+  - `./scripts/render-nginx-config.sh` now supports installed-path frontend roots plus explicit upstream host, port, server name, and listen-port overrides so the same renderer works for both packaged-bundle previews and installed production layouts
+  - `./scripts/render-launchd-plist.sh` now renders a backend `launchd` plist for macOS production service management
+  - `./scripts/prod-backend-run.sh` now provides a foreground backend runner suitable for `launchd`
+- Important implementation notes:
+  - the production runtime remains:
+    - Homebrew-managed nginx
+    - static frontend files
+    - one Spring Boot backend jar
+    - filesystem-backed H2 plus media storage
+  - the production runtime does not use `vite`, `vite preview`, or any npm dev server
+  - TLS automation uses Certbot’s nginx flow only when `--domain` and `--email` are supplied
+- Verification completed:
+  - passed `sh -n scripts/render-launchd-plist.sh`
+  - passed `sh -n scripts/prod-backend-run.sh`
+  - passed `sh -n scripts/prod-macos-setup.sh`
+  - passed `./scripts/render-nginx-config.sh --output /tmp/meditation-nginx.conf --frontend-root /opt/meditation/app/frontend --server-name example.com`
+  - passed `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist --script-path /opt/meditation/bin/prod-backend-run.sh --env-file /opt/meditation/shared/meditation.env`
+  - passed `./scripts/prod-macos-setup.sh prepare-host --dry-run`
+  - passed `./scripts/prod-macos-setup.sh install-app --dry-run --skip-build --bundle-dir local-data/deploy --domain example.com --email ops@example.com`
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify`
+- Exact recommended next prompt:
+  - `Implement a bounded production-hardening slice for the Mac Mini deployment flow. Add backup and restore helpers for the H2 and media directories, add a health-check/report script for nginx plus launchd plus backend status, document safe rollback/update steps in the Mac runbook and README, update decisions/session-handoff, run the required verification commands and script dry-runs, and commit with a clear message. Exclude database migration away from H2, CI/CD, and containerization.`
+
+## Current status prior to this slice
 Production deployment guidance is now explicit. The repo now has script-first packaging and backend runtime helpers for a production-oriented deployment shape where nginx serves the frontend build and reverse-proxies the Spring Boot backend.
 
 ## 2026-03-28 production deployment scripting

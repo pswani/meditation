@@ -79,6 +79,30 @@ backend_bind_host() {
   printf '%s\n' "${MEDITATION_BACKEND_BIND_HOST:-127.0.0.1}"
 }
 
+java_bin() {
+  if [ -n "${MEDITATION_JAVA_BIN:-}" ]; then
+    printf '%s\n' "$MEDITATION_JAVA_BIN"
+    return
+  fi
+
+  if command -v java >/dev/null 2>&1; then
+    command -v java
+    return
+  fi
+
+  if [ -x /opt/homebrew/opt/openjdk@21/bin/java ]; then
+    printf '%s\n' /opt/homebrew/opt/openjdk@21/bin/java
+    return
+  fi
+
+  if [ -x /usr/local/opt/openjdk@21/bin/java ]; then
+    printf '%s\n' /usr/local/opt/openjdk@21/bin/java
+    return
+  fi
+
+  printf '\n'
+}
+
 backend_bound_health_url() {
   printf 'http://%s:%s/api/health\n' "$(backend_bind_host)" "$(backend_port)"
 }

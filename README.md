@@ -460,11 +460,14 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/preview-local.sh` | `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
 | `./scripts/package-deploy.sh` | none | Build a deployable prod bundle | Builds the frontend and backend, then assembles a deploy bundle with static frontend files, backend jar, nginx config, and backend env example under `local-data/deploy/` by default. |
 | `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate prod nginx config | Renders an nginx site config that serves the frontend `dist` bundle and proxies `/api` and `/media` to the Spring Boot backend. |
+| `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist` | none | Generate a backend `launchd` plist | Renders a macOS `launchd` plist for a production backend service. |
 | `./scripts/prod-backend-start.sh` | none | Start the prod backend jar | Starts the packaged Spring Boot backend jar in the background using a production-oriented runtime directory and health checks. |
 | `./scripts/prod-backend-stop.sh` | none | Stop the prod backend jar | Stops the backend process started by `./scripts/prod-backend-start.sh`. |
 | `./scripts/prod-backend-restart.sh` | none | Restart the prod backend jar | Restarts the backend process managed by the prod lifecycle scripts. |
 | `./scripts/prod-backend-status.sh` | none | Inspect prod backend health | Prints the backend PID, jar path, health URL, health state, log path, and database file location. |
 | `./scripts/prod-backend-logs.sh --tail 40` | none | Tail prod backend logs | Tails the backend log written by the prod lifecycle scripts. |
+| `./scripts/prod-macos-setup.sh prepare-host` | none | Prepare a Mac Mini production host | Installs macOS production prerequisites such as Homebrew packages and creates the default production directory layout. |
+| `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain example.com --email ops@example.com` | none | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, starts nginx, and optionally runs Certbot. |
 | `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
 
 ### Environment and configuration variables
@@ -520,6 +523,12 @@ Optional variables:
   - optional `server_name` value in the generated nginx config
 - `MEDITATION_NGINX_LISTEN_PORT`
   - optional `listen` port in the generated nginx config
+- `MEDITATION_JAVA_BIN`
+  - optional absolute Java executable override for production backend scripts
+- `MEDITATION_PROD_APP_ROOT`
+  - optional install root override for `./scripts/prod-macos-setup.sh`
+- `MEDITATION_PROD_RUNTIME_DIR`
+  - optional runtime directory override for `./scripts/prod-macos-setup.sh`
 
 Code audit results:
 
@@ -1529,6 +1538,18 @@ Render the nginx site config directly from the repo settings:
 ./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf
 ```
 
+You can also render it for an installed production location:
+
+```bash
+./scripts/render-nginx-config.sh \
+  --output /opt/meditation/nginx/meditation.conf \
+  --frontend-root /opt/meditation/app/frontend \
+  --backend-host 127.0.0.1 \
+  --backend-port 8080 \
+  --server-name meditation.example.com \
+  --listen-port 80
+```
+
 The generated config:
 
 - serves the frontend static files from the packaged deploy bundle
@@ -1536,7 +1557,40 @@ The generated config:
 - proxies `/api/` to the backend
 - proxies `/media/` to the backend
 
-This repo does not automate TLS certificates; add your environment’s HTTPS and certificate configuration on top of the generated site config.
+This repo now includes a macOS production installer that can obtain certificates with Certbot after installing nginx and the app bundle. For a full Mac Mini flow, see `docs/mac-mini-production-runbook.md`.
+
+### Mac Mini production runbook
+
+For a production-only deployment on a Mac Mini:
+
+1. Prepare the host:
+
+```bash
+./scripts/prod-macos-setup.sh prepare-host
+```
+
+2. Build the production bundle:
+
+```bash
+./scripts/package-deploy.sh
+```
+
+3. Install and start the production app:
+
+```bash
+./scripts/prod-macos-setup.sh install-app \
+  --bundle-dir local-data/deploy \
+  --domain meditation.example.com \
+  --email ops@example.com
+```
+
+This production path:
+
+- serves the frontend from Homebrew-managed `nginx`
+- installs the backend jar under `/opt/meditation`
+- runs the backend under macOS `launchd`
+- can request TLS certificates with Certbot
+- does not use `vite`, `vite preview`, or any npm dev server as the runtime
 
 ### Static assets and media in deployment
 
@@ -1565,10 +1619,14 @@ Current likely runtime configuration:
   - `MEDITATION_MEDIA_STORAGE_ROOT`
   - `MEDITATION_BACKEND_JAR_PATH`
   - `MEDITATION_RUNTIME_DIR`
+  - `MEDITATION_JAVA_BIN`
 - nginx bundle generation:
   - `MEDITATION_DEPLOY_DIR`
   - `MEDITATION_NGINX_SERVER_NAME`
   - `MEDITATION_NGINX_LISTEN_PORT`
+- macOS production installer:
+  - `MEDITATION_PROD_APP_ROOT`
+  - `MEDITATION_PROD_RUNTIME_DIR`
 
 Optional build-time override when pairing the built front end with a separate backend:
 
