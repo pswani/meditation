@@ -9,6 +9,9 @@
   - nginx reverse proxy
   - filesystem-backed H2 and media storage
 - Add a production-only macOS installer path instead of extending the local dev or preview scripts, because the requested runtime must not depend on Vite dev or preview servers.
+- Clarify the README production section as two explicit paths:
+  - LAN-only install without a domain or TLS
+  - public-domain install with Certbot-managed TLS
 - Use `launchd` as the recommended backend service manager on the Mac Mini and add a dedicated foreground backend runner for that environment, while keeping the existing `nohup`-style prod lifecycle helpers for repo-local operator use.
 - Keep the nginx renderer reusable by allowing installed frontend roots and explicit upstream host/port overrides instead of baking `/local-data/deploy/` paths into every deployment.
 - Keep TLS automation bounded to Certbot’s nginx integration for standard domain-based installs, and document manual DNS-validation as the fallback when inbound port `80` is unavailable.

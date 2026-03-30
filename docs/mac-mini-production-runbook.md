@@ -70,6 +70,12 @@ Dry run:
 ./scripts/prod-macos-setup.sh install-app --dry-run --skip-build --bundle-dir local-data/deploy
 ```
 
+Real run for LAN-only HTTP use:
+
+```bash
+./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
+```
+
 Real run with TLS:
 
 ```bash
@@ -89,6 +95,12 @@ What this does:
 - starts or restarts the backend through `launchd`
 - starts or restarts `nginx`
 - if `--domain` and `--email` are provided, runs `certbot --nginx`
+
+If you do not have a public domain:
+- omit `--domain`
+- omit `--email`
+- use the app over plain HTTP on your LAN
+- open `http://<Mac-Mini-LAN-IP>/` or `http://<Mac-Local-Hostname>.local/`
 
 ## Installed layout
 

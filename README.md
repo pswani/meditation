@@ -1485,16 +1485,6 @@ local-data/deploy/
 
 Use `./scripts/package-deploy.sh --skip-build` when the build artifacts already exist and you only want to refresh the assembled deployment bundle.
 
-### Preview the production build locally
-
-```bash
-./scripts/preview-local.sh
-```
-
-The preview server is configured to bind to the local network on port `4173`.
-
-Optional npm wrapper: `npm run preview:app`
-
 ### Deployment assumptions
 
 The repo now produces:
@@ -1559,23 +1549,72 @@ The generated config:
 
 This repo now includes a macOS production installer that can obtain certificates with Certbot after installing nginx and the app bundle. For a full Mac Mini flow, see `docs/mac-mini-production-runbook.md`.
 
-### Mac Mini production runbook
+### Mac Mini production steps
 
-For a production-only deployment on a Mac Mini:
+Use these steps for a production-only deployment on a Mac Mini.
 
-1. Prepare the host:
+Do not use any of these for production runtime:
+
+- `npm run dev:*`
+- `npm run preview:*`
+- `vite`
+- `vite preview`
+
+#### LAN-only install
+
+Use this when you do not have a public domain and only want to use the app on your local network over HTTP.
+
+1. Prepare the Mac Mini host:
 
 ```bash
 ./scripts/prod-macos-setup.sh prepare-host
 ```
 
-2. Build the production bundle:
+2. Build and package the production bundle:
 
 ```bash
 ./scripts/package-deploy.sh
 ```
 
 3. Install and start the production app:
+
+```bash
+./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
+```
+
+4. Open the app from devices on your LAN:
+
+```text
+http://<MAC-MINI-LAN-IP>/
+http://<MAC-MINI-LOCAL-HOSTNAME>.local/
+```
+
+5. Verify the backend locally on the Mac Mini:
+
+```bash
+curl -s http://127.0.0.1:8080/api/health
+sudo launchctl print system/com.meditation.backend
+sudo brew services list | grep nginx
+tail -n 40 /opt/meditation/runtime-production/logs/backend-production.log
+```
+
+#### Public-domain install
+
+Use this when you have a public DNS name pointed at the Mac Mini and want Certbot-managed HTTPS.
+
+1. Prepare the Mac Mini host:
+
+```bash
+./scripts/prod-macos-setup.sh prepare-host
+```
+
+2. Build and package the production bundle:
+
+```bash
+./scripts/package-deploy.sh
+```
+
+3. Install and start the production app with TLS:
 
 ```bash
 ./scripts/prod-macos-setup.sh install-app \
@@ -1589,7 +1628,7 @@ This production path:
 - serves the frontend from Homebrew-managed `nginx`
 - installs the backend jar under `/opt/meditation`
 - runs the backend under macOS `launchd`
-- can request TLS certificates with Certbot
+- can request TLS certificates with Certbot when a public domain is available
 - does not use `vite`, `vite preview`, or any npm dev server as the runtime
 
 ### Static assets and media in deployment

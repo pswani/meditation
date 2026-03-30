@@ -26,6 +26,9 @@ Production deployment guidance now includes a production-only Mac Mini path. The
   - `./scripts/render-nginx-config.sh` now supports installed-path frontend roots plus explicit upstream host, port, server name, and listen-port overrides so the same renderer works for both packaged-bundle previews and installed production layouts
   - `./scripts/render-launchd-plist.sh` now renders a backend `launchd` plist for macOS production service management
   - `./scripts/prod-backend-run.sh` now provides a foreground backend runner suitable for `launchd`
+  - `README.md` and `docs/mac-mini-production-runbook.md` now spell out the production sequence as explicit steps for:
+    - LAN-only HTTP install without a domain
+    - public-domain install with Certbot-managed TLS
 - Important implementation notes:
   - the production runtime remains:
     - Homebrew-managed nginx
