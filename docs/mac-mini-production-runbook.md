@@ -128,7 +128,24 @@ Backend service:
 - label: `com.meditation.backend`
 - plist: `/Library/LaunchDaemons/com.meditation.backend.plist`
 
-Common commands:
+Use one script for routine operations:
+
+```bash
+./scripts/prod-macos-control.sh start
+./scripts/prod-macos-control.sh stop
+./scripts/prod-macos-control.sh restart
+./scripts/prod-macos-control.sh status
+./scripts/prod-macos-control.sh logs
+```
+
+Useful log variants:
+
+```bash
+./scripts/prod-macos-control.sh logs
+./scripts/prod-macos-control.sh logs --lines 80 --no-follow
+```
+
+Direct checks:
 
 ```bash
 sudo launchctl print system/com.meditation.backend
@@ -150,6 +167,12 @@ For an update:
 ```
 
 This re-installs the frontend/backend files, refreshes the nginx config, and restarts the managed services.
+
+If you only need a clean runtime restart without reinstalling files:
+
+```bash
+./scripts/prod-macos-control.sh restart
+```
 
 ## Notes
 

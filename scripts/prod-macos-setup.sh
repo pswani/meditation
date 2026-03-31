@@ -281,6 +281,12 @@ maybe_install_certbot_certificate() {
     "sudo certbot --nginx --non-interactive --agree-tos --no-eff-email --redirect -m '$email_address' -d '$domain_name'"
 }
 
+restart_managed_services() {
+  run_step \
+    "Restarting the managed production services" \
+    "'$(resolve_path "scripts/prod-macos-control.sh")' restart"
+}
+
 report_runtime_summary() {
   printf '%s\n' "Production app root: $(prod_app_root)"
   printf '%s\n' "Frontend install dir: $(prod_frontend_dir)"
@@ -310,8 +316,7 @@ install_app() {
   ensure_prod_env_file
   render_installed_nginx_config
   render_backend_launchd_plist
-  restart_backend_service
-  restart_nginx_service
+  restart_managed_services
   maybe_install_certbot_certificate
   report_runtime_summary
 }

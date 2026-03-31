@@ -2,6 +2,23 @@
 
 ## Decision log
 
+### 2026-03-30 mac mini production control decisions
+- Add one combined Mac Mini production control script for:
+  - `start`
+  - `stop`
+  - `restart`
+  - `status`
+  - `logs`
+- Treat that control script as the primary operator surface after installation, instead of requiring the operator to mix raw `brew services`, `launchctl`, and health-check commands by hand.
+- Keep the control script restart flow clean and explicit:
+  - stop backend if loaded
+  - stop `nginx` if running
+  - start `nginx`
+  - start or re-kickstart the backend service
+  - wait for backend health
+- Add backend log tailing to the same script so routine production inspection does not require memorizing the installed runtime log path.
+- Update the install workflow to call the combined control script for service restart after deployment so install-time behavior and day-to-day operator behavior stay aligned.
+
 ### 2026-03-29 mac mini production runbook decisions
 - Keep the repo’s production deployment model centered on the existing packaged bundle:
   - static frontend files

@@ -468,6 +468,8 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/prod-backend-logs.sh --tail 40` | none | Tail prod backend logs | Tails the backend log written by the prod lifecycle scripts. |
 | `./scripts/prod-macos-setup.sh prepare-host` | none | Prepare a Mac Mini production host | Installs macOS production prerequisites such as Homebrew packages and creates the default production directory layout. |
 | `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain example.com --email ops@example.com` | none | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, starts nginx, and optionally runs Certbot. |
+| `./scripts/prod-macos-control.sh restart` | none | Cleanly restart the Mac Mini production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
+| `./scripts/prod-macos-control.sh logs --lines 80 --no-follow` | none | Tail or inspect Mac Mini production backend logs | Reads the installed backend production log with optional bounded output for quick inspection. |
 | `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
 
 ### Environment and configuration variables
@@ -1592,10 +1594,7 @@ http://<MAC-MINI-LOCAL-HOSTNAME>.local/
 5. Verify the backend locally on the Mac Mini:
 
 ```bash
-curl -s http://127.0.0.1:8080/api/health
-sudo launchctl print system/com.meditation.backend
-sudo brew services list | grep nginx
-tail -n 40 /opt/meditation/runtime-production/logs/backend-production.log
+./scripts/prod-macos-control.sh status
 ```
 
 #### Public-domain install
@@ -1630,6 +1629,33 @@ This production path:
 - runs the backend under macOS `launchd`
 - can request TLS certificates with Certbot when a public domain is available
 - does not use `vite`, `vite preview`, or any npm dev server as the runtime
+
+### Mac Mini service control
+
+Once the app is installed on the Mac Mini, use one control script for day-to-day operations:
+
+```bash
+./scripts/prod-macos-control.sh start
+./scripts/prod-macos-control.sh stop
+./scripts/prod-macos-control.sh restart
+./scripts/prod-macos-control.sh status
+./scripts/prod-macos-control.sh logs
+```
+
+`restart` is the clean “make it healthy again” path:
+
+- stops the backend `launchd` service if it is loaded
+- stops `nginx` if it is running
+- starts `nginx`
+- starts or re-kickstarts the backend service
+- waits for backend health on `http://127.0.0.1:8080/api/health`
+
+`logs` tails the backend production log from `/opt/meditation/runtime-production/logs/backend-production.log`.
+You can also limit output without following:
+
+```bash
+./scripts/prod-macos-control.sh logs --lines 80 --no-follow
+```
 
 ### Static assets and media in deployment
 

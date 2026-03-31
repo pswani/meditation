@@ -1,6 +1,42 @@
 # Session Handoff
 
 ## Current status
+Mac Mini production operations now include one combined control script for clean start, stop, restart, status checks, and backend log tailing across both `nginx` and the backend `launchd` service.
+
+## 2026-03-30 mac mini production control script
+- Added and updated:
+  - `requirements/execplan-macos-production-control-script.md`
+  - `README.md`
+  - `docs/mac-mini-production-runbook.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - `scripts/prod-macos-control.sh`
+  - `scripts/prod-macos-setup.sh`
+- Production workflow changes:
+  - `./scripts/prod-macos-control.sh` now provides one production operator surface for:
+    - `start`
+    - `stop`
+    - `restart`
+    - `status`
+    - `logs`
+  - `restart` now performs a clean cycle across both services and waits for backend health before reporting success
+  - `logs` now tails `/opt/meditation/runtime-production/logs/backend-production.log` by default and also supports bounded non-follow reads with `--lines` plus `--no-follow`
+  - `./scripts/prod-macos-setup.sh install-app` now uses the combined control script to restart managed services after installing files and rendering config
+- Important implementation notes:
+  - the new control script assumes the Mac Mini install layout already exists under `/opt/meditation` unless overridden
+  - the new control script still relies on `sudo` for launchd system-service operations and Homebrew nginx control
+- Verification completed:
+  - passed `sh -n scripts/prod-macos-control.sh`
+  - passed `./scripts/prod-macos-control.sh start --dry-run`
+  - passed `./scripts/prod-macos-control.sh stop --dry-run`
+  - passed `./scripts/prod-macos-control.sh restart --dry-run`
+  - passed `./scripts/prod-macos-control.sh logs --dry-run`
+  - passed `MEDITATION_PROD_RUNTIME_DIR=/tmp/meditation-prod-log-test ./scripts/prod-macos-control.sh logs --lines 2 --no-follow`
+  - pending: live `logs` verification against the real Mac Mini production log file
+- Exact recommended next prompt:
+  - `Implement a bounded Mac Mini operations hardening slice. Add backup and restore scripts for `/opt/meditation/shared/h2` and `/opt/meditation/shared/media`, add a concise rollback script for restoring the last known good bundle, update the runbook plus README plus handoff docs, run the relevant verification commands and script dry-runs, and commit with a clear message. Exclude cloud deployment, database migration away from H2, and containerization.`
+
+## Current status prior to this slice
 Production deployment guidance now includes a production-only Mac Mini path. The repo has a runbook plus scripts to prepare a macOS host, install the packaged frontend/backend bundle, render nginx and `launchd` config, and optionally request TLS certificates with Certbot without relying on Vite dev or preview at runtime.
 
 ## 2026-03-29 mac mini production runbook

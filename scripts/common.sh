@@ -229,6 +229,33 @@ run_backend_command() {
   exec sh -lc "$command_value"
 }
 
+run_backend_command_inline() {
+  command_name=$1
+  command_value=$2
+  dir=$(backend_dir)
+
+  if [ -z "$command_value" ]; then
+    printf '%s\n' "No external backend command is configured for $command_name."
+    printf '%s\n' "Set MEDITATION_BACKEND_DIR and optionally MEDITATION_BACKEND_${command_name}_CMD in .env.local."
+    return 1
+  fi
+
+  if [ -n "$dir" ]; then
+    printf '%s\n' "Running backend $command_name command in $dir"
+    (
+      cd "$dir"
+      sh -lc "$command_value"
+    )
+    return
+  fi
+
+  printf '%s\n' "Running backend $command_name command from the frontend workspace."
+  (
+    cd "$ROOT_DIR"
+    sh -lc "$command_value"
+  )
+}
+
 runtime_dir() {
   printf '%s\n' "$(resolve_path "${MEDITATION_RUNTIME_DIR:-local-data/runtime}")"
 }
