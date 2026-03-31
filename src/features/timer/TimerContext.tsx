@@ -43,6 +43,7 @@ import {
   loadTimerSettingsFromApi,
   persistTimerSettingsToApi,
 } from '../../utils/timerSettingsApi';
+import { normalizeTimerSettings } from '../../utils/timerSettingsNormalization';
 import { validateTimerSettings } from '../../utils/timerValidation';
 import { defaultTimerSettings } from './constants';
 import {
@@ -282,11 +283,25 @@ function applyQueuedTimerSettings(
   settings: TimerSettings,
   queueEntries: readonly SyncQueueEntry[]
 ): TimerSettings {
+  const latestQueuedSettingsEntry = selectLatestQueuedTimerSettingsEntry(queueEntries);
+
+  return latestQueuedSettingsEntry ? normalizeTimerSettings(latestQueuedSettingsEntry.payload as TimerSettings) : settings;
+}
+
+function selectLatestQueuedTimerSettingsEntry(queueEntries: readonly SyncQueueEntry[]): SyncQueueEntry | null {
   const latestQueuedSettingsEntry = [...queueEntries]
     .reverse()
     .find((entry) => entry.entityType === 'timer-settings' && entry.operation === 'upsert');
 
-  return latestQueuedSettingsEntry ? (latestQueuedSettingsEntry.payload as TimerSettings) : settings;
+  return latestQueuedSettingsEntry ?? null;
+}
+
+function replaceQueueEntryPayload(
+  updateQueue: (updater: (current: readonly SyncQueueEntry[]) => readonly SyncQueueEntry[]) => void,
+  entryId: string,
+  payload: unknown
+) {
+  updateQueue((current) => current.map((entry) => (entry.id === entryId ? { ...entry, payload } : entry)));
 }
 
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
@@ -843,14 +858,18 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
         lastPersistedTimerSettingsRef.current = remoteSettings;
 
-        const shouldPromoteBootstrapSettings =
-          !areTimerSettingsEqual(latestTimerSettingsRef.current, defaultTimerSettings) &&
-          areTimerSettingsEqual(remoteSettings, defaultTimerSettings);
         const hasQueuedTimerSettings = queuedTimerSettingsEntries.length > 0;
 
-        if (shouldPromoteBootstrapSettings || hasQueuedTimerSettings) {
+        if (hasQueuedTimerSettings) {
           lastPersistedTimerSettingsRef.current = remoteSettings;
+          const latestQueuedTimerSettingsEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
           const queuedSettings = applyQueuedTimerSettings(latestTimerSettingsRef.current, queuedTimerSettingsEntries);
+          if (
+            latestQueuedTimerSettingsEntry &&
+            !areTimerSettingsEqual(latestQueuedTimerSettingsEntry.payload as TimerSettings, queuedSettings)
+          ) {
+            replaceQueueEntryPayload(updateQueue, latestQueuedTimerSettingsEntry.id, queuedSettings);
+          }
           if (!areTimerSettingsEqual(queuedSettings, latestTimerSettingsRef.current)) {
             dispatch({ type: 'SET_SETTINGS', payload: queuedSettings });
           }
@@ -892,7 +911,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         inFlightTimerSettingsHydrationKeyRef.current = null;
       }
     };
-  }, [bootstrap.settings, isOnline]);
+  }, [bootstrap.settings, isOnline, updateQueue]);
 
   useEffect(() => {
     if (!remoteSettingsHydratedRef.current) {
@@ -907,6 +926,23 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
+    const queuedTimerSettingsEntries = selectSyncQueueEntries(queue, {
+      entityTypes: ['timer-settings'],
+    });
+    const latestQueuedTimerSettingsEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
+
+    if (latestQueuedTimerSettingsEntry) {
+      const normalizedQueuedSettings = normalizeTimerSettings(latestQueuedTimerSettingsEntry.payload as TimerSettings);
+
+      if (!areTimerSettingsEqual(latestQueuedTimerSettingsEntry.payload as TimerSettings, normalizedQueuedSettings)) {
+        replaceQueueEntryPayload(updateQueue, latestQueuedTimerSettingsEntry.id, normalizedQueuedSettings);
+      }
+
+      if (areTimerSettingsEqual(normalizedQueuedSettings, state.settings)) {
+        return;
+      }
+    }
+
     mergeQueueEntry(updateQueue, {
       entityType: 'timer-settings',
       operation: 'upsert',
@@ -917,7 +953,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     if (!isOnline) {
       setSettingsSyncError(buildQueuedSaveMessage('timer settings'));
     }
-  }, [isOnline, state.settings, state.validation.isValid, updateQueue]);
+  }, [isOnline, queue, state.settings, state.validation.isValid, updateQueue]);
 
   useEffect(() => {
     if (!remoteSessionLogsHydratedRef.current) {
@@ -990,7 +1026,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         try {
           if (queueEntry.entityType === 'timer-settings' && queueEntry.operation === 'upsert') {
             setIsSettingsSyncing(true);
-            const savedSettings = await persistTimerSettingsToApi(queueEntry.payload as TimerSettings, {
+            const queuedSettings = normalizeTimerSettings(queueEntry.payload as TimerSettings);
+            const savedSettings = await persistTimerSettingsToApi(queuedSettings, {
               syncQueuedAt: queueEntry.queuedAt,
             });
             lastPersistedTimerSettingsRef.current = savedSettings;

@@ -3,9 +3,7 @@ import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
 import {
-  normalizeFixedDurationMinutes,
-  normalizeTimerMode,
-  resolveLastFixedDurationMinutes,
+  normalizeTimerSettings,
 } from './timerSettingsNormalization';
 
 export const TIMER_SETTINGS_PATH = '/settings/timer';
@@ -49,21 +47,10 @@ function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
     throw new Error('Timer settings response is invalid.');
   }
 
-  const timerMode = normalizeTimerMode(payload.timerMode);
-  const lastFixedDurationMinutes = resolveLastFixedDurationMinutes(payload.durationMinutes, payload.lastFixedDurationMinutes);
-  const durationMinutes = normalizeFixedDurationMinutes(timerMode, payload.durationMinutes, payload.lastFixedDurationMinutes);
-
-  return {
-    timerMode,
-    durationMinutes,
-    lastFixedDurationMinutes,
+  return normalizeTimerSettings({
+    ...payload,
     meditationType: payload.meditationType as TimerSettings['meditationType'],
-    startSound: payload.startSound,
-    endSound: payload.endSound,
-    intervalEnabled: payload.intervalEnabled,
-    intervalMinutes: payload.intervalMinutes,
-    intervalSound: payload.intervalSound,
-  };
+  });
 }
 
 export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
@@ -71,22 +58,19 @@ export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
 }
 
 export function areTimerSettingsEqual(left: TimerSettings, right: TimerSettings): boolean {
-  const leftTimerMode = normalizeTimerMode(left.timerMode);
-  const rightTimerMode = normalizeTimerMode(right.timerMode);
-  const leftLastFixedDurationMinutes = resolveLastFixedDurationMinutes(left.durationMinutes, left.lastFixedDurationMinutes);
-  const rightLastFixedDurationMinutes = resolveLastFixedDurationMinutes(right.durationMinutes, right.lastFixedDurationMinutes);
+  const normalizedLeft = normalizeTimerSettings(left);
+  const normalizedRight = normalizeTimerSettings(right);
 
   return (
-    leftTimerMode === rightTimerMode &&
-    normalizeFixedDurationMinutes(leftTimerMode, left.durationMinutes, left.lastFixedDurationMinutes) ===
-      normalizeFixedDurationMinutes(rightTimerMode, right.durationMinutes, right.lastFixedDurationMinutes) &&
-    leftLastFixedDurationMinutes === rightLastFixedDurationMinutes &&
-    left.meditationType === right.meditationType &&
-    left.startSound === right.startSound &&
-    left.endSound === right.endSound &&
-    left.intervalEnabled === right.intervalEnabled &&
-    left.intervalMinutes === right.intervalMinutes &&
-    left.intervalSound === right.intervalSound
+    normalizedLeft.timerMode === normalizedRight.timerMode &&
+    normalizedLeft.durationMinutes === normalizedRight.durationMinutes &&
+    normalizedLeft.lastFixedDurationMinutes === normalizedRight.lastFixedDurationMinutes &&
+    normalizedLeft.meditationType === normalizedRight.meditationType &&
+    normalizedLeft.startSound === normalizedRight.startSound &&
+    normalizedLeft.endSound === normalizedRight.endSound &&
+    normalizedLeft.intervalEnabled === normalizedRight.intervalEnabled &&
+    normalizedLeft.intervalMinutes === normalizedRight.intervalMinutes &&
+    normalizedLeft.intervalSound === normalizedRight.intervalSound
   );
 }
 

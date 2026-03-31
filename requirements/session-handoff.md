@@ -1,6 +1,46 @@
 # Session Handoff
 
 ## Current status
+The reviewed timer defect findings are fixed on `codex/timer-defaults-runtime-defects`. The milestone can move to the final local merge back into `main`.
+
+## 2026-03-31 timer review remediation and verification
+- Added and updated:
+  - `requirements/execplan-timer-review-findings-and-verification.md`
+  - `src/utils/timerSettingsNormalization.ts`
+  - `src/utils/timerSettingsApi.ts`
+  - `src/utils/storage.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - regression coverage in:
+    - `src/App.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+- What review findings were fixed:
+  - online timer-settings hydration no longer promotes stale local cached settings over backend state just because the backend currently matches app defaults
+  - timer-settings queue reconciliation now preserves an existing queued timer-settings mutation when the queued meaning is unchanged instead of resetting its sync metadata
+  - queued timer-settings payloads now normalize through the same fixed-duration compatibility rules before they are replayed into runtime state or persisted to the backend
+- Scenarios verified:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - specifically covered through focused regression tests:
+    - backend defaults overriding stale local timer-settings cache when no queued timer-settings change exists
+    - queued timer-settings replay preserving `queuedAt` while normalizing fixed-duration payloads
+    - Settings default timer persistence
+    - Practice draft behavior staying session-scoped
+    - Home quick start and favorite custom play shortcut behavior
+    - active timer runtime/recovery regression coverage already exercised by the full suite
+    - validation edge cases and `session log` correctness via the updated timer utility tests and app-level regressions
+- Remaining risks or limitations:
+  - the review’s two nice-to-have follow-ups are still open:
+    - Home quick start still uses the same label for paused and running timers
+    - `TimerContext` remains dense and would benefit from a later extraction pass when this area is touched again
+  - this slice did not require backend code changes, so no Maven/backend verification was needed for prompt 05
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, requirements/session-handoff.md, requirements/decisions.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, and docs/screen-inventory.md. Then inspect the current git state, confirm the current defect-fix branch is codex/timer-defaults-runtime-defects and the recorded parent branch for this bundle is main, verify the working tree is clean and the recent bundle verification is still sufficient, merge codex/timer-defaults-runtime-defects back into main locally with a normal merge that preserves history unless a safer local strategy is required, resolve conflicts carefully if they appear, confirm the resulting git status, update requirements/decisions.md and requirements/session-handoff.md with the merge outcome and completion summary, and commit any final merge-related documentation updates with a clear message such as chore(branch): merge timer defect remediation branch into parent.`
+
+## Current status
 The timer defaults and runtime defects review is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review-remediation and verification pass.
 
 ## 2026-03-31 timer defaults and runtime defects review

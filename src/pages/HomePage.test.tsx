@@ -22,6 +22,54 @@ function createJsonResponse(status: number, body: unknown) {
   };
 }
 
+function stubHomeFetchWithTimerSettings(settings: {
+  durationMinutes: number;
+  meditationType: string;
+  startSound: string;
+  endSound: string;
+  intervalEnabled: boolean;
+  intervalMinutes: number;
+  intervalSound: string;
+}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/api/settings/timer') && method === 'GET') {
+        return createJsonResponse(200, {
+          id: 'default',
+          ...settings,
+          updatedAt: '2026-03-26T12:00:00.000Z',
+        });
+      }
+
+      if (url.endsWith('/api/session-logs') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.endsWith('/api/sankalpas') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.includes('/api/sankalpas?') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.endsWith('/api/playlists') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+    })
+  );
+}
+
 describe('HomePage UX', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -160,6 +208,15 @@ describe('HomePage UX', () => {
         intervalSound: 'Temple Bell',
       })
     );
+    stubHomeFetchWithTimerSettings({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
 
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -212,6 +269,15 @@ describe('HomePage UX', () => {
         },
       ])
     );
+    stubHomeFetchWithTimerSettings({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
 
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -245,6 +311,15 @@ describe('HomePage UX', () => {
         intervalSound: 'Temple Bell',
       })
     );
+    stubHomeFetchWithTimerSettings({
+      durationMinutes: 15,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
 
     render(
       <MemoryRouter initialEntries={['/']}>

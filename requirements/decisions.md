@@ -2,6 +2,13 @@
 
 ## Decision log
 
+### 2026-03-31 timer review remediation decisions
+- Treat queued timer-settings mutations as the only reliable signal that the browser has unsynced timer-settings intent worth replaying over backend state:
+  - if there is no queued timer-settings entry, online hydration should accept the backend response even when the backend currently matches app defaults
+  - do not use “remote equals default settings” as a proxy for local freshness
+- Preserve the original `queuedAt` timestamp for the same unsynced timer-settings change, because backend stale-write protection depends on that timestamp remaining stable across reloads and hydration passes.
+- Normalize timer-settings payloads consistently across storage, API, queue-backed hydration, and queue-backed persistence so fixed-mode compatibility fixes do not stop at the sync queue boundary.
+
 ### 2026-03-31 timer validation and log guard decisions
 - Keep fixed-mode validation strict about the current `durationMinutes` value:
   - if `timerMode = "fixed"`, the current duration must itself be a positive finite number

@@ -16,6 +16,47 @@ function createJsonResponse(status: number, body: unknown) {
   };
 }
 
+function stubSettingsFetch(settings: {
+  durationMinutes: number;
+  meditationType: string;
+  startSound: string;
+  endSound: string;
+  intervalEnabled: boolean;
+  intervalMinutes: number;
+  intervalSound: string;
+}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/api/settings/timer') && method === 'GET') {
+        return createJsonResponse(200, {
+          id: 'default',
+          ...settings,
+          updatedAt: '2026-03-26T12:00:00.000Z',
+        });
+      }
+
+      if (url.endsWith('/api/settings/timer') && method === 'PUT') {
+        return createJsonResponse(200, {
+          id: 'default',
+          ...settings,
+          ...(typeof init?.body === 'string' ? JSON.parse(init.body) : {}),
+          updatedAt: '2026-03-26T12:05:00.000Z',
+        });
+      }
+
+      if (url.endsWith('/api/session-logs') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+    })
+  );
+}
+
 function renderSettingsPage() {
   render(
     <MemoryRouter initialEntries={['/settings']}>
@@ -49,6 +90,15 @@ describe('SettingsPage UX', () => {
         intervalSound: 'Temple Bell',
       })
     );
+    stubSettingsFetch({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
   });
 
   afterEach(() => {

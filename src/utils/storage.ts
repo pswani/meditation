@@ -4,9 +4,7 @@ import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
 import type { ActiveSession, TimerSettings } from '../types/timer';
 import {
-  normalizeFixedDurationMinutes,
-  normalizeTimerMode,
-  resolveLastFixedDurationMinutes,
+  normalizeTimerSettings,
 } from './timerSettingsNormalization';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
@@ -395,13 +393,7 @@ export function loadTimerSettings(): TimerSettings | null {
       return null;
     }
 
-    return {
-      ...parsed,
-      timerMode: normalizeTimerMode(parsed.timerMode),
-      durationMinutes: normalizeFixedDurationMinutes(parsed.timerMode, parsed.durationMinutes, parsed.lastFixedDurationMinutes),
-      lastFixedDurationMinutes: resolveLastFixedDurationMinutes(parsed.durationMinutes, parsed.lastFixedDurationMinutes),
-      intervalSound: parsed.intervalSound ?? 'Temple Bell',
-    };
+    return normalizeTimerSettings(parsed);
   } catch {
     return null;
   }
