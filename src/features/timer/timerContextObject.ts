@@ -54,7 +54,7 @@ export interface TimerContextValue {
   readonly endPlaylistRunEarly: () => void;
   readonly clearPlaylistRunOutcome: () => void;
   readonly addManualLog: (input: ManualLogInput) => Promise<ManualLogSaveResult>;
-  readonly startSession: () => boolean;
+  readonly startSession: (settings?: TimerSettings) => boolean;
   readonly pauseSession: () => void;
   readonly resumeSession: () => void;
   readonly endSessionEarly: () => void;

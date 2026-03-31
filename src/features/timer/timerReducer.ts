@@ -16,7 +16,7 @@ export interface TimerState {
 export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'REPLACE_SESSION_LOGS'; payload: readonly SessionLog[] }
-  | { type: 'START_SESSION'; nowMs: number }
+  | { type: 'START_SESSION'; nowMs: number; settings?: TimerSettings }
   | { type: 'SYNC_TICK'; nowMs: number }
   | { type: 'PAUSE_SESSION'; nowMs: number }
   | { type: 'RESUME_SESSION'; nowMs: number }
@@ -49,36 +49,35 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
       };
     }
     case 'START_SESSION': {
-      const validation = validateTimerSettings(state.settings);
-      if (!validation.isValid || !state.settings.meditationType) {
+      const sessionSettings = action.settings ?? state.settings;
+      const validation = validateTimerSettings(sessionSettings);
+      if (!validation.isValid || !sessionSettings.meditationType) {
         return {
           ...state,
-          validation,
         };
       }
 
-      const fixedDurationMinutes = state.settings.durationMinutes ?? state.settings.lastFixedDurationMinutes;
-      const durationSeconds = state.settings.timerMode === 'fixed' ? Math.round(fixedDurationMinutes * 60) : null;
+      const fixedDurationMinutes = sessionSettings.durationMinutes ?? sessionSettings.lastFixedDurationMinutes;
+      const durationSeconds = sessionSettings.timerMode === 'fixed' ? Math.round(fixedDurationMinutes * 60) : null;
       const startedAt = new Date(action.nowMs).toISOString();
 
       return {
         ...state,
-        validation,
         lastOutcome: null,
         activeSession: {
           startedAt,
           startedAtMs: action.nowMs,
-          timerMode: state.settings.timerMode,
+          timerMode: sessionSettings.timerMode,
           intendedDurationSeconds: durationSeconds,
           elapsedSeconds: 0,
           isPaused: false,
           lastResumedAtMs: action.nowMs,
-          meditationType: state.settings.meditationType,
-          startSound: state.settings.startSound,
-          endSound: state.settings.endSound,
-          intervalEnabled: state.settings.intervalEnabled,
-          intervalMinutes: state.settings.intervalMinutes,
-          intervalSound: state.settings.intervalSound,
+          meditationType: sessionSettings.meditationType,
+          startSound: sessionSettings.startSound,
+          endSound: sessionSettings.endSound,
+          intervalEnabled: sessionSettings.intervalEnabled,
+          intervalMinutes: sessionSettings.intervalMinutes,
+          intervalSound: sessionSettings.intervalSound,
         },
       };
     }

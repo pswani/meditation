@@ -35,7 +35,6 @@ export default function HomePage() {
     activeSession,
     activePlaylistRun,
     startSession,
-    setSettings,
     startPlaylistRun,
     isSettingsLoading,
     isPlaylistsLoading,
@@ -80,9 +79,13 @@ export default function HomePage() {
   }
 
   function applyCustomPlayShortcut(play: CustomPlay) {
-    setSettings(applyCustomPlayToTimerSettings(settings, play));
-    setFeedbackMessage(`Loaded ${play.name} into timer setup.`);
-    navigate('/practice');
+    setFeedbackMessage(null);
+    navigate('/practice', {
+      state: {
+        entryMessage: `Custom play "${play.name}" applied to timer setup.`,
+        timerPreset: applyCustomPlayToTimerSettings(settings, play),
+      },
+    });
   }
 
   function runFavoritePlaylist(playlistId: string) {

@@ -5,6 +5,8 @@ import { SyncStatusProvider } from '../sync/SyncStatusProvider';
 import { TimerProvider } from '../timer/TimerContext';
 import PracticePage from '../../pages/PracticePage';
 
+const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
+
 function createJsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
@@ -24,6 +26,20 @@ async function waitForPracticeToolsReady() {
 describe('CustomPlayManager UX', () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -151,6 +167,13 @@ describe('CustomPlayManager UX', () => {
     const timerEndSoundField = screen.getByLabelText(/^End sound \(optional\)$/i) as HTMLSelectElement;
     expect(timerStartSoundField.value).toBe('Soft Chime');
     expect(timerEndSoundField.value).toBe('Wood Block');
+    expect(JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY) ?? '{}')).toMatchObject({
+      durationMinutes: 20,
+      lastFixedDurationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /delete/i }));
     expect(screen.getByRole('dialog', { name: /delete custom play morning focus confirmation/i })).toBeInTheDocument();

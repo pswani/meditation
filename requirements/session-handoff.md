@@ -1,6 +1,44 @@
 # Session Handoff
 
 ## Current status
+The practice/default-timer separation fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to active timer runtime and recovery defects.
+
+## 2026-03-31 timer default separation
+- Added and updated:
+  - `requirements/execplan-timer-default-separation.md`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/features/timer/timerContextObject.ts`
+  - `src/features/timer/timerReducer.ts`
+  - `src/pages/PracticePage.tsx`
+  - `src/pages/HomePage.tsx`
+  - `src/features/customPlays/CustomPlayManager.tsx`
+  - focused timer ownership regression tests in:
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+    - `src/features/customPlays/CustomPlayManager.test.tsx`
+- What was fixed:
+  - Practice timer edits now stay in a session-scoped draft instead of overwriting saved defaults
+  - Home quick start still reads the Settings-backed default timer summary after Practice edits
+  - Home favorite custom play shortcuts and Practice custom play "Use" flows now preload timer setup without persisting those values as defaults
+  - Settings remains the only path that saves or resets persisted timer defaults
+- Ownership split:
+  - Settings owns persisted default timer preferences
+  - Home quick start reads persisted defaults
+  - Practice owns a local timer draft seeded from persisted defaults or a one-time route preset
+  - starting a session now uses the current Practice draft snapshot without writing it into defaults first
+- Remaining limitations:
+  - the Practice draft is intentionally route-scoped and is not preserved after leaving the Practice screen
+  - this step did not address active timer recovery defects, stale-session cleanup, or other runtime-model issues outside default ownership
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing active-timer runtime and recovery defects, implement the bounded active-session persistence and recovery cleanup so fixed-duration sessions can rehydrate, resume, stay paused correctly, and clear stale state truthfully, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if API contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): restore active session recovery and runtime consistency.`
+
+## Current status
 The timer defaults and runtime defects milestone branch has been prepared from `main`. Defect remediation should continue on `codex/timer-defaults-runtime-defects` using the checked-in prompt sequence.
 
 ## 2026-03-31 timer defaults and runtime defects branch setup

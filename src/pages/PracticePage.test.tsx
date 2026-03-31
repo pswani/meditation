@@ -6,6 +6,7 @@ import { TimerProvider } from '../features/timer/TimerContext';
 import PracticePage from './PracticePage';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -133,6 +134,45 @@ describe('PracticePage UX', () => {
     const durationInput = screen.getByLabelText(/duration \(minutes\)/i) as HTMLInputElement;
     expect(durationInput.value).toBe('24');
     expect(screen.getByRole('button', { name: /start session/i })).toBeInTheDocument();
+  });
+
+  it('keeps practice timer edits session-scoped instead of overwriting saved defaults', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeSettingsHydration();
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '31' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /meditation type/i }), { target: { value: 'Ajapa' } });
+
+    expect(JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY) ?? '{}')).toMatchObject({
+      durationMinutes: 20,
+      lastFixedDurationMinutes: 20,
+      meditationType: 'Vipassana',
+    });
   });
 
   it('exposes explicit expanded state for advanced timer settings', async () => {

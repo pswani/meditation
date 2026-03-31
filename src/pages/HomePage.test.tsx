@@ -145,6 +145,93 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/quick start needs valid defaults/i)).toBeInTheDocument();
   });
 
+  it('keeps Home quick start aligned to saved defaults after Practice edits', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitForHomeQuickStartReady();
+    expect(screen.getByText(/default timer: 20 min · vipassana/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /open practice/i }));
+    expect(await screen.findByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '33' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /meditation type/i }), { target: { value: 'Ajapa' } });
+
+    fireEvent.click(screen.getAllByRole('link', { name: /^home$/i })[0]);
+    await waitForHomeQuickStartReady();
+    expect(screen.getByText(/default timer: 20 min · vipassana/i)).toBeInTheDocument();
+  });
+
+  it('preloads a favorite custom play without overwriting the saved Home defaults', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+    localStorage.setItem(
+      CUSTOM_PLAYS_KEY,
+      JSON.stringify([
+        {
+          id: 'play-1',
+          name: 'Morning Focus',
+          durationMinutes: 33,
+          meditationType: 'Ajapa',
+          startSound: 'Soft Chime',
+          endSound: 'Wood Block',
+          favorite: true,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitForHomeQuickStartReady();
+    fireEvent.click(screen.getByRole('button', { name: /^use$/i }));
+
+    expect(await screen.findByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
+    expect(screen.getByText(/custom play "Morning Focus" applied to timer setup\./i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/duration \(minutes\)/i)).toHaveValue(33);
+    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Ajapa');
+
+    fireEvent.click(screen.getAllByRole('link', { name: /^home$/i })[0]);
+    await waitForHomeQuickStartReady();
+    expect(screen.getByText(/default timer: 20 min · vipassana/i)).toBeInTheDocument();
+  });
+
   it('starts and routes to the active timer when quick-start defaults are valid', async () => {
     localStorage.setItem(
       TIMER_SETTINGS_KEY,

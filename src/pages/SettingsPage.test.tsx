@@ -216,4 +216,25 @@ describe('SettingsPage UX', () => {
 
     expect(await screen.findByText(/^settings saved\.$/i)).toBeInTheDocument();
   });
+
+  it('resets persisted defaults back to the app baseline', async () => {
+    renderSettingsPage();
+
+    await waitForSettingsPageReady();
+    fireEvent.click(screen.getByRole('button', { name: /reset to app defaults/i }));
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY) ?? '{}')).toMatchObject({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: '',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+  });
 });

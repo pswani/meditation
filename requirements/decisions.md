@@ -2,6 +2,15 @@
 
 ## Decision log
 
+### 2026-03-31 timer default separation decisions
+- Keep persisted timer defaults in `TimerContext` as the single source of truth for Home quick start and Settings, instead of letting Practice mutate the same state.
+- Move Practice timer setup edits into route-local draft state so:
+  - backend-hydrated defaults still seed the screen before the user edits
+  - Home and Practice custom play preload flows can override only the current timer setup session
+  - only Settings saves or resets app defaults
+- Let timer start accept an explicit settings snapshot so Practice can launch a session from its local draft without writing those draft values into persisted defaults first.
+- Keep the reducer backward-compatible with the legacy `START_SESSION` action shape so existing timer tests and internal callers that rely on state-backed defaults remain safe during this defect-fix bundle.
+
 ### 2026-03-31 timer defaults and runtime defects branch setup decisions
 - Treat `main` as the parent branch for the `timer-defaults-and-runtime-defects-with-branching` bundle because the bundle was started from a clean `main` worktree and no earlier handoff entry recorded a more specific parent for this exact prompt set.
 - Create and use the local feature branch `codex/timer-defaults-runtime-defects` for the defect-remediation work before merging back into `main`.

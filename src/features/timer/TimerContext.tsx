@@ -43,6 +43,7 @@ import {
   loadTimerSettingsFromApi,
   persistTimerSettingsToApi,
 } from '../../utils/timerSettingsApi';
+import { validateTimerSettings } from '../../utils/timerValidation';
 import { defaultTimerSettings } from './constants';
 import {
   applyQueuedCollectionMutations,
@@ -1689,17 +1690,18 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           persisted: true,
         };
       },
-      startSession: () => {
+      startSession: (settingsOverride) => {
         if (activePlaylistRun) {
           return false;
         }
 
-        if (!state.validation.isValid || !state.settings.meditationType) {
-          dispatch({ type: 'SET_SETTINGS', payload: state.settings });
+        const nextSettings = settingsOverride ?? state.settings;
+        const validation = validateTimerSettings(nextSettings);
+        if (!validation.isValid || !nextSettings.meditationType) {
           return false;
         }
 
-        dispatch({ type: 'START_SESSION', nowMs: Date.now() });
+        dispatch({ type: 'START_SESSION', nowMs: Date.now(), settings: nextSettings });
         return true;
       },
       pauseSession: () => {
