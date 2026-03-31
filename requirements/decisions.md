@@ -2,6 +2,13 @@
 
 ## Decision log
 
+### 2026-03-31 timer defaults and runtime defects merge decisions
+- Merge `codex/timer-defaults-runtime-defects` back into `main` with a normal local merge commit so the branch-setup, implementation, review, remediation, and prompt-history commits stay intact.
+- Mark the timer defaults and runtime defects bundle complete on `main` after the merge because the milestone’s ownership, recovery, validation, and reviewed sync-safety fixes all landed together with their supporting docs and tests.
+- Carry the remaining review nice-to-haves forward as non-blocking follow-up work rather than holding this defect-remediation merge:
+  - Home paused-timer wording consistency
+  - `TimerContext` extraction for maintainability
+
 ### 2026-03-31 timer review remediation decisions
 - Treat queued timer-settings mutations as the only reliable signal that the browser has unsynced timer-settings intent worth replaying over backend state:
   - if there is no queued timer-settings entry, online hydration should accept the backend response even when the backend currently matches app defaults

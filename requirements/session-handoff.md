@@ -1,6 +1,27 @@
 # Session Handoff
 
 ## Current status
+The timer defaults and runtime defects bundle is now merged into `main`. The defect-fix branch history has been preserved locally, and the repository is back on a clean parent branch state.
+
+## 2026-03-31 timer defaults and runtime defects merge
+- Defect-fix branch merged:
+  - `codex/timer-defaults-runtime-defects`
+- Parent branch updated:
+  - `main`
+- Merge outcome:
+  - merged locally with a normal merge commit on `main`
+  - resulting `git status` is clean after the merge
+  - preserved the full milestone prompt history, including branch setup, implementation, review, remediation, and execplan artifacts
+- Completion summary:
+  - Practice timer edits and custom play preload flows are now session-scoped instead of mutating saved defaults
+  - active timer persistence and recovery now use one coherent `ActiveSession` model with safer stale-session handling and paused-session messaging
+  - timer validation, `session log` duration guards, and timer-settings normalization are tightened for fixed-duration compatibility and truthful logging
+  - the prompt-04 review findings around timer-settings sync safety were fixed, including authoritative backend hydration when no queued timer-settings change exists and preserved queue ordering metadata during queued timer-settings replay
+  - focused regression coverage now protects default ownership, active timer recovery, validation edge cases, queued timer-settings replay, and end-to-end timer-setting hydration behavior
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-timer-defaults-and-runtime-defects.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan and implement the remaining non-blocking timer polish from docs/review-timer-defaults-and-runtime-defects.md, bounded to two items: make Home distinguish paused timers from running timers in its quick-start copy, and extract the timer-settings hydration/sync logic out of TimerContext into a focused helper or hook without changing other product behavior. Add the focused regression tests needed to protect those changes, run npm run typecheck, npm run lint, npm run test, npm run build, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as refactor(timer): polish paused timer messaging and isolate settings sync logic.`
+
+## Current status
 The reviewed timer defect findings are fixed on `codex/timer-defaults-runtime-defects`. The milestone can move to the final local merge back into `main`.
 
 ## 2026-03-31 timer review remediation and verification
