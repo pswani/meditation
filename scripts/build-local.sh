@@ -20,7 +20,7 @@ npm run build
 command_value=$(backend_build_cmd)
 if [ -n "$command_value" ]; then
   printf '%s\n' "Building paired backend"
-  run_backend_command "BUILD" "$command_value"
+  run_backend_command_inline "BUILD" "$command_value"
 else
   printf '%s\n' "No external backend build configured. Frontend build complete."
 fi

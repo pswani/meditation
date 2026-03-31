@@ -79,6 +79,30 @@ backend_bind_host() {
   printf '%s\n' "${MEDITATION_BACKEND_BIND_HOST:-127.0.0.1}"
 }
 
+java_bin() {
+  if [ -n "${MEDITATION_JAVA_BIN:-}" ]; then
+    printf '%s\n' "$MEDITATION_JAVA_BIN"
+    return
+  fi
+
+  if command -v java >/dev/null 2>&1; then
+    command -v java
+    return
+  fi
+
+  if [ -x /opt/homebrew/opt/openjdk@21/bin/java ]; then
+    printf '%s\n' /opt/homebrew/opt/openjdk@21/bin/java
+    return
+  fi
+
+  if [ -x /usr/local/opt/openjdk@21/bin/java ]; then
+    printf '%s\n' /usr/local/opt/openjdk@21/bin/java
+    return
+  fi
+
+  printf '\n'
+}
+
 backend_bound_health_url() {
   printf 'http://%s:%s/api/health\n' "$(backend_bind_host)" "$(backend_port)"
 }
@@ -203,6 +227,33 @@ run_backend_command() {
   fi
 
   exec sh -lc "$command_value"
+}
+
+run_backend_command_inline() {
+  command_name=$1
+  command_value=$2
+  dir=$(backend_dir)
+
+  if [ -z "$command_value" ]; then
+    printf '%s\n' "No external backend command is configured for $command_name."
+    printf '%s\n' "Set MEDITATION_BACKEND_DIR and optionally MEDITATION_BACKEND_${command_name}_CMD in .env.local."
+    return 1
+  fi
+
+  if [ -n "$dir" ]; then
+    printf '%s\n' "Running backend $command_name command in $dir"
+    (
+      cd "$dir"
+      sh -lc "$command_value"
+    )
+    return
+  fi
+
+  printf '%s\n' "Running backend $command_name command from the frontend workspace."
+  (
+    cd "$ROOT_DIR"
+    sh -lc "$command_value"
+  )
 }
 
 runtime_dir() {

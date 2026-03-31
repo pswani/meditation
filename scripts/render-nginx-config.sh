@@ -7,10 +7,15 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/common.sh"
 
 print_usage() {
-  printf '%s\n' "Usage: ./scripts/render-nginx-config.sh [--output PATH]"
+  printf '%s\n' "Usage: ./scripts/render-nginx-config.sh [--output PATH] [--frontend-root PATH] [--backend-host HOST] [--backend-port PORT] [--server-name NAME] [--listen-port PORT]"
 }
 
 output_path=""
+frontend_root_override=""
+backend_host_override=""
+backend_port_override=""
+server_name_override=""
+listen_port_override=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -21,6 +26,46 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       output_path=$1
+      ;;
+    --frontend-root)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      frontend_root_override=$1
+      ;;
+    --backend-host)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      backend_host_override=$1
+      ;;
+    --backend-port)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      backend_port_override=$1
+      ;;
+    --server-name)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      server_name_override=$1
+      ;;
+    --listen-port)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      listen_port_override=$1
       ;;
     --help|-h)
       print_usage
@@ -36,10 +81,37 @@ done
 
 load_local_env
 
-frontend_root=$(deploy_frontend_dir)
-backend_origin="http://$(backend_bind_host):$(backend_port)"
-server_name=$(nginx_server_name)
-listen_port=$(nginx_listen_port)
+if [ -n "$frontend_root_override" ]; then
+  frontend_root=$(resolve_path "$frontend_root_override")
+else
+  frontend_root=$(deploy_frontend_dir)
+fi
+
+if [ -n "$backend_host_override" ]; then
+  backend_host=$backend_host_override
+else
+  backend_host=$(backend_bind_host)
+fi
+
+if [ -n "$backend_port_override" ]; then
+  backend_port_value=$backend_port_override
+else
+  backend_port_value=$(backend_port)
+fi
+
+backend_origin="http://${backend_host}:${backend_port_value}"
+
+if [ -n "$server_name_override" ]; then
+  server_name=$server_name_override
+else
+  server_name=$(nginx_server_name)
+fi
+
+if [ -n "$listen_port_override" ]; then
+  listen_port=$listen_port_override
+else
+  listen_port=$(nginx_listen_port)
+fi
 
 config_text=$(cat <<EOF
 server {

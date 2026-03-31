@@ -2,6 +2,37 @@
 
 ## Decision log
 
+### 2026-03-30 mac mini production control decisions
+- Add one combined Mac Mini production control script for:
+  - `start`
+  - `stop`
+  - `restart`
+  - `status`
+  - `logs`
+- Treat that control script as the primary operator surface after installation, instead of requiring the operator to mix raw `brew services`, `launchctl`, and health-check commands by hand.
+- Keep the control script restart flow clean and explicit:
+  - stop backend if loaded
+  - stop `nginx` if running
+  - start `nginx`
+  - start or re-kickstart the backend service
+  - wait for backend health
+- Add backend log tailing to the same script so routine production inspection does not require memorizing the installed runtime log path.
+- Update the install workflow to call the combined control script for service restart after deployment so install-time behavior and day-to-day operator behavior stay aligned.
+
+### 2026-03-29 mac mini production runbook decisions
+- Keep the repo’s production deployment model centered on the existing packaged bundle:
+  - static frontend files
+  - one Spring Boot jar
+  - nginx reverse proxy
+  - filesystem-backed H2 and media storage
+- Add a production-only macOS installer path instead of extending the local dev or preview scripts, because the requested runtime must not depend on Vite dev or preview servers.
+- Clarify the README production section as two explicit paths:
+  - LAN-only install without a domain or TLS
+  - public-domain install with Certbot-managed TLS
+- Use `launchd` as the recommended backend service manager on the Mac Mini and add a dedicated foreground backend runner for that environment, while keeping the existing `nohup`-style prod lifecycle helpers for repo-local operator use.
+- Keep the nginx renderer reusable by allowing installed frontend roots and explicit upstream host/port overrides instead of baking `/local-data/deploy/` paths into every deployment.
+- Keep TLS automation bounded to Certbot’s nginx integration for standard domain-based installs, and document manual DNS-validation as the fallback when inbound port `80` is unavailable.
+
 ### 2026-03-28 production deployment scripting decisions
 - Treat nginx as the recommended self-managed production frontend server for this repo:
   - serve the static frontend production build from `dist/`
