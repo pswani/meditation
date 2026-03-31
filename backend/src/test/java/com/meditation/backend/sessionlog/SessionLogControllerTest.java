@@ -42,6 +42,7 @@ class SessionLogControllerTest {
                   "startedAt": "2026-03-26T10:00:00Z",
                   "endedAt": "2026-03-26T10:20:00Z",
                   "meditationType": "Vipassana",
+                  "timerMode": "fixed",
                   "intendedDurationSeconds": 1200,
                   "completedDurationSeconds": 1200,
                   "status": "completed",
@@ -55,6 +56,7 @@ class SessionLogControllerTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("log-older"))
+        .andExpect(jsonPath("$.timerMode").value("fixed"))
         .andExpect(jsonPath("$.intendedDurationSeconds").value(1200));
 
     mockMvc.perform(put("/api/session-logs/log-newer")
@@ -65,6 +67,7 @@ class SessionLogControllerTest {
                   "startedAt": "2026-03-26T11:00:00Z",
                   "endedAt": "2026-03-26T11:12:00Z",
                   "meditationType": "Ajapa",
+                  "timerMode": "fixed",
                   "intendedDurationSeconds": 900,
                   "completedDurationSeconds": 720,
                   "status": "ended early",
@@ -99,6 +102,7 @@ class SessionLogControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.source").value("manual log"))
         .andExpect(jsonPath("$.status").value("completed"))
+        .andExpect(jsonPath("$.timerMode").value("fixed"))
         .andExpect(jsonPath("$.intendedDurationSeconds").value(720))
         .andExpect(jsonPath("$.completedDurationSeconds").value(720))
         .andExpect(jsonPath("$.startedAt").value("2026-03-26T11:00:00Z"))
@@ -111,6 +115,42 @@ class SessionLogControllerTest {
   }
 
   @Test
+  void savesOpenEndedSessionLogsThroughTheApi() throws Exception {
+    mockMvc.perform(put("/api/session-logs/log-open-ended")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "log-open-ended",
+                  "startedAt": "2026-03-26T11:00:00Z",
+                  "endedAt": "2026-03-26T11:18:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "open-ended",
+                  "intendedDurationSeconds": null,
+                  "completedDurationSeconds": 1080,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "Soft Chime",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": true,
+                  "intervalMinutes": 9,
+                  "intervalSound": "Wood Block"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("log-open-ended"))
+        .andExpect(jsonPath("$.timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.intendedDurationSeconds").isEmpty())
+        .andExpect(jsonPath("$.completedDurationSeconds").value(1080))
+        .andExpect(jsonPath("$.status").value("completed"));
+
+    mockMvc.perform(get("/api/session-logs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].timerMode").value("open-ended"))
+        .andExpect(jsonPath("$[0].intendedDurationSeconds").isEmpty());
+  }
+
+  @Test
   void rejectsInvalidSessionLogPayloads() throws Exception {
     mockMvc.perform(put("/api/session-logs/log-invalid")
             .contentType(APPLICATION_JSON)
@@ -120,6 +160,7 @@ class SessionLogControllerTest {
                   "startedAt": "2026-03-26T10:00:00Z",
                   "endedAt": "2026-03-26T09:59:00Z",
                   "meditationType": "Vipassana",
+                  "timerMode": "fixed",
                   "intendedDurationSeconds": 1200,
                   "completedDurationSeconds": 1200,
                   "status": "completed",
@@ -159,6 +200,7 @@ class SessionLogControllerTest {
                   "startedAt": "2026-03-26T10:00:00Z",
                   "endedAt": "2026-03-26T10:20:00Z",
                   "meditationType": "Vipassana",
+                  "timerMode": "fixed",
                   "intendedDurationSeconds": 1200,
                   "completedDurationSeconds": 1200,
                   "status": "completed",
@@ -182,6 +224,7 @@ class SessionLogControllerTest {
                   "startedAt": "2026-03-26T10:00:00Z",
                   "endedAt": "2026-03-26T10:20:00Z",
                   "meditationType": "Ajapa",
+                  "timerMode": "fixed",
                   "intendedDurationSeconds": 1200,
                   "completedDurationSeconds": 600,
                   "status": "ended early",

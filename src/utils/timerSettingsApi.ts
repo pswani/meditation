@@ -8,6 +8,7 @@ export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
 
 interface TimerSettingsApiResponse {
   readonly id?: string;
+  readonly timerMode?: TimerSettings['timerMode'];
   readonly durationMinutes: number;
   readonly meditationType: string;
   readonly startSound: string;
@@ -25,6 +26,7 @@ function isTimerSettingsApiResponse(value: unknown): value is TimerSettingsApiRe
 
   const candidate = value as Record<string, unknown>;
   return (
+    (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
     typeof candidate.durationMinutes === 'number' &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
@@ -41,6 +43,7 @@ function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
   }
 
   return {
+    timerMode: payload.timerMode ?? 'fixed',
     durationMinutes: payload.durationMinutes,
     meditationType: payload.meditationType as TimerSettings['meditationType'],
     startSound: payload.startSound,
@@ -57,6 +60,7 @@ export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
 
 export function areTimerSettingsEqual(left: TimerSettings, right: TimerSettings): boolean {
   return (
+    left.timerMode === right.timerMode &&
     left.durationMinutes === right.durationMinutes &&
     left.meditationType === right.meditationType &&
     left.startSound === right.startSound &&

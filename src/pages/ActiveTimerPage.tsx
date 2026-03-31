@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatRemainingTime } from '../features/timer/time';
+import { formatRemainingTime, getActiveSessionClockSeconds } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
 
 export default function ActiveTimerPage() {
@@ -19,12 +19,29 @@ export default function ActiveTimerPage() {
   } = useTimer();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
+  const [clockNowMs, setClockNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (!activeSession) {
       setShowEndEarlyConfirm(false);
     }
   }, [activeSession]);
+
+  useEffect(() => {
+    setClockNowMs(Date.now());
+
+    if (!activeSession || isPaused) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setClockNowMs(Date.now());
+    }, 500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeSession, isPaused]);
 
   if (!activeSession) {
     if (lastOutcome) {
@@ -87,12 +104,22 @@ export default function ActiveTimerPage() {
     );
   }
 
+  const timerClockSeconds = getActiveSessionClockSeconds(activeSession, clockNowMs);
+  const isOpenEndedSession = activeSession.timerMode === 'open-ended';
+  const timerClockLabel = isOpenEndedSession ? 'Elapsed' : 'Remaining';
+  const endActionLabel = isOpenEndedSession ? 'End Session' : 'End Early';
+
   return (
     <section className="page-card active-timer">
       <p className="eyebrow">{activeSession.meditationType}</p>
       <p className={`session-state ${isPaused ? 'paused' : ''}`}>{isPaused ? 'Paused' : 'In Session'}</p>
-      <h2 className="timer-clock">{formatRemainingTime(activeSession.remainingSeconds)}</h2>
-      <p className="page-description">Stay present. Pause or resume anytime, or end early if needed.</p>
+      <p className="timer-clock-label">{timerClockLabel}</p>
+      <h2 className="timer-clock">{formatRemainingTime(timerClockSeconds)}</h2>
+      <p className="page-description">
+        {isOpenEndedSession
+          ? 'Stay present. Pause or resume anytime, then end the session whenever it feels complete.'
+          : 'Stay present. Pause or resume anytime, or end early if needed.'}
+      </p>
 
       {timerSoundPlaybackMessage ? (
         <div className="status-banner warn" role="status">
@@ -114,13 +141,17 @@ export default function ActiveTimerPage() {
           </button>
         )}
         <button type="button" className="secondary" onClick={() => setShowEndEarlyConfirm(true)}>
-          End Early
+          {endActionLabel}
         </button>
       </div>
 
       {showEndEarlyConfirm ? (
         <div className="confirm-sheet" role="dialog" aria-label="End session early confirmation">
-          <p>End this session now and create an auto log with status ended early?</p>
+          <p>
+            {isOpenEndedSession
+              ? 'End this session now and create an auto log with the elapsed duration?'
+              : 'End this session now and create an auto log with status ended early?'}
+          </p>
           <div className="timer-actions">
             <button type="button" className="secondary" onClick={() => setShowEndEarlyConfirm(false)}>
               Continue Session
@@ -132,7 +163,7 @@ export default function ActiveTimerPage() {
                 endSessionEarly();
               }}
             >
-              End Early
+              {endActionLabel}
             </button>
           </div>
         </div>

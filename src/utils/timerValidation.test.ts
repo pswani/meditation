@@ -3,6 +3,7 @@ import { getIntervalBellCount, validateTimerSettings } from './timerValidation';
 import type { TimerSettings } from '../types/timer';
 
 const base: TimerSettings = {
+  timerMode: 'fixed',
   durationMinutes: 20,
   meditationType: 'Vipassana',
   startSound: 'None',
@@ -41,6 +42,12 @@ describe('validateTimerSettings', () => {
     const result = validateTimerSettings({ ...base, intervalEnabled: true, intervalMinutes: 0 });
     expect(result.isValid).toBe(false);
     expect(result.errors.intervalMinutes).toMatch(/greater than 0/i);
+  });
+
+  it('allows open-ended mode without a fixed duration', () => {
+    const result = validateTimerSettings({ ...base, timerMode: 'open-ended', durationMinutes: 0, intervalEnabled: true, intervalMinutes: 5 });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual({});
   });
 });
 

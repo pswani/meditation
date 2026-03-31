@@ -17,6 +17,9 @@ public class TimerSettingsEntity {
   @Column(name = "duration_minutes", nullable = false)
   private int durationMinutes;
 
+  @Column(name = "timer_mode", nullable = false, length = 32)
+  private String timerMode;
+
   @Column(name = "meditation_type_code", length = 32)
   private String meditationTypeCode;
 
@@ -44,6 +47,7 @@ public class TimerSettingsEntity {
   public TimerSettingsEntity(
       String id,
       int durationMinutes,
+      String timerMode,
       String meditationTypeCode,
       String startSound,
       String endSound,
@@ -54,6 +58,7 @@ public class TimerSettingsEntity {
   ) {
     this.id = id;
     this.durationMinutes = durationMinutes;
+    this.timerMode = timerMode;
     this.meditationTypeCode = meditationTypeCode;
     this.startSound = startSound;
     this.endSound = endSound;
@@ -73,6 +78,10 @@ public class TimerSettingsEntity {
 
   public String getMeditationTypeCode() {
     return meditationTypeCode;
+  }
+
+  public String getTimerMode() {
+    return timerMode;
   }
 
   public String getStartSound() {
@@ -101,6 +110,7 @@ public class TimerSettingsEntity {
 
   public void updateFrom(TimerSettingsUpsertRequest request, Instant updatedAt) {
     this.durationMinutes = request.durationMinutes();
+    this.timerMode = request.timerMode();
     this.meditationTypeCode = normalizeMeditationTypeCode(request.meditationType());
     this.startSound = request.startSound();
     this.endSound = request.endSound();

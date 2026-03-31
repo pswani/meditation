@@ -27,6 +27,7 @@ class TimerSettingsRepositoryTest {
 
     Instant updatedAt = Instant.parse("2026-03-26T15:45:00Z");
     seeded.updateFrom(new TimerSettingsUpsertRequest(
+        "fixed",
         32,
         "Sahaj",
         "Soft Chime",

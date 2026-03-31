@@ -37,6 +37,7 @@ export function buildPlaylistItemLogEntry({
     startedAt,
     endedAt: endedAt.toISOString(),
     meditationType: item.meditationType,
+    timerMode: 'fixed',
     intendedDurationSeconds,
     completedDurationSeconds: Math.max(0, Math.min(intendedDurationSeconds, completedDurationSeconds)),
     status,

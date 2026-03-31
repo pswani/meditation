@@ -1,6 +1,45 @@
 # Session Handoff
 
 ## Current status
+Open-ended timer mode is now implemented on `codex/open-ended-timer`. The milestone can move to a focused review pass before any follow-up fixes.
+
+## 2026-03-30 open-ended timer implementation
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-feature-bundle.md`
+  - `docs/product-requirements.md`
+  - `docs/ux-spec.md`
+  - `docs/screen-inventory.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - frontend timer state, persistence, API, and page files needed for open-ended mode
+  - backend timer settings and `session log` models, services, tests, and Flyway migration support
+- What was implemented:
+  - a clear timer mode choice between fixed duration and open-ended in Practice and Settings
+  - open-ended active sessions with elapsed-time display, pause/resume support, and manual end flow
+  - repeated interval-bell behavior for open-ended sessions using elapsed-time milestones
+  - `session log` creation that records actual completed duration and stores open-ended sessions with `timerMode = open-ended`
+  - History representation that shows open-ended entries without inventing a planned duration
+  - timer settings and backend `session log` contracts extended cleanly for the new mode
+- How open-ended mode behaves:
+  - the user selects open-ended mode in timer setup or settings
+  - no fixed countdown is shown during the active session; the clock displays elapsed time instead
+  - pause/resume preserves elapsed-duration correctness
+  - ending the session creates a `completed` auto log with the actual elapsed duration
+  - interval bells remain optional and repeat on the configured cadence while the session is active
+- Limitations and prototype notes:
+  - timer settings still persist a fixed `durationMinutes` value even while open-ended mode is selected so the fixed-duration preference is preserved for later use
+  - backend verification required `mvn -Dmaven.repo.local=../local-data/m2 clean test` after stale build output caused a plain `test` run to miss the new Flyway migration
+  - this slice does not redesign playlist flows, custom play flows, or offline/sync behavior beyond the timer-mode compatibility already present in the app
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then review the implemented open-ended timer feature for UX clarity, timer behavior, data-model cleanliness, code quality, responsive behavior, and consistency with the rest of the timer flow. Do not make code changes. Write critical issues, important issues, and nice-to-have improvements with recommended fixes into docs/review-open-ended-timer.md and requirements/session-handoff.md, and commit the review docs if appropriate with a clear message such as docs(timer): review open-ended timer experience.`
+
+## Current status
 The open-ended timer milestone branch has been prepared from `main`. Feature work should continue on `codex/open-ended-timer` using the checked-in prompt sequence.
 
 ## 2026-03-30 open-ended timer branch setup

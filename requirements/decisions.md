@@ -2,6 +2,13 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer implementation decisions
+- Represent open-ended timer sessions explicitly with `timerMode = "open-ended"` across timer settings, active-session state, API payloads, H2 persistence, and `session log` records instead of inferring the mode indirectly.
+- Keep the saved fixed `durationMinutes` value even when the user switches timer settings to open-ended mode so returning to fixed duration restores the last meaningful duration instead of forcing re-entry.
+- Treat a manually ended open-ended timer session as `completed`, not `ended early`, because that flow has no planned finish time to leave early.
+- Store open-ended `session log` entries with `intendedDurationSeconds = null` and preserve summary, history, and `sankalpa` compatibility by continuing to calculate progress from `completedDurationSeconds`.
+- Keep interval bells available in open-ended mode and define them as repeated elapsed-time milestones instead of disabling them or tying them to a missing end time.
+
 ### 2026-03-30 open-ended timer branch setup decisions
 - Treat `main` as the parent branch for the `open-ended-timer-feature-bundle-with-branching` milestone, even though a different working branch was present when the prompt sequence began.
 - Create and use the local feature branch `codex/open-ended-timer` for the milestone work before merging back into `main`.

@@ -1,4 +1,5 @@
 import type { ActiveSession } from '../../types/timer';
+import { getActiveSessionElapsedSeconds } from './time';
 import { resolveTimerSound, SILENT_TIMER_SOUND_LABEL } from './timerSoundCatalog';
 
 export type TimerSoundCue = 'start' | 'interval' | 'end';
@@ -124,16 +125,11 @@ export function createTimerSoundPlayer(
   };
 }
 
-export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number, isPaused: boolean): number {
-  if (isPaused) {
-    return Math.max(0, session.intendedDurationSeconds - session.remainingSeconds);
-  }
-
-  const remainingSeconds = Math.max(0, Math.ceil((session.endAtMs - nowMs) / 1000));
-  return Math.max(0, session.intendedDurationSeconds - remainingSeconds);
+export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number): number {
+  return getActiveSessionElapsedSeconds(session, nowMs);
 }
 
-export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number, isPaused: boolean): number {
+export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number): number {
   if (!session.intervalEnabled || session.intervalMinutes <= 0) {
     return 0;
   }
@@ -143,7 +139,12 @@ export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number
     return 0;
   }
 
-  const completedSeconds = getCompletedSessionSeconds(session, nowMs, isPaused);
+  const completedSeconds = getCompletedSessionSeconds(session, nowMs);
+
+  if (session.timerMode === 'open-ended' || session.intendedDurationSeconds === null) {
+    return Math.floor(completedSeconds / intervalSeconds);
+  }
+
   const maxIntervalCueCount = Math.floor((session.intendedDurationSeconds - 1) / intervalSeconds);
 
   return Math.min(Math.floor(completedSeconds / intervalSeconds), maxIntervalCueCount);

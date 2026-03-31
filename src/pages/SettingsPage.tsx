@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { meditationTypes, soundOptions, defaultTimerSettings } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
-import type { TimerSettings } from '../types/timer';
+import type { TimerMode, TimerSettings } from '../types/timer';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 
 type SavePhase = 'idle' | 'awaiting-sync-start' | 'saving';
@@ -9,6 +9,7 @@ type SaveMessageTone = 'ok' | 'status';
 
 function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings): boolean {
   return (
+    current.timerMode !== baseline.timerMode ||
     current.durationMinutes !== baseline.durationMinutes ||
     current.meditationType !== baseline.meditationType ||
     current.startSound !== baseline.startSound ||
@@ -64,8 +65,8 @@ export default function SettingsPage() {
   }, [isSettingsSyncing, savePhase, settingsSyncError]);
 
   const intervalCount = useMemo(
-    () => (draft.intervalEnabled ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
-    [draft.durationMinutes, draft.intervalEnabled, draft.intervalMinutes]
+    () => (draft.intervalEnabled && draft.timerMode === 'fixed' ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
+    [draft.durationMinutes, draft.intervalEnabled, draft.intervalMinutes, draft.timerMode]
   );
 
   function update<K extends keyof TimerSettings>(key: K, value: TimerSettings[K]) {
@@ -75,6 +76,10 @@ export default function SettingsPage() {
       ...current,
       [key]: value,
     }));
+  }
+
+  function selectTimerMode(timerMode: TimerMode) {
+    update('timerMode', timerMode);
   }
 
   function saveDefaults() {
@@ -139,27 +144,64 @@ export default function SettingsPage() {
       <section className="settings-panel">
         <h3 className="section-title">Default Timer Preferences</h3>
         <form className="form-grid" onSubmit={(event) => event.preventDefault()}>
-          <label>
-            <span>Default duration (minutes)</span>
-            <input
-              type="number"
-              min={1}
-              value={draft.durationMinutes}
-              disabled={areSettingsControlsDisabled}
-              aria-invalid={Boolean(errors.durationMinutes)}
-              aria-describedby={durationMessageId}
-              onChange={(event) => update('durationMinutes', Number(event.target.value))}
-            />
-            {errors.durationMinutes ? (
-              <small id={durationMessageId} className="error-text">
-                {errors.durationMinutes}
-              </small>
-            ) : (
-              <small id={durationMessageId} className="hint-text">
-                Used when opening timer setup.
-              </small>
-            )}
-          </label>
+          <section className="timer-mode-panel" aria-label="Default timer mode">
+            <label className={`timer-mode-option ${draft.timerMode === 'fixed' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="default-timer-mode"
+                checked={draft.timerMode === 'fixed'}
+                disabled={areSettingsControlsDisabled}
+                onChange={() => selectTimerMode('fixed')}
+              />
+              <span className="timer-mode-copy">
+                <strong>Fixed Duration</strong>
+                <small>Keep a saved default duration ready for quick start.</small>
+              </span>
+            </label>
+
+            <label className={`timer-mode-option ${draft.timerMode === 'open-ended' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="default-timer-mode"
+                checked={draft.timerMode === 'open-ended'}
+                disabled={areSettingsControlsDisabled}
+                onChange={() => selectTimerMode('open-ended')}
+              />
+              <span className="timer-mode-copy">
+                <strong>Open-Ended</strong>
+                <small>Open timer setup ready to start without a planned finish time.</small>
+              </span>
+            </label>
+          </section>
+
+          {draft.timerMode === 'fixed' ? (
+            <label>
+              <span>Default duration (minutes)</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.durationMinutes}
+                disabled={areSettingsControlsDisabled}
+                aria-invalid={Boolean(errors.durationMinutes)}
+                aria-describedby={durationMessageId}
+                onChange={(event) => update('durationMinutes', Number(event.target.value))}
+              />
+              {errors.durationMinutes ? (
+                <small id={durationMessageId} className="error-text">
+                  {errors.durationMinutes}
+                </small>
+              ) : (
+                <small id={durationMessageId} className="hint-text">
+                  Used when opening timer setup.
+                </small>
+              )}
+            </label>
+          ) : (
+            <div className="mode-hint-card">
+              <strong>Open-ended default</strong>
+              <p className="section-subtitle">Quick start and timer setup will open without a scheduled end time.</p>
+            </div>
+          )}
 
           <label>
             <span>Default meditation type</span>
@@ -247,7 +289,9 @@ export default function SettingsPage() {
                   </small>
                 ) : (
                   <small id={intervalMessageId} className="hint-text">
-                    {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} within the default session.
+                    {draft.timerMode === 'open-ended'
+                      ? `A bell will repeat every ${draft.intervalMinutes} minute${draft.intervalMinutes === 1 ? '' : 's'} until the session is ended.`
+                      : `${intervalCount} interval bell${intervalCount === 1 ? '' : 's'} within the default session.`}
                   </small>
                 )}
               </label>

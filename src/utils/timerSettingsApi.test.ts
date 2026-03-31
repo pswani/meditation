@@ -21,6 +21,7 @@ describe('timer settings api boundary', () => {
         status: 200,
         json: async () => ({
           id: 'default',
+          timerMode: 'fixed',
           durationMinutes: 24,
           meditationType: 'Vipassana',
           startSound: 'None',
@@ -37,6 +38,7 @@ describe('timer settings api boundary', () => {
     expect(TIMER_SETTINGS_ENDPOINT).toBe('/api/settings/timer');
     expect(buildTimerSettingsUrl()).toBe('/api/settings/timer');
     expect(buildTimerSettingsUrl('http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/settings/timer');
+    expect(settings.timerMode).toBe('fixed');
     expect(settings.durationMinutes).toBe(24);
     expect(settings.meditationType).toBe('Vipassana');
   });
@@ -47,6 +49,7 @@ describe('timer settings api boundary', () => {
       status: 200,
       json: async () => ({
         id: 'default',
+        timerMode: 'fixed',
         durationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
@@ -61,6 +64,7 @@ describe('timer settings api boundary', () => {
 
     const saved = await persistTimerSettingsToApi(
       {
+        timerMode: 'fixed',
         durationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
@@ -78,6 +82,7 @@ describe('timer settings api boundary', () => {
     expect(saved.intervalMinutes).toBe(10);
     expect(saved.intervalSound).toBe('Wood Block');
     expect(areTimerSettingsEqual(saved, {
+      timerMode: 'fixed',
       durationMinutes: 30,
       meditationType: 'Ajapa',
       startSound: 'Soft Chime',

@@ -7,6 +7,7 @@ import { TimerProvider } from './TimerContext';
 import { useTimer } from './useTimer';
 
 const validSettings: TimerSettings = {
+  timerMode: 'fixed',
   durationMinutes: 10,
   meditationType: 'Vipassana',
   startSound: 'Soft Chime',

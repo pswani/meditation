@@ -1,4 +1,5 @@
 import { defaultTimerSettings } from './constants';
+import { getActiveSessionElapsedMilliseconds, getActiveSessionElapsedSeconds } from './time';
 import type { SessionLog } from '../../types/sessionLog';
 import type { ActiveSession, TimerOutcome, TimerSettings, TimerValidationResult } from '../../types/timer';
 import { buildAutoLogEntry } from '../../utils/sessionLog';
@@ -56,7 +57,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         };
       }
 
-      const durationSeconds = Math.round(state.settings.durationMinutes * 60);
+      const durationSeconds = state.settings.timerMode === 'fixed' ? Math.round(state.settings.durationMinutes * 60) : null;
       const startedAt = new Date(action.nowMs).toISOString();
 
       return {
@@ -66,15 +67,17 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         activeSession: {
           startedAt,
           startedAtMs: action.nowMs,
+          timerMode: state.settings.timerMode,
           intendedDurationSeconds: durationSeconds,
-          remainingSeconds: durationSeconds,
+          elapsedSeconds: 0,
+          isPaused: false,
+          lastResumedAtMs: action.nowMs,
           meditationType: state.settings.meditationType,
           startSound: state.settings.startSound,
           endSound: state.settings.endSound,
           intervalEnabled: state.settings.intervalEnabled,
           intervalMinutes: state.settings.intervalMinutes,
           intervalSound: state.settings.intervalSound,
-          endAtMs: action.nowMs + durationSeconds * 1000,
         },
       };
     }
@@ -85,42 +88,39 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
       };
     }
     case 'SYNC_TICK': {
-      if (!state.activeSession) {
+      if (!state.activeSession || state.activeSession.isPaused) {
         return state;
       }
 
-      const remainingSeconds = Math.max(0, Math.ceil((state.activeSession.endAtMs - action.nowMs) / 1000));
+      const intendedDurationSeconds = state.activeSession.intendedDurationSeconds;
 
-      if (remainingSeconds > 0) {
-        return {
-          ...state,
-          activeSession: {
-            ...state.activeSession,
-            remainingSeconds,
-          },
-        };
+      if (
+        state.activeSession.timerMode === 'fixed' &&
+        intendedDurationSeconds !== null &&
+        getActiveSessionElapsedMilliseconds(state.activeSession, action.nowMs) >= intendedDurationSeconds * 1000
+      ) {
+        return finalizeSession(state, 'completed', action.nowMs, intendedDurationSeconds);
       }
 
-      return finalizeSession(state, 'completed', action.nowMs, 0);
+      return state;
     }
     case 'PAUSE_SESSION': {
-      if (!state.activeSession) {
+      if (!state.activeSession || state.activeSession.isPaused) {
         return state;
       }
-
-      const remainingSeconds = Math.max(0, Math.ceil((state.activeSession.endAtMs - action.nowMs) / 1000));
 
       return {
         ...state,
         activeSession: {
           ...state.activeSession,
-          remainingSeconds,
-          endAtMs: action.nowMs + remainingSeconds * 1000,
+          elapsedSeconds: getActiveSessionElapsedSeconds(state.activeSession, action.nowMs),
+          isPaused: true,
+          lastResumedAtMs: null,
         },
       };
     }
     case 'RESUME_SESSION': {
-      if (!state.activeSession) {
+      if (!state.activeSession || !state.activeSession.isPaused) {
         return state;
       }
 
@@ -128,7 +128,8 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         ...state,
         activeSession: {
           ...state.activeSession,
-          endAtMs: action.nowMs + state.activeSession.remainingSeconds * 1000,
+          isPaused: false,
+          lastResumedAtMs: action.nowMs,
         },
       };
     }
@@ -137,8 +138,9 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         return state;
       }
 
-      const remainingSeconds = Math.max(0, Math.ceil((state.activeSession.endAtMs - action.nowMs) / 1000));
-      return finalizeSession(state, 'ended early', action.nowMs, remainingSeconds);
+      const completedDurationSeconds = getActiveSessionElapsedSeconds(state.activeSession, action.nowMs);
+      const finalStatus = state.activeSession.timerMode === 'open-ended' ? 'completed' : 'ended early';
+      return finalizeSession(state, finalStatus, action.nowMs, completedDurationSeconds);
     }
     case 'ADD_SESSION_LOG': {
       return {
@@ -161,17 +163,25 @@ function finalizeSession(
   state: TimerState,
   status: 'completed' | 'ended early',
   nowMs: number,
-  remainingSeconds: number
+  completedDurationSeconds: number
 ): TimerState {
   if (!state.activeSession) {
     return state;
   }
 
-  const completedDurationSeconds = state.activeSession.intendedDurationSeconds - remainingSeconds;
+  const normalizedCompletedDurationSeconds =
+    state.activeSession.intendedDurationSeconds === null
+      ? Math.max(0, completedDurationSeconds)
+      : Math.max(0, Math.min(state.activeSession.intendedDurationSeconds, completedDurationSeconds));
   const logEntry = buildAutoLogEntry({
-    session: state.activeSession,
+    session: {
+      ...state.activeSession,
+      elapsedSeconds: normalizedCompletedDurationSeconds,
+      isPaused: true,
+      lastResumedAtMs: null,
+    },
     endedAt: new Date(nowMs),
-    completedDurationSeconds,
+    completedDurationSeconds: normalizedCompletedDurationSeconds,
     status,
   });
 
@@ -182,6 +192,7 @@ function finalizeSession(
       status,
       endedAt: new Date(nowMs).toISOString(),
       completedDurationSeconds: logEntry.completedDurationSeconds,
+      timerMode: logEntry.timerMode,
     },
     sessionLogs: appendSessionLog(state.sessionLogs, logEntry),
   };

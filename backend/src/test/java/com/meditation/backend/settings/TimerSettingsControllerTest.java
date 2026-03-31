@@ -31,6 +31,7 @@ class TimerSettingsControllerTest {
     timerSettingsRepository.save(new TimerSettingsEntity(
         "default",
         20,
+        "fixed",
         null,
         "None",
         "Temple Bell",
@@ -46,6 +47,7 @@ class TimerSettingsControllerTest {
     mockMvc.perform(get("/api/settings/timer"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("default"))
+        .andExpect(jsonPath("$.timerMode").value("fixed"))
         .andExpect(jsonPath("$.durationMinutes").value(20))
         .andExpect(jsonPath("$.meditationType").value(""))
         .andExpect(jsonPath("$.intervalEnabled").value(false));
@@ -57,6 +59,7 @@ class TimerSettingsControllerTest {
             .contentType(APPLICATION_JSON)
             .content("""
                 {
+                  "timerMode": "fixed",
                   "durationMinutes": 32,
                   "meditationType": "Sahaj",
                   "startSound": "Soft Chime",
@@ -67,6 +70,7 @@ class TimerSettingsControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.timerMode").value("fixed"))
         .andExpect(jsonPath("$.durationMinutes").value(32))
         .andExpect(jsonPath("$.meditationType").value("Sahaj"))
         .andExpect(jsonPath("$.intervalEnabled").value(true))
@@ -79,11 +83,41 @@ class TimerSettingsControllerTest {
   }
 
   @Test
+  void savesOpenEndedTimerSettings() throws Exception {
+    mockMvc.perform(put("/api/settings/timer")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "timerMode": "open-ended",
+                  "durationMinutes": 20,
+                  "meditationType": "Vipassana",
+                  "startSound": "Soft Chime",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": true,
+                  "intervalMinutes": 10,
+                  "intervalSound": "Wood Block"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.durationMinutes").value(20))
+        .andExpect(jsonPath("$.meditationType").value("Vipassana"))
+        .andExpect(jsonPath("$.intervalEnabled").value(true))
+        .andExpect(jsonPath("$.intervalMinutes").value(10));
+
+    mockMvc.perform(get("/api/settings/timer"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.durationMinutes").value(20));
+  }
+
+  @Test
   void rejectsInvalidTimerSettings() throws Exception {
     mockMvc.perform(put("/api/settings/timer")
             .contentType(APPLICATION_JSON)
             .content("""
                 {
+                  "timerMode": "fixed",
                   "durationMinutes": 0,
                   "meditationType": "",
                   "startSound": "None",
@@ -103,6 +137,7 @@ class TimerSettingsControllerTest {
             .header("X-Meditation-Sync-Queued-At", "2099-03-27T10:15:00Z")
             .content("""
                 {
+                  "timerMode": "fixed",
                   "durationMinutes": 32,
                   "meditationType": "Sahaj",
                   "startSound": "Soft Chime",
@@ -120,6 +155,7 @@ class TimerSettingsControllerTest {
             .header("X-Meditation-Sync-Queued-At", "2099-03-27T10:10:00Z")
             .content("""
                 {
+                  "timerMode": "fixed",
                   "durationMinutes": 18,
                   "meditationType": "Ajapa",
                   "startSound": "None",

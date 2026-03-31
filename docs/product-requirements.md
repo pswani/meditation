@@ -40,14 +40,17 @@ The app must work well on:
 - sankalpa snapshot
 
 ### Timer
-- total duration
+- fixed-duration or open-ended mode
+- total duration for fixed sessions
 - meditation type
 - optional start sound
 - optional end sound
 - optional interval sounds
+- elapsed time for open-ended sessions
 - pause
 - resume
-- end early
+- end early for fixed sessions
+- manual end for open-ended sessions
 
 ### Custom Plays
 - create

@@ -13,6 +13,7 @@ public class TimerSettingsService {
 
   static final String DEFAULT_SETTINGS_ID = "default";
   private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
+  private static final Set<String> TIMER_MODES = Set.of("fixed", "open-ended");
 
   private final TimerSettingsRepository timerSettingsRepository;
 
@@ -34,6 +35,7 @@ public class TimerSettingsService {
         .orElseGet(() -> new TimerSettingsEntity(
             DEFAULT_SETTINGS_ID,
             request.durationMinutes(),
+            request.timerMode(),
             normalizeMeditationType(request.meditationType()),
             request.startSound(),
             request.endSound(),
@@ -56,6 +58,7 @@ public class TimerSettingsService {
   private TimerSettingsResponse toResponse(TimerSettingsEntity entity) {
     return new TimerSettingsResponse(
         entity.getId(),
+        entity.getTimerMode(),
         entity.getDurationMinutes(),
         Optional.ofNullable(entity.getMeditationTypeCode()).orElse(""),
         entity.getStartSound(),
@@ -68,6 +71,10 @@ public class TimerSettingsService {
   }
 
   private void validateRequest(TimerSettingsUpsertRequest request) {
+    if (!TIMER_MODES.contains(request.timerMode())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
+    }
+
     if (request.durationMinutes() <= 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
     }
@@ -92,7 +99,7 @@ public class TimerSettingsService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interval minutes must be greater than 0 when interval bell is enabled.");
     }
 
-    if (request.intervalEnabled() && request.intervalMinutes() >= request.durationMinutes()) {
+    if ("fixed".equals(request.timerMode()) && request.intervalEnabled() && request.intervalMinutes() >= request.durationMinutes()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interval minutes must be less than the total duration.");
     }
 

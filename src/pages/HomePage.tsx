@@ -128,7 +128,9 @@ export default function HomePage() {
         <p className="section-subtitle">
           {isSettingsLoading
             ? 'Loading timer defaults...'
-            : `Default timer: ${settings.durationMinutes} min · ${settings.meditationType || 'select meditation type'}`}
+            : `Default timer: ${settings.timerMode === 'open-ended' ? 'Open-ended' : `${settings.durationMinutes} min`} · ${
+                settings.meditationType || 'select meditation type'
+              }`}
         </p>
         <div className="timer-actions">
           <button type="button" onClick={quickStart} disabled={isSettingsLoading}>

@@ -92,6 +92,7 @@ export function buildManualLogEntry(input: ManualLogInput, now: Date): SessionLo
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
     meditationType: request.meditationType,
+    timerMode: 'fixed',
     intendedDurationSeconds: durationSeconds,
     completedDurationSeconds: durationSeconds,
     status: 'completed',

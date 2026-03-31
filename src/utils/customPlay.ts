@@ -71,6 +71,7 @@ export function applyCustomPlayToTimerSettings(
 ): TimerSettings {
   return {
     ...settings,
+    timerMode: 'fixed',
     durationMinutes: play.durationMinutes,
     meditationType: play.meditationType,
     startSound: play.startSound,

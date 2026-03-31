@@ -582,15 +582,17 @@ describe('App shell', () => {
         activeSession: {
           startedAt: '2026-03-24T10:00:00.000Z',
           startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          timerMode: 'fixed',
           intendedDurationSeconds: 1200,
-          remainingSeconds: 1200,
+          elapsedSeconds: 0,
+          isPaused: false,
+          lastResumedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
           meditationType: 'Vipassana',
           startSound: 'None',
           endSound: 'Temple Bell',
           intervalEnabled: false,
           intervalMinutes: 0,
           intervalSound: 'None',
-          endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
         },
         isPaused: false,
       })
@@ -606,7 +608,7 @@ describe('App shell', () => {
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
 
     const persistedState = JSON.parse(localStorage.getItem(ACTIVE_TIMER_STATE_KEY) ?? '{}');
-    expect(persistedState.activeSession?.remainingSeconds).toBe(900);
+    expect(persistedState.activeSession?.elapsedSeconds).toBe(300);
 
     fireEvent.click(screen.getByRole('button', { name: /^dismiss$/i }));
     expect(screen.queryByText(/recovered an active timer from your previous app state/i)).not.toBeInTheDocument();
@@ -625,15 +627,17 @@ describe('App shell', () => {
         activeSession: {
           startedAt: '2026-03-24T10:00:00.000Z',
           startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          timerMode: 'fixed',
           intendedDurationSeconds: 1200,
-          remainingSeconds: 1200,
+          elapsedSeconds: 0,
+          isPaused: false,
+          lastResumedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
           meditationType: 'Ajapa',
           startSound: 'None',
           endSound: 'Temple Bell',
           intervalEnabled: false,
           intervalMinutes: 0,
           intervalSound: 'None',
-          endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
         },
         isPaused: false,
       })

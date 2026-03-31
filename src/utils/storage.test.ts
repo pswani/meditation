@@ -36,6 +36,7 @@ describe('storage timer settings', () => {
 
   it('persists and loads timer settings', () => {
     const settings: TimerSettings = {
+      timerMode: 'fixed',
       durationMinutes: 25,
       meditationType: 'Ajapa',
       startSound: 'None',
@@ -86,6 +87,7 @@ describe('storage session logs', () => {
         startedAt: '2026-03-24T10:00:00.000Z',
         endedAt: '2026-03-24T10:20:00.000Z',
         meditationType: 'Vipassana',
+        timerMode: 'fixed',
         intendedDurationSeconds: 1200,
         completedDurationSeconds: 1200,
         status: 'completed',
@@ -121,6 +123,7 @@ describe('storage session logs', () => {
           startedAt: '2026-03-24T10:00:00.000Z',
           endedAt: '2026-03-24T10:20:00.000Z',
           meditationType: 'Vipassana',
+          timerMode: 'fixed',
           intendedDurationSeconds: 1200,
           completedDurationSeconds: 1200,
           status: 'completed',
@@ -155,6 +158,7 @@ describe('storage session logs', () => {
         startedAt: '2026-03-24T10:00:00.000Z',
         endedAt: '2026-03-24T10:20:00.000Z',
         meditationType: 'Vipassana',
+        timerMode: 'fixed',
         intendedDurationSeconds: 1200,
         completedDurationSeconds: 1200,
         status: 'completed',
@@ -523,15 +527,17 @@ describe('storage active runtime state', () => {
       {
         startedAt: '2026-03-24T10:00:00.000Z',
         startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
         intendedDurationSeconds: 1200,
-        remainingSeconds: 900,
+        elapsedSeconds: 300,
+        isPaused: true,
+        lastResumedAtMs: null,
         meditationType: 'Vipassana',
         startSound: 'None',
         endSound: 'Temple Bell',
         intervalEnabled: false,
         intervalMinutes: 0,
         intervalSound: 'None',
-        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
       },
       true
     );
@@ -540,15 +546,17 @@ describe('storage active runtime state', () => {
       activeSession: {
         startedAt: '2026-03-24T10:00:00.000Z',
         startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
         intendedDurationSeconds: 1200,
-        remainingSeconds: 900,
+        elapsedSeconds: 300,
+        isPaused: true,
+        lastResumedAtMs: null,
         meditationType: 'Vipassana',
         startSound: 'None',
         endSound: 'Temple Bell',
         intervalEnabled: false,
         intervalMinutes: 0,
         intervalSound: 'None',
-        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
       },
       isPaused: true,
     });
@@ -559,15 +567,17 @@ describe('storage active runtime state', () => {
       {
         startedAt: '2026-03-24T10:00:00.000Z',
         startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
         intendedDurationSeconds: 1200,
-        remainingSeconds: 900,
+        elapsedSeconds: 300,
+        isPaused: false,
+        lastResumedAtMs: Date.parse('2026-03-24T10:15:00.000Z'),
         meditationType: 'Vipassana',
         startSound: 'None',
         endSound: 'Temple Bell',
         intervalEnabled: false,
         intervalMinutes: 0,
         intervalSound: 'None',
-        endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
       },
       false
     );

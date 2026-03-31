@@ -135,6 +135,7 @@ class PlaylistControllerTest {
         "auto log",
         "completed",
         "Vipassana",
+        "fixed",
         Instant.parse("2026-03-26T10:00:00Z"),
         Instant.parse("2026-03-26T10:10:00Z"),
         600,
