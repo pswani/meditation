@@ -61,6 +61,7 @@ class TimerSettingsControllerTest {
                 {
                   "timerMode": "fixed",
                   "durationMinutes": 32,
+                  "lastFixedDurationMinutes": 32,
                   "meditationType": "Sahaj",
                   "startSound": "Soft Chime",
                   "endSound": "Temple Bell",
@@ -72,6 +73,7 @@ class TimerSettingsControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.timerMode").value("fixed"))
         .andExpect(jsonPath("$.durationMinutes").value(32))
+        .andExpect(jsonPath("$.lastFixedDurationMinutes").value(32))
         .andExpect(jsonPath("$.meditationType").value("Sahaj"))
         .andExpect(jsonPath("$.intervalEnabled").value(true))
         .andExpect(jsonPath("$.intervalMinutes").value(8));
@@ -89,7 +91,8 @@ class TimerSettingsControllerTest {
             .content("""
                 {
                   "timerMode": "open-ended",
-                  "durationMinutes": 20,
+                  "durationMinutes": null,
+                  "lastFixedDurationMinutes": 20,
                   "meditationType": "Vipassana",
                   "startSound": "Soft Chime",
                   "endSound": "Temple Bell",
@@ -100,7 +103,8 @@ class TimerSettingsControllerTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.timerMode").value("open-ended"))
-        .andExpect(jsonPath("$.durationMinutes").value(20))
+        .andExpect(jsonPath("$.durationMinutes").isEmpty())
+        .andExpect(jsonPath("$.lastFixedDurationMinutes").value(20))
         .andExpect(jsonPath("$.meditationType").value("Vipassana"))
         .andExpect(jsonPath("$.intervalEnabled").value(true))
         .andExpect(jsonPath("$.intervalMinutes").value(10));
@@ -108,7 +112,8 @@ class TimerSettingsControllerTest {
     mockMvc.perform(get("/api/settings/timer"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.timerMode").value("open-ended"))
-        .andExpect(jsonPath("$.durationMinutes").value(20));
+        .andExpect(jsonPath("$.durationMinutes").isEmpty())
+        .andExpect(jsonPath("$.lastFixedDurationMinutes").value(20));
   }
 
   @Test
@@ -119,6 +124,7 @@ class TimerSettingsControllerTest {
                 {
                   "timerMode": "fixed",
                   "durationMinutes": 0,
+                  "lastFixedDurationMinutes": 20,
                   "meditationType": "",
                   "startSound": "None",
                   "endSound": "Temple Bell",
@@ -139,6 +145,7 @@ class TimerSettingsControllerTest {
                 {
                   "timerMode": "fixed",
                   "durationMinutes": 32,
+                  "lastFixedDurationMinutes": 32,
                   "meditationType": "Sahaj",
                   "startSound": "Soft Chime",
                   "endSound": "Temple Bell",
@@ -157,6 +164,7 @@ class TimerSettingsControllerTest {
                 {
                   "timerMode": "fixed",
                   "durationMinutes": 18,
+                  "lastFixedDurationMinutes": 18,
                   "meditationType": "Ajapa",
                   "startSound": "None",
                   "endSound": "None",

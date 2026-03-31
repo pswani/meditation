@@ -26,7 +26,8 @@ function isTimerSettings(value: unknown): value is TimerSettings {
   const candidate = value as Record<string, unknown>;
   return (
     (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
-    typeof candidate.durationMinutes === 'number' &&
+    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null || typeof candidate.durationMinutes === 'undefined') &&
+    (typeof candidate.lastFixedDurationMinutes === 'number' || typeof candidate.lastFixedDurationMinutes === 'undefined') &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
@@ -392,6 +393,20 @@ export function loadTimerSettings(): TimerSettings | null {
     return {
       ...parsed,
       timerMode: parsed.timerMode ?? 'fixed',
+      durationMinutes:
+        (parsed.timerMode ?? 'fixed') === 'open-ended'
+          ? null
+          : typeof parsed.durationMinutes === 'number'
+            ? parsed.durationMinutes
+            : typeof parsed.lastFixedDurationMinutes === 'number'
+              ? parsed.lastFixedDurationMinutes
+              : null,
+      lastFixedDurationMinutes:
+        typeof parsed.lastFixedDurationMinutes === 'number'
+          ? parsed.lastFixedDurationMinutes
+          : typeof parsed.durationMinutes === 'number'
+            ? parsed.durationMinutes
+            : 20,
       intervalSound: parsed.intervalSound ?? 'Temple Bell',
     };
   } catch {

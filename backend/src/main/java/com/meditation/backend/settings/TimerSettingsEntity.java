@@ -108,8 +108,8 @@ public class TimerSettingsEntity {
     return updatedAt;
   }
 
-  public void updateFrom(TimerSettingsUpsertRequest request, Instant updatedAt) {
-    this.durationMinutes = request.durationMinutes();
+  public void updateFrom(TimerSettingsUpsertRequest request, int lastFixedDurationMinutes, Instant updatedAt) {
+    this.durationMinutes = lastFixedDurationMinutes;
     this.timerMode = request.timerMode();
     this.meditationTypeCode = normalizeMeditationTypeCode(request.meditationType());
     this.startSound = request.startSound();

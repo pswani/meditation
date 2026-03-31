@@ -57,7 +57,8 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         };
       }
 
-      const durationSeconds = state.settings.timerMode === 'fixed' ? Math.round(state.settings.durationMinutes * 60) : null;
+      const fixedDurationMinutes = state.settings.durationMinutes ?? state.settings.lastFixedDurationMinutes;
+      const durationSeconds = state.settings.timerMode === 'fixed' ? Math.round(fixedDurationMinutes * 60) : null;
       const startedAt = new Date(action.nowMs).toISOString();
 
       return {

@@ -38,6 +38,7 @@ describe('storage timer settings', () => {
     const settings: TimerSettings = {
       timerMode: 'fixed',
       durationMinutes: 25,
+      lastFixedDurationMinutes: 25,
       meditationType: 'Ajapa',
       startSound: 'None',
       endSound: 'Temple Bell',
@@ -64,6 +65,7 @@ describe('storage timer settings', () => {
     );
 
     expect(loadTimerSettings()).toMatchObject({
+      lastFixedDurationMinutes: 20,
       intervalSound: 'Temple Bell',
     });
   });

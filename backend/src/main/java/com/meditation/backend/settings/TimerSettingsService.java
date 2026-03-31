@@ -34,7 +34,7 @@ public class TimerSettingsService {
     TimerSettingsEntity entity = timerSettingsRepository.findById(DEFAULT_SETTINGS_ID)
         .orElseGet(() -> new TimerSettingsEntity(
             DEFAULT_SETTINGS_ID,
-            request.durationMinutes(),
+            resolveLastFixedDurationMinutes(request, null),
             request.timerMode(),
             normalizeMeditationType(request.meditationType()),
             request.startSound(),
@@ -50,7 +50,7 @@ public class TimerSettingsService {
     }
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
-    entity.updateFrom(request, mutationTimestamp);
+    entity.updateFrom(request, resolveLastFixedDurationMinutes(request, entity), mutationTimestamp);
 
     return toResponse(timerSettingsRepository.save(entity));
   }
@@ -59,6 +59,7 @@ public class TimerSettingsService {
     return new TimerSettingsResponse(
         entity.getId(),
         entity.getTimerMode(),
+        "open-ended".equals(entity.getTimerMode()) ? null : entity.getDurationMinutes(),
         entity.getDurationMinutes(),
         Optional.ofNullable(entity.getMeditationTypeCode()).orElse(""),
         entity.getStartSound(),
@@ -75,8 +76,12 @@ public class TimerSettingsService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
     }
 
-    if (request.durationMinutes() <= 0) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
+    if ("fixed".equals(request.timerMode())) {
+      if (request.durationMinutes() == null || request.durationMinutes() <= 0) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
+      }
+    } else if (request.durationMinutes() != null && request.durationMinutes() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Open-ended duration must be omitted or greater than 0.");
     }
 
     if (request.startSound() == null || request.startSound().isBlank()) {
@@ -99,7 +104,12 @@ public class TimerSettingsService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interval minutes must be greater than 0 when interval bell is enabled.");
     }
 
-    if ("fixed".equals(request.timerMode()) && request.intervalEnabled() && request.intervalMinutes() >= request.durationMinutes()) {
+    if (
+        "fixed".equals(request.timerMode()) &&
+        request.durationMinutes() != null &&
+        request.intervalEnabled() &&
+        request.intervalMinutes() >= request.durationMinutes()
+    ) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Interval minutes must be less than the total duration.");
     }
 
@@ -115,5 +125,21 @@ public class TimerSettingsService {
     }
 
     return meditationType;
+  }
+
+  private int resolveLastFixedDurationMinutes(TimerSettingsUpsertRequest request, TimerSettingsEntity existingEntity) {
+    if (request.lastFixedDurationMinutes() != null && request.lastFixedDurationMinutes() > 0) {
+      return request.lastFixedDurationMinutes();
+    }
+
+    if (request.durationMinutes() != null && request.durationMinutes() > 0) {
+      return request.durationMinutes();
+    }
+
+    if (existingEntity != null && existingEntity.getDurationMinutes() > 0) {
+      return existingEntity.getDurationMinutes();
+    }
+
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Last fixed duration must be greater than 0.");
   }
 }

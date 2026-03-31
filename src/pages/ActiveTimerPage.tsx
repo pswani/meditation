@@ -108,6 +108,7 @@ export default function ActiveTimerPage() {
   const isOpenEndedSession = activeSession.timerMode === 'open-ended';
   const timerClockLabel = isOpenEndedSession ? 'Elapsed' : 'Remaining';
   const endActionLabel = isOpenEndedSession ? 'End Session' : 'End Early';
+  const confirmationLabel = isOpenEndedSession ? 'End session confirmation' : 'End session early confirmation';
 
   return (
     <section className="page-card active-timer">
@@ -146,7 +147,7 @@ export default function ActiveTimerPage() {
       </div>
 
       {showEndEarlyConfirm ? (
-        <div className="confirm-sheet" role="dialog" aria-label="End session early confirmation">
+        <div className="confirm-sheet" role="dialog" aria-label={confirmationLabel}>
           <p>
             {isOpenEndedSession
               ? 'End this session now and create an auto log with the elapsed duration?'

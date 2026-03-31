@@ -73,6 +73,7 @@ export function applyCustomPlayToTimerSettings(
     ...settings,
     timerMode: 'fixed',
     durationMinutes: play.durationMinutes,
+    lastFixedDurationMinutes: play.durationMinutes,
     meditationType: play.meditationType,
     startSound: play.startSound,
     endSound: play.endSound,

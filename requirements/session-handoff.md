@@ -1,6 +1,33 @@
 # Session Handoff
 
 ## Current status
+The important open-ended timer review findings are now fixed on `codex/open-ended-timer`. The milestone can move to a thorough verification and regression pass.
+
+## 2026-03-30 open-ended timer review fixes
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-review-fixes.md`
+  - frontend timer settings modeling, storage, API, and mode-selection flows
+  - backend timer settings request/response validation and controller tests
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- Issues fixed:
+  - open-ended timer settings no longer require a planned duration at the API boundary; the contract now uses `durationMinutes = null` plus an explicit `lastFixedDurationMinutes` fallback
+  - switching back to fixed mode preserves the last meaningful fixed duration without depending on hidden open-ended duration state
+  - quick-start validation guidance is now mode-aware for open-ended defaults
+  - the active-session confirmation dialog now uses open-ended-specific accessible labeling instead of “end early” wording
+- Remaining limitations:
+  - the review’s nice-to-have shell and recent-activity context improvements are still open
+  - backend persistence still stores the last fixed duration in the existing timer-settings duration column; the API contract is clean now, but the internal DB shape is still optimized for a bounded migration-free fix
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for a thorough verification pass of the open-ended timer feature. Test timer setup, active session, pause/resume, manual end, session-log creation, history display, backend/API persistence, and any current offline/sync implications; regression-test the fixed-duration timer flow; strengthen focused tests where needed; run npm run typecheck, npm run lint, npm run test, npm run build, and the relevant backend tests; update README.md if needed plus requirements/decisions.md and requirements/session-handoff.md; and commit with a clear message such as test(timer): verify open-ended timer flow and regressions.`
+
+## Current status
 The open-ended timer review pass is complete. No critical issues were found; the next slice should fix the important issues documented in `docs/review-open-ended-timer.md`.
 
 ## 2026-03-30 open-ended timer review

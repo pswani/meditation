@@ -29,13 +29,14 @@ class TimerSettingsRepositoryTest {
     seeded.updateFrom(new TimerSettingsUpsertRequest(
         "fixed",
         32,
+        32,
         "Sahaj",
         "Soft Chime",
         "Temple Bell",
         true,
         8,
         "Wood Block"
-    ), updatedAt);
+    ), 32, updatedAt);
 
     timerSettingsRepository.saveAndFlush(seeded);
 

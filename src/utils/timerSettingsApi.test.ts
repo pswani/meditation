@@ -40,6 +40,7 @@ describe('timer settings api boundary', () => {
     expect(buildTimerSettingsUrl('http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/settings/timer');
     expect(settings.timerMode).toBe('fixed');
     expect(settings.durationMinutes).toBe(24);
+    expect(settings.lastFixedDurationMinutes).toBe(24);
     expect(settings.meditationType).toBe('Vipassana');
   });
 
@@ -51,6 +52,7 @@ describe('timer settings api boundary', () => {
         id: 'default',
         timerMode: 'fixed',
         durationMinutes: 30,
+        lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
         endSound: 'Temple Bell',
@@ -66,6 +68,7 @@ describe('timer settings api boundary', () => {
       {
         timerMode: 'fixed',
         durationMinutes: 30,
+        lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
         endSound: 'Temple Bell',
@@ -84,6 +87,7 @@ describe('timer settings api boundary', () => {
     expect(areTimerSettingsEqual(saved, {
       timerMode: 'fixed',
       durationMinutes: 30,
+      lastFixedDurationMinutes: 30,
       meditationType: 'Ajapa',
       startSound: 'Soft Chime',
       endSound: 'Temple Bell',

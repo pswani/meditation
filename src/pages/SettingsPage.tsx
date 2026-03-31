@@ -11,6 +11,7 @@ function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings
   return (
     current.timerMode !== baseline.timerMode ||
     current.durationMinutes !== baseline.durationMinutes ||
+    current.lastFixedDurationMinutes !== baseline.lastFixedDurationMinutes ||
     current.meditationType !== baseline.meditationType ||
     current.startSound !== baseline.startSound ||
     current.endSound !== baseline.endSound ||
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const [savePhase, setSavePhase] = useState<SavePhase>('idle');
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
+  const fixedDurationMinutes = draft.durationMinutes ?? draft.lastFixedDurationMinutes;
   const areSettingsControlsDisabled = isSettingsLoading || isSettingsSyncing;
   const durationMessageId = errors.durationMinutes ? 'settings-duration-error' : 'settings-duration-hint';
   const meditationTypeMessageId = errors.meditationType ? 'settings-meditation-type-error' : 'settings-meditation-type-hint';
@@ -65,8 +67,8 @@ export default function SettingsPage() {
   }, [isSettingsSyncing, savePhase, settingsSyncError]);
 
   const intervalCount = useMemo(
-    () => (draft.intervalEnabled && draft.timerMode === 'fixed' ? getIntervalBellCount(draft.durationMinutes, draft.intervalMinutes) : 0),
-    [draft.durationMinutes, draft.intervalEnabled, draft.intervalMinutes, draft.timerMode]
+    () => (draft.intervalEnabled && draft.timerMode === 'fixed' ? getIntervalBellCount(fixedDurationMinutes, draft.intervalMinutes) : 0),
+    [draft.intervalEnabled, draft.intervalMinutes, draft.timerMode, fixedDurationMinutes]
   );
 
   function update<K extends keyof TimerSettings>(key: K, value: TimerSettings[K]) {
@@ -78,8 +80,35 @@ export default function SettingsPage() {
     }));
   }
 
+  function updateDurationMinutes(value: number) {
+    setSaveMessage(null);
+    setSavePhase('idle');
+    setDraft((current) => ({
+      ...current,
+      durationMinutes: value,
+      lastFixedDurationMinutes: value > 0 ? value : current.lastFixedDurationMinutes,
+    }));
+  }
+
   function selectTimerMode(timerMode: TimerMode) {
-    update('timerMode', timerMode);
+    setSaveMessage(null);
+    setSavePhase('idle');
+    setDraft((current) => {
+      if (timerMode === 'fixed') {
+        return {
+          ...current,
+          timerMode: 'fixed',
+          durationMinutes: current.durationMinutes ?? current.lastFixedDurationMinutes,
+        };
+      }
+
+      return {
+        ...current,
+        timerMode: 'open-ended',
+        durationMinutes: null,
+        lastFixedDurationMinutes: current.durationMinutes ?? current.lastFixedDurationMinutes,
+      };
+    });
   }
 
   function saveDefaults() {
@@ -180,11 +209,11 @@ export default function SettingsPage() {
               <input
                 type="number"
                 min={1}
-                value={draft.durationMinutes}
+                value={fixedDurationMinutes}
                 disabled={areSettingsControlsDisabled}
                 aria-invalid={Boolean(errors.durationMinutes)}
                 aria-describedby={durationMessageId}
-                onChange={(event) => update('durationMinutes', Number(event.target.value))}
+                onChange={(event) => updateDurationMinutes(Number(event.target.value))}
               />
               {errors.durationMinutes ? (
                 <small id={durationMessageId} className="error-text">

@@ -44,10 +44,11 @@ export default function PracticePage() {
     meditationType: false,
     intervalMinutes: false,
   });
+  const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
 
   const intervalCount = useMemo(
-    () => (settings.intervalEnabled && settings.timerMode === 'fixed' ? getIntervalBellCount(settings.durationMinutes, settings.intervalMinutes) : 0),
-    [settings.durationMinutes, settings.intervalEnabled, settings.intervalMinutes, settings.timerMode]
+    () => (settings.intervalEnabled && settings.timerMode === 'fixed' ? getIntervalBellCount(fixedDurationMinutes, settings.intervalMinutes) : 0),
+    [fixedDurationMinutes, settings.intervalEnabled, settings.intervalMinutes, settings.timerMode]
   );
 
   const visibleErrors = useMemo(
@@ -86,6 +87,14 @@ export default function PracticePage() {
     });
   }
 
+  function updateDurationMinutes(value: number) {
+    setSettings({
+      ...settings,
+      durationMinutes: value,
+      lastFixedDurationMinutes: value > 0 ? value : settings.lastFixedDurationMinutes,
+    });
+  }
+
   function markTouched(field: SetupField) {
     setTouched((current) => ({
       ...current,
@@ -102,7 +111,21 @@ export default function PracticePage() {
   }
 
   function selectTimerMode(timerMode: TimerMode) {
-    update('timerMode', timerMode);
+    if (timerMode === 'fixed') {
+      setSettings({
+        ...settings,
+        timerMode: 'fixed',
+        durationMinutes: settings.durationMinutes ?? settings.lastFixedDurationMinutes,
+      });
+      return;
+    }
+
+    setSettings({
+      ...settings,
+      timerMode: 'open-ended',
+      durationMinutes: null,
+      lastFixedDurationMinutes: fixedDurationMinutes,
+    });
   }
 
   return (
@@ -192,11 +215,11 @@ export default function PracticePage() {
             <input
               type="number"
               min={1}
-              value={settings.durationMinutes}
+              value={fixedDurationMinutes}
               disabled={areTimerSettingsControlsDisabled}
               aria-invalid={Boolean(visibleErrors.durationMinutes)}
               aria-describedby={durationMessageId}
-              onChange={(event) => update('durationMinutes', Number(event.target.value))}
+              onChange={(event) => updateDurationMinutes(Number(event.target.value))}
               onBlur={() => markTouched('durationMinutes')}
             />
             {visibleErrors.durationMinutes ? (

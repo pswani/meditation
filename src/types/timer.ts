@@ -5,7 +5,8 @@ export type TimerStatus = 'idle' | 'running' | 'paused' | 'completed' | 'ended e
 
 export interface TimerSettings {
   timerMode: TimerMode;
-  durationMinutes: number;
+  durationMinutes: number | null;
+  lastFixedDurationMinutes: number;
   meditationType: MeditationType | '';
   startSound: string;
   endSound: string;

@@ -2,6 +2,13 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer review-fix decisions
+- Model open-ended timer defaults at the timer-settings boundary with:
+  - `durationMinutes = null` when the current default mode is open-ended
+  - `lastFixedDurationMinutes` as the explicit fallback used when the user switches back to fixed mode
+- Keep the backend storage schema unchanged for this fix slice by continuing to persist the last fixed duration in the existing timer-settings duration column, while shaping API requests and responses so open-ended mode no longer depends on pretending it currently has a planned duration.
+- Make quick-start guidance and end-session confirmation labels mode-aware so open-ended users see language about valid open-ended defaults and ending a session, not fixed-duration-only wording.
+
 ### 2026-03-30 open-ended timer implementation decisions
 - Represent open-ended timer sessions explicitly with `timerMode = "open-ended"` across timer settings, active-session state, API payloads, H2 persistence, and `session log` records instead of inferring the mode indirectly.
 - Keep the saved fixed `durationMinutes` value even when the user switches timer settings to open-ended mode so returning to fixed duration restores the last meaningful duration instead of forcing re-entry.
