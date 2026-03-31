@@ -105,4 +105,33 @@ describe('timer settings api boundary', () => {
       })
     );
   });
+
+  it('normalizes open-ended timer settings responses with a last fixed duration fallback', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'default',
+          timerMode: 'open-ended',
+          durationMinutes: null,
+          lastFixedDurationMinutes: 18,
+          meditationType: 'Vipassana',
+          startSound: 'Soft Chime',
+          endSound: 'Temple Bell',
+          intervalEnabled: true,
+          intervalMinutes: 9,
+          intervalSound: 'Wood Block',
+        }),
+      })
+    );
+
+    const settings = await loadTimerSettingsFromApi();
+
+    expect(settings.timerMode).toBe('open-ended');
+    expect(settings.durationMinutes).toBeNull();
+    expect(settings.lastFixedDurationMinutes).toBe(18);
+    expect(settings.intervalEnabled).toBe(true);
+  });
 });

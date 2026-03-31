@@ -1157,6 +1157,7 @@ describe('App shell', () => {
     await flushBackendHydration();
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/session timestamp/i), { target: { value: '2026-03-30T07:00' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
@@ -1198,6 +1199,7 @@ describe('App shell', () => {
     await flushBackendHydration();
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText(/session timestamp/i), { target: { value: '2026-03-30T07:00' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
 
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();

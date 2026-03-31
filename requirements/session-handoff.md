@@ -1,6 +1,39 @@
 # Session Handoff
 
 ## Current status
+The open-ended timer milestone is now fully verified on `codex/open-ended-timer`. The next step is to merge the feature branch back into `main` locally.
+
+## 2026-03-30 open-ended timer verification
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-verification.md`
+  - `src/features/timer/time.test.ts`
+  - `src/pages/PracticePage.test.tsx`
+  - `src/utils/timerSettingsApi.test.ts`
+  - `src/App.test.tsx`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- Scenarios covered:
+  - open-ended elapsed clock progression while running
+  - open-ended pause behavior preserving elapsed time
+  - fixed-session remaining-time regression coverage
+  - switching from open-ended mode back to fixed restores the last fixed duration and fixed start CTA
+  - timer settings API normalization for open-ended responses using `durationMinutes = null` and `lastFixedDurationMinutes`
+  - backend-backed manual-log save, fresh-mount rehydration, Summary visibility, and Sankalpa progress visibility with deterministic timestamps
+- Confidence level:
+  - high for the open-ended timer setup, runtime clock behavior, manual-log integration, and fixed-duration regression surfaces covered by the current automated suite
+- Remaining risks or limitations:
+  - this prompt relied on focused automated verification rather than spinning up a live local browser session, so any remaining risk is mostly in layout polish or browser-only interaction nuances outside the tested flows
+  - the earlier review’s nice-to-have shell and recent-activity consistency improvements are still open and were intentionally left out of this verification-only slice
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, requirements/session-handoff.md, requirements/decisions.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, and docs/screen-inventory.md. Then inspect the current git state, confirm the active feature branch is codex/open-ended-timer and the recorded parent branch is main, verify there are no unintended uncommitted changes, rerun any merge-relevant verification only if needed, merge codex/open-ended-timer back into main locally with a normal merge that preserves history, resolve conflicts safely if they appear, update requirements/decisions.md and requirements/session-handoff.md with the merge outcome and feature completion summary, include the milestone prompt files as part of the final commit, and commit any final merge-related documentation updates with a clear message such as chore(branch): merge open-ended timer feature branch into parent.`
+
+## Current status
 The important open-ended timer review findings are now fixed on `codex/open-ended-timer`. The milestone can move to a thorough verification and regression pass.
 
 ## 2026-03-30 open-ended timer review fixes

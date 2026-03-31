@@ -108,6 +108,33 @@ describe('PracticePage UX', () => {
     expect(screen.getByRole('button', { name: /open playlists/i })).toBeInTheDocument();
   });
 
+  it('restores the last fixed duration after switching from open-ended mode back to fixed', async () => {
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeSettingsHydration();
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '24' } });
+    fireEvent.click(screen.getByRole('radio', { name: /open-ended/i }));
+
+    expect(screen.queryByLabelText(/duration \(minutes\)/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start open-ended session/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: /fixed duration/i }));
+
+    const durationInput = screen.getByLabelText(/duration \(minutes\)/i) as HTMLInputElement;
+    expect(durationInput.value).toBe('24');
+    expect(screen.getByRole('button', { name: /start session/i })).toBeInTheDocument();
+  });
+
   it('exposes explicit expanded state for advanced timer settings', async () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>

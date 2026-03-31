@@ -2,6 +2,14 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer verification decisions
+- Keep the prompt 04 verification slice focused on high-signal automated coverage instead of adding a separate browser-verification layer:
+  - timer-time helper tests for open-ended elapsed and paused clock behavior
+  - Practice-page regression coverage for restoring the last fixed duration after switching back from open-ended mode
+  - timer-settings API normalization coverage for `durationMinutes = null` plus `lastFixedDurationMinutes`
+  - stateful app-shell coverage for backend-backed manual-log rehydration into Summary and Sankalpa
+- Make the backend-backed manual-log app journeys use explicit `session timestamp` values that are safely inside the Sankalpa window so the session-count assertions remain deterministic across timezone conversion behavior and fresh mounts.
+
 ### 2026-03-30 open-ended timer review-fix decisions
 - Model open-ended timer defaults at the timer-settings boundary with:
   - `durationMinutes = null` when the current default mode is open-ended
