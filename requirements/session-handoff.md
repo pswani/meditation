@@ -1,7 +1,24 @@
 # Session Handoff
 
 ## Current status
-The open-ended timer milestone is now fully verified on `codex/open-ended-timer`. The next step is to merge the feature branch back into `main` locally.
+The open-ended timer milestone is now merged into `main`. The feature branch history has been preserved locally, and the next bounded product slice can start from `main`.
+
+## 2026-03-30 open-ended timer merge
+- Feature branch merged:
+  - `codex/open-ended-timer`
+- Parent branch updated:
+  - `main`
+- Merge outcome:
+  - merged locally with a normal merge commit on `main`
+  - preserved the milestone prompt history already carried on the feature branch, including prompt-file additions that were committed during the branch work
+- Feature completion summary:
+  - open-ended timer mode is implemented across timer setup, active-session runtime, storage, REST contracts, H2 persistence, History presentation, and manual end behavior
+  - the follow-up review findings were fixed for the timer-settings contract and open-ended UX wording
+  - focused verification now covers open-ended elapsed-time helpers, fixed-duration restoration, timer settings API normalization, and backend-backed manual-log rehydration into Summary and Sankalpa
+- Resulting git status:
+  - `main` contains the merged feature history and is ready for the next slice
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for a bounded playlist runtime audio slice. Implement actual audio playback during playlist runs for the current playlist experience, keep the UI calm and responsive across mobile, tablet, and desktop, add only the minimum transition behavior needed for trustworthy playback without redesigning playlist management or media ingestion, add focused tests for runtime playback behavior, run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification only if backend code changes, update the relevant docs along with requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as feat(playlists): add runtime audio playback.`
 
 ## 2026-03-30 open-ended timer verification
 - Added and updated:

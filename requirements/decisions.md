@@ -2,6 +2,10 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer merge decisions
+- Merge `codex/open-ended-timer` back into `main` with a normal local merge commit so the branch-setup, implementation, review, remediation, verification, and prompt-history commits stay intact.
+- Treat the `open-ended-timer-feature-bundle-with-branching` milestone as complete on `main` after the merge because the timer-mode feature, review fixes, and verification pass all landed together with their supporting prompt and handoff artifacts.
+
 ### 2026-03-30 open-ended timer verification decisions
 - Keep the prompt 04 verification slice focused on high-signal automated coverage instead of adding a separate browser-verification layer:
   - timer-time helper tests for open-ended elapsed and paused clock behavior
