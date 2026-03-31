@@ -5,6 +5,7 @@ import type { TimerSettings } from '../types/timer';
 const base: TimerSettings = {
   timerMode: 'fixed',
   durationMinutes: 20,
+  lastFixedDurationMinutes: 20,
   meditationType: 'Vipassana',
   startSound: 'None',
   endSound: 'Temple Bell',
@@ -22,6 +23,12 @@ describe('validateTimerSettings', () => {
 
   it('requires duration > 0', () => {
     const result = validateTimerSettings({ ...base, durationMinutes: 0 });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.durationMinutes).toMatch(/greater than 0/i);
+  });
+
+  it('rejects fixed mode when the current duration is missing even if a last fixed fallback exists', () => {
+    const result = validateTimerSettings({ ...base, durationMinutes: null, lastFixedDurationMinutes: 20 });
     expect(result.isValid).toBe(false);
     expect(result.errors.durationMinutes).toMatch(/greater than 0/i);
   });
@@ -48,6 +55,12 @@ describe('validateTimerSettings', () => {
     const result = validateTimerSettings({ ...base, timerMode: 'open-ended', durationMinutes: 0, intervalEnabled: true, intervalMinutes: 5 });
     expect(result.isValid).toBe(true);
     expect(result.errors).toEqual({});
+  });
+
+  it('rejects non-finite interval values when interval bells are enabled', () => {
+    const result = validateTimerSettings({ ...base, intervalEnabled: true, intervalMinutes: Number.POSITIVE_INFINITY });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.intervalMinutes).toMatch(/greater than 0/i);
   });
 });
 

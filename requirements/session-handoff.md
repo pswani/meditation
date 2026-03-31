@@ -1,6 +1,190 @@
 # Session Handoff
 
 ## Current status
+The reviewed timer defect findings are fixed on `codex/timer-defaults-runtime-defects`. The milestone can move to the final local merge back into `main`.
+
+## 2026-03-31 timer review remediation and verification
+- Added and updated:
+  - `requirements/execplan-timer-review-findings-and-verification.md`
+  - `src/utils/timerSettingsNormalization.ts`
+  - `src/utils/timerSettingsApi.ts`
+  - `src/utils/storage.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - regression coverage in:
+    - `src/App.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+- What review findings were fixed:
+  - online timer-settings hydration no longer promotes stale local cached settings over backend state just because the backend currently matches app defaults
+  - timer-settings queue reconciliation now preserves an existing queued timer-settings mutation when the queued meaning is unchanged instead of resetting its sync metadata
+  - queued timer-settings payloads now normalize through the same fixed-duration compatibility rules before they are replayed into runtime state or persisted to the backend
+- Scenarios verified:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - specifically covered through focused regression tests:
+    - backend defaults overriding stale local timer-settings cache when no queued timer-settings change exists
+    - queued timer-settings replay preserving `queuedAt` while normalizing fixed-duration payloads
+    - Settings default timer persistence
+    - Practice draft behavior staying session-scoped
+    - Home quick start and favorite custom play shortcut behavior
+    - active timer runtime/recovery regression coverage already exercised by the full suite
+    - validation edge cases and `session log` correctness via the updated timer utility tests and app-level regressions
+- Remaining risks or limitations:
+  - the review’s two nice-to-have follow-ups are still open:
+    - Home quick start still uses the same label for paused and running timers
+    - `TimerContext` remains dense and would benefit from a later extraction pass when this area is touched again
+  - this slice did not require backend code changes, so no Maven/backend verification was needed for prompt 05
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, requirements/session-handoff.md, requirements/decisions.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, and docs/screen-inventory.md. Then inspect the current git state, confirm the current defect-fix branch is codex/timer-defaults-runtime-defects and the recorded parent branch for this bundle is main, verify the working tree is clean and the recent bundle verification is still sufficient, merge codex/timer-defaults-runtime-defects back into main locally with a normal merge that preserves history unless a safer local strategy is required, resolve conflicts carefully if they appear, confirm the resulting git status, update requirements/decisions.md and requirements/session-handoff.md with the merge outcome and completion summary, and commit any final merge-related documentation updates with a clear message such as chore(branch): merge timer defect remediation branch into parent.`
+
+## Current status
+The timer defaults and runtime defects review is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review-remediation and verification pass.
+
+## 2026-03-31 timer defaults and runtime defects review
+- Added and updated:
+  - `docs/review-timer-defaults-and-runtime-defects.md`
+  - `requirements/session-handoff.md`
+- Top findings:
+  - no critical issues were identified
+  - important: online timer-settings hydration can still let stale local cached settings survive and re-queue over authoritative backend defaults when the backend happens to match app defaults
+  - important: timer-settings queue reconciliation currently replaces queued write metadata and bypasses timer-settings normalization for queued payloads, which weakens stale-write protection and leaves one compatibility gap in the sync path
+  - nice-to-have: Home quick start still uses the same “Resume Active Timer” label for paused and running sessions
+  - nice-to-have: `TimerContext` remains very dense, which raises future timer-remediation risk even though this review did not find a current blocker there
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-timer-defaults-and-runtime-defects.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan, implement the critical and important issues from docs/review-timer-defaults-and-runtime-defects.md while keeping scope bounded to the reviewed findings plus regression-proofing of the timer defects already fixed in this bundle, add the focused test coverage needed to lock those fixes in, verify Settings default timer persistence, Practice draft behavior, Home quick start and custom play shortcuts, active timer runtime and reload recovery, validation edge cases, and session-log correctness, run npm run typecheck, npm run lint, npm run test, npm run build, run any relevant backend build/test commands only if the reviewed fixes touch those contracts, update README.md if needed plus requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): address review findings and verify defect remediation.`
+
+## Current status
+The timer validation and session-log guard fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review pass for timer defaults and runtime defects.
+
+## 2026-03-31 timer validation and log guards
+- Added and updated:
+  - `requirements/execplan-timer-validation-and-log-guards.md`
+  - `src/utils/timerSettingsNormalization.ts`
+  - `src/utils/timerValidation.ts`
+  - `src/utils/sessionLog.ts`
+  - `src/utils/timerSettingsApi.ts`
+  - `src/utils/storage.ts`
+  - `src/features/timer/timerReducer.ts`
+  - focused regression coverage in:
+    - `src/utils/timerValidation.test.ts`
+    - `src/utils/sessionLog.test.ts`
+    - `src/utils/timerSettingsApi.test.ts`
+    - `src/utils/storage.test.ts`
+- What correctness guards were fixed:
+  - fixed-duration validation now rejects missing or invalid current duration values instead of quietly treating `lastFixedDurationMinutes` as the active duration
+  - interval-bell validation now rejects non-finite values consistently
+  - auto-log duration derivation now clamps malformed non-finite values to `0` and still caps fixed sessions at the intended duration
+  - timer settings loaded from API or local storage now normalize legacy fixed-duration payloads to a safe positive duration before UI, reducer, or sync code uses them
+  - timer-settings equality now compares normalized meaning so legacy/partial payload shapes do not create false differences
+- Compatibility assumptions kept:
+  - legacy timer-settings payloads may omit `timerMode` and still normalize to fixed mode safely
+  - invalid or missing fixed-duration values recover from a valid `lastFixedDurationMinutes` when present, otherwise they fall back to the existing 20-minute default
+  - open-ended timer settings still normalize to `durationMinutes = null` while preserving the last meaningful fixed duration
+  - no backend timer-settings contract changes were required in this slice, so frontend normalization stayed compatible with the existing REST boundary
+- Remaining limitations:
+  - this slice did not add a broader review of timer UX wording, responsive flow polish, or offline queue behavior beyond the specific timer-settings equality and normalization guardrails touched here
+  - deeper timer-state-model cleanup is still reserved for the upcoming review/remediation prompts rather than this bounded correctness pass
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then review the timer-related flows and surrounding implementation thoroughly across functional correctness, UX clarity, persistence and recovery behavior, offline/sync safety, code quality, state-model cleanliness, and responsive behavior. Evaluate default timer ownership, active timer runtime and recovery, validation and session-log trustworthiness, timer-mode compatibility safety, and timer state-model maintainability. Do not implement code changes in this step. Write findings into docs/review-timer-defaults-and-runtime-defects.md and requirements/session-handoff.md, include the top findings plus the exact recommended next prompt, and if only review documentation changes are committed use a clear message such as docs(timer): review defaults and runtime defect remediation.`
+
+## Current status
+The active timer runtime and recovery fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to timer validation and session-log guard defects.
+
+## 2026-03-31 active timer recovery
+- Added and updated:
+  - `requirements/execplan-active-timer-recovery.md`
+  - `src/utils/storage.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/app/AppShell.tsx`
+  - focused recovery and persistence tests in:
+    - `src/utils/storage.test.ts`
+    - `src/features/timer/TimerContext.test.tsx`
+    - `src/App.test.tsx`
+- What runtime/recovery defects were fixed:
+  - active timer persistence now writes one canonical `ActiveSession` snapshot instead of duplicating pause state in a wrapper object
+  - recovery now normalizes paused and running sessions consistently before they reach the UI or runtime helpers
+  - fixed sessions that are already complete when rehydrated now clear stale state truthfully instead of remaining resumable
+  - shell banner messaging now distinguishes paused timers from running timers after recovery
+- Chosen active-session model:
+  - one persisted `ActiveSession` snapshot for new writes
+  - legacy wrapped fixed-session payloads still load through a compatibility path
+  - `TimerContext` recovery computes elapsed time once, then hands the normalized session to UI and sound helpers
+- Remaining limitations:
+  - this slice did not change playlist runtime recovery behavior beyond leaving its existing flow intact
+  - browser-only edge cases outside the current automated recovery scenarios may still need later review, especially around unusual clock jumps or tab suspension behavior
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing timer validation and session-log correctness guards, implement the bounded timer validation, duration clamp, and legacy/default normalization fixes, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if timer-settings contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): restore validation and duration guard correctness.`
+
+## Current status
+The practice/default-timer separation fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to active timer runtime and recovery defects.
+
+## 2026-03-31 timer default separation
+- Added and updated:
+  - `requirements/execplan-timer-default-separation.md`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/features/timer/timerContextObject.ts`
+  - `src/features/timer/timerReducer.ts`
+  - `src/pages/PracticePage.tsx`
+  - `src/pages/HomePage.tsx`
+  - `src/features/customPlays/CustomPlayManager.tsx`
+  - focused timer ownership regression tests in:
+    - `src/pages/PracticePage.test.tsx`
+    - `src/pages/HomePage.test.tsx`
+    - `src/pages/SettingsPage.test.tsx`
+    - `src/features/customPlays/CustomPlayManager.test.tsx`
+- What was fixed:
+  - Practice timer edits now stay in a session-scoped draft instead of overwriting saved defaults
+  - Home quick start still reads the Settings-backed default timer summary after Practice edits
+  - Home favorite custom play shortcuts and Practice custom play "Use" flows now preload timer setup without persisting those values as defaults
+  - Settings remains the only path that saves or resets persisted timer defaults
+- Ownership split:
+  - Settings owns persisted default timer preferences
+  - Home quick start reads persisted defaults
+  - Practice owns a local timer draft seeded from persisted defaults or a one-time route preset
+  - starting a session now uses the current Practice draft snapshot without writing it into defaults first
+- Remaining limitations:
+  - the Practice draft is intentionally route-scoped and is not preserved after leaving the Practice screen
+  - this step did not address active timer recovery defects, stale-session cleanup, or other runtime-model issues outside default ownership
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing active-timer runtime and recovery defects, implement the bounded active-session persistence and recovery cleanup so fixed-duration sessions can rehydrate, resume, stay paused correctly, and clear stale state truthfully, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if API contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): restore active session recovery and runtime consistency.`
+
+## Current status
+The timer defaults and runtime defects milestone branch has been prepared from `main`. Defect remediation should continue on `codex/timer-defaults-runtime-defects` using the checked-in prompt sequence.
+
+## 2026-03-31 timer defaults and runtime defects branch setup
+- Parent branch:
+  - `main`
+- Feature branch:
+  - `codex/timer-defaults-runtime-defects`
+- Working tree status at branch setup:
+  - clean and ready for timer defect remediation work
+- Bundle scope:
+  - practice draft timer state must stop mutating saved defaults
+  - active timer runtime persistence and recovery must be coherent and resumable
+  - timer validation, duration guards, and legacy/default compatibility must be corrected
+  - the bundle still includes review, remediation, verification, and merge-back for those timer defects
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing the practice/default-timer separation defect, implement the bounded timer-default ownership fix so Practice and custom play preload flows stay session-scoped while Settings remains the only place that persists defaults, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if timer-settings contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): separate practice draft state from saved defaults.`
+
+## Current status
 The open-ended timer milestone is now merged into `main`. The feature branch history has been preserved locally, and the next bounded product slice can start from `main`.
 
 ## 2026-03-30 open-ended timer merge

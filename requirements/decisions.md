@@ -2,6 +2,61 @@
 
 ## Decision log
 
+### 2026-03-31 timer review remediation decisions
+- Treat queued timer-settings mutations as the only reliable signal that the browser has unsynced timer-settings intent worth replaying over backend state:
+  - if there is no queued timer-settings entry, online hydration should accept the backend response even when the backend currently matches app defaults
+  - do not use “remote equals default settings” as a proxy for local freshness
+- Preserve the original `queuedAt` timestamp for the same unsynced timer-settings change, because backend stale-write protection depends on that timestamp remaining stable across reloads and hydration passes.
+- Normalize timer-settings payloads consistently across storage, API, queue-backed hydration, and queue-backed persistence so fixed-mode compatibility fixes do not stop at the sync queue boundary.
+
+### 2026-03-31 timer validation and log guard decisions
+- Keep fixed-mode validation strict about the current `durationMinutes` value:
+  - if `timerMode = "fixed"`, the current duration must itself be a positive finite number
+  - do not let `lastFixedDurationMinutes` silently satisfy current fixed-mode validation, because that would hide broken current settings in Practice or Settings
+- Normalize legacy or partial timer-settings payloads only at storage and API boundaries:
+  - recover missing or invalid fixed durations from `lastFixedDurationMinutes` when it is usable
+  - otherwise fall back to the safe 20-minute fixed default
+  - keep open-ended mode normalized to `durationMinutes = null`
+- Compare timer settings by normalized meaning instead of raw payload shape so omitted legacy fields do not trigger unnecessary sync churn or false inequality.
+- Clamp auto-generated `session log` durations defensively before persistence:
+  - keep fixed sessions bounded by `intendedDurationSeconds`
+  - coerce malformed non-finite derived durations to `0` instead of letting invalid values leak into logs
+
+### 2026-03-31 active timer recovery decisions
+- Persist active timer state as one canonical `ActiveSession` snapshot instead of a wrapper object with duplicate pause state, so reducer/runtime/UI/storage all speak the same active-session model.
+- Keep active timer hydration backward-compatible by continuing to read the older wrapped fixed-session persistence shape that used `remainingSeconds` plus `endAtMs`, then normalize it into the current `ActiveSession` model during load.
+- Treat paused-session recovery as its own user-facing state:
+  - preserve `elapsedSeconds`
+  - normalize `lastResumedAtMs` to `null`
+  - show paused-specific recovery and shell banner wording
+- Clear fixed sessions during recovery when their elapsed time is already at or past the intended duration, even if the persisted snapshot says they were paused, because those sessions can no longer be resumed truthfully.
+
+### 2026-03-31 timer default separation decisions
+- Keep persisted timer defaults in `TimerContext` as the single source of truth for Home quick start and Settings, instead of letting Practice mutate the same state.
+- Move Practice timer setup edits into route-local draft state so:
+  - backend-hydrated defaults still seed the screen before the user edits
+  - Home and Practice custom play preload flows can override only the current timer setup session
+  - only Settings saves or resets app defaults
+- Let timer start accept an explicit settings snapshot so Practice can launch a session from its local draft without writing those draft values into persisted defaults first.
+- Keep the reducer backward-compatible with the legacy `START_SESSION` action shape so existing timer tests and internal callers that rely on state-backed defaults remain safe during this defect-fix bundle.
+
+### 2026-03-31 timer defaults and runtime defects branch setup decisions
+- Treat `main` as the parent branch for the `timer-defaults-and-runtime-defects-with-branching` bundle because the bundle was started from a clean `main` worktree and no earlier handoff entry recorded a more specific parent for this exact prompt set.
+- Create and use the local feature branch `codex/timer-defaults-runtime-defects` for the defect-remediation work before merging back into `main`.
+- Keep this bundle bounded to:
+  - default timer ownership between Settings, Home, Practice, and custom play shortcuts
+  - active timer runtime persistence and recovery correctness
+  - timer validation, duration guards, and compatibility fixes
+  - review, remediation, verification, and merge-back for those timer defects
+- Preserve the checked-in prompt execution order:
+  - `00-create-branch`
+  - `01-fix-practice-default-timer-separation`
+  - `02-fix-active-timer-recovery`
+  - `03-fix-timer-validation-and-log-guards`
+  - `04-review-timer-defects-and-code-quality`
+  - `05-fix-review-findings-and-verify`
+  - `99-merge-branch`
+
 ### 2026-03-30 open-ended timer merge decisions
 - Merge `codex/open-ended-timer` back into `main` with a normal local merge commit so the branch-setup, implementation, review, remediation, verification, and prompt-history commits stay intact.
 - Treat the `open-ended-timer-feature-bundle-with-branching` milestone as complete on `main` after the merge because the timer-mode feature, review fixes, and verification pass all landed together with their supporting prompt and handoff artifacts.

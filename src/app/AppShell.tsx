@@ -70,10 +70,17 @@ export default function AppShell() {
           {activeSession ? (
             <div className="shell-active-banner" role="status" aria-live="polite">
               <p>
-                Active timer: {activeSession.meditationType} · {activeSession.timerMode === 'open-ended' ? 'open-ended session' : 'in session'}
+                {activeSession.isPaused ? 'Paused timer' : 'Active timer'}: {activeSession.meditationType} ·{' '}
+                {activeSession.isPaused
+                  ? activeSession.timerMode === 'open-ended'
+                    ? 'paused open-ended session'
+                    : 'paused fixed session'
+                  : activeSession.timerMode === 'open-ended'
+                  ? 'open-ended session'
+                  : 'in session'}
               </p>
               <button type="button" className="secondary shell-active-action" onClick={() => navigate('/practice/active')}>
-                Resume Active Timer
+                {activeSession.isPaused ? 'Resume Paused Timer' : 'Resume Active Timer'}
               </button>
             </div>
           ) : null}

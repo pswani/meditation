@@ -70,6 +70,35 @@ describe('storage timer settings', () => {
     });
   });
 
+  it('normalizes legacy fixed timer settings with missing valid durations to the safe default duration', () => {
+    localStorage.setItem(
+      rawTimerSettingsKey,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: null,
+        lastFixedDurationMinutes: 0,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    expect(loadTimerSettings()).toEqual({
+      timerMode: 'fixed',
+      durationMinutes: 20,
+      lastFixedDurationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
+  });
+
   it('returns null when stored timer settings payload is invalid', () => {
     localStorage.setItem(rawTimerSettingsKey, JSON.stringify({ durationMinutes: '20' }));
 
@@ -525,65 +554,87 @@ describe('storage active runtime state', () => {
   });
 
   it('persists and loads active timer state snapshot', () => {
-    saveActiveTimerState(
-      {
-        startedAt: '2026-03-24T10:00:00.000Z',
-        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
-        timerMode: 'fixed',
-        intendedDurationSeconds: 1200,
-        elapsedSeconds: 300,
-        isPaused: true,
-        lastResumedAtMs: null,
-        meditationType: 'Vipassana',
-        startSound: 'None',
-        endSound: 'Temple Bell',
-        intervalEnabled: false,
-        intervalMinutes: 0,
-        intervalSound: 'None',
-      },
-      true
-    );
+    saveActiveTimerState({
+      startedAt: '2026-03-24T10:00:00.000Z',
+      startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+      timerMode: 'fixed',
+      intendedDurationSeconds: 1200,
+      elapsedSeconds: 300,
+      isPaused: true,
+      lastResumedAtMs: null,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    });
 
     expect(loadActiveTimerState()).toEqual({
-      activeSession: {
-        startedAt: '2026-03-24T10:00:00.000Z',
-        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
-        timerMode: 'fixed',
-        intendedDurationSeconds: 1200,
-        elapsedSeconds: 300,
-        isPaused: true,
-        lastResumedAtMs: null,
-        meditationType: 'Vipassana',
-        startSound: 'None',
-        endSound: 'Temple Bell',
-        intervalEnabled: false,
-        intervalMinutes: 0,
-        intervalSound: 'None',
-      },
+      startedAt: '2026-03-24T10:00:00.000Z',
+      startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+      timerMode: 'fixed',
+      intendedDurationSeconds: 1200,
+      elapsedSeconds: 300,
       isPaused: true,
+      lastResumedAtMs: null,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    });
+  });
+
+  it('normalizes legacy wrapped active timer payloads into the current session model', () => {
+    localStorage.setItem(
+      rawActiveTimerStateKey,
+      JSON.stringify({
+        activeSession: {
+          startedAt: '2026-03-24T10:00:00.000Z',
+          startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          intendedDurationSeconds: 1200,
+          remainingSeconds: 600,
+          meditationType: 'Vipassana',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+          endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+        },
+        isPaused: true,
+      })
+    );
+
+    expect(loadActiveTimerState()).toMatchObject({
+      timerMode: 'fixed',
+      intendedDurationSeconds: 1200,
+      elapsedSeconds: 600,
+      isPaused: true,
+      lastResumedAtMs: null,
+      meditationType: 'Vipassana',
     });
   });
 
   it('removes active timer snapshot when there is no active session', () => {
-    saveActiveTimerState(
-      {
-        startedAt: '2026-03-24T10:00:00.000Z',
-        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
-        timerMode: 'fixed',
-        intendedDurationSeconds: 1200,
-        elapsedSeconds: 300,
-        isPaused: false,
-        lastResumedAtMs: Date.parse('2026-03-24T10:15:00.000Z'),
-        meditationType: 'Vipassana',
-        startSound: 'None',
-        endSound: 'Temple Bell',
-        intervalEnabled: false,
-        intervalMinutes: 0,
-        intervalSound: 'None',
-      },
-      false
-    );
-    saveActiveTimerState(null, false);
+    saveActiveTimerState({
+      startedAt: '2026-03-24T10:00:00.000Z',
+      startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+      timerMode: 'fixed',
+      intendedDurationSeconds: 1200,
+      elapsedSeconds: 300,
+      isPaused: false,
+      lastResumedAtMs: Date.parse('2026-03-24T10:15:00.000Z'),
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    });
+    saveActiveTimerState(null);
 
     expect(localStorage.getItem(rawActiveTimerStateKey)).toBeNull();
     expect(loadActiveTimerState()).toBeNull();

@@ -6,6 +6,7 @@ import { TimerProvider } from '../features/timer/TimerContext';
 import PracticePage from './PracticePage';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -14,6 +15,46 @@ function createJsonResponse(status: number, body: unknown) {
     json: async () => body,
     text: async () => JSON.stringify(body),
   };
+}
+
+function stubPracticeFetchWithTimerSettings(settings: {
+  durationMinutes: number;
+  meditationType: string;
+  startSound: string;
+  endSound: string;
+  intervalEnabled: boolean;
+  intervalMinutes: number;
+  intervalSound: string;
+}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/api/settings/timer') && method === 'GET') {
+        return createJsonResponse(200, {
+          id: 'default',
+          ...settings,
+          updatedAt: '2026-03-26T12:00:00.000Z',
+        });
+      }
+
+      if (url.endsWith('/api/session-logs') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      if (url.endsWith('/api/playlists') && method === 'GET') {
+        return createJsonResponse(200, []);
+      }
+
+      return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+    })
+  );
 }
 
 async function waitForPracticeSettingsHydration() {
@@ -133,6 +174,54 @@ describe('PracticePage UX', () => {
     const durationInput = screen.getByLabelText(/duration \(minutes\)/i) as HTMLInputElement;
     expect(durationInput.value).toBe('24');
     expect(screen.getByRole('button', { name: /start session/i })).toBeInTheDocument();
+  });
+
+  it('keeps practice timer edits session-scoped instead of overwriting saved defaults', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+    stubPracticeFetchWithTimerSettings({
+      durationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeSettingsHydration();
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '31' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /meditation type/i }), { target: { value: 'Ajapa' } });
+
+    expect(JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY) ?? '{}')).toMatchObject({
+      durationMinutes: 20,
+      lastFixedDurationMinutes: 20,
+      meditationType: 'Vipassana',
+    });
   });
 
   it('exposes explicit expanded state for advanced timer settings', async () => {

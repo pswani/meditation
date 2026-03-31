@@ -2,6 +2,9 @@ import type { TimerSettings } from '../types/timer';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  normalizeTimerSettings,
+} from './timerSettingsNormalization';
 
 export const TIMER_SETTINGS_PATH = '/settings/timer';
 export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
@@ -9,7 +12,7 @@ export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
 interface TimerSettingsApiResponse {
   readonly id?: string;
   readonly timerMode?: TimerSettings['timerMode'];
-  readonly durationMinutes: number | null;
+  readonly durationMinutes?: number | null;
   readonly lastFixedDurationMinutes?: number;
   readonly meditationType: string;
   readonly startSound: string;
@@ -28,7 +31,7 @@ function isTimerSettingsApiResponse(value: unknown): value is TimerSettingsApiRe
   const candidate = value as Record<string, unknown>;
   return (
     (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
-    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null) &&
+    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null || typeof candidate.durationMinutes === 'undefined') &&
     (typeof candidate.lastFixedDurationMinutes === 'number' || typeof candidate.lastFixedDurationMinutes === 'undefined') &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
@@ -44,26 +47,10 @@ function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
     throw new Error('Timer settings response is invalid.');
   }
 
-  const timerMode = payload.timerMode ?? 'fixed';
-  const lastFixedDurationMinutes =
-    typeof payload.lastFixedDurationMinutes === 'number'
-      ? payload.lastFixedDurationMinutes
-      : typeof payload.durationMinutes === 'number'
-        ? payload.durationMinutes
-        : 20;
-  const durationMinutes = timerMode === 'open-ended' ? null : payload.durationMinutes ?? lastFixedDurationMinutes;
-
-  return {
-    timerMode,
-    durationMinutes,
-    lastFixedDurationMinutes,
+  return normalizeTimerSettings({
+    ...payload,
     meditationType: payload.meditationType as TimerSettings['meditationType'],
-    startSound: payload.startSound,
-    endSound: payload.endSound,
-    intervalEnabled: payload.intervalEnabled,
-    intervalMinutes: payload.intervalMinutes,
-    intervalSound: payload.intervalSound,
-  };
+  });
 }
 
 export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
@@ -71,16 +58,19 @@ export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
 }
 
 export function areTimerSettingsEqual(left: TimerSettings, right: TimerSettings): boolean {
+  const normalizedLeft = normalizeTimerSettings(left);
+  const normalizedRight = normalizeTimerSettings(right);
+
   return (
-    left.timerMode === right.timerMode &&
-    left.durationMinutes === right.durationMinutes &&
-    left.lastFixedDurationMinutes === right.lastFixedDurationMinutes &&
-    left.meditationType === right.meditationType &&
-    left.startSound === right.startSound &&
-    left.endSound === right.endSound &&
-    left.intervalEnabled === right.intervalEnabled &&
-    left.intervalMinutes === right.intervalMinutes &&
-    left.intervalSound === right.intervalSound
+    normalizedLeft.timerMode === normalizedRight.timerMode &&
+    normalizedLeft.durationMinutes === normalizedRight.durationMinutes &&
+    normalizedLeft.lastFixedDurationMinutes === normalizedRight.lastFixedDurationMinutes &&
+    normalizedLeft.meditationType === normalizedRight.meditationType &&
+    normalizedLeft.startSound === normalizedRight.startSound &&
+    normalizedLeft.endSound === normalizedRight.endSound &&
+    normalizedLeft.intervalEnabled === normalizedRight.intervalEnabled &&
+    normalizedLeft.intervalMinutes === normalizedRight.intervalMinutes &&
+    normalizedLeft.intervalSound === normalizedRight.intervalSound
   );
 }
 

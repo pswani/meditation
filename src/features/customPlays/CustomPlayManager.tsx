@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
+import type { TimerSettings } from '../../types/timer';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
 import type { MediaAssetCatalogIssue } from '../../utils/mediaAssetApi';
 import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
@@ -24,10 +25,13 @@ function describeLinkedMedia(asset: MediaAssetMetadata): string {
   return asset.label;
 }
 
-export default function CustomPlayManager() {
+interface CustomPlayManagerProps {
+  readonly timerSettings: TimerSettings;
+  readonly onApplyCustomPlay: (nextSettings: TimerSettings) => void;
+}
+
+export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: CustomPlayManagerProps) {
   const {
-    settings,
-    setSettings,
     customPlays,
     saveCustomPlay,
     deleteCustomPlay,
@@ -93,7 +97,7 @@ export default function CustomPlayManager() {
       return;
     }
 
-    setSettings(applyCustomPlayToTimerSettings(settings, match));
+    onApplyCustomPlay(applyCustomPlayToTimerSettings(timerSettings, match));
     setPendingDeleteId(null);
     setAppliedPlayId(match.id);
     setSaveFeedbackMessage(null);

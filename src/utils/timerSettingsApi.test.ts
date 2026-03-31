@@ -134,4 +134,60 @@ describe('timer settings api boundary', () => {
     expect(settings.lastFixedDurationMinutes).toBe(18);
     expect(settings.intervalEnabled).toBe(true);
   });
+
+  it('normalizes legacy fixed responses with missing current duration to a safe fallback', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'default',
+          durationMinutes: null,
+          lastFixedDurationMinutes: 0,
+          meditationType: 'Vipassana',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 5,
+          intervalSound: 'Temple Bell',
+        }),
+      })
+    );
+
+    const settings = await loadTimerSettingsFromApi();
+
+    expect(settings.timerMode).toBe('fixed');
+    expect(settings.durationMinutes).toBe(20);
+    expect(settings.lastFixedDurationMinutes).toBe(20);
+  });
+
+  it('compares timer settings by normalized meaning instead of raw legacy shape', () => {
+    expect(
+      areTimerSettingsEqual(
+        {
+          timerMode: 'fixed',
+          durationMinutes: null,
+          lastFixedDurationMinutes: 20,
+          meditationType: 'Vipassana',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 5,
+          intervalSound: 'Temple Bell',
+        },
+        {
+          timerMode: 'fixed',
+          durationMinutes: 20,
+          lastFixedDurationMinutes: 20,
+          meditationType: 'Vipassana',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 5,
+          intervalSound: 'Temple Bell',
+        }
+      )
+    ).toBe(true);
+  });
 });

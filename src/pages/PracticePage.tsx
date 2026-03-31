@@ -5,21 +5,26 @@ import { meditationTypes, soundOptions } from '../features/timer/constants';
 import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
 import type { MeditationType, TimerMode, TimerSettings } from '../types/timer';
-import { getIntervalBellCount } from '../utils/timerValidation';
+import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 
 type SetupField = 'durationMinutes' | 'meditationType' | 'intervalMinutes';
 
 interface PracticeRouteState {
   readonly entryMessage?: string;
+  readonly timerPreset?: TimerSettings;
 }
+
+const initialTouchedState: Record<SetupField, boolean> = {
+  durationMinutes: false,
+  meditationType: false,
+  intervalMinutes: false,
+};
 
 export default function PracticePage() {
   const {
-    settings,
-    validation,
+    settings: defaultSettings,
     activeSession,
     activePlaylistRun,
-    setSettings,
     startSession,
     clearOutcome,
     lastOutcome,
@@ -35,20 +40,22 @@ export default function PracticePage() {
   const advancedContentId = 'advanced-timer-settings';
   const practiceToolsContentId = 'practice-tools-content';
   const timerStartBlockedMessageId = 'timer-start-blocked-message';
+  const [draftSettings, setDraftSettings] = useState(defaultSettings);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [startAttempted, setStartAttempted] = useState(false);
   const [entryMessage, setEntryMessage] = useState<string | null>(null);
-  const [touched, setTouched] = useState<Record<SetupField, boolean>>({
-    durationMinutes: false,
-    meditationType: false,
-    intervalMinutes: false,
-  });
-  const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const [touched, setTouched] = useState<Record<SetupField, boolean>>(initialTouchedState);
+  const validation = useMemo(() => validateTimerSettings(draftSettings), [draftSettings]);
+  const fixedDurationMinutes = draftSettings.durationMinutes ?? draftSettings.lastFixedDurationMinutes;
 
   const intervalCount = useMemo(
-    () => (settings.intervalEnabled && settings.timerMode === 'fixed' ? getIntervalBellCount(fixedDurationMinutes, settings.intervalMinutes) : 0),
-    [fixedDurationMinutes, settings.intervalEnabled, settings.intervalMinutes, settings.timerMode]
+    () =>
+      draftSettings.intervalEnabled && draftSettings.timerMode === 'fixed'
+        ? getIntervalBellCount(fixedDurationMinutes, draftSettings.intervalMinutes)
+        : 0,
+    [draftSettings.intervalEnabled, draftSettings.intervalMinutes, draftSettings.timerMode, fixedDurationMinutes]
   );
 
   const visibleErrors = useMemo(
@@ -56,13 +63,19 @@ export default function PracticePage() {
       durationMinutes: (startAttempted || touched.durationMinutes) ? validation.errors.durationMinutes : undefined,
       meditationType: (startAttempted || touched.meditationType) ? validation.errors.meditationType : undefined,
       intervalMinutes:
-        settings.intervalEnabled && (startAttempted || touched.intervalMinutes) ? validation.errors.intervalMinutes : undefined,
+        draftSettings.intervalEnabled && (startAttempted || touched.intervalMinutes) ? validation.errors.intervalMinutes : undefined,
     }),
-    [settings.intervalEnabled, startAttempted, touched, validation.errors]
+    [draftSettings.intervalEnabled, startAttempted, touched, validation.errors]
   );
   const durationMessageId = visibleErrors.durationMinutes ? 'practice-duration-error' : 'practice-duration-hint';
   const meditationTypeMessageId = visibleErrors.meditationType ? 'practice-meditation-type-error' : 'practice-meditation-type-hint';
   const intervalMessageId = visibleErrors.intervalMinutes ? 'practice-interval-error' : 'practice-interval-hint';
+
+  useEffect(() => {
+    if (!isDraftDirty) {
+      setDraftSettings(defaultSettings);
+    }
+  }, [defaultSettings, isDraftDirty]);
 
   useEffect(() => {
     if (visibleErrors.intervalMinutes) {
@@ -72,27 +85,36 @@ export default function PracticePage() {
 
   useEffect(() => {
     const state = location.state as PracticeRouteState | null;
-    if (!state?.entryMessage) {
+    if (!state?.entryMessage && !state?.timerPreset) {
       return;
     }
 
-    setEntryMessage(state.entryMessage);
+    if (state.timerPreset) {
+      setDraftSettings(state.timerPreset);
+      setIsDraftDirty(true);
+      setStartAttempted(false);
+      setTouched(initialTouchedState);
+    }
+
+    setEntryMessage(state.entryMessage ?? null);
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, location.state, navigate]);
 
   function update<K extends keyof TimerSettings>(key: K, value: TimerSettings[K]) {
-    setSettings({
-      ...settings,
+    setIsDraftDirty(true);
+    setDraftSettings((current) => ({
+      ...current,
       [key]: value,
-    });
+    }));
   }
 
   function updateDurationMinutes(value: number) {
-    setSettings({
-      ...settings,
+    setIsDraftDirty(true);
+    setDraftSettings((current) => ({
+      ...current,
       durationMinutes: value,
-      lastFixedDurationMinutes: value > 0 ? value : settings.lastFixedDurationMinutes,
-    });
+      lastFixedDurationMinutes: value > 0 ? value : current.lastFixedDurationMinutes,
+    }));
   }
 
   function markTouched(field: SetupField) {
@@ -104,28 +126,29 @@ export default function PracticePage() {
 
   function onStart() {
     setStartAttempted(true);
-    const started = startSession();
+    const started = startSession(draftSettings);
     if (started) {
       navigate('/practice/active');
     }
   }
 
   function selectTimerMode(timerMode: TimerMode) {
+    setIsDraftDirty(true);
     if (timerMode === 'fixed') {
-      setSettings({
-        ...settings,
+      setDraftSettings((current) => ({
+        ...current,
         timerMode: 'fixed',
-        durationMinutes: settings.durationMinutes ?? settings.lastFixedDurationMinutes,
-      });
+        durationMinutes: current.durationMinutes ?? current.lastFixedDurationMinutes,
+      }));
       return;
     }
 
-    setSettings({
-      ...settings,
+    setDraftSettings((current) => ({
+      ...current,
       timerMode: 'open-ended',
       durationMinutes: null,
-      lastFixedDurationMinutes: fixedDurationMinutes,
-    });
+      lastFixedDurationMinutes: current.durationMinutes ?? current.lastFixedDurationMinutes,
+    }));
   }
 
   return (
@@ -179,11 +202,11 @@ export default function PracticePage() {
       ) : null}
 
       <section className="timer-mode-panel" aria-label="Timer mode">
-        <label className={`timer-mode-option ${settings.timerMode === 'fixed' ? 'selected' : ''}`}>
+        <label className={`timer-mode-option ${draftSettings.timerMode === 'fixed' ? 'selected' : ''}`}>
           <input
             type="radio"
             name="timer-mode"
-            checked={settings.timerMode === 'fixed'}
+            checked={draftSettings.timerMode === 'fixed'}
             disabled={areTimerSettingsControlsDisabled}
             onChange={() => selectTimerMode('fixed')}
           />
@@ -193,11 +216,11 @@ export default function PracticePage() {
           </span>
         </label>
 
-        <label className={`timer-mode-option ${settings.timerMode === 'open-ended' ? 'selected' : ''}`}>
+        <label className={`timer-mode-option ${draftSettings.timerMode === 'open-ended' ? 'selected' : ''}`}>
           <input
             type="radio"
             name="timer-mode"
-            checked={settings.timerMode === 'open-ended'}
+            checked={draftSettings.timerMode === 'open-ended'}
             disabled={areTimerSettingsControlsDisabled}
             onChange={() => selectTimerMode('open-ended')}
           />
@@ -209,7 +232,7 @@ export default function PracticePage() {
       </section>
 
       <div className="form-grid">
-        {settings.timerMode === 'fixed' ? (
+        {draftSettings.timerMode === 'fixed' ? (
           <label>
             <span>Duration (minutes)</span>
             <input
@@ -242,7 +265,7 @@ export default function PracticePage() {
         <label>
           <span>Meditation type</span>
           <select
-            value={settings.meditationType}
+            value={draftSettings.meditationType}
             disabled={areTimerSettingsControlsDisabled}
             aria-invalid={Boolean(visibleErrors.meditationType)}
             aria-describedby={meditationTypeMessageId}
@@ -286,7 +309,7 @@ export default function PracticePage() {
               <label>
                 <span>Start sound (optional)</span>
                 <select
-                  value={settings.startSound}
+                  value={draftSettings.startSound}
                   disabled={areTimerSettingsControlsDisabled}
                   onChange={(event) => update('startSound', event.target.value)}
                 >
@@ -301,7 +324,7 @@ export default function PracticePage() {
               <label>
                 <span>End sound (optional)</span>
                 <select
-                  value={settings.endSound}
+                  value={draftSettings.endSound}
                   disabled={areTimerSettingsControlsDisabled}
                   onChange={(event) => update('endSound', event.target.value)}
                 >
@@ -318,21 +341,21 @@ export default function PracticePage() {
               <label className="checkbox-row">
                 <input
                   type="checkbox"
-                  checked={settings.intervalEnabled}
+                  checked={draftSettings.intervalEnabled}
                   disabled={areTimerSettingsControlsDisabled}
                   onChange={(event) => update('intervalEnabled', event.target.checked)}
                 />
                 <span>Enable interval bell</span>
               </label>
 
-              {settings.intervalEnabled ? (
+              {draftSettings.intervalEnabled ? (
                 <div className="form-grid">
                   <label>
                     <span>Interval bell every (minutes)</span>
                     <input
                       type="number"
                       min={1}
-                      value={settings.intervalMinutes}
+                      value={draftSettings.intervalMinutes}
                       disabled={areTimerSettingsControlsDisabled}
                       aria-invalid={Boolean(visibleErrors.intervalMinutes)}
                       aria-describedby={intervalMessageId}
@@ -341,21 +364,21 @@ export default function PracticePage() {
                     />
                     {visibleErrors.intervalMinutes ? (
                       <small id={intervalMessageId} className="error-text">
-                    {visibleErrors.intervalMinutes}
-                  </small>
-                ) : (
-                  <small id={intervalMessageId} className="hint-text">
-                    {settings.timerMode === 'open-ended'
-                      ? `A bell will repeat every ${settings.intervalMinutes} minute${settings.intervalMinutes === 1 ? '' : 's'} until you end the session.`
-                      : `${intervalCount} interval bell${intervalCount === 1 ? '' : 's'} will occur before session end.`}
-                  </small>
-                )}
-              </label>
+                        {visibleErrors.intervalMinutes}
+                      </small>
+                    ) : (
+                      <small id={intervalMessageId} className="hint-text">
+                        {draftSettings.timerMode === 'open-ended'
+                          ? `A bell will repeat every ${draftSettings.intervalMinutes} minute${draftSettings.intervalMinutes === 1 ? '' : 's'} until you end the session.`
+                          : `${intervalCount} interval bell${intervalCount === 1 ? '' : 's'} will occur before session end.`}
+                      </small>
+                    )}
+                  </label>
 
                   <label>
                     <span>Interval sound</span>
                     <select
-                      value={settings.intervalSound}
+                      value={draftSettings.intervalSound}
                       disabled={areTimerSettingsControlsDisabled}
                       onChange={(event) => update('intervalSound', event.target.value)}
                     >
@@ -380,7 +403,7 @@ export default function PracticePage() {
           disabled={isTimerStartBlockedByPlaylistRun}
           aria-describedby={isTimerStartBlockedByPlaylistRun ? timerStartBlockedMessageId : undefined}
         >
-          {settings.timerMode === 'open-ended' ? 'Start Open-Ended Session' : 'Start Session'}
+          {draftSettings.timerMode === 'open-ended' ? 'Start Open-Ended Session' : 'Start Session'}
         </button>
       </div>
 
@@ -430,7 +453,13 @@ export default function PracticePage() {
 
         {toolsOpen ? (
           <div id={practiceToolsContentId} className="practice-tools-content">
-            <CustomPlayManager />
+            <CustomPlayManager
+              timerSettings={draftSettings}
+              onApplyCustomPlay={(nextSettings) => {
+                setDraftSettings(nextSettings);
+                setIsDraftDirty(true);
+              }}
+            />
 
             <section className="playlist-entry-panel">
               <h3 className="section-title">Playlists</h3>

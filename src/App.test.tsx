@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import type { SankalpaGoal } from './types/sankalpa';
 import type { SessionLog } from './types/sessionLog';
+import { SYNC_QUEUED_AT_HEADER } from './utils/syncApi';
 import { createSyncQueueEntry } from './utils/syncQueue';
 
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
@@ -566,7 +567,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
+    expect(screen.getByText(/paused timer: vipassana/i)).toBeInTheDocument();
     expect(setItemSpy).toHaveBeenCalledTimes(1);
     expect(setItemSpy).toHaveBeenCalledWith(SYNC_QUEUE_KEY, '[]');
     expect(removeItemSpy).not.toHaveBeenCalled();
@@ -608,13 +609,77 @@ describe('App shell', () => {
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
 
     const persistedState = JSON.parse(localStorage.getItem(ACTIVE_TIMER_STATE_KEY) ?? '{}');
-    expect(persistedState.activeSession?.elapsedSeconds).toBe(300);
+    expect(persistedState.elapsedSeconds).toBe(300);
 
     fireEvent.click(screen.getByRole('button', { name: /^dismiss$/i }));
     expect(screen.queryByText(/recovered an active timer from your previous app state/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /resume active timer/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+  });
+
+  it('rehydrates a paused active timer with paused shell messaging and resume flow', () => {
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
+        intendedDurationSeconds: 1200,
+        elapsedSeconds: 300,
+        isPaused: true,
+        lastResumedAtMs: null,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/recovered a paused timer from your previous app state/i)).toBeInTheDocument();
+    expect(screen.getByText(/paused timer: vipassana/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /resume paused timer/i }));
+    expect(screen.getByText(/^paused$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument();
+  });
+
+  it('clears paused fixed sessions that are already complete when the app reloads', () => {
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
+        intendedDurationSeconds: 1200,
+        elapsedSeconds: 1200,
+        isPaused: true,
+        lastResumedAtMs: null,
+        meditationType: 'Ajapa',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/previous active timer was cleared because it could not be safely resumed/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /resume paused timer/i })).not.toBeInTheDocument();
+    expect(localStorage.getItem(ACTIVE_TIMER_STATE_KEY)).toBeNull();
   });
 
   it('clears stale persisted active timer state that can no longer be safely resumed', () => {
@@ -1103,6 +1168,113 @@ describe('App shell', () => {
 
     expect(await screen.findByLabelText(/duration \(minutes\)/i)).toHaveValue(32);
     expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Sahaj');
+  });
+
+  it('prefers backend timer settings over stale local cache when no queued timer-settings change exists', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 33,
+        lastFixedDurationMinutes: 33,
+        meditationType: 'Ajapa',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    const { fetchMock, store } = createStatefulBackendFetchMock({
+      settings: {
+        durationMinutes: 20,
+        meditationType: '',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    await flushAsyncEffects();
+
+    expect(screen.getByText(/default timer: 20 min/i)).toBeInTheDocument();
+    expect(store.settings.durationMinutes).toBe(20);
+    expect(store.settings.meditationType).toBe('');
+
+    const timerSettingsPutCalls = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      return new URL(url, 'http://localhost').pathname === '/api/settings/timer' && (init?.method ?? 'GET') === 'PUT';
+    });
+
+    expect(timerSettingsPutCalls).toHaveLength(0);
+  });
+
+  it('preserves queued timer-settings ordering metadata while normalizing queued fixed-duration payloads before sync', async () => {
+    localStorage.setItem(
+      SYNC_QUEUE_KEY,
+      JSON.stringify([
+        createSyncQueueEntry({
+          entityType: 'timer-settings',
+          operation: 'upsert',
+          recordId: 'default',
+          queuedAt: '2026-03-25T10:00:00.000Z',
+          payload: {
+            timerMode: 'fixed',
+            durationMinutes: null,
+            lastFixedDurationMinutes: 32,
+            meditationType: 'Ajapa',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+          },
+        }),
+      ])
+    );
+
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    await waitFor(() => expect(store.settings.durationMinutes).toBe(32));
+
+    const timerSettingsPutCalls = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      return new URL(url, 'http://localhost').pathname === '/api/settings/timer' && (init?.method ?? 'GET') === 'PUT';
+    });
+
+    expect(timerSettingsPutCalls).toHaveLength(1);
+
+    const [, requestInit] = timerSettingsPutCalls[0] ?? [];
+    const requestBody = typeof requestInit?.body === 'string' ? JSON.parse(requestInit.body) : null;
+    const requestHeaders = (requestInit?.headers ?? {}) as Record<string, string>;
+
+    expect(requestBody).toMatchObject({
+      timerMode: 'fixed',
+      durationMinutes: 32,
+      lastFixedDurationMinutes: 32,
+      meditationType: 'Ajapa',
+    });
+    expect(requestHeaders[SYNC_QUEUED_AT_HEADER]).toBe('2026-03-25T10:00:00.000Z');
+    expect(await screen.findByLabelText(/default duration \(minutes\)/i)).toHaveValue(32);
   });
 
   it('syncs an ended-early timer session to backend history and rehydrates it on a fresh mount', async () => {
