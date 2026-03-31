@@ -1,6 +1,24 @@
 # Session Handoff
 
 ## Current status
+The timer defaults and runtime defects milestone branch has been prepared from `main`. Defect remediation should continue on `codex/timer-defaults-runtime-defects` using the checked-in prompt sequence.
+
+## 2026-03-31 timer defaults and runtime defects branch setup
+- Parent branch:
+  - `main`
+- Feature branch:
+  - `codex/timer-defaults-runtime-defects`
+- Working tree status at branch setup:
+  - clean and ready for timer defect remediation work
+- Bundle scope:
+  - practice draft timer state must stop mutating saved defaults
+  - active timer runtime persistence and recovery must be coherent and resumable
+  - timer validation, duration guards, and legacy/default compatibility must be corrected
+  - the bundle still includes review, remediation, verification, and merge-back for those timer defects
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing the practice/default-timer separation defect, implement the bounded timer-default ownership fix so Practice and custom play preload flows stay session-scoped while Settings remains the only place that persists defaults, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if timer-settings contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): separate practice draft state from saved defaults.`
+
+## Current status
 The open-ended timer milestone is now merged into `main`. The feature branch history has been preserved locally, and the next bounded product slice can start from `main`.
 
 ## 2026-03-30 open-ended timer merge

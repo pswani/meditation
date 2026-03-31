@@ -2,6 +2,23 @@
 
 ## Decision log
 
+### 2026-03-31 timer defaults and runtime defects branch setup decisions
+- Treat `main` as the parent branch for the `timer-defaults-and-runtime-defects-with-branching` bundle because the bundle was started from a clean `main` worktree and no earlier handoff entry recorded a more specific parent for this exact prompt set.
+- Create and use the local feature branch `codex/timer-defaults-runtime-defects` for the defect-remediation work before merging back into `main`.
+- Keep this bundle bounded to:
+  - default timer ownership between Settings, Home, Practice, and custom play shortcuts
+  - active timer runtime persistence and recovery correctness
+  - timer validation, duration guards, and compatibility fixes
+  - review, remediation, verification, and merge-back for those timer defects
+- Preserve the checked-in prompt execution order:
+  - `00-create-branch`
+  - `01-fix-practice-default-timer-separation`
+  - `02-fix-active-timer-recovery`
+  - `03-fix-timer-validation-and-log-guards`
+  - `04-review-timer-defects-and-code-quality`
+  - `05-fix-review-findings-and-verify`
+  - `99-merge-branch`
+
 ### 2026-03-30 open-ended timer merge decisions
 - Merge `codex/open-ended-timer` back into `main` with a normal local merge commit so the branch-setup, implementation, review, remediation, verification, and prompt-history commits stay intact.
 - Treat the `open-ended-timer-feature-bundle-with-branching` milestone as complete on `main` after the merge because the timer-mode feature, review fixes, and verification pass all landed together with their supporting prompt and handoff artifacts.
