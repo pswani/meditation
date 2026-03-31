@@ -1,6 +1,39 @@
 # Session Handoff
 
 ## Current status
+The active timer runtime and recovery fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to timer validation and session-log guard defects.
+
+## 2026-03-31 active timer recovery
+- Added and updated:
+  - `requirements/execplan-active-timer-recovery.md`
+  - `src/utils/storage.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/app/AppShell.tsx`
+  - focused recovery and persistence tests in:
+    - `src/utils/storage.test.ts`
+    - `src/features/timer/TimerContext.test.tsx`
+    - `src/App.test.tsx`
+- What runtime/recovery defects were fixed:
+  - active timer persistence now writes one canonical `ActiveSession` snapshot instead of duplicating pause state in a wrapper object
+  - recovery now normalizes paused and running sessions consistently before they reach the UI or runtime helpers
+  - fixed sessions that are already complete when rehydrated now clear stale state truthfully instead of remaining resumable
+  - shell banner messaging now distinguishes paused timers from running timers after recovery
+- Chosen active-session model:
+  - one persisted `ActiveSession` snapshot for new writes
+  - legacy wrapped fixed-session payloads still load through a compatibility path
+  - `TimerContext` recovery computes elapsed time once, then hands the normalized session to UI and sound helpers
+- Remaining limitations:
+  - this slice did not change playlist runtime recovery behavior beyond leaving its existing flow intact
+  - browser-only edge cases outside the current automated recovery scenarios may still need later review, especially around unusual clock jumps or tab suspension behavior
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for fixing timer validation and session-log correctness guards, implement the bounded timer validation, duration clamp, and legacy/default normalization fixes, add focused tests, run npm run typecheck, npm run lint, npm run test, npm run build, run relevant backend verification only if timer-settings contracts change, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): restore validation and duration guard correctness.`
+
+## Current status
 The practice/default-timer separation fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to active timer runtime and recovery defects.
 
 ## 2026-03-31 timer default separation

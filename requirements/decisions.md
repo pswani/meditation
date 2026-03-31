@@ -2,6 +2,15 @@
 
 ## Decision log
 
+### 2026-03-31 active timer recovery decisions
+- Persist active timer state as one canonical `ActiveSession` snapshot instead of a wrapper object with duplicate pause state, so reducer/runtime/UI/storage all speak the same active-session model.
+- Keep active timer hydration backward-compatible by continuing to read the older wrapped fixed-session persistence shape that used `remainingSeconds` plus `endAtMs`, then normalize it into the current `ActiveSession` model during load.
+- Treat paused-session recovery as its own user-facing state:
+  - preserve `elapsedSeconds`
+  - normalize `lastResumedAtMs` to `null`
+  - show paused-specific recovery and shell banner wording
+- Clear fixed sessions during recovery when their elapsed time is already at or past the intended duration, even if the persisted snapshot says they were paused, because those sessions can no longer be resumed truthfully.
+
 ### 2026-03-31 timer default separation decisions
 - Keep persisted timer defaults in `TimerContext` as the single source of truth for Home quick start and Settings, instead of letting Practice mutate the same state.
 - Move Practice timer setup edits into route-local draft state so:

@@ -566,7 +566,7 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
+    expect(screen.getByText(/paused timer: vipassana/i)).toBeInTheDocument();
     expect(setItemSpy).toHaveBeenCalledTimes(1);
     expect(setItemSpy).toHaveBeenCalledWith(SYNC_QUEUE_KEY, '[]');
     expect(removeItemSpy).not.toHaveBeenCalled();
@@ -608,13 +608,77 @@ describe('App shell', () => {
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
 
     const persistedState = JSON.parse(localStorage.getItem(ACTIVE_TIMER_STATE_KEY) ?? '{}');
-    expect(persistedState.activeSession?.elapsedSeconds).toBe(300);
+    expect(persistedState.elapsedSeconds).toBe(300);
 
     fireEvent.click(screen.getByRole('button', { name: /^dismiss$/i }));
     expect(screen.queryByText(/recovered an active timer from your previous app state/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /resume active timer/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+  });
+
+  it('rehydrates a paused active timer with paused shell messaging and resume flow', () => {
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
+        intendedDurationSeconds: 1200,
+        elapsedSeconds: 300,
+        isPaused: true,
+        lastResumedAtMs: null,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/recovered a paused timer from your previous app state/i)).toBeInTheDocument();
+    expect(screen.getByText(/paused timer: vipassana/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /resume paused timer/i }));
+    expect(screen.getByText(/^paused$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument();
+  });
+
+  it('clears paused fixed sessions that are already complete when the app reloads', () => {
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        startedAt: '2026-03-24T10:00:00.000Z',
+        startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+        timerMode: 'fixed',
+        intendedDurationSeconds: 1200,
+        elapsedSeconds: 1200,
+        isPaused: true,
+        lastResumedAtMs: null,
+        meditationType: 'Ajapa',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/previous active timer was cleared because it could not be safely resumed/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /resume paused timer/i })).not.toBeInTheDocument();
+    expect(localStorage.getItem(ACTIVE_TIMER_STATE_KEY)).toBeNull();
   });
 
   it('clears stale persisted active timer state that can no longer be safely resumed', () => {

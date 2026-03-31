@@ -497,17 +497,70 @@ export function saveSankalpas(sankalpas: readonly SankalpaGoal[]): void {
   localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
 }
 
-interface StoredActiveTimerState {
-  readonly activeSession: ActiveSession;
-  readonly isPaused: boolean;
-}
-
 interface StoredActivePlaylistRunState {
   readonly activePlaylistRun: ActivePlaylistRun;
   readonly isPaused: boolean;
 }
 
-export function loadActiveTimerState(): StoredActiveTimerState | null {
+function normalizePersistedActiveSession(session: ActiveSession): ActiveSession {
+  return {
+    ...session,
+    lastResumedAtMs: session.isPaused ? null : session.lastResumedAtMs,
+  };
+}
+
+function normalizeLegacyActiveTimerState(activeSession: Record<string, unknown>, isPaused: boolean): ActiveSession | null {
+  const intendedDurationSeconds =
+    typeof activeSession.intendedDurationSeconds === 'number' && activeSession.intendedDurationSeconds > 0
+      ? activeSession.intendedDurationSeconds
+      : null;
+  const endAtMs = typeof activeSession.endAtMs === 'number' && Number.isInteger(activeSession.endAtMs) ? activeSession.endAtMs : null;
+  const storedRemainingSeconds =
+    typeof activeSession.remainingSeconds === 'number' && activeSession.remainingSeconds >= 0
+      ? activeSession.remainingSeconds
+      : null;
+
+  if (
+    !isValidIsoDate(activeSession.startedAt) ||
+    typeof activeSession.startedAtMs !== 'number' ||
+    !Number.isInteger(activeSession.startedAtMs) ||
+    intendedDurationSeconds === null ||
+    endAtMs === null ||
+    storedRemainingSeconds === null ||
+    !isMeditationType(activeSession.meditationType) ||
+    typeof activeSession.startSound !== 'string' ||
+    typeof activeSession.endSound !== 'string' ||
+    typeof activeSession.intervalEnabled !== 'boolean' ||
+    typeof activeSession.intervalMinutes !== 'number' ||
+    activeSession.intervalMinutes < 0 ||
+    typeof activeSession.intervalSound !== 'string'
+  ) {
+    return null;
+  }
+
+  const nowMs = Date.now();
+  const elapsedSeconds = isPaused
+    ? Math.max(0, intendedDurationSeconds - storedRemainingSeconds)
+    : Math.max(0, intendedDurationSeconds - Math.max(0, Math.ceil((endAtMs - nowMs) / 1000)));
+
+  return {
+    startedAt: activeSession.startedAt,
+    startedAtMs: activeSession.startedAtMs,
+    timerMode: 'fixed',
+    intendedDurationSeconds,
+    elapsedSeconds,
+    isPaused,
+    lastResumedAtMs: isPaused ? null : nowMs,
+    meditationType: activeSession.meditationType,
+    startSound: activeSession.startSound,
+    endSound: activeSession.endSound,
+    intervalEnabled: activeSession.intervalEnabled,
+    intervalMinutes: activeSession.intervalMinutes,
+    intervalSound: activeSession.intervalSound,
+  };
+}
+
+export function loadActiveTimerState(): ActiveSession | null {
   const raw = localStorage.getItem(ACTIVE_TIMER_STATE_KEY);
   if (!raw) {
     return null;
@@ -515,86 +568,29 @@ export function loadActiveTimerState(): StoredActiveTimerState | null {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!isObjectRecord(parsed)) {
+    if (isActiveSession(parsed)) {
+      return normalizePersistedActiveSession(parsed);
+    }
+
+    if (!isObjectRecord(parsed) || !isObjectRecord(parsed.activeSession)) {
       return null;
     }
 
-    const candidate = parsed as Record<string, unknown>;
-    if (!isObjectRecord(candidate.activeSession) || typeof candidate.isPaused !== 'boolean') {
+    if (isActiveSession(parsed.activeSession)) {
+      return normalizePersistedActiveSession(parsed.activeSession);
+    }
+
+    if (typeof parsed.isPaused !== 'boolean') {
       return null;
     }
 
-    const sessionCandidate = candidate.activeSession as Record<string, unknown>;
-
-    let normalizedSession: ActiveSession | null = null;
-
-    if (isActiveSession(sessionCandidate)) {
-      normalizedSession = {
-        ...sessionCandidate,
-      };
-    } else {
-      const timerMode = 'fixed';
-      const intendedDurationSeconds =
-        typeof sessionCandidate.intendedDurationSeconds === 'number' && sessionCandidate.intendedDurationSeconds > 0
-          ? sessionCandidate.intendedDurationSeconds
-          : null;
-      const endAtMs =
-        typeof sessionCandidate.endAtMs === 'number' && Number.isInteger(sessionCandidate.endAtMs) ? sessionCandidate.endAtMs : null;
-      const storedRemainingSeconds =
-        typeof sessionCandidate.remainingSeconds === 'number' && sessionCandidate.remainingSeconds >= 0
-          ? sessionCandidate.remainingSeconds
-          : null;
-
-      if (
-        !isValidIsoDate(sessionCandidate.startedAt) ||
-        typeof sessionCandidate.startedAtMs !== 'number' ||
-        !Number.isInteger(sessionCandidate.startedAtMs) ||
-        intendedDurationSeconds === null ||
-        endAtMs === null ||
-        storedRemainingSeconds === null ||
-        !isMeditationType(sessionCandidate.meditationType) ||
-        typeof sessionCandidate.startSound !== 'string' ||
-        typeof sessionCandidate.endSound !== 'string' ||
-        typeof sessionCandidate.intervalEnabled !== 'boolean' ||
-        typeof sessionCandidate.intervalMinutes !== 'number' ||
-        sessionCandidate.intervalMinutes < 0 ||
-        typeof sessionCandidate.intervalSound !== 'string'
-      ) {
-        return null;
-      }
-
-      const nowMs = Date.now();
-      const elapsedSeconds = candidate.isPaused
-        ? Math.max(0, intendedDurationSeconds - storedRemainingSeconds)
-        : Math.max(0, intendedDurationSeconds - Math.max(0, Math.ceil((endAtMs - nowMs) / 1000)));
-
-      normalizedSession = {
-        startedAt: sessionCandidate.startedAt,
-        startedAtMs: sessionCandidate.startedAtMs,
-        timerMode,
-        intendedDurationSeconds,
-        elapsedSeconds,
-        isPaused: candidate.isPaused,
-        lastResumedAtMs: candidate.isPaused ? null : nowMs,
-        meditationType: sessionCandidate.meditationType,
-        startSound: sessionCandidate.startSound,
-        endSound: sessionCandidate.endSound,
-        intervalEnabled: sessionCandidate.intervalEnabled,
-        intervalMinutes: sessionCandidate.intervalMinutes,
-        intervalSound: sessionCandidate.intervalSound,
-      };
-    }
-
-    return {
-      activeSession: normalizedSession,
-      isPaused: candidate.isPaused,
-    };
+    return normalizeLegacyActiveTimerState(parsed.activeSession as Record<string, unknown>, parsed.isPaused);
   } catch {
     return null;
   }
 }
 
-export function saveActiveTimerState(activeSession: ActiveSession | null, isPaused: boolean): void {
+export function saveActiveTimerState(activeSession: ActiveSession | null): void {
   if (!activeSession) {
     localStorage.removeItem(ACTIVE_TIMER_STATE_KEY);
     return;
@@ -602,10 +598,7 @@ export function saveActiveTimerState(activeSession: ActiveSession | null, isPaus
 
   localStorage.setItem(
     ACTIVE_TIMER_STATE_KEY,
-    JSON.stringify({
-      activeSession,
-      isPaused,
-    } satisfies StoredActiveTimerState)
+    JSON.stringify(normalizePersistedActiveSession(activeSession))
   );
 }
 

@@ -100,7 +100,7 @@ describe('TimerProvider persistence behavior', () => {
 
     const pausedPayload = JSON.parse(String(timerPersistenceCalls.at(-1)?.[1]));
     expect(pausedPayload.isPaused).toBe(true);
-    expect(pausedPayload.activeSession.elapsedSeconds).toBeGreaterThan(0);
+    expect(pausedPayload.elapsedSeconds).toBeGreaterThan(0);
   });
 
   it('does not rewrite active playlist persistence on every countdown tick', async () => {
