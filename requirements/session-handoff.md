@@ -1,6 +1,21 @@
 # Session Handoff
 
 ## Current status
+The open-ended timer review pass is complete. No critical issues were found; the next slice should fix the important issues documented in `docs/review-open-ended-timer.md`.
+
+## 2026-03-30 open-ended timer review
+- Added and updated:
+  - `docs/review-open-ended-timer.md`
+  - `requirements/session-handoff.md`
+- Top findings:
+  - no critical issues were identified
+  - important: backend timer settings still require a positive fixed duration even when `timerMode` is open-ended, which weakens the contract cleanliness of the new mode
+  - important: a few user-facing messages and labels still use fixed-duration or “end early” language in open-ended flows
+  - nice-to-have: shell and recent-activity surfaces could show open-ended mode more consistently outside History
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-open-ended-timer.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan and implement the critical and important issues from docs/review-open-ended-timer.md while keeping scope bounded to the open-ended timer feature and its immediate integration points. Preserve calm responsive UX, add focused tests for the changed behavior, run npm run typecheck, npm run lint, npm run test, npm run build, and the relevant backend tests, update requirements/decisions.md plus requirements/session-handoff.md, and commit with a clear message such as fix(timer): refine open-ended meditation timer behavior.`
+
+## Current status
 Open-ended timer mode is now implemented on `codex/open-ended-timer`. The milestone can move to a focused review pass before any follow-up fixes.
 
 ## 2026-03-30 open-ended timer implementation
