@@ -55,6 +55,17 @@ describe('buildAutoLogEntry', () => {
     expect(log.completedDurationSeconds).toBe(0);
   });
 
+  it('clamps non-finite completed duration values before persisting the auto log', () => {
+    const log = buildAutoLogEntry({
+      session: activeSession,
+      endedAt: new Date('2026-03-23T10:01:00.000Z'),
+      completedDurationSeconds: Number.NaN,
+      status: 'ended early',
+    });
+
+    expect(log.completedDurationSeconds).toBe(0);
+  });
+
   it('creates open-ended auto log entries without a planned duration', () => {
     const log = buildAutoLogEntry({
       session: {

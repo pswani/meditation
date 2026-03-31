@@ -2,6 +2,11 @@ import type { TimerSettings } from '../types/timer';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  normalizeFixedDurationMinutes,
+  normalizeTimerMode,
+  resolveLastFixedDurationMinutes,
+} from './timerSettingsNormalization';
 
 export const TIMER_SETTINGS_PATH = '/settings/timer';
 export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
@@ -9,7 +14,7 @@ export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
 interface TimerSettingsApiResponse {
   readonly id?: string;
   readonly timerMode?: TimerSettings['timerMode'];
-  readonly durationMinutes: number | null;
+  readonly durationMinutes?: number | null;
   readonly lastFixedDurationMinutes?: number;
   readonly meditationType: string;
   readonly startSound: string;
@@ -28,7 +33,7 @@ function isTimerSettingsApiResponse(value: unknown): value is TimerSettingsApiRe
   const candidate = value as Record<string, unknown>;
   return (
     (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
-    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null) &&
+    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null || typeof candidate.durationMinutes === 'undefined') &&
     (typeof candidate.lastFixedDurationMinutes === 'number' || typeof candidate.lastFixedDurationMinutes === 'undefined') &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
@@ -44,14 +49,9 @@ function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
     throw new Error('Timer settings response is invalid.');
   }
 
-  const timerMode = payload.timerMode ?? 'fixed';
-  const lastFixedDurationMinutes =
-    typeof payload.lastFixedDurationMinutes === 'number'
-      ? payload.lastFixedDurationMinutes
-      : typeof payload.durationMinutes === 'number'
-        ? payload.durationMinutes
-        : 20;
-  const durationMinutes = timerMode === 'open-ended' ? null : payload.durationMinutes ?? lastFixedDurationMinutes;
+  const timerMode = normalizeTimerMode(payload.timerMode);
+  const lastFixedDurationMinutes = resolveLastFixedDurationMinutes(payload.durationMinutes, payload.lastFixedDurationMinutes);
+  const durationMinutes = normalizeFixedDurationMinutes(timerMode, payload.durationMinutes, payload.lastFixedDurationMinutes);
 
   return {
     timerMode,
@@ -71,10 +71,16 @@ export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
 }
 
 export function areTimerSettingsEqual(left: TimerSettings, right: TimerSettings): boolean {
+  const leftTimerMode = normalizeTimerMode(left.timerMode);
+  const rightTimerMode = normalizeTimerMode(right.timerMode);
+  const leftLastFixedDurationMinutes = resolveLastFixedDurationMinutes(left.durationMinutes, left.lastFixedDurationMinutes);
+  const rightLastFixedDurationMinutes = resolveLastFixedDurationMinutes(right.durationMinutes, right.lastFixedDurationMinutes);
+
   return (
-    left.timerMode === right.timerMode &&
-    left.durationMinutes === right.durationMinutes &&
-    left.lastFixedDurationMinutes === right.lastFixedDurationMinutes &&
+    leftTimerMode === rightTimerMode &&
+    normalizeFixedDurationMinutes(leftTimerMode, left.durationMinutes, left.lastFixedDurationMinutes) ===
+      normalizeFixedDurationMinutes(rightTimerMode, right.durationMinutes, right.lastFixedDurationMinutes) &&
+    leftLastFixedDurationMinutes === rightLastFixedDurationMinutes &&
     left.meditationType === right.meditationType &&
     left.startSound === right.startSound &&
     left.endSound === right.endSound &&

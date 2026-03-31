@@ -2,6 +2,19 @@
 
 ## Decision log
 
+### 2026-03-31 timer validation and log guard decisions
+- Keep fixed-mode validation strict about the current `durationMinutes` value:
+  - if `timerMode = "fixed"`, the current duration must itself be a positive finite number
+  - do not let `lastFixedDurationMinutes` silently satisfy current fixed-mode validation, because that would hide broken current settings in Practice or Settings
+- Normalize legacy or partial timer-settings payloads only at storage and API boundaries:
+  - recover missing or invalid fixed durations from `lastFixedDurationMinutes` when it is usable
+  - otherwise fall back to the safe 20-minute fixed default
+  - keep open-ended mode normalized to `durationMinutes = null`
+- Compare timer settings by normalized meaning instead of raw payload shape so omitted legacy fields do not trigger unnecessary sync churn or false inequality.
+- Clamp auto-generated `session log` durations defensively before persistence:
+  - keep fixed sessions bounded by `intendedDurationSeconds`
+  - coerce malformed non-finite derived durations to `0` instead of letting invalid values leak into logs
+
 ### 2026-03-31 active timer recovery decisions
 - Persist active timer state as one canonical `ActiveSession` snapshot instead of a wrapper object with duplicate pause state, so reducer/runtime/UI/storage all speak the same active-session model.
 - Keep active timer hydration backward-compatible by continuing to read the older wrapped fixed-session persistence shape that used `remainingSeconds` plus `endAtMs`, then normalize it into the current `ActiveSession` model during load.

@@ -3,6 +3,11 @@ import type { ActivePlaylistRun, Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
 import type { ActiveSession, TimerSettings } from '../types/timer';
+import {
+  normalizeFixedDurationMinutes,
+  normalizeTimerMode,
+  resolveLastFixedDurationMinutes,
+} from './timerSettingsNormalization';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
@@ -392,21 +397,9 @@ export function loadTimerSettings(): TimerSettings | null {
 
     return {
       ...parsed,
-      timerMode: parsed.timerMode ?? 'fixed',
-      durationMinutes:
-        (parsed.timerMode ?? 'fixed') === 'open-ended'
-          ? null
-          : typeof parsed.durationMinutes === 'number'
-            ? parsed.durationMinutes
-            : typeof parsed.lastFixedDurationMinutes === 'number'
-              ? parsed.lastFixedDurationMinutes
-              : null,
-      lastFixedDurationMinutes:
-        typeof parsed.lastFixedDurationMinutes === 'number'
-          ? parsed.lastFixedDurationMinutes
-          : typeof parsed.durationMinutes === 'number'
-            ? parsed.durationMinutes
-            : 20,
+      timerMode: normalizeTimerMode(parsed.timerMode),
+      durationMinutes: normalizeFixedDurationMinutes(parsed.timerMode, parsed.durationMinutes, parsed.lastFixedDurationMinutes),
+      lastFixedDurationMinutes: resolveLastFixedDurationMinutes(parsed.durationMinutes, parsed.lastFixedDurationMinutes),
       intervalSound: parsed.intervalSound ?? 'Temple Bell',
     };
   } catch {

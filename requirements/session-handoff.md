@@ -1,6 +1,45 @@
 # Session Handoff
 
 ## Current status
+The timer validation and session-log guard fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review pass for timer defaults and runtime defects.
+
+## 2026-03-31 timer validation and log guards
+- Added and updated:
+  - `requirements/execplan-timer-validation-and-log-guards.md`
+  - `src/utils/timerSettingsNormalization.ts`
+  - `src/utils/timerValidation.ts`
+  - `src/utils/sessionLog.ts`
+  - `src/utils/timerSettingsApi.ts`
+  - `src/utils/storage.ts`
+  - `src/features/timer/timerReducer.ts`
+  - focused regression coverage in:
+    - `src/utils/timerValidation.test.ts`
+    - `src/utils/sessionLog.test.ts`
+    - `src/utils/timerSettingsApi.test.ts`
+    - `src/utils/storage.test.ts`
+- What correctness guards were fixed:
+  - fixed-duration validation now rejects missing or invalid current duration values instead of quietly treating `lastFixedDurationMinutes` as the active duration
+  - interval-bell validation now rejects non-finite values consistently
+  - auto-log duration derivation now clamps malformed non-finite values to `0` and still caps fixed sessions at the intended duration
+  - timer settings loaded from API or local storage now normalize legacy fixed-duration payloads to a safe positive duration before UI, reducer, or sync code uses them
+  - timer-settings equality now compares normalized meaning so legacy/partial payload shapes do not create false differences
+- Compatibility assumptions kept:
+  - legacy timer-settings payloads may omit `timerMode` and still normalize to fixed mode safely
+  - invalid or missing fixed-duration values recover from a valid `lastFixedDurationMinutes` when present, otherwise they fall back to the existing 20-minute default
+  - open-ended timer settings still normalize to `durationMinutes = null` while preserving the last meaningful fixed duration
+  - no backend timer-settings contract changes were required in this slice, so frontend normalization stayed compatible with the existing REST boundary
+- Remaining limitations:
+  - this slice did not add a broader review of timer UX wording, responsive flow polish, or offline queue behavior beyond the specific timer-settings equality and normalization guardrails touched here
+  - deeper timer-state-model cleanup is still reserved for the upcoming review/remediation prompts rather than this bounded correctness pass
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then review the timer-related flows and surrounding implementation thoroughly across functional correctness, UX clarity, persistence and recovery behavior, offline/sync safety, code quality, state-model cleanliness, and responsive behavior. Evaluate default timer ownership, active timer runtime and recovery, validation and session-log trustworthiness, timer-mode compatibility safety, and timer state-model maintainability. Do not implement code changes in this step. Write findings into docs/review-timer-defaults-and-runtime-defects.md and requirements/session-handoff.md, include the top findings plus the exact recommended next prompt, and if only review documentation changes are committed use a clear message such as docs(timer): review defaults and runtime defect remediation.`
+
+## Current status
 The active timer runtime and recovery fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to timer validation and session-log guard defects.
 
 ## 2026-03-31 active timer recovery

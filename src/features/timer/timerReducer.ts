@@ -3,6 +3,7 @@ import { getActiveSessionElapsedMilliseconds, getActiveSessionElapsedSeconds } f
 import type { SessionLog } from '../../types/sessionLog';
 import type { ActiveSession, TimerOutcome, TimerSettings, TimerValidationResult } from '../../types/timer';
 import { buildAutoLogEntry } from '../../utils/sessionLog';
+import { normalizeFixedDurationMinutes } from '../../utils/timerSettingsNormalization';
 import { validateTimerSettings } from '../../utils/timerValidation';
 
 export interface TimerState {
@@ -57,8 +58,18 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         };
       }
 
-      const fixedDurationMinutes = sessionSettings.durationMinutes ?? sessionSettings.lastFixedDurationMinutes;
-      const durationSeconds = sessionSettings.timerMode === 'fixed' ? Math.round(fixedDurationMinutes * 60) : null;
+      const fixedDurationMinutes = normalizeFixedDurationMinutes(
+        sessionSettings.timerMode,
+        sessionSettings.durationMinutes,
+        sessionSettings.lastFixedDurationMinutes
+      );
+      if (sessionSettings.timerMode === 'fixed' && fixedDurationMinutes === null) {
+        return {
+          ...state,
+        };
+      }
+      const durationSeconds =
+        sessionSettings.timerMode === 'fixed' && fixedDurationMinutes !== null ? Math.round(fixedDurationMinutes * 60) : null;
       const startedAt = new Date(action.nowMs).toISOString();
 
       return {

@@ -10,10 +10,11 @@ interface BuildSessionLogParams {
 
 export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, status }: BuildSessionLogParams): SessionLog {
   const intendedDurationSeconds = session.timerMode === 'fixed' ? session.intendedDurationSeconds : null;
+  const normalizedCompletedDurationSeconds = Number.isFinite(completedDurationSeconds) ? completedDurationSeconds : 0;
   const safeCompletedDurationSeconds =
     intendedDurationSeconds === null
-      ? Math.max(0, completedDurationSeconds)
-      : Math.max(0, Math.min(intendedDurationSeconds, completedDurationSeconds));
+      ? Math.max(0, normalizedCompletedDurationSeconds)
+      : Math.max(0, Math.min(intendedDurationSeconds, normalizedCompletedDurationSeconds));
 
   return {
     id: `${session.startedAtMs}-${session.timerMode}-${status}-${Math.round(safeCompletedDurationSeconds)}`,

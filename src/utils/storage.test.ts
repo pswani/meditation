@@ -70,6 +70,35 @@ describe('storage timer settings', () => {
     });
   });
 
+  it('normalizes legacy fixed timer settings with missing valid durations to the safe default duration', () => {
+    localStorage.setItem(
+      rawTimerSettingsKey,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: null,
+        lastFixedDurationMinutes: 0,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+
+    expect(loadTimerSettings()).toEqual({
+      timerMode: 'fixed',
+      durationMinutes: 20,
+      lastFixedDurationMinutes: 20,
+      meditationType: 'Vipassana',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
+  });
+
   it('returns null when stored timer settings payload is invalid', () => {
     localStorage.setItem(rawTimerSettingsKey, JSON.stringify({ durationMinutes: '20' }));
 
