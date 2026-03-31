@@ -1,6 +1,22 @@
 # Session Handoff
 
 ## Current status
+The timer defaults and runtime defects review is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review-remediation and verification pass.
+
+## 2026-03-31 timer defaults and runtime defects review
+- Added and updated:
+  - `docs/review-timer-defaults-and-runtime-defects.md`
+  - `requirements/session-handoff.md`
+- Top findings:
+  - no critical issues were identified
+  - important: online timer-settings hydration can still let stale local cached settings survive and re-queue over authoritative backend defaults when the backend happens to match app defaults
+  - important: timer-settings queue reconciliation currently replaces queued write metadata and bypasses timer-settings normalization for queued payloads, which weakens stale-write protection and leaves one compatibility gap in the sync path
+  - nice-to-have: Home quick start still uses the same “Resume Active Timer” label for paused and running sessions
+  - nice-to-have: `TimerContext` remains very dense, which raises future timer-remediation risk even though this review did not find a current blocker there
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-timer-defaults-and-runtime-defects.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan, implement the critical and important issues from docs/review-timer-defaults-and-runtime-defects.md while keeping scope bounded to the reviewed findings plus regression-proofing of the timer defects already fixed in this bundle, add the focused test coverage needed to lock those fixes in, verify Settings default timer persistence, Practice draft behavior, Home quick start and custom play shortcuts, active timer runtime and reload recovery, validation edge cases, and session-log correctness, run npm run typecheck, npm run lint, npm run test, npm run build, run any relevant backend build/test commands only if the reviewed fixes touch those contracts, update README.md if needed plus requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as fix(timer): address review findings and verify defect remediation.`
+
+## Current status
 The timer validation and session-log guard fix is complete on `codex/timer-defaults-runtime-defects`. The milestone can move to the review pass for timer defaults and runtime defects.
 
 ## 2026-03-31 timer validation and log guards
