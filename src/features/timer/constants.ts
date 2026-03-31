@@ -6,7 +6,9 @@ export const meditationTypes = meditationTypesCatalog as readonly MeditationType
 export const soundOptions = soundOptionsCatalog as readonly string[];
 
 export const defaultTimerSettings = {
+  timerMode: 'fixed',
   durationMinutes: 20,
+  lastFixedDurationMinutes: 20,
   meditationType: '',
   startSound: 'None',
   endSound: 'Temple Bell',

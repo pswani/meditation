@@ -137,6 +137,7 @@ class SummaryControllerTest {
         source,
         status,
         meditationType,
+        "fixed",
         endedAt.minusSeconds(completedDurationSeconds),
         endedAt,
         completedDurationSeconds,

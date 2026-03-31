@@ -5,7 +5,7 @@ import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { SessionLog } from '../types/sessionLog';
 import type { ManualLogInput, ManualLogValidationResult } from '../utils/manualLog';
-import { formatDurationLabel } from '../utils/sessionLog';
+import { formatDurationLabel, formatPlannedDurationLabel } from '../utils/sessionLog';
 
 function getDefaultTimestamp(): string {
   const now = new Date();
@@ -184,7 +184,7 @@ export default function HistoryPage() {
 
                     <div className="history-meta">
                       <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
-                      <span>Planned: {formatDurationLabel(entry.intendedDurationSeconds)}</span>
+                      <span>Planned: {formatPlannedDurationLabel(entry)}</span>
                     </div>
                   </div>
 
@@ -192,6 +192,7 @@ export default function HistoryPage() {
                     <div className="badge-row">
                       <span className={`pill ${entry.status === 'completed' ? 'ok' : 'warn'}`}>{entry.status}</span>
                       <span className={`pill source ${entry.source === 'manual log' ? 'manual' : 'auto'}`}>{entry.source}</span>
+                      {entry.timerMode === 'open-ended' ? <span className="pill mode">open-ended</span> : null}
                       {entry.playlistName ? <span className="pill playlist">playlist</span> : null}
                     </div>
                   </div>

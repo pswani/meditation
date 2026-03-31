@@ -56,12 +56,12 @@ import {
   createTimerSoundPlayer,
   getElapsedIntervalCueCount,
 } from './timerSoundPlayback';
+import { getActiveSessionElapsedSeconds } from './time';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
 
 interface TimerHydration {
   readonly activeSession: ActiveSession | null;
-  readonly isPaused: boolean;
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly isPlaylistRunPaused: boolean;
   readonly recoveryMessage: string | null;
@@ -77,11 +77,11 @@ interface TimerBootstrap {
   readonly skipInitialActivePlaylistPersist: boolean;
 }
 
-function serializeActiveTimerPersistence(activeSession: ActiveSession | null, isPaused: boolean): string {
+function serializeActiveTimerPersistence(activeSession: ActiveSession | null): string {
   return activeSession
     ? JSON.stringify({
         activeSession,
-        isPaused,
+        isPaused: activeSession.isPaused,
       })
     : 'null';
 }
@@ -97,7 +97,6 @@ function serializeActivePlaylistPersistence(activePlaylistRun: ActivePlaylistRun
 
 function recoverActiveSession(
   storedActiveSession: ActiveSession | null,
-  isPaused: boolean,
   nowMs: number
 ): { readonly activeSession: ActiveSession | null; readonly recoveryMessage: string | null } {
   if (!storedActiveSession) {
@@ -107,15 +106,19 @@ function recoverActiveSession(
     };
   }
 
-  if (isPaused) {
+  if (storedActiveSession.isPaused) {
     return {
       activeSession: storedActiveSession,
       recoveryMessage: 'Recovered an active timer from your previous app state.',
     };
   }
 
-  const remainingSeconds = Math.ceil((storedActiveSession.endAtMs - nowMs) / 1000);
-  if (remainingSeconds <= 0) {
+  const elapsedSeconds = getActiveSessionElapsedSeconds(storedActiveSession, nowMs);
+  if (
+    storedActiveSession.timerMode === 'fixed' &&
+    storedActiveSession.intendedDurationSeconds !== null &&
+    elapsedSeconds >= storedActiveSession.intendedDurationSeconds
+  ) {
     return {
       activeSession: null,
       recoveryMessage: 'Your previous active timer was cleared because it could not be safely resumed.',
@@ -125,7 +128,8 @@ function recoverActiveSession(
   return {
     activeSession: {
       ...storedActiveSession,
-      remainingSeconds,
+      elapsedSeconds,
+      lastResumedAtMs: nowMs,
     },
     recoveryMessage: 'Recovered an active timer from your previous app state.',
   };
@@ -172,7 +176,7 @@ function createTimerHydration(
   storedPlaylistRunState: ReturnType<typeof loadActivePlaylistRunState>,
   nowMs: number
 ): TimerHydration {
-  const timerRecovery = recoverActiveSession(storedTimerState?.activeSession ?? null, storedTimerState?.isPaused ?? false, nowMs);
+  const timerRecovery = recoverActiveSession(storedTimerState?.activeSession ?? null, nowMs);
   const playlistRecovery = recoverActivePlaylistRun(
     storedPlaylistRunState?.activePlaylistRun ?? null,
     storedPlaylistRunState?.isPaused ?? false,
@@ -181,7 +185,6 @@ function createTimerHydration(
 
   return {
     activeSession: timerRecovery.activeSession,
-    isPaused: timerRecovery.activeSession ? (storedTimerState?.isPaused ?? false) : false,
     activePlaylistRun: playlistRecovery.activePlaylistRun,
     isPlaylistRunPaused: playlistRecovery.activePlaylistRun ? (storedPlaylistRunState?.isPaused ?? false) : false,
     recoveryMessage: timerRecovery.recoveryMessage ?? playlistRecovery.recoveryMessage,
@@ -204,8 +207,8 @@ function createTimerBootstrap(nowMs: number): TimerBootstrap {
     playlists,
     hydration,
     skipInitialActiveTimerPersist:
-      serializeActiveTimerPersistence(hydration.activeSession, hydration.isPaused) ===
-      serializeActiveTimerPersistence(storedTimerState?.activeSession ?? null, storedTimerState?.isPaused ?? false),
+      serializeActiveTimerPersistence(hydration.activeSession) ===
+      serializeActiveTimerPersistence(storedTimerState?.activeSession ?? null),
     skipInitialActivePlaylistPersist:
       serializeActivePlaylistPersistence(hydration.activePlaylistRun, hydration.isPlaylistRunPaused) ===
       serializeActivePlaylistPersistence(
@@ -300,7 +303,6 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       };
     }
   );
-  const [isPaused, setIsPaused] = useState(bootstrap.hydration.isPaused);
   const [customPlays, setCustomPlays] = useState<CustomPlay[]>(bootstrap.customPlays);
   const [playlists, setPlaylists] = useState<Playlist[]>(bootstrap.playlists);
   const [activePlaylistRun, setActivePlaylistRun] = useState<ActivePlaylistRun | null>(bootstrap.hydration.activePlaylistRun);
@@ -320,6 +322,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const [timerSoundPlaybackMessage, setTimerSoundPlaybackMessage] = useState<string | null>(null);
+  const [activeSessionNowMs, setActiveSessionNowMs] = useState(() => Date.now());
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestCustomPlaysRef = useRef(customPlays);
   const latestPlaylistsRef = useRef(playlists);
@@ -363,72 +366,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const lastActiveSessionRef = useRef(state.activeSession);
   const handledSoundPlaybackMessageKeyRef = useRef<string | null>(null);
   const handledTimerOutcomeEndedAtRef = useRef<string | null>(null);
-  const activeSessionStartedAt = state.activeSession?.startedAt ?? null;
-  const activeSessionStartedAtMs = state.activeSession?.startedAtMs ?? null;
-  const activeSessionIntendedDurationSeconds = state.activeSession?.intendedDurationSeconds ?? null;
-  const activeSessionMeditationType = state.activeSession?.meditationType ?? null;
-  const activeSessionStartSound = state.activeSession?.startSound ?? null;
-  const activeSessionEndSound = state.activeSession?.endSound ?? null;
-  const activeSessionIntervalEnabled = state.activeSession?.intervalEnabled ?? null;
-  const activeSessionIntervalMinutes = state.activeSession?.intervalMinutes ?? null;
-  const activeSessionIntervalSound = state.activeSession?.intervalSound ?? null;
-  const activeSessionRemainingSeconds = state.activeSession?.remainingSeconds ?? null;
-  const activeSessionEndAtMs = state.activeSession?.endAtMs ?? null;
-  const isRecoveredRunningTimer =
-    !isPaused &&
-    activeSessionStartedAt !== null &&
-    bootstrap.hydration.activeSession?.startedAt === activeSessionStartedAt &&
-    bootstrap.hydration.activeSession?.endAtMs === activeSessionEndAtMs;
-
-  const persistedTimerRemainingSeconds = activeSessionStartedAt
-    ? isPaused || isRecoveredRunningTimer
-      ? activeSessionRemainingSeconds
-      : activeSessionIntendedDurationSeconds
-    : null;
+  const isPaused = state.activeSession?.isPaused ?? false;
   const activeTimerPersistence = useMemo(
     () =>
-      activeSessionStartedAt &&
-      activeSessionStartedAtMs !== null &&
-      activeSessionIntendedDurationSeconds !== null &&
-      activeSessionMeditationType !== null &&
-      activeSessionStartSound !== null &&
-      activeSessionEndSound !== null &&
-      activeSessionIntervalEnabled !== null &&
-      activeSessionIntervalMinutes !== null &&
-      activeSessionIntervalSound !== null &&
-      activeSessionEndAtMs !== null &&
-      persistedTimerRemainingSeconds !== null
+      state.activeSession
         ? {
-            activeSession: {
-              startedAt: activeSessionStartedAt,
-              startedAtMs: activeSessionStartedAtMs,
-              intendedDurationSeconds: activeSessionIntendedDurationSeconds,
-              remainingSeconds: persistedTimerRemainingSeconds,
-              meditationType: activeSessionMeditationType,
-              startSound: activeSessionStartSound,
-              endSound: activeSessionEndSound,
-              intervalEnabled: activeSessionIntervalEnabled,
-              intervalMinutes: activeSessionIntervalMinutes,
-              intervalSound: activeSessionIntervalSound,
-              endAtMs: activeSessionEndAtMs,
-            } satisfies ActiveSession,
-            isPaused,
+            activeSession: state.activeSession,
+            isPaused: state.activeSession.isPaused,
           }
         : null,
-    [
-      isPaused,
-      activeSessionStartedAt,
-      activeSessionStartedAtMs,
-      activeSessionIntendedDurationSeconds,
-      activeSessionMeditationType,
-      activeSessionStartSound,
-      activeSessionEndSound,
-      activeSessionIntervalEnabled,
-      activeSessionIntervalMinutes,
-      activeSessionIntervalSound,
-      persistedTimerRemainingSeconds,
-      activeSessionEndAtMs,
-    ]
+    [state.activeSession]
   );
   const activePlaylistRunId = activePlaylistRun?.runId ?? null;
   const activePlaylistId = activePlaylistRun?.playlistId ?? null;
@@ -534,16 +481,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!state.activeSession) {
-      setIsPaused(false);
-    }
-  }, [state.activeSession]);
-
-  useEffect(() => {
     if (!activePlaylistRun) {
       setIsPlaylistRunPaused(false);
     }
   }, [activePlaylistRun]);
+
+  useEffect(() => {
+    setActiveSessionNowMs(Date.now());
+  }, [state.activeSession, isPaused]);
 
   useEffect(() => {
     if (skipInitialTimerSettingsPersistRef.current) {
@@ -1194,7 +1139,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     }
 
     const intervalId = window.setInterval(() => {
-      dispatch({ type: 'SYNC_TICK', nowMs: Date.now() });
+      const nowMs = Date.now();
+      setActiveSessionNowMs(nowMs);
+      dispatch({ type: 'SYNC_TICK', nowMs });
     }, 500);
 
     return () => {
@@ -1220,7 +1167,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     const activeSession = state.activeSession;
     const soundState = activeSessionSoundStateRef.current;
-    const nowMs = Date.now();
+    const nowMs = activeSessionNowMs;
 
     if (activeSession) {
       const isRecoveredSession = activeSession.startedAt === initialRecoveredActiveSessionIdRef.current;
@@ -1229,7 +1176,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         soundState.sessionId = activeSession.startedAt;
         soundState.startHandled = isRecoveredSession;
         soundState.lastIntervalCueCount = isRecoveredSession
-          ? getElapsedIntervalCueCount(activeSession, nowMs, isPaused)
+          ? getElapsedIntervalCueCount(activeSession, nowMs)
           : 0;
         handledSoundPlaybackMessageKeyRef.current = null;
         setTimerSoundPlaybackMessage(null);
@@ -1245,7 +1192,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
       // Interval playback follows actual elapsed session milestones so pause/resume and timer drift do not double-fire cues.
       if (activeSession.intervalEnabled && !isPaused) {
-        const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs, isPaused);
+        const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs);
         if (elapsedIntervalCueCount > soundState.lastIntervalCueCount) {
           soundState.lastIntervalCueCount = elapsedIntervalCueCount;
           void playTimerSound(activeSession.intervalSound, 'interval');
@@ -1275,7 +1222,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     handledTimerOutcomeEndedAtRef.current = state.lastOutcome.endedAt;
     void playTimerSound(lastActiveSessionRef.current.endSound, 'end');
-  }, [isPaused, state.activeSession, state.lastOutcome]);
+  }, [activeSessionNowMs, isPaused, state.activeSession, state.lastOutcome]);
 
   useEffect(() => {
     if (!activePlaylistRun || isPlaylistRunPaused) {
@@ -1753,20 +1700,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         dispatch({ type: 'START_SESSION', nowMs: Date.now() });
-        setIsPaused(false);
         return true;
       },
       pauseSession: () => {
         dispatch({ type: 'PAUSE_SESSION', nowMs: Date.now() });
-        setIsPaused(true);
       },
       resumeSession: () => {
         dispatch({ type: 'RESUME_SESSION', nowMs: Date.now() });
-        setIsPaused(false);
       },
       endSessionEarly: () => {
         dispatch({ type: 'END_EARLY', nowMs: Date.now() });
-        setIsPaused(false);
       },
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
       clearTimerSoundPlaybackMessage: () => {

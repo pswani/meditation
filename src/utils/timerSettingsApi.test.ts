@@ -21,6 +21,7 @@ describe('timer settings api boundary', () => {
         status: 200,
         json: async () => ({
           id: 'default',
+          timerMode: 'fixed',
           durationMinutes: 24,
           meditationType: 'Vipassana',
           startSound: 'None',
@@ -37,7 +38,9 @@ describe('timer settings api boundary', () => {
     expect(TIMER_SETTINGS_ENDPOINT).toBe('/api/settings/timer');
     expect(buildTimerSettingsUrl()).toBe('/api/settings/timer');
     expect(buildTimerSettingsUrl('http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/settings/timer');
+    expect(settings.timerMode).toBe('fixed');
     expect(settings.durationMinutes).toBe(24);
+    expect(settings.lastFixedDurationMinutes).toBe(24);
     expect(settings.meditationType).toBe('Vipassana');
   });
 
@@ -47,7 +50,9 @@ describe('timer settings api boundary', () => {
       status: 200,
       json: async () => ({
         id: 'default',
+        timerMode: 'fixed',
         durationMinutes: 30,
+        lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
         endSound: 'Temple Bell',
@@ -61,7 +66,9 @@ describe('timer settings api boundary', () => {
 
     const saved = await persistTimerSettingsToApi(
       {
+        timerMode: 'fixed',
         durationMinutes: 30,
+        lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
         startSound: 'Soft Chime',
         endSound: 'Temple Bell',
@@ -78,7 +85,9 @@ describe('timer settings api boundary', () => {
     expect(saved.intervalMinutes).toBe(10);
     expect(saved.intervalSound).toBe('Wood Block');
     expect(areTimerSettingsEqual(saved, {
+      timerMode: 'fixed',
       durationMinutes: 30,
+      lastFixedDurationMinutes: 30,
       meditationType: 'Ajapa',
       startSound: 'Soft Chime',
       endSound: 'Temple Bell',
@@ -95,5 +104,34 @@ describe('timer settings api boundary', () => {
         }),
       })
     );
+  });
+
+  it('normalizes open-ended timer settings responses with a last fixed duration fallback', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'default',
+          timerMode: 'open-ended',
+          durationMinutes: null,
+          lastFixedDurationMinutes: 18,
+          meditationType: 'Vipassana',
+          startSound: 'Soft Chime',
+          endSound: 'Temple Bell',
+          intervalEnabled: true,
+          intervalMinutes: 9,
+          intervalSound: 'Wood Block',
+        }),
+      })
+    );
+
+    const settings = await loadTimerSettingsFromApi();
+
+    expect(settings.timerMode).toBe('open-ended');
+    expect(settings.durationMinutes).toBeNull();
+    expect(settings.lastFixedDurationMinutes).toBe(18);
+    expect(settings.intervalEnabled).toBe(true);
   });
 });

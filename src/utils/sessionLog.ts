@@ -9,13 +9,20 @@ interface BuildSessionLogParams {
 }
 
 export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, status }: BuildSessionLogParams): SessionLog {
+  const intendedDurationSeconds = session.timerMode === 'fixed' ? session.intendedDurationSeconds : null;
+  const safeCompletedDurationSeconds =
+    intendedDurationSeconds === null
+      ? Math.max(0, completedDurationSeconds)
+      : Math.max(0, Math.min(intendedDurationSeconds, completedDurationSeconds));
+
   return {
-    id: `${session.startedAtMs}-${status}-${Math.round(completedDurationSeconds)}`,
+    id: `${session.startedAtMs}-${session.timerMode}-${status}-${Math.round(safeCompletedDurationSeconds)}`,
     startedAt: session.startedAt,
     endedAt: endedAt.toISOString(),
     meditationType: session.meditationType,
-    intendedDurationSeconds: session.intendedDurationSeconds,
-    completedDurationSeconds: Math.max(0, Math.min(session.intendedDurationSeconds, completedDurationSeconds)),
+    timerMode: session.timerMode,
+    intendedDurationSeconds,
+    completedDurationSeconds: safeCompletedDurationSeconds,
     status,
     source: 'auto log',
     startSound: session.startSound,
@@ -50,6 +57,7 @@ export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolea
     left.startedAt === right.startedAt &&
     left.endedAt === right.endedAt &&
     left.meditationType === right.meditationType &&
+    left.timerMode === right.timerMode &&
     left.intendedDurationSeconds === right.intendedDurationSeconds &&
     left.completedDurationSeconds === right.completedDurationSeconds &&
     left.status === right.status &&
@@ -66,4 +74,12 @@ export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolea
     left.playlistItemPosition === right.playlistItemPosition &&
     left.playlistItemCount === right.playlistItemCount
   );
+}
+
+export function formatPlannedDurationLabel(entry: Pick<SessionLog, 'timerMode' | 'intendedDurationSeconds'>): string {
+  if (entry.timerMode === 'open-ended' || entry.intendedDurationSeconds === null) {
+    return 'Open-ended';
+  }
+
+  return formatDurationLabel(entry.intendedDurationSeconds);
 }

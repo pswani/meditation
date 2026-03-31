@@ -14,7 +14,8 @@ interface SessionLogApiResponse {
   readonly startedAt: string;
   readonly endedAt: string;
   readonly meditationType: SessionLog['meditationType'];
-  readonly intendedDurationSeconds: number;
+  readonly timerMode?: SessionLog['timerMode'];
+  readonly intendedDurationSeconds: number | null;
   readonly completedDurationSeconds: number;
   readonly status: SessionLog['status'];
   readonly source: SessionLog['source'];
@@ -46,7 +47,8 @@ function isSessionLogApiResponse(value: unknown): value is SessionLogApiResponse
     isValidIsoDate(candidate.startedAt) &&
     isValidIsoDate(candidate.endedAt) &&
     typeof candidate.meditationType === 'string' &&
-    typeof candidate.intendedDurationSeconds === 'number' &&
+    (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
+    (typeof candidate.intendedDurationSeconds === 'number' || candidate.intendedDurationSeconds === null) &&
     typeof candidate.completedDurationSeconds === 'number' &&
     (candidate.status === 'completed' || candidate.status === 'ended early') &&
     (candidate.source === 'auto log' || candidate.source === 'manual log') &&
@@ -80,6 +82,7 @@ function normalizeSessionLogPayload(payload: unknown): SessionLog {
     startedAt: payload.startedAt,
     endedAt: payload.endedAt,
     meditationType: payload.meditationType,
+    timerMode: payload.timerMode ?? 'fixed',
     intendedDurationSeconds: payload.intendedDurationSeconds,
     completedDurationSeconds: payload.completedDurationSeconds,
     status: payload.status,

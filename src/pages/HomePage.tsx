@@ -50,6 +50,7 @@ export default function HomePage() {
   const topActiveSankalpa = useMemo(() => selectTopActiveSankalpaProgress(sankalpaProgressEntries), [sankalpaProgressEntries]);
   const favoriteCustomPlays = useMemo(() => customPlays.filter((entry) => entry.favorite).slice(0, 3), [customPlays]);
   const favoritePlaylists = useMemo(() => playlists.filter((entry) => entry.favorite).slice(0, 3), [playlists]);
+  const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
 
   function quickStart() {
     if (activeSession) {
@@ -70,7 +71,10 @@ export default function HomePage() {
 
     navigate('/practice', {
       state: {
-        entryMessage: 'Quick start needs valid defaults. Review duration and meditation type in timer setup.',
+        entryMessage:
+          settings.timerMode === 'open-ended'
+            ? 'Quick start needs valid open-ended defaults. Review meditation type and interval settings in timer setup.'
+            : 'Quick start needs valid defaults. Review duration, meditation type, and any interval settings in timer setup.',
       },
     });
   }
@@ -128,7 +132,9 @@ export default function HomePage() {
         <p className="section-subtitle">
           {isSettingsLoading
             ? 'Loading timer defaults...'
-            : `Default timer: ${settings.durationMinutes} min · ${settings.meditationType || 'select meditation type'}`}
+            : `Default timer: ${settings.timerMode === 'open-ended' ? 'Open-ended' : `${fixedDurationMinutes} min`} · ${
+                settings.meditationType || 'select meditation type'
+              }`}
         </p>
         <div className="timer-actions">
           <button type="button" onClick={quickStart} disabled={isSettingsLoading}>

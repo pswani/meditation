@@ -5,15 +5,17 @@ import type { ActiveSession } from '../types/timer';
 const activeSession: ActiveSession = {
   startedAt: '2026-03-23T10:00:00.000Z',
   startedAtMs: Date.parse('2026-03-23T10:00:00.000Z'),
+  timerMode: 'fixed',
   intendedDurationSeconds: 1200,
-  remainingSeconds: 400,
+  elapsedSeconds: 800,
+  isPaused: true,
+  lastResumedAtMs: null,
   meditationType: 'Ajapa',
   startSound: 'None',
   endSound: 'Temple Bell',
   intervalEnabled: true,
   intervalMinutes: 5,
   intervalSound: 'Soft Chime',
-  endAtMs: Date.parse('2026-03-23T10:20:00.000Z'),
 };
 
 describe('buildAutoLogEntry', () => {
@@ -51,6 +53,23 @@ describe('buildAutoLogEntry', () => {
     });
 
     expect(log.completedDurationSeconds).toBe(0);
+  });
+
+  it('creates open-ended auto log entries without a planned duration', () => {
+    const log = buildAutoLogEntry({
+      session: {
+        ...activeSession,
+        timerMode: 'open-ended',
+        intendedDurationSeconds: null,
+      },
+      endedAt: new Date('2026-03-23T10:12:00.000Z'),
+      completedDurationSeconds: 720,
+      status: 'completed',
+    });
+
+    expect(log.timerMode).toBe('open-ended');
+    expect(log.intendedDurationSeconds).toBeNull();
+    expect(log.completedDurationSeconds).toBe(720);
   });
 });
 

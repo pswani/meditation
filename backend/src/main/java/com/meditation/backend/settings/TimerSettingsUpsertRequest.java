@@ -1,7 +1,9 @@
 package com.meditation.backend.settings;
 
 public record TimerSettingsUpsertRequest(
-    int durationMinutes,
+    String timerMode,
+    Integer durationMinutes,
+    Integer lastFixedDurationMinutes,
     String meditationType,
     String startSound,
     String endSound,

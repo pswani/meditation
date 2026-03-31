@@ -8,7 +8,9 @@ export const TIMER_SETTINGS_ENDPOINT = buildApiPath(TIMER_SETTINGS_PATH);
 
 interface TimerSettingsApiResponse {
   readonly id?: string;
-  readonly durationMinutes: number;
+  readonly timerMode?: TimerSettings['timerMode'];
+  readonly durationMinutes: number | null;
+  readonly lastFixedDurationMinutes?: number;
   readonly meditationType: string;
   readonly startSound: string;
   readonly endSound: string;
@@ -25,7 +27,9 @@ function isTimerSettingsApiResponse(value: unknown): value is TimerSettingsApiRe
 
   const candidate = value as Record<string, unknown>;
   return (
-    typeof candidate.durationMinutes === 'number' &&
+    (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
+    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null) &&
+    (typeof candidate.lastFixedDurationMinutes === 'number' || typeof candidate.lastFixedDurationMinutes === 'undefined') &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
@@ -40,8 +44,19 @@ function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
     throw new Error('Timer settings response is invalid.');
   }
 
+  const timerMode = payload.timerMode ?? 'fixed';
+  const lastFixedDurationMinutes =
+    typeof payload.lastFixedDurationMinutes === 'number'
+      ? payload.lastFixedDurationMinutes
+      : typeof payload.durationMinutes === 'number'
+        ? payload.durationMinutes
+        : 20;
+  const durationMinutes = timerMode === 'open-ended' ? null : payload.durationMinutes ?? lastFixedDurationMinutes;
+
   return {
-    durationMinutes: payload.durationMinutes,
+    timerMode,
+    durationMinutes,
+    lastFixedDurationMinutes,
     meditationType: payload.meditationType as TimerSettings['meditationType'],
     startSound: payload.startSound,
     endSound: payload.endSound,
@@ -57,7 +72,9 @@ export function buildTimerSettingsUrl(apiBaseUrl?: string): string {
 
 export function areTimerSettingsEqual(left: TimerSettings, right: TimerSettings): boolean {
   return (
+    left.timerMode === right.timerMode &&
     left.durationMinutes === right.durationMinutes &&
+    left.lastFixedDurationMinutes === right.lastFixedDurationMinutes &&
     left.meditationType === right.meditationType &&
     left.startSound === right.startSound &&
     left.endSound === right.endSound &&

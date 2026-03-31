@@ -1,4 +1,4 @@
-import type { MeditationType } from './timer';
+import type { MeditationType, TimerMode } from './timer';
 
 export type SessionLogStatus = 'completed' | 'ended early';
 export type SessionLogSource = 'auto log' | 'manual log';
@@ -8,7 +8,8 @@ export interface SessionLog {
   readonly startedAt: string;
   readonly endedAt: string;
   readonly meditationType: MeditationType;
-  readonly intendedDurationSeconds: number;
+  readonly timerMode: TimerMode;
+  readonly intendedDurationSeconds: number | null;
   readonly completedDurationSeconds: number;
   readonly status: SessionLogStatus;
   readonly source: SessionLogSource;

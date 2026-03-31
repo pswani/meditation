@@ -10,6 +10,7 @@ const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 
 const validSettings: TimerSettings = {
+  timerMode: 'fixed',
   durationMinutes: 10,
   meditationType: 'Vipassana',
   startSound: 'None',
@@ -50,7 +51,7 @@ function PersistenceHarness() {
       <button type="button" onClick={() => pausePlaylistRun()}>
         Pause Playlist Run
       </button>
-      <p data-testid="timer-remaining">{activeSession?.remainingSeconds ?? 'none'}</p>
+      <p data-testid="timer-elapsed">{activeSession?.elapsedSeconds ?? 'none'}</p>
       <p data-testid="playlist-remaining">{activePlaylistRun?.currentItemRemainingSeconds ?? 'none'}</p>
     </div>
   );
@@ -99,7 +100,7 @@ describe('TimerProvider persistence behavior', () => {
 
     const pausedPayload = JSON.parse(String(timerPersistenceCalls.at(-1)?.[1]));
     expect(pausedPayload.isPaused).toBe(true);
-    expect(pausedPayload.activeSession.remainingSeconds).toBeLessThan(600);
+    expect(pausedPayload.activeSession.elapsedSeconds).toBeGreaterThan(0);
   });
 
   it('does not rewrite active playlist persistence on every countdown tick', async () => {

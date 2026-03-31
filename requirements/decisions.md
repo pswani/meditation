@@ -2,6 +2,43 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer verification decisions
+- Keep the prompt 04 verification slice focused on high-signal automated coverage instead of adding a separate browser-verification layer:
+  - timer-time helper tests for open-ended elapsed and paused clock behavior
+  - Practice-page regression coverage for restoring the last fixed duration after switching back from open-ended mode
+  - timer-settings API normalization coverage for `durationMinutes = null` plus `lastFixedDurationMinutes`
+  - stateful app-shell coverage for backend-backed manual-log rehydration into Summary and Sankalpa
+- Make the backend-backed manual-log app journeys use explicit `session timestamp` values that are safely inside the Sankalpa window so the session-count assertions remain deterministic across timezone conversion behavior and fresh mounts.
+
+### 2026-03-30 open-ended timer review-fix decisions
+- Model open-ended timer defaults at the timer-settings boundary with:
+  - `durationMinutes = null` when the current default mode is open-ended
+  - `lastFixedDurationMinutes` as the explicit fallback used when the user switches back to fixed mode
+- Keep the backend storage schema unchanged for this fix slice by continuing to persist the last fixed duration in the existing timer-settings duration column, while shaping API requests and responses so open-ended mode no longer depends on pretending it currently has a planned duration.
+- Make quick-start guidance and end-session confirmation labels mode-aware so open-ended users see language about valid open-ended defaults and ending a session, not fixed-duration-only wording.
+
+### 2026-03-30 open-ended timer implementation decisions
+- Represent open-ended timer sessions explicitly with `timerMode = "open-ended"` across timer settings, active-session state, API payloads, H2 persistence, and `session log` records instead of inferring the mode indirectly.
+- Keep the saved fixed `durationMinutes` value even when the user switches timer settings to open-ended mode so returning to fixed duration restores the last meaningful duration instead of forcing re-entry.
+- Treat a manually ended open-ended timer session as `completed`, not `ended early`, because that flow has no planned finish time to leave early.
+- Store open-ended `session log` entries with `intendedDurationSeconds = null` and preserve summary, history, and `sankalpa` compatibility by continuing to calculate progress from `completedDurationSeconds`.
+- Keep interval bells available in open-ended mode and define them as repeated elapsed-time milestones instead of disabling them or tying them to a missing end time.
+
+### 2026-03-30 open-ended timer branch setup decisions
+- Treat `main` as the parent branch for the `open-ended-timer-feature-bundle-with-branching` milestone, even though a different working branch was present when the prompt sequence began.
+- Create and use the local feature branch `codex/open-ended-timer` for the milestone work before merging back into `main`.
+- Keep this milestone bounded to the open-ended timer slice:
+  - open-ended timer setup and active-session behavior
+  - session-log and history integration needed for correctness
+  - milestone review, remediation, verification, and merge-back
+- Preserve the checked-in prompt execution order:
+  - `00-create-branch`
+  - `01-implement-open-ended-timer`
+  - `02-review-open-ended-timer`
+  - `03-fix-open-ended-timer`
+  - `04-test-open-ended-timer`
+  - `99-merge-branch`
+
 ### 2026-03-30 mac mini production control decisions
 - Add one combined Mac Mini production control script for:
   - `start`

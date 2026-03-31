@@ -14,7 +14,9 @@
 - favorites
 
 ## Timer Setup
-- duration
+- timer mode choice
+- duration for fixed mode
+- open-ended hint state
 - meditation type
 - sounds
 - interval controls
@@ -24,12 +26,13 @@
 - countdown or elapsed display
 - pause
 - resume
-- end
+- end early or end session
 
 ## History
 - recent logs
 - filters
 - manual vs auto badges
+- open-ended mode badge and planned-duration label handling
 
 ## Goals
 - active sankalpas

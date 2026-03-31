@@ -1,6 +1,140 @@
 # Session Handoff
 
 ## Current status
+The open-ended timer milestone is now fully verified on `codex/open-ended-timer`. The next step is to merge the feature branch back into `main` locally.
+
+## 2026-03-30 open-ended timer verification
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-verification.md`
+  - `src/features/timer/time.test.ts`
+  - `src/pages/PracticePage.test.tsx`
+  - `src/utils/timerSettingsApi.test.ts`
+  - `src/App.test.tsx`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- Scenarios covered:
+  - open-ended elapsed clock progression while running
+  - open-ended pause behavior preserving elapsed time
+  - fixed-session remaining-time regression coverage
+  - switching from open-ended mode back to fixed restores the last fixed duration and fixed start CTA
+  - timer settings API normalization for open-ended responses using `durationMinutes = null` and `lastFixedDurationMinutes`
+  - backend-backed manual-log save, fresh-mount rehydration, Summary visibility, and Sankalpa progress visibility with deterministic timestamps
+- Confidence level:
+  - high for the open-ended timer setup, runtime clock behavior, manual-log integration, and fixed-duration regression surfaces covered by the current automated suite
+- Remaining risks or limitations:
+  - this prompt relied on focused automated verification rather than spinning up a live local browser session, so any remaining risk is mostly in layout polish or browser-only interaction nuances outside the tested flows
+  - the earlier review’s nice-to-have shell and recent-activity consistency improvements are still open and were intentionally left out of this verification-only slice
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, requirements/session-handoff.md, requirements/decisions.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, and docs/screen-inventory.md. Then inspect the current git state, confirm the active feature branch is codex/open-ended-timer and the recorded parent branch is main, verify there are no unintended uncommitted changes, rerun any merge-relevant verification only if needed, merge codex/open-ended-timer back into main locally with a normal merge that preserves history, resolve conflicts safely if they appear, update requirements/decisions.md and requirements/session-handoff.md with the merge outcome and feature completion summary, include the milestone prompt files as part of the final commit, and commit any final merge-related documentation updates with a clear message such as chore(branch): merge open-ended timer feature branch into parent.`
+
+## Current status
+The important open-ended timer review findings are now fixed on `codex/open-ended-timer`. The milestone can move to a thorough verification and regression pass.
+
+## 2026-03-30 open-ended timer review fixes
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-review-fixes.md`
+  - frontend timer settings modeling, storage, API, and mode-selection flows
+  - backend timer settings request/response validation and controller tests
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- Issues fixed:
+  - open-ended timer settings no longer require a planned duration at the API boundary; the contract now uses `durationMinutes = null` plus an explicit `lastFixedDurationMinutes` fallback
+  - switching back to fixed mode preserves the last meaningful fixed duration without depending on hidden open-ended duration state
+  - quick-start validation guidance is now mode-aware for open-ended defaults
+  - the active-session confirmation dialog now uses open-ended-specific accessible labeling instead of “end early” wording
+- Remaining limitations:
+  - the review’s nice-to-have shell and recent-activity context improvements are still open
+  - backend persistence still stores the last fixed duration in the existing timer-settings duration column; the API contract is clean now, but the internal DB shape is still optimized for a bounded migration-free fix
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for a thorough verification pass of the open-ended timer feature. Test timer setup, active session, pause/resume, manual end, session-log creation, history display, backend/API persistence, and any current offline/sync implications; regression-test the fixed-duration timer flow; strengthen focused tests where needed; run npm run typecheck, npm run lint, npm run test, npm run build, and the relevant backend tests; update README.md if needed plus requirements/decisions.md and requirements/session-handoff.md; and commit with a clear message such as test(timer): verify open-ended timer flow and regressions.`
+
+## Current status
+The open-ended timer review pass is complete. No critical issues were found; the next slice should fix the important issues documented in `docs/review-open-ended-timer.md`.
+
+## 2026-03-30 open-ended timer review
+- Added and updated:
+  - `docs/review-open-ended-timer.md`
+  - `requirements/session-handoff.md`
+- Top findings:
+  - no critical issues were identified
+  - important: backend timer settings still require a positive fixed duration even when `timerMode` is open-ended, which weakens the contract cleanliness of the new mode
+  - important: a few user-facing messages and labels still use fixed-duration or “end early” language in open-ended flows
+  - nice-to-have: shell and recent-activity surfaces could show open-ended mode more consistently outside History
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-open-ended-timer.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan and implement the critical and important issues from docs/review-open-ended-timer.md while keeping scope bounded to the open-ended timer feature and its immediate integration points. Preserve calm responsive UX, add focused tests for the changed behavior, run npm run typecheck, npm run lint, npm run test, npm run build, and the relevant backend tests, update requirements/decisions.md plus requirements/session-handoff.md, and commit with a clear message such as fix(timer): refine open-ended meditation timer behavior.`
+
+## Current status
+Open-ended timer mode is now implemented on `codex/open-ended-timer`. The milestone can move to a focused review pass before any follow-up fixes.
+
+## 2026-03-30 open-ended timer implementation
+- Added and updated:
+  - `requirements/execplan-open-ended-timer-feature-bundle.md`
+  - `docs/product-requirements.md`
+  - `docs/ux-spec.md`
+  - `docs/screen-inventory.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+  - frontend timer state, persistence, API, and page files needed for open-ended mode
+  - backend timer settings and `session log` models, services, tests, and Flyway migration support
+- What was implemented:
+  - a clear timer mode choice between fixed duration and open-ended in Practice and Settings
+  - open-ended active sessions with elapsed-time display, pause/resume support, and manual end flow
+  - repeated interval-bell behavior for open-ended sessions using elapsed-time milestones
+  - `session log` creation that records actual completed duration and stores open-ended sessions with `timerMode = open-ended`
+  - History representation that shows open-ended entries without inventing a planned duration
+  - timer settings and backend `session log` contracts extended cleanly for the new mode
+- How open-ended mode behaves:
+  - the user selects open-ended mode in timer setup or settings
+  - no fixed countdown is shown during the active session; the clock displays elapsed time instead
+  - pause/resume preserves elapsed-duration correctness
+  - ending the session creates a `completed` auto log with the actual elapsed duration
+  - interval bells remain optional and repeat on the configured cadence while the session is active
+- Limitations and prototype notes:
+  - timer settings still persist a fixed `durationMinutes` value even while open-ended mode is selected so the fixed-duration preference is preserved for later use
+  - backend verification required `mvn -Dmaven.repo.local=../local-data/m2 clean test` after stale build output caused a plain `test` run to miss the new Flyway migration
+  - this slice does not redesign playlist flows, custom play flows, or offline/sync behavior beyond the timer-mode compatibility already present in the app
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 clean test`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then review the implemented open-ended timer feature for UX clarity, timer behavior, data-model cleanliness, code quality, responsive behavior, and consistency with the rest of the timer flow. Do not make code changes. Write critical issues, important issues, and nice-to-have improvements with recommended fixes into docs/review-open-ended-timer.md and requirements/session-handoff.md, and commit the review docs if appropriate with a clear message such as docs(timer): review open-ended timer experience.`
+
+## Current status
+The open-ended timer milestone branch has been prepared from `main`. Feature work should continue on `codex/open-ended-timer` using the checked-in prompt sequence.
+
+## 2026-03-30 open-ended timer branch setup
+- Parent branch:
+  - `main`
+- Feature branch:
+  - `codex/open-ended-timer`
+- Working tree status at branch setup:
+  - clean and ready for feature work
+- Feature scope:
+  - open-ended timer setup support
+  - active open-ended session behavior
+  - elapsed-time display
+  - pause, resume, and manual end behavior
+  - trustworthy `session log` creation using actual elapsed duration
+  - any minimal history or backend integration needed for correctness
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for implementing an open-ended meditation timer, implement the bounded open-ended timer feature with focused tests and required verification commands, update the relevant docs plus decisions/session-handoff, and commit with a clear message such as feat(timer): add open-ended meditation timer mode.`
+
+## Current status
 Mac Mini production operations now include one combined control script for clean start, stop, restart, status checks, and backend log tailing across both `nginx` and the backend `launchd` service.
 
 ## 2026-03-30 mac mini production control script

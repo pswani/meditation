@@ -4,7 +4,7 @@ import CustomPlayManager from '../features/customPlays/CustomPlayManager';
 import { meditationTypes, soundOptions } from '../features/timer/constants';
 import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
-import type { MeditationType, TimerSettings } from '../types/timer';
+import type { MeditationType, TimerMode, TimerSettings } from '../types/timer';
 import { getIntervalBellCount } from '../utils/timerValidation';
 
 type SetupField = 'durationMinutes' | 'meditationType' | 'intervalMinutes';
@@ -44,10 +44,11 @@ export default function PracticePage() {
     meditationType: false,
     intervalMinutes: false,
   });
+  const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
 
   const intervalCount = useMemo(
-    () => (settings.intervalEnabled ? getIntervalBellCount(settings.durationMinutes, settings.intervalMinutes) : 0),
-    [settings.durationMinutes, settings.intervalEnabled, settings.intervalMinutes]
+    () => (settings.intervalEnabled && settings.timerMode === 'fixed' ? getIntervalBellCount(fixedDurationMinutes, settings.intervalMinutes) : 0),
+    [fixedDurationMinutes, settings.intervalEnabled, settings.intervalMinutes, settings.timerMode]
   );
 
   const visibleErrors = useMemo(
@@ -86,6 +87,14 @@ export default function PracticePage() {
     });
   }
 
+  function updateDurationMinutes(value: number) {
+    setSettings({
+      ...settings,
+      durationMinutes: value,
+      lastFixedDurationMinutes: value > 0 ? value : settings.lastFixedDurationMinutes,
+    });
+  }
+
   function markTouched(field: SetupField) {
     setTouched((current) => ({
       ...current,
@@ -101,10 +110,28 @@ export default function PracticePage() {
     }
   }
 
+  function selectTimerMode(timerMode: TimerMode) {
+    if (timerMode === 'fixed') {
+      setSettings({
+        ...settings,
+        timerMode: 'fixed',
+        durationMinutes: settings.durationMinutes ?? settings.lastFixedDurationMinutes,
+      });
+      return;
+    }
+
+    setSettings({
+      ...settings,
+      timerMode: 'open-ended',
+      durationMinutes: null,
+      lastFixedDurationMinutes: fixedDurationMinutes,
+    });
+  }
+
   return (
     <section className="page-card timer-setup">
       <h2 className="page-title">Timer Setup</h2>
-      <p className="page-description">Set duration and meditation type, then start a calm, focused session.</p>
+      <p className="page-description">Choose a fixed-duration or open-ended session, then start with a calm, focused setup.</p>
 
       {entryMessage ? (
         <div className="status-banner warn" role="status">
@@ -151,29 +178,66 @@ export default function PracticePage() {
         </div>
       ) : null}
 
-      <div className="form-grid">
-        <label>
-          <span>Duration (minutes)</span>
+      <section className="timer-mode-panel" aria-label="Timer mode">
+        <label className={`timer-mode-option ${settings.timerMode === 'fixed' ? 'selected' : ''}`}>
           <input
-            type="number"
-            min={1}
-            value={settings.durationMinutes}
+            type="radio"
+            name="timer-mode"
+            checked={settings.timerMode === 'fixed'}
             disabled={areTimerSettingsControlsDisabled}
-            aria-invalid={Boolean(visibleErrors.durationMinutes)}
-            aria-describedby={durationMessageId}
-            onChange={(event) => update('durationMinutes', Number(event.target.value))}
-            onBlur={() => markTouched('durationMinutes')}
+            onChange={() => selectTimerMode('fixed')}
           />
-          {visibleErrors.durationMinutes ? (
-            <small id={durationMessageId} className="error-text">
-              {visibleErrors.durationMinutes}
-            </small>
-          ) : (
-            <small id={durationMessageId} className="hint-text">
-              Choose total session duration.
-            </small>
-          )}
+          <span className="timer-mode-copy">
+            <strong>Fixed Duration</strong>
+            <small>Choose a total time and let the timer complete on its own.</small>
+          </span>
         </label>
+
+        <label className={`timer-mode-option ${settings.timerMode === 'open-ended' ? 'selected' : ''}`}>
+          <input
+            type="radio"
+            name="timer-mode"
+            checked={settings.timerMode === 'open-ended'}
+            disabled={areTimerSettingsControlsDisabled}
+            onChange={() => selectTimerMode('open-ended')}
+          />
+          <span className="timer-mode-copy">
+            <strong>Open-Ended</strong>
+            <small>Start without an end time and finish manually when the session feels complete.</small>
+          </span>
+        </label>
+      </section>
+
+      <div className="form-grid">
+        {settings.timerMode === 'fixed' ? (
+          <label>
+            <span>Duration (minutes)</span>
+            <input
+              type="number"
+              min={1}
+              value={fixedDurationMinutes}
+              disabled={areTimerSettingsControlsDisabled}
+              aria-invalid={Boolean(visibleErrors.durationMinutes)}
+              aria-describedby={durationMessageId}
+              onChange={(event) => updateDurationMinutes(Number(event.target.value))}
+              onBlur={() => markTouched('durationMinutes')}
+            />
+            {visibleErrors.durationMinutes ? (
+              <small id={durationMessageId} className="error-text">
+                {visibleErrors.durationMinutes}
+              </small>
+            ) : (
+              <small id={durationMessageId} className="hint-text">
+                Choose total session duration.
+              </small>
+            )}
+          </label>
+        ) : (
+          <div className="mode-hint-card">
+            <strong>Open-ended session</strong>
+            <p className="section-subtitle">This timer will show elapsed time and continue until you choose End Session.</p>
+          </div>
+        )}
 
         <label>
           <span>Meditation type</span>
@@ -277,14 +341,16 @@ export default function PracticePage() {
                     />
                     {visibleErrors.intervalMinutes ? (
                       <small id={intervalMessageId} className="error-text">
-                        {visibleErrors.intervalMinutes}
-                      </small>
-                    ) : (
-                      <small id={intervalMessageId} className="hint-text">
-                        {intervalCount} interval bell{intervalCount === 1 ? '' : 's'} will occur before session end.
-                      </small>
-                    )}
-                  </label>
+                    {visibleErrors.intervalMinutes}
+                  </small>
+                ) : (
+                  <small id={intervalMessageId} className="hint-text">
+                    {settings.timerMode === 'open-ended'
+                      ? `A bell will repeat every ${settings.intervalMinutes} minute${settings.intervalMinutes === 1 ? '' : 's'} until you end the session.`
+                      : `${intervalCount} interval bell${intervalCount === 1 ? '' : 's'} will occur before session end.`}
+                  </small>
+                )}
+              </label>
 
                   <label>
                     <span>Interval sound</span>
@@ -314,7 +380,7 @@ export default function PracticePage() {
           disabled={isTimerStartBlockedByPlaylistRun}
           aria-describedby={isTimerStartBlockedByPlaylistRun ? timerStartBlockedMessageId : undefined}
         >
-          Start Session
+          {settings.timerMode === 'open-ended' ? 'Start Open-Ended Session' : 'Start Session'}
         </button>
       </div>
 

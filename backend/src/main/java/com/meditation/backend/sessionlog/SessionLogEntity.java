@@ -23,6 +23,9 @@ public class SessionLogEntity {
   @Column(name = "meditation_type_code", nullable = false, length = 32)
   private String meditationTypeCode;
 
+  @Column(name = "timer_mode", nullable = false, length = 32)
+  private String timerMode;
+
   @Column(name = "started_at", nullable = false)
   private Instant startedAt;
 
@@ -79,6 +82,7 @@ public class SessionLogEntity {
       String source,
       String status,
       String meditationTypeCode,
+      String timerMode,
       Instant startedAt,
       Instant endedAt,
       Integer plannedDurationSeconds,
@@ -100,6 +104,7 @@ public class SessionLogEntity {
     this.source = source;
     this.status = status;
     this.meditationTypeCode = meditationTypeCode;
+    this.timerMode = timerMode;
     this.startedAt = startedAt;
     this.endedAt = endedAt;
     this.plannedDurationSeconds = plannedDurationSeconds;
@@ -136,6 +141,10 @@ public class SessionLogEntity {
 
   public Instant getStartedAt() {
     return startedAt;
+  }
+
+  public String getTimerMode() {
+    return timerMode;
   }
 
   public Instant getEndedAt() {

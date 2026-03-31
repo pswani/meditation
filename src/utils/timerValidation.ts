@@ -2,8 +2,9 @@ import type { TimerSettings, TimerValidationResult } from '../types/timer';
 
 export function validateTimerSettings(settings: TimerSettings): TimerValidationResult {
   const errors: TimerValidationResult['errors'] = {};
+  const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
 
-  if (Number.isNaN(settings.durationMinutes) || settings.durationMinutes <= 0) {
+  if (settings.timerMode === 'fixed' && (Number.isNaN(fixedDurationMinutes) || fixedDurationMinutes <= 0)) {
     errors.durationMinutes = 'Duration must be greater than 0.';
   }
 
@@ -14,7 +15,7 @@ export function validateTimerSettings(settings: TimerSettings): TimerValidationR
   if (settings.intervalEnabled) {
     if (Number.isNaN(settings.intervalMinutes) || settings.intervalMinutes <= 0) {
       errors.intervalMinutes = 'Interval bell must be greater than 0.';
-    } else if (settings.intervalMinutes >= settings.durationMinutes) {
+    } else if (settings.timerMode === 'fixed' && settings.intervalMinutes >= fixedDurationMinutes) {
       errors.intervalMinutes = 'Each interval bell must be less than total duration.';
     }
   }

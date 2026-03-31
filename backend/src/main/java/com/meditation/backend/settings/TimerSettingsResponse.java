@@ -4,7 +4,9 @@ import java.time.Instant;
 
 public record TimerSettingsResponse(
     String id,
-    int durationMinutes,
+    String timerMode,
+    Integer durationMinutes,
+    int lastFixedDurationMinutes,
     String meditationType,
     String startSound,
     String endSound,

@@ -25,7 +25,9 @@ function isTimerSettings(value: unknown): value is TimerSettings {
 
   const candidate = value as Record<string, unknown>;
   return (
-    typeof candidate.durationMinutes === 'number' &&
+    (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
+    (typeof candidate.durationMinutes === 'number' || candidate.durationMinutes === null || typeof candidate.durationMinutes === 'undefined') &&
+    (typeof candidate.lastFixedDurationMinutes === 'number' || typeof candidate.lastFixedDurationMinutes === 'undefined') &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
@@ -110,13 +112,20 @@ function isSessionLog(value: unknown): value is SessionLog {
     !isMeditationType(candidate.meditationType) ||
     !isValidIsoDate(candidate.startedAt) ||
     !isValidIsoDate(candidate.endedAt) ||
-    !isFinitePositiveNumber(candidate.intendedDurationSeconds) ||
     !isFiniteNonNegativeNumber(candidate.completedDurationSeconds)
   ) {
     return false;
   }
 
-  if (candidate.completedDurationSeconds > candidate.intendedDurationSeconds) {
+  const timerMode = candidate.timerMode === 'open-ended' ? 'open-ended' : 'fixed';
+  const intendedDurationSeconds =
+    typeof candidate.intendedDurationSeconds === 'number' ? candidate.intendedDurationSeconds : candidate.intendedDurationSeconds === null ? null : undefined;
+
+  if (timerMode === 'fixed' && (!isFinitePositiveNumber(intendedDurationSeconds) || candidate.completedDurationSeconds > intendedDurationSeconds)) {
+    return false;
+  }
+
+  if (timerMode === 'open-ended' && intendedDurationSeconds !== null && typeof intendedDurationSeconds !== 'undefined') {
     return false;
   }
 
@@ -126,6 +135,7 @@ function isSessionLog(value: unknown): value is SessionLog {
 
   return (
     typeof candidate.id === 'string' &&
+    (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
     (candidate.status === 'completed' || candidate.status === 'ended early') &&
     (candidate.source === 'auto log' || candidate.source === 'manual log') &&
     typeof candidate.startSound === 'string' &&
@@ -146,20 +156,36 @@ function isActiveSession(value: unknown): value is ActiveSession {
   if (
     !isValidIsoDate(candidate.startedAt) ||
     !isFiniteInteger(candidate.startedAtMs) ||
-    !isFinitePositiveNumber(candidate.intendedDurationSeconds) ||
-    !isFiniteNonNegativeNumber(candidate.remainingSeconds) ||
+    (candidate.timerMode !== 'fixed' && candidate.timerMode !== 'open-ended') ||
+    !isFiniteNonNegativeNumber(candidate.elapsedSeconds) ||
+    typeof candidate.isPaused !== 'boolean' ||
+    !(
+      candidate.lastResumedAtMs === null ||
+      (typeof candidate.lastResumedAtMs === 'number' && Number.isInteger(candidate.lastResumedAtMs))
+    ) ||
+    !(
+      candidate.intendedDurationSeconds === null ||
+      (typeof candidate.intendedDurationSeconds === 'number' && candidate.intendedDurationSeconds > 0)
+    ) ||
     !isMeditationType(candidate.meditationType) ||
     typeof candidate.startSound !== 'string' ||
     typeof candidate.endSound !== 'string' ||
     typeof candidate.intervalEnabled !== 'boolean' ||
     !isFiniteNonNegativeNumber(candidate.intervalMinutes) ||
-    typeof candidate.intervalSound !== 'string' ||
-    !isFiniteInteger(candidate.endAtMs)
+    typeof candidate.intervalSound !== 'string'
   ) {
     return false;
   }
 
-  return candidate.remainingSeconds <= candidate.intendedDurationSeconds;
+  if (candidate.timerMode === 'fixed' && candidate.intendedDurationSeconds === null) {
+    return false;
+  }
+
+  if (candidate.timerMode === 'open-ended' && candidate.intendedDurationSeconds !== null) {
+    return false;
+  }
+
+  return candidate.lastResumedAtMs !== null || candidate.isPaused;
 }
 
 function isPlaylistRunItem(value: unknown): value is ActivePlaylistRun['items'][number] {
@@ -366,6 +392,21 @@ export function loadTimerSettings(): TimerSettings | null {
 
     return {
       ...parsed,
+      timerMode: parsed.timerMode ?? 'fixed',
+      durationMinutes:
+        (parsed.timerMode ?? 'fixed') === 'open-ended'
+          ? null
+          : typeof parsed.durationMinutes === 'number'
+            ? parsed.durationMinutes
+            : typeof parsed.lastFixedDurationMinutes === 'number'
+              ? parsed.lastFixedDurationMinutes
+              : null,
+      lastFixedDurationMinutes:
+        typeof parsed.lastFixedDurationMinutes === 'number'
+          ? parsed.lastFixedDurationMinutes
+          : typeof parsed.durationMinutes === 'number'
+            ? parsed.durationMinutes
+            : 20,
       intervalSound: parsed.intervalSound ?? 'Temple Bell',
     };
   } catch {
@@ -385,7 +426,14 @@ export function loadSessionLogs(): SessionLog[] {
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isSessionLog) : [];
+    return Array.isArray(parsed)
+      ? parsed
+          .filter(isSessionLog)
+          .map((entry) => ({
+            ...entry,
+            timerMode: entry.timerMode ?? 'fixed',
+          }))
+      : [];
   } catch {
     return [];
   }
@@ -472,12 +520,73 @@ export function loadActiveTimerState(): StoredActiveTimerState | null {
     }
 
     const candidate = parsed as Record<string, unknown>;
-    if (!isActiveSession(candidate.activeSession) || typeof candidate.isPaused !== 'boolean') {
+    if (!isObjectRecord(candidate.activeSession) || typeof candidate.isPaused !== 'boolean') {
       return null;
     }
 
+    const sessionCandidate = candidate.activeSession as Record<string, unknown>;
+
+    let normalizedSession: ActiveSession | null = null;
+
+    if (isActiveSession(sessionCandidate)) {
+      normalizedSession = {
+        ...sessionCandidate,
+      };
+    } else {
+      const timerMode = 'fixed';
+      const intendedDurationSeconds =
+        typeof sessionCandidate.intendedDurationSeconds === 'number' && sessionCandidate.intendedDurationSeconds > 0
+          ? sessionCandidate.intendedDurationSeconds
+          : null;
+      const endAtMs =
+        typeof sessionCandidate.endAtMs === 'number' && Number.isInteger(sessionCandidate.endAtMs) ? sessionCandidate.endAtMs : null;
+      const storedRemainingSeconds =
+        typeof sessionCandidate.remainingSeconds === 'number' && sessionCandidate.remainingSeconds >= 0
+          ? sessionCandidate.remainingSeconds
+          : null;
+
+      if (
+        !isValidIsoDate(sessionCandidate.startedAt) ||
+        typeof sessionCandidate.startedAtMs !== 'number' ||
+        !Number.isInteger(sessionCandidate.startedAtMs) ||
+        intendedDurationSeconds === null ||
+        endAtMs === null ||
+        storedRemainingSeconds === null ||
+        !isMeditationType(sessionCandidate.meditationType) ||
+        typeof sessionCandidate.startSound !== 'string' ||
+        typeof sessionCandidate.endSound !== 'string' ||
+        typeof sessionCandidate.intervalEnabled !== 'boolean' ||
+        typeof sessionCandidate.intervalMinutes !== 'number' ||
+        sessionCandidate.intervalMinutes < 0 ||
+        typeof sessionCandidate.intervalSound !== 'string'
+      ) {
+        return null;
+      }
+
+      const nowMs = Date.now();
+      const elapsedSeconds = candidate.isPaused
+        ? Math.max(0, intendedDurationSeconds - storedRemainingSeconds)
+        : Math.max(0, intendedDurationSeconds - Math.max(0, Math.ceil((endAtMs - nowMs) / 1000)));
+
+      normalizedSession = {
+        startedAt: sessionCandidate.startedAt,
+        startedAtMs: sessionCandidate.startedAtMs,
+        timerMode,
+        intendedDurationSeconds,
+        elapsedSeconds,
+        isPaused: candidate.isPaused,
+        lastResumedAtMs: candidate.isPaused ? null : nowMs,
+        meditationType: sessionCandidate.meditationType,
+        startSound: sessionCandidate.startSound,
+        endSound: sessionCandidate.endSound,
+        intervalEnabled: sessionCandidate.intervalEnabled,
+        intervalMinutes: sessionCandidate.intervalMinutes,
+        intervalSound: sessionCandidate.intervalSound,
+      };
+    }
+
     return {
-      activeSession: candidate.activeSession,
+      activeSession: normalizedSession,
       isPaused: candidate.isPaused,
     };
   } catch {

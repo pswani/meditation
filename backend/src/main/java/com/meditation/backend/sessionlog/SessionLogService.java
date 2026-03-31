@@ -16,6 +16,7 @@ public class SessionLogService {
   private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
   private static final Set<String> SESSION_LOG_STATUSES = Set.of("completed", "ended early");
   private static final Set<String> SESSION_LOG_SOURCES = Set.of("auto log", "manual log");
+  private static final Set<String> TIMER_MODES = Set.of("fixed", "open-ended");
 
   private final SessionLogRepository sessionLogRepository;
 
@@ -49,6 +50,7 @@ public class SessionLogService {
         "manual log",
         "completed",
         request.meditationType(),
+        "fixed",
         endedAt.minusSeconds(durationSeconds),
         endedAt,
         durationSeconds,
@@ -96,6 +98,7 @@ public class SessionLogService {
         request.source(),
         request.status(),
         request.meditationType(),
+        request.timerMode(),
         startedAt,
         endedAt,
         request.intendedDurationSeconds(),
@@ -123,7 +126,8 @@ public class SessionLogService {
         entity.getStartedAt().toString(),
         entity.getEndedAt().toString(),
         entity.getMeditationTypeCode(),
-        entity.getPlannedDurationSeconds() == null ? 0 : entity.getPlannedDurationSeconds(),
+        entity.getTimerMode(),
+        entity.getPlannedDurationSeconds(),
         entity.getCompletedDurationSeconds(),
         entity.getStatus(),
         entity.getSource(),
@@ -179,12 +183,22 @@ public class SessionLogService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
     }
 
-    if (request.intendedDurationSeconds() <= 0) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Intended duration must be greater than 0.");
+    if (!TIMER_MODES.contains(request.timerMode())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
     }
 
-    if (request.completedDurationSeconds() < 0 || request.completedDurationSeconds() > request.intendedDurationSeconds()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed duration must be between 0 and intended duration.");
+    if ("fixed".equals(request.timerMode())) {
+      if (request.intendedDurationSeconds() == null || request.intendedDurationSeconds() <= 0) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Intended duration must be greater than 0.");
+      }
+
+      if (request.completedDurationSeconds() < 0 || request.completedDurationSeconds() > request.intendedDurationSeconds()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed duration must be between 0 and intended duration.");
+      }
+    } else if (request.intendedDurationSeconds() != null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Open-ended session logs cannot include an intended duration.");
+    } else if (request.completedDurationSeconds() < 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed duration must be 0 or greater.");
     }
 
     if (request.startSound() == null || request.startSound().isBlank()) {

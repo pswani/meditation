@@ -166,6 +166,7 @@ class SankalpaControllerTest {
         "auto log",
         "completed",
         meditationType,
+        "fixed",
         endedAt.minusSeconds(completedDurationSeconds),
         endedAt,
         completedDurationSeconds,
