@@ -2,6 +2,21 @@
 
 ## Decision log
 
+### 2026-03-30 open-ended timer branch setup decisions
+- Treat `main` as the parent branch for the `open-ended-timer-feature-bundle-with-branching` milestone, even though a different working branch was present when the prompt sequence began.
+- Create and use the local feature branch `codex/open-ended-timer` for the milestone work before merging back into `main`.
+- Keep this milestone bounded to the open-ended timer slice:
+  - open-ended timer setup and active-session behavior
+  - session-log and history integration needed for correctness
+  - milestone review, remediation, verification, and merge-back
+- Preserve the checked-in prompt execution order:
+  - `00-create-branch`
+  - `01-implement-open-ended-timer`
+  - `02-review-open-ended-timer`
+  - `03-fix-open-ended-timer`
+  - `04-test-open-ended-timer`
+  - `99-merge-branch`
+
 ### 2026-03-30 mac mini production control decisions
 - Add one combined Mac Mini production control script for:
   - `start`

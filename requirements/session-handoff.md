@@ -1,6 +1,26 @@
 # Session Handoff
 
 ## Current status
+The open-ended timer milestone branch has been prepared from `main`. Feature work should continue on `codex/open-ended-timer` using the checked-in prompt sequence.
+
+## 2026-03-30 open-ended timer branch setup
+- Parent branch:
+  - `main`
+- Feature branch:
+  - `codex/open-ended-timer`
+- Working tree status at branch setup:
+  - clean and ready for feature work
+- Feature scope:
+  - open-ended timer setup support
+  - active open-ended session behavior
+  - elapsed-time display
+  - pause, resume, and manual end behavior
+  - trustworthy `session log` creation using actual elapsed duration
+  - any minimal history or backend integration needed for correctness
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan for implementing an open-ended meditation timer, implement the bounded open-ended timer feature with focused tests and required verification commands, update the relevant docs plus decisions/session-handoff, and commit with a clear message such as feat(timer): add open-ended meditation timer mode.`
+
+## Current status
 Mac Mini production operations now include one combined control script for clean start, stop, restart, status checks, and backend log tailing across both `nginx` and the backend `launchd` service.
 
 ## 2026-03-30 mac mini production control script
