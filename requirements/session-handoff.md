@@ -1,6 +1,27 @@
 # Session Handoff
 
 ## Current status
+The final intent-compliance audit is complete on `codex/intent-remediation-bundle`. No product code changed in this step; the work re-audited the app after the two remediation slices and concluded that the largest remaining product gap is still the missing runnable `custom play` flow.
+
+## 2026-04-01 final intent compliance pass
+- Added and updated:
+  - `docs/review-intent-compliance-final-pass.md`
+  - `requirements/session-handoff.md`
+- Closure summary:
+  - closed:
+    - Home `start last used meditation`
+    - roadmap and README truthfulness about the full-stack baseline
+    - startup workflow trust issues around unmanaged listeners and slow dead-process failures
+  - still partial or unresolved:
+    - runnable `custom play` session flow
+    - playlist optional small gaps and broader sequencing scope
+    - `TimerContext` size and responsibility split
+- Recommendation from the audit:
+  - one more bounded remediation slice is still needed after cleanup work, focused on making `custom play` a true pre-recorded meditation-session flow
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, PLANS.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-intent-compliance-final-pass.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Inspect the current repository for prompt files, review files, execplans, session-handoff artifacts, decisions logs, milestone tracking docs, branch choreography files, and non-functional scripts that exist primarily for feature tracking, tracing, or handoff rather than product functionality. Then create an ExecPlan and implement a repository cleanup pass whose goal is to keep only functional application code, meaningful tests, durable product and developer documentation, and operational scripts still needed to run, verify, build, deploy, or maintain the app. Classify each candidate as delete, keep, or keep but rewrite; preserve durable docs; update AGENTS.md and surviving docs so they no longer require deleted tracking artifacts; reconcile already-deleted files without restoring obsolete tracking artifacts; run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification if cleanup touches backend scripts or setup docs; provide a deletion summary grouped by category; list intentionally retained non-code files and why; update remaining docs for internal consistency; and commit with a clear message such as chore(repo): remove feature-tracking and handoff artifacts.`
+
+## Current status
 The slice-2 review finding is fixed on `codex/intent-remediation-bundle`. Home now clears stale playlist-based last-used shortcuts once playlist state proves they are no longer runnable, and the bundle is ready for the final intent audit step.
 
 ## 2026-04-01 home last-used meditation review fixes
