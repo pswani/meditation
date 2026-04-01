@@ -1,6 +1,26 @@
 # Session Handoff
 
 ## Current status
+The intent remediation bundle branch has been prepared from `codex/review-and-cleanup`. No product code changed in this step; the work recorded the bundle branch setup and resolved the prerequisite audit artifact paths for the remaining prompt sequence.
+
+## 2026-04-01 intent remediation bundle branch setup
+- Parent branch:
+  - `codex/review-and-cleanup`
+- Feature branch:
+  - `codex/intent-remediation-bundle`
+- Working tree status at branch setup:
+  - clean and ready for intent remediation bundle work
+- Resolved prerequisite artifacts:
+  - requirement audit: `docs/review-intent-compliance-full-app.md`
+  - pending-work inventory: `docs/pending-work-inventory.md`
+- Bundle scope:
+  - define a practical remediation roadmap from the current intent audit and pending-work inventory
+  - implement the first two highest-priority remediation slices with focused review and follow-up fixes
+  - perform a final intent audit, cleanup tracking artifacts, and merge the bundle back into the recorded parent branch
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, requirements/session-handoff.md, docs/review-intent-compliance-full-app.md, and docs/pending-work-inventory.md. Then create an ExecPlan for closing the product gaps identified in the requirement audit and pending-work inventory. Convert the findings into a practical remediation roadmap with 3 to 6 bounded vertical slices, identify blockers and dependencies, distinguish must-fix gaps from quality and polish work, recommend the first slice to implement now and why, write the plan into requirements/execplan-intent-remediation-bundle.md, update requirements/session-handoff.md with the exact recommended next prompt, and if only documentation changes are made commit with a clear message such as docs(plan): define intent remediation slices.`
+
+## Current status
 The pending-work inventory is complete. No product code changed in this step; the work added planning documentation that consolidates the remaining product, architecture, verification, and cleanup work needed to reach a clean, functional, trustworthy meditation app.
 
 ## 2026-04-01 pending work inventory
