@@ -1,6 +1,20 @@
 # Session Handoff
 
 ## Current status
+The Home last-used meditation slice has been reviewed on `codex/intent-remediation-bundle`. No product code changed in this step; the work documented one important follow-up issue to fix before moving on from slice 2.
+
+## 2026-04-01 home last-used meditation review
+- Added and updated:
+  - `docs/review-intent-remediation-slice-2.md`
+  - `requirements/session-handoff.md`
+- Top finding:
+  - `[P2]` when the stored last-used context points to a playlist that has since been deleted, Home keeps showing the stale `Start Last Used Meditation` playlist shortcut forever and only repeats the `playlist not found` error instead of clearing or repairing that dead shortcut
+- Open question / assumption:
+  - assumed Home should clear or downgrade stale last-used playlist references once they are proven unrunnable, rather than repeatedly presenting the same dead shortcut
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, requirements/execplan-intent-remediation-bundle.md, and docs/review-intent-remediation-slice-2.md. Then create a small ExecPlan if needed and implement the important findings from docs/review-intent-remediation-slice-2.md, keeping scope bounded to the reviewed issues and regression-proofing for slice 2. Fix blocker and important findings, include nice-to-have findings only if they are tightly related and low risk, add focused regression tests for each meaningful fix, avoid unrelated refactors, run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification if backend or persistence code changed, update requirements/decisions.md and requirements/session-handoff.md with completion notes, remaining risks, and the exact recommended next prompt, and commit with a clear message such as fix(core): address slice 2 review findings.`
+
+## Current status
 The Home last-used meditation slice is complete on `codex/intent-remediation-bundle`. Home now shows a secondary `Start Last Used Meditation` action backed by persisted launch context for timer sessions and playlist runs, and the next step is a focused review of this slice.
 
 ## 2026-04-01 home last-used meditation
