@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSyncStatus } from '../sync/useSyncStatus';
 import type { CustomPlay, CustomPlaySaveResult } from '../../types/customPlay';
+import type { LastUsedMeditation } from '../../types/home';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome, PlaylistSaveResult } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SyncQueueEntry } from '../../types/sync';
@@ -28,12 +29,14 @@ import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
   loadCustomPlays,
+  loadLastUsedMeditation,
   loadPlaylists,
   loadSessionLogs,
   loadTimerSettings,
   saveActivePlaylistRunState,
   saveActiveTimerState,
   saveCustomPlays,
+  saveLastUsedMeditation,
   savePlaylists,
   saveSessionLogs,
   saveTimerSettings,
@@ -304,9 +307,18 @@ function replaceQueueEntryPayload(
   updateQueue((current) => current.map((entry) => (entry.id === entryId ? { ...entry, payload } : entry)));
 }
 
+function recordLastUsedMeditation(
+  setLastUsedMeditation: (lastUsedMeditation: LastUsedMeditation | null) => void,
+  nextLastUsedMeditation: LastUsedMeditation
+) {
+  setLastUsedMeditation(nextLastUsedMeditation);
+  saveLastUsedMeditation(nextLastUsedMeditation);
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const { isOnline, queue, updateQueue } = useSyncStatus();
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
+  const [lastUsedMeditation, setLastUsedMeditation] = useState<LastUsedMeditation | null>(() => loadLastUsedMeditation());
   const [state, dispatch] = useReducer(
     timerReducer,
     undefined,
@@ -1345,6 +1357,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       recentLogs: state.sessionLogs.slice(0, 20),
       customPlays,
       playlists,
+      lastUsedMeditation,
       activePlaylistRun,
       playlistRunOutcome,
       isPaused,
@@ -1596,6 +1609,12 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
         setPlaylistRunOutcome(null);
         setIsPlaylistRunPaused(false);
+        recordLastUsedMeditation(setLastUsedMeditation, {
+          kind: 'playlist',
+          playlistId: playlist.id,
+          playlistName: playlist.name,
+          usedAt: runStartedAt,
+        });
         setActivePlaylistRun({
           runId: `${playlist.id}-${nowMs}`,
           playlistId: playlist.id,
@@ -1729,7 +1748,13 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           return false;
         }
 
-        dispatch({ type: 'START_SESSION', nowMs: Date.now(), settings: nextSettings });
+        const nowMs = Date.now();
+        recordLastUsedMeditation(setLastUsedMeditation, {
+          kind: 'timer',
+          settings: nextSettings,
+          usedAt: new Date(nowMs).toISOString(),
+        });
+        dispatch({ type: 'START_SESSION', nowMs, settings: nextSettings });
         return true;
       },
       pauseSession: () => {
@@ -1763,6 +1788,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSessionLogSyncing,
       isSettingsLoading,
       isSettingsSyncing,
+      lastUsedMeditation,
       playlistRunOutcome,
       playlists,
       playlistSyncError,

@@ -1,6 +1,43 @@
 # Session Handoff
 
 ## Current status
+The Home last-used meditation slice is complete on `codex/intent-remediation-bundle`. Home now shows a secondary `Start Last Used Meditation` action backed by persisted launch context for timer sessions and playlist runs, and the next step is a focused review of this slice.
+
+## 2026-04-01 home last-used meditation
+- Added and updated:
+  - `src/types/home.ts`
+  - `src/utils/storage.ts`
+  - `src/utils/storage.test.ts`
+  - `src/features/timer/timerContextObject.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/pages/HomePage.tsx`
+  - `src/pages/HomePage.test.tsx`
+  - `README.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- What was completed:
+  - added a persisted local `last used meditation` launch context with two supported kinds:
+    - timer settings snapshot
+    - playlist reference
+  - `TimerContext` now records that launch context when a timer session or playlist run actually starts
+  - Home Quick Start now shows:
+    - a calm empty state when no last-used meditation exists yet
+    - a descriptive `Last used: ...` summary when one does exist
+    - a secondary `Start Last Used Meditation` action that restarts the stored timer or playlist flow without mutating saved defaults
+  - current `custom play` usage naturally participates through the timer path, so a timer started from a custom-play preset is remembered as a timer launch instead of inventing a premature third runtime kind
+- Remaining limitations:
+  - this slice does not turn `custom play` into its own runnable session type yet, so Home describes those remembered launches as timer-based last-used sessions
+  - deleting or changing a remembered playlist later still relies on the existing playlist-start validation and block messaging when Home tries to rerun it
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed targeted `npx vitest run src/utils/storage.test.ts src/pages/HomePage.test.tsx`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, requirements/execplan-intent-remediation-bundle.md, and the implementation state after slice 2. Then perform a focused code and product review of the most recently completed slice 2 work. Review for requirement correctness against requirements/intent.md, regressions in surrounding flows, missing validations, persistence, sync, or recovery issues, backend or API contract mismatches, UX clarity and responsive behavior, and missing or weak tests. Do not implement fixes in this step. Write the review into docs/review-intent-remediation-slice-2.md, update requirements/session-handoff.md with the top findings and the exact recommended next prompt, and if only documentation changes are made commit with a clear message such as docs(review): assess intent remediation slice 2.`
+
+## Current status
 The slice-1 review findings are fixed on `codex/intent-remediation-bundle`. The startup workflow now fails fast when the managed process dies, the Flyway recovery hint only keys off fresh log output, and the local H2 reset path requires explicit `--force` confirmation before deleting files. The next step is the next implementation slice from the bundle plan: Home `start last used meditation`.
 
 ## 2026-04-01 startup reliability review fixes

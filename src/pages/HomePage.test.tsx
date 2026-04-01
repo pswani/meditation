@@ -8,6 +8,7 @@ const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
+const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
 
 async function waitForHomeQuickStartReady() {
   await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
@@ -89,6 +90,7 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/no session log entries yet today/i)).toBeInTheDocument();
     expect(screen.getByText(/no active sankalpa right now/i)).toBeInTheDocument();
     expect(screen.getByText(/no favorites yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/your last started timer or playlist will appear here/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /next actions/i })).not.toBeInTheDocument();
   });
 
@@ -331,6 +333,173 @@ describe('HomePage UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
     expect(screen.getByText(/stay present/i)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(LAST_USED_MEDITATION_KEY) ?? 'null')).toMatchObject({
+      kind: 'timer',
+      settings: {
+        durationMinutes: 15,
+        meditationType: 'Vipassana',
+      },
+    });
+  });
+
+  it('starts the last used timer shortcut from Home without relying on saved defaults', async () => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: '',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 5,
+        intervalSound: 'Temple Bell',
+      })
+    );
+    localStorage.setItem(
+      LAST_USED_MEDITATION_KEY,
+      JSON.stringify({
+        kind: 'timer',
+        settings: {
+          timerMode: 'fixed',
+          durationMinutes: 27,
+          lastFixedDurationMinutes: 27,
+          meditationType: 'Ajapa',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: true,
+          intervalMinutes: 9,
+          intervalSound: 'Wood Block',
+        },
+        usedAt: '2026-04-01T12:00:00.000Z',
+      })
+    );
+    stubHomeFetchWithTimerSettings({
+      durationMinutes: 20,
+      meditationType: '',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 5,
+      intervalSound: 'Temple Bell',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitForHomeQuickStartReady();
+    expect(screen.getByText(/last used: timer · 27 min · ajapa/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start last used meditation/i }));
+
+    expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+    expect(screen.getByText(/stay present/i)).toBeInTheDocument();
+  });
+
+  it('starts the last used playlist shortcut from Home', async () => {
+    localStorage.setItem(
+      LAST_USED_MEDITATION_KEY,
+      JSON.stringify({
+        kind: 'playlist',
+        playlistId: 'playlist-1',
+        playlistName: 'Evening Sequence',
+        usedAt: '2026-04-01T12:00:00.000Z',
+      })
+    );
+    localStorage.setItem(
+      PLAYLISTS_KEY,
+      JSON.stringify([
+        {
+          id: 'playlist-1',
+          name: 'Evening Sequence',
+          favorite: true,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+          items: [
+            {
+              id: 'playlist-item-1',
+              durationMinutes: 10,
+              meditationType: 'Vipassana',
+            },
+          ],
+        },
+      ])
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/sankalpas') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.includes('/api/sankalpas?') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, [
+            {
+              id: 'playlist-1',
+              name: 'Evening Sequence',
+              favorite: true,
+              createdAt: '2026-03-24T08:00:00.000Z',
+              updatedAt: '2026-03-24T08:00:00.000Z',
+              items: [
+                {
+                  id: 'playlist-item-1',
+                  durationMinutes: 10,
+                  meditationType: 'Vipassana',
+                },
+              ],
+            },
+          ]);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText(/last used: playlist · evening sequence/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /start last used meditation/i }));
+
+    expect(await screen.findByRole('heading', { name: /evening sequence/i })).toBeInTheDocument();
+    expect(screen.getByText(/item 1 of 1/i)).toBeInTheDocument();
   });
 
   it('keeps favorite playlist shortcuts disabled until backend playlists finish hydrating', async () => {

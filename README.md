@@ -65,6 +65,7 @@ The chosen target architecture for the next implementation phase is:
 The app supports a focused meditation practice workflow:
 
 - quick start from Home
+- start the last used meditation from Home
 - timer-based meditation sessions
 - optional start, end, and interval sound selections
 - custom plays
@@ -836,6 +837,7 @@ The app currently persists data in `localStorage` using these keys:
 - `meditation.customPlays.v1`
 - `meditation.playlists.v1`
 - `meditation.sankalpas.v1`
+- `meditation.lastUsedMeditation.v1`
 - `meditation.activeTimerState.v1`
 - `meditation.activePlaylistRunState.v1`
 

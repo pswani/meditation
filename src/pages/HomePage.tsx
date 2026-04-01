@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { useTimer } from '../features/timer/useTimer';
 import type { CustomPlay } from '../types/customPlay';
+import type { LastUsedMeditation } from '../types/home';
 import type { PlaylistRunStartResult } from '../types/playlist';
 import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { formatDurationLabel } from '../utils/sessionLog';
@@ -25,6 +26,19 @@ function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
   return reasonToMessage[result.reason];
 }
 
+function describeLastUsedMeditation(lastUsedMeditation: LastUsedMeditation): string {
+  if (lastUsedMeditation.kind === 'playlist') {
+    return `Playlist · ${lastUsedMeditation.playlistName}`;
+  }
+
+  const durationLabel =
+    lastUsedMeditation.settings.timerMode === 'open-ended'
+      ? 'Open-ended'
+      : `${lastUsedMeditation.settings.durationMinutes ?? lastUsedMeditation.settings.lastFixedDurationMinutes} min`;
+
+  return `Timer · ${durationLabel} · ${lastUsedMeditation.settings.meditationType}`;
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const {
@@ -32,6 +46,7 @@ export default function HomePage() {
     sessionLogs,
     customPlays,
     playlists,
+    lastUsedMeditation,
     activeSession,
     activePlaylistRun,
     startSession,
@@ -104,6 +119,53 @@ export default function HomePage() {
     setFeedbackMessage(playlistStartBlockMessage(result));
   }
 
+  function startLastUsedMeditationShortcut() {
+    if (!lastUsedMeditation) {
+      return;
+    }
+
+    setFeedbackMessage(null);
+
+    if (lastUsedMeditation.kind === 'playlist') {
+      if (activePlaylistRun?.playlistId === lastUsedMeditation.playlistId) {
+        navigate('/practice/playlists/active');
+        return;
+      }
+
+      const result = startPlaylistRun(lastUsedMeditation.playlistId);
+      if (result.started) {
+        navigate('/practice/playlists/active');
+        return;
+      }
+
+      setFeedbackMessage(playlistStartBlockMessage(result));
+      return;
+    }
+
+    if (activeSession) {
+      navigate('/practice/active');
+      return;
+    }
+
+    if (activePlaylistRun) {
+      setFeedbackMessage('Finish the active playlist run before starting your last-used timer.');
+      return;
+    }
+
+    const started = startSession(lastUsedMeditation.settings);
+    if (started) {
+      navigate('/practice/active');
+      return;
+    }
+
+    navigate('/practice', {
+      state: {
+        entryMessage: 'Your last-used timer settings need a quick review before starting.',
+        timerPreset: lastUsedMeditation.settings,
+      },
+    });
+  }
+
   return (
     <section className="page-card home-screen">
       <h2 className="page-title">Home</h2>
@@ -147,6 +209,18 @@ export default function HomePage() {
             Open Practice
           </button>
         </div>
+        {lastUsedMeditation ? (
+          <>
+            <p className="section-subtitle">Last used: {describeLastUsedMeditation(lastUsedMeditation)}</p>
+            <div className="timer-actions">
+              <button type="button" className="secondary" onClick={startLastUsedMeditationShortcut}>
+                Start Last Used Meditation
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="section-subtitle">Your last started timer or playlist will appear here.</p>
+        )}
       </section>
 
       <div className="home-layout-grid">

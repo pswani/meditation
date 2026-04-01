@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { CustomPlay, CustomPlayDraft, CustomPlaySaveResult } from '../../types/customPlay';
+import type { LastUsedMeditation } from '../../types/home';
 import type {
   ActivePlaylistRun,
   PlaylistDeleteResult,
@@ -23,6 +24,7 @@ export interface TimerContextValue {
   readonly recentLogs: readonly SessionLog[];
   readonly customPlays: readonly CustomPlay[];
   readonly playlists: readonly Playlist[];
+  readonly lastUsedMeditation: LastUsedMeditation | null;
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly playlistRunOutcome: PlaylistRunOutcome | null;
   readonly isPaused: boolean;

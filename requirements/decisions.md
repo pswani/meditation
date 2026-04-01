@@ -2,6 +2,18 @@
 
 ## Decision log
 
+### 2026-04-01 home last-used meditation decisions
+- Model `last used meditation` as a small local launch-context record with two supported kinds only:
+  - `timer`, storing the validated timer settings snapshot that actually started the session
+  - `playlist`, storing the playlist id and display name needed to restart the existing playlist run flow
+- Record the last-used context centrally inside `TimerContext` when a timer session or playlist run actually starts, instead of trying to infer it from Home-only UI actions or from saved defaults.
+- Keep current `custom play` launches represented as timer settings in the last-used model:
+  - the current product still treats `custom play` as a timer preset plus media metadata, not a separate runnable session type
+  - Home should not invent a third launch kind until the later `custom play` runtime slice exists
+- Show the Home shortcut as a calm secondary action inside Quick Start:
+  - keep the primary default-timer quick start unchanged
+  - show a helpful empty state when no last-used meditation exists yet
+
 ### 2026-04-01 startup reliability review-fix decisions
 - Require an explicit `--force` flag for `npm run db:h2:reset` instead of treating port and health probes as enough proof that the database is unused:
   - this keeps the reset path honest when developers use per-shell port overrides
