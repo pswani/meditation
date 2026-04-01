@@ -2,6 +2,12 @@
 
 ## Decision log
 
+### 2026-04-01 home last-used meditation review-fix decisions
+- Clear stale playlist-based last-used context as soon as the app can prove the playlist is gone:
+  - remove it immediately when the user deletes that playlist locally
+  - also remove it after playlist hydration finishes and the remembered playlist id is no longer present
+- Keep the fix in `TimerContext` rather than Home-only UI code so every consumer sees the corrected source of truth and the persisted storage entry stays in sync.
+
 ### 2026-04-01 home last-used meditation decisions
 - Model `last used meditation` as a small local launch-context record with two supported kinds only:
   - `timer`, storing the validated timer settings snapshot that actually started the session

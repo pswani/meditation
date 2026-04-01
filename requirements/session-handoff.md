@@ -1,6 +1,32 @@
 # Session Handoff
 
 ## Current status
+The slice-2 review finding is fixed on `codex/intent-remediation-bundle`. Home now clears stale playlist-based last-used shortcuts once playlist state proves they are no longer runnable, and the bundle is ready for the final intent audit step.
+
+## 2026-04-01 home last-used meditation review fixes
+- Added and updated:
+  - `src/features/timer/timerContextObject.ts`
+  - `src/features/timer/TimerContext.tsx`
+  - `src/pages/HomePage.test.tsx`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- What was completed:
+  - added a shared `clearLastUsedMeditation` path in `TimerContext`
+  - stale playlist-based last-used context now clears immediately when the user deletes that playlist locally
+  - stale playlist-based last-used context also clears after playlist hydration finishes and the remembered playlist id is no longer present, so Home removes the dead shortcut instead of repeating `playlist not found`
+  - added a focused Home regression test that verifies the stale shortcut disappears and the persisted storage entry is removed
+- Remaining risks:
+  - timer-based last-used context still depends on the stored timer settings remaining startable; if future slices introduce new timer launch kinds, the last-used model may need another expansion
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed targeted `npx vitest run src/pages/HomePage.test.tsx`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, docs/review-intent-compliance-full-app.md, docs/pending-work-inventory.md, and requirements/execplan-intent-remediation-bundle.md. Then perform a fresh requirement audit of the current application against requirements/intent.md after the remediation slices completed. Verify which original gaps are now fully closed, identify which gaps remain partial or unresolved, flag any new regressions introduced during remediation, do not implement code changes, write the audit into docs/review-intent-compliance-final-pass.md, update requirements/session-handoff.md with the exact recommended next prompt, and if only documentation changes are made commit with a clear message such as docs(review): final intent compliance pass.`
+
+## Current status
 The Home last-used meditation slice has been reviewed on `codex/intent-remediation-bundle`. No product code changed in this step; the work documented one important follow-up issue to fix before moving on from slice 2.
 
 ## 2026-04-01 home last-used meditation review

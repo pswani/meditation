@@ -502,6 +502,73 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/item 1 of 1/i)).toBeInTheDocument();
   });
 
+  it('clears a stale last used playlist shortcut after playlists finish hydrating without that playlist', async () => {
+    localStorage.setItem(
+      LAST_USED_MEDITATION_KEY,
+      JSON.stringify({
+        kind: 'playlist',
+        playlistId: 'playlist-missing',
+        playlistName: 'Missing Sequence',
+        usedAt: '2026-04-01T12:00:00.000Z',
+      })
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/sankalpas') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.includes('/api/sankalpas?') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /start last used meditation/i })).not.toBeInTheDocument()
+    );
+    expect(screen.getByText(/your last started timer or playlist will appear here/i)).toBeInTheDocument();
+    expect(localStorage.getItem(LAST_USED_MEDITATION_KEY)).toBeNull();
+  });
+
   it('keeps favorite playlist shortcuts disabled until backend playlists finish hydrating', async () => {
     localStorage.setItem(
       PLAYLISTS_KEY,

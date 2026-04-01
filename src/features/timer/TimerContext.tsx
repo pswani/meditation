@@ -315,6 +315,13 @@ function recordLastUsedMeditation(
   saveLastUsedMeditation(nextLastUsedMeditation);
 }
 
+function clearLastUsedMeditationRecord(
+  setLastUsedMeditation: (lastUsedMeditation: LastUsedMeditation | null) => void
+) {
+  setLastUsedMeditation(null);
+  saveLastUsedMeditation(null);
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const { isOnline, queue, updateQueue } = useSyncStatus();
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
@@ -350,6 +357,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const [timerSoundPlaybackMessage, setTimerSoundPlaybackMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isPlaylistsLoading || lastUsedMeditation?.kind !== 'playlist') {
+      return;
+    }
+
+    if (!playlists.some((playlist) => playlist.id === lastUsedMeditation.playlistId)) {
+      clearLastUsedMeditationRecord(setLastUsedMeditation);
+    }
+  }, [isPlaylistsLoading, lastUsedMeditation, playlists]);
   const [activeSessionNowMs, setActiveSessionNowMs] = useState(() => Date.now());
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestCustomPlaysRef = useRef(customPlays);
@@ -1534,6 +1551,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         setPlaylists((current) => current.filter((playlist) => playlist.id !== playlistId));
+        if (lastUsedMeditation?.kind === 'playlist' && lastUsedMeditation.playlistId === playlistId) {
+          clearLastUsedMeditationRecord(setLastUsedMeditation);
+        }
         mergeQueueEntry(updateQueue, {
           entityType: 'playlist',
           operation: 'delete',
@@ -1634,6 +1654,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         });
 
         return startResult;
+      },
+      clearLastUsedMeditation: () => {
+        clearLastUsedMeditationRecord(setLastUsedMeditation);
       },
       pausePlaylistRun: () => {
         if (!activePlaylistRun) {

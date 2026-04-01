@@ -51,6 +51,7 @@ export interface TimerContextValue {
   readonly deletePlaylist: (playlistId: string) => Promise<PlaylistDeleteResult>;
   readonly toggleFavoritePlaylist: (playlistId: string) => Promise<boolean>;
   readonly startPlaylistRun: (playlistId: string) => PlaylistRunStartResult;
+  readonly clearLastUsedMeditation: () => void;
   readonly pausePlaylistRun: () => void;
   readonly resumePlaylistRun: () => void;
   readonly endPlaylistRunEarly: () => void;
