@@ -287,8 +287,8 @@ src/
   pages/                Route-level screens
   types/                Shared domain types
   utils/                Validation, persistence, summaries, API boundaries
-docs/                   Product, architecture, UX, and review docs
-requirements/           Decisions, handoff, roadmap, ExecPlans
+docs/                   Product, architecture, UX, and operations docs
+requirements/           Intent, roadmap, decisions, and current-state notes
 backend/                Spring Boot + H2 backend foundation
 ```
 
