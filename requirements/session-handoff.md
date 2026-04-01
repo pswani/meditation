@@ -1,6 +1,29 @@
 # Session Handoff
 
 ## Current status
+The intent remediation roadmap is now defined on `codex/intent-remediation-bundle`. No product code changed in this step; the work translated the current intent audit and pending-work inventory into a bounded sequence of remediation slices.
+
+## 2026-04-01 intent remediation bundle planning
+- Added and updated:
+  - `requirements/execplan-intent-remediation-bundle.md`
+  - `requirements/session-handoff.md`
+- Planning scope:
+  - converted the current intent-compliance findings and pending-work backlog into five bounded remediation slices
+  - separated must-fix startup and product-correctness work from larger follow-up feature and cleanup work
+  - chose the safest execution order for this bundle
+- Prioritized slices:
+  - restore the default local startup baseline
+  - add Home `start last used meditation`
+  - turn `custom play` into a real pre-recorded meditation-session flow
+  - complete playlist runtime behavior
+  - perform final audit and cleanup/truth-alignment
+- First slice recommended now:
+  - restore the default local startup baseline
+  - reason: it removes the current blocker on trustworthy default full-stack verification for every later slice
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/roadmap.md, requirements/decisions.md, requirements/session-handoff.md, docs/review-intent-compliance-full-app.md, docs/pending-work-inventory.md, and requirements/execplan-intent-remediation-bundle.md. Then implement the highest-priority remediation slice from requirements/execplan-intent-remediation-bundle.md. Keep scope bounded to restoring the documented default local startup baseline: diagnose and fix the Flyway/default-H2 compatibility problem behind npm run start:app; if legacy local data needs repair, add a safe repo-owned repair or reset path with explicit documentation instead of relying on an ad hoc clean-database workaround; verify npm run start:app and npm run status:app, backend health, frontend reachability, and at least one representative persisted API flow on the repaired default stack; add focused tests or verification improvements where practical; update README.md, requirements/decisions.md, and requirements/session-handoff.md; run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification; and commit with a clear message such as fix(dev): restore default local app startup reliability.`
+
+## Current status
 The intent remediation bundle branch has been prepared from `codex/review-and-cleanup`. No product code changed in this step; the work recorded the bundle branch setup and resolved the prerequisite audit artifact paths for the remaining prompt sequence.
 
 ## 2026-04-01 intent remediation bundle branch setup
