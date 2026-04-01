@@ -2,6 +2,18 @@
 
 ## Decision log
 
+### 2026-04-01 startup reliability remediation decisions
+- Treat an already-responding configured frontend or backend URL as a hard stop for `npm run start:app`, even when the managed PID files are absent:
+  - the managed stack must not treat another process's health response as proof that the new managed process started successfully
+  - this keeps `start:app` trustworthy when an unmanaged local server is already using the configured port
+- Make `npm run status:app` distinguish managed-process state from URL health:
+  - show the managed PID state as before
+  - add an explicit note when the configured URL is healthy because another unmanaged process is responding
+- Keep the Flyway/default-H2 recovery path explicit and repo-owned:
+  - do not attempt an implicit repair of unknown local migration history during startup
+  - document `npm run db:h2:reset` as the safe local-development reset path after the backend is stopped
+- Update roadmap handoff language now to reflect the real full-stack baseline, because trustworthy startup guidance depends on the repo describing its current frontend-plus-backend architecture accurately
+
 ### 2026-03-31 timer defaults and runtime defects merge decisions
 - Merge `codex/timer-defaults-runtime-defects` back into `main` with a normal local merge commit so the branch-setup, implementation, review, remediation, and prompt-history commits stay intact.
 - Mark the timer defaults and runtime defects bundle complete on `main` after the merge because the milestone’s ownership, recovery, validation, and reviewed sync-safety fixes all landed together with their supporting docs and tests.

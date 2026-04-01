@@ -1,6 +1,48 @@
 # Session Handoff
 
 ## Current status
+The startup-reliability slice is complete on `codex/intent-remediation-bundle`. The managed local workflow is now more trustworthy about unmanaged port conflicts, the local H2 reset path is explicitly documented as the repo-owned recovery path for legacy Flyway mismatch, and the next step is a focused review of this slice.
+
+## 2026-04-01 startup reliability remediation
+- Added and updated:
+  - `scripts/common.sh`
+  - `scripts/app-start.sh`
+  - `scripts/app-status.sh`
+  - `scripts/h2-reset.sh`
+  - `README.md`
+  - `requirements/roadmap.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- What was completed:
+  - `npm run start:app` now refuses to start when the configured frontend or backend URL is already being served by another unmanaged process, instead of treating that existing health response as proof that the managed stack started successfully
+  - `npm run status:app` now calls out when the configured URL is healthy because another unmanaged process is responding, even though the managed PID files are absent
+  - backend startup failures that include the Flyway `Detected applied migration not resolved locally` message now print explicit local-H2 recovery guidance pointing to `npm run db:h2:reset`
+  - `npm run db:h2:reset` remains the repo-owned local-development reset path and now documents safer usage more clearly
+  - `requirements/roadmap.md` now reflects the actual full-stack baseline instead of describing the repo as frontend-only
+- Remaining limitations:
+  - this slice does not automatically repair unknown legacy Flyway history; it documents and surfaces the safe local-development reset path instead
+  - unmanaged local processes still have to be stopped manually; the managed scripts now detect and report that situation rather than trying to take ownership of it
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+  - verified `npm run status:app` on the default configuration now reports when another unmanaged backend process is already responding at `http://127.0.0.1:8080/api/health`
+  - verified `npm run start:app` on the default configuration now refuses that unmanaged-port conflict with explicit guidance instead of falsely reporting success
+  - verified the managed stack end to end against the default H2 path using isolated local ports `8081` and `5174` in one interactive shell session:
+    - `npm run start:app`
+    - `npm run status:app`
+    - `curl -i -s http://127.0.0.1:8081/api/health`
+    - `curl -i -s http://127.0.0.1:5174`
+    - `curl -i -s http://127.0.0.1:8081/api/settings/timer`
+    - `curl -i -s -X PUT http://127.0.0.1:8081/api/settings/timer ...`
+    - `curl -i -s http://127.0.0.1:8081/api/settings/timer`
+    - `npm run stop:app`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, docs/review-intent-compliance-full-app.md, docs/pending-work-inventory.md, and requirements/execplan-intent-remediation-bundle.md. Then perform a focused code and product review of the most recently completed remediation slice. Review for requirement correctness against requirements/intent.md, regressions in surrounding flows, missing validations, persistence or sync safety issues, backend or API contract mismatches, misleading UX states or copy, responsive behavior problems, and missing or weak tests. Do not implement fixes in this step. Write the review into docs/review-intent-remediation-slice-1.md, update requirements/session-handoff.md with the top findings and the exact recommended next prompt, and if only review documentation changes are made commit with a clear message such as docs(review): assess intent remediation slice 1.`
+
+## Current status
 The intent remediation roadmap is now defined on `codex/intent-remediation-bundle`. No product code changed in this step; the work translated the current intent audit and pending-work inventory into a bounded sequence of remediation slices.
 
 ## 2026-04-01 intent remediation bundle planning

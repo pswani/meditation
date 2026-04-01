@@ -37,14 +37,14 @@ frontend_port=$(frontend_dev_port)
 frontend_url=$(frontend_dev_url)
 frontend_log=$(component_log_file frontend)
 
-ensure_component_stopped frontend "$frontend_port"
+ensure_component_stopped frontend "$frontend_port" "$frontend_url"
 
 if [ "$start_backend" -eq 1 ]; then
   backend_port_value=$(backend_port)
   backend_url=$(backend_health_url)
   backend_log=$(component_log_file backend)
 
-  ensure_component_stopped backend "$backend_port_value"
+  ensure_component_stopped backend "$backend_port_value" "$backend_url"
 
   append_log_header backend "Starting managed backend"
   nohup "$SCRIPT_DIR/dev-backend.sh" >> "$backend_log" 2>&1 &
@@ -55,6 +55,14 @@ if [ "$start_backend" -eq 1 ]; then
     printf '%s\n' "Backend did not become healthy at $backend_url"
     printf '%s\n' "Recent backend log output:"
     print_log_tail backend 40
+    if grep -F "Detected applied migration not resolved locally" "$backend_log" >/dev/null 2>&1; then
+      printf '\n%s\n' "Local H2 startup recovery"
+      printf '%s\n' "The configured local development database at $(h2_db_dir)/$(h2_db_name) has Flyway history that this repo no longer resolves."
+      printf '%s\n' "If you do not need to preserve that local dev data, stop any backend using this database and run:"
+      printf '%s\n' "  npm run db:h2:reset"
+      printf '%s\n' "Then rerun:"
+      printf '%s\n' "  npm run start:app"
+    fi
     stop_component backend
     exit 1
   fi

@@ -329,13 +329,15 @@ port_in_use() {
   port=$1
 
   if command -v lsof >/dev/null 2>&1; then
-    lsof -iTCP:"$port" -sTCP:LISTEN -n -P >/dev/null 2>&1
-    return $?
+    if lsof -iTCP:"$port" -sTCP:LISTEN -n -P >/dev/null 2>&1; then
+      return 0
+    fi
   fi
 
   if command -v nc >/dev/null 2>&1; then
-    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
-    return $?
+    if nc -z 127.0.0.1 "$port" >/dev/null 2>&1; then
+      return 0
+    fi
   fi
 
   return 1
@@ -344,10 +346,17 @@ port_in_use() {
 ensure_component_stopped() {
   name=$1
   port=${2:-}
+  url=${3:-}
 
   if component_is_running "$name"; then
     printf '%s\n' "Managed $name process is already running."
     printf '%s\n' "Use the stop helper before starting it again."
+    return 1
+  fi
+
+  if [ -n "$url" ] && url_is_reachable "$url"; then
+    printf '%s\n' "Configured $name URL is already responding at $url."
+    printf '%s\n' "Stop the other process or change the configured port before starting the managed stack."
     return 1
   fi
 
@@ -375,6 +384,11 @@ wait_for_http() {
   done
 
   return 1
+}
+
+url_is_reachable() {
+  url=$1
+  curl -fsS --max-time 2 "$url" >/dev/null 2>&1
 }
 
 append_log_header() {

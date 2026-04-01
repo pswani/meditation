@@ -426,6 +426,7 @@ Behavior:
   - this repo uses file-backed H2 inside the backend process, so there is no separate DB daemon to restart independently
 - `./scripts/app-status.sh`
   - shows managed PID, URL, health, and log-path details
+  - calls out when the configured frontend or backend URL is healthy because of another unmanaged process rather than the managed stack
 - `./scripts/app-logs.sh`
   - tails the managed frontend and backend logs
 
@@ -451,11 +452,11 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/dev-backend.sh` | `npm run dev:backend` | Backend-only local API work | Starts the configured backend dev command, which defaults to the in-repo Spring Boot app with the `dev` profile on port `8080`. |
 | `./scripts/dev-stack.sh` | `npm run dev:all` | Foreground full-stack local work | Starts the backend in the background for the current shell session, then runs the frontend dev server in the foreground. |
 | `./scripts/build-local.sh` | `npm run build:app` | Full local build verification | Builds the frontend bundle and, when a backend build command is configured, also runs backend verify/package work. |
-| `./scripts/app-start.sh` | `npm run start:app` | Managed background local stack | Starts the backend and frontend as background processes, waits for health checks, and writes PID files plus logs under `local-data/runtime/`. |
+| `./scripts/app-start.sh` | `npm run start:app` | Managed background local stack | Starts the backend and frontend as background processes, waits for health checks, refuses to reuse URLs already served by another process, and writes PID files plus logs under `local-data/runtime/`. |
 | `./scripts/app-stop.sh` | `npm run stop:app` | Stop managed processes | Stops only the managed frontend and backend processes created by `./scripts/app-start.sh`. |
 | `./scripts/app-restart.sh` | `npm run restart:app` | Restart the managed stack | Stops and restarts the managed frontend and backend together. |
 | `./scripts/app-restart.sh --no-db` | `npm run restart:app -- --no-db` | Restart UI without cycling the backend | Restarts only the managed frontend, leaving the current backend process and embedded H2 state running. |
-| `./scripts/app-status.sh` | `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, and the current H2 file location. |
+| `./scripts/app-status.sh` | `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, the current H2 file location, and notes when another unmanaged process is already responding on the configured URL. |
 | `./scripts/app-logs.sh --tail 40` | `npm run logs:app -- --tail 40` | Check managed logs | Tails the managed frontend and backend logs, with optional component selection and line count. |
 | `./scripts/preview-local.sh` | `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
 | `./scripts/package-deploy.sh` | none | Build a deployable prod bundle | Builds the frontend and backend, then assembles a deploy bundle with static frontend files, backend jar, nginx config, and backend env example under `local-data/deploy/` by default. |
@@ -470,7 +471,7 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain example.com --email ops@example.com` | none | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, starts nginx, and optionally runs Certbot. |
 | `./scripts/prod-macos-control.sh restart` | none | Cleanly restart the Mac Mini production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
 | `./scripts/prod-macos-control.sh logs --lines 80 --no-follow` | none | Tail or inspect Mac Mini production backend logs | Reads the installed backend production log with optional bounded output for quick inspection. |
-| `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow. |
+| `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow after confirming no backend is still reachable on the configured local health URL. |
 
 ### Environment and configuration variables
 
@@ -638,12 +639,18 @@ What they do:
   - tails the prod backend log
 - `./scripts/h2-reset.sh`
   - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows
+  - refuses to run while a backend is still reachable on the configured health URL so the reset stays local-only and safe
 
 If you prefer npm aliases, the lifecycle commands above also exist in `package.json` as thin wrappers around the same scripts.
 
 Important note:
 
 - H2 reset clears the local DB files; Flyway recreates schema on the next backend startup
+- if `npm run start:app` reports `Detected applied migration not resolved locally`, the supported recovery path is:
+  - stop any backend using the configured local DB
+  - run `npm run db:h2:reset`
+  - rerun `npm run start:app`
+- this reset is for local development data only
 
 ### Default ports and URLs
 
