@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CustomPlay } from '../types/customPlay';
+import type { LastUsedMeditation } from '../types/home';
 import type { Playlist } from '../types/playlist';
 import type { SankalpaGoal } from '../types/sankalpa';
 import type { SessionLog } from '../types/sessionLog';
@@ -8,6 +9,7 @@ import {
   loadActivePlaylistRunState,
   loadActiveTimerState,
   loadCustomPlays,
+  loadLastUsedMeditation,
   loadPlaylists,
   loadSankalpas,
   loadSessionLogs,
@@ -15,6 +17,7 @@ import {
   saveActivePlaylistRunState,
   saveActiveTimerState,
   saveCustomPlays,
+  saveLastUsedMeditation,
   savePlaylists,
   saveSankalpas,
   saveSessionLogs,
@@ -28,6 +31,7 @@ const rawPlaylistsKey = 'meditation.playlists.v1';
 const rawSankalpasKey = 'meditation.sankalpas.v1';
 const rawActiveTimerStateKey = 'meditation.activeTimerState.v1';
 const rawActivePlaylistRunStateKey = 'meditation.activePlaylistRunState.v1';
+const rawLastUsedMeditationKey = 'meditation.lastUsedMeditation.v1';
 
 describe('storage timer settings', () => {
   beforeEach(() => {
@@ -256,6 +260,61 @@ describe('storage session logs', () => {
     );
 
     expect(loadSessionLogs()).toEqual([]);
+  });
+});
+
+describe('storage last used meditation', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads a last used timer meditation context', () => {
+    const lastUsedMeditation: LastUsedMeditation = {
+      kind: 'timer',
+      settings: {
+        timerMode: 'fixed',
+        durationMinutes: 27,
+        lastFixedDurationMinutes: 27,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: true,
+        intervalMinutes: 9,
+        intervalSound: 'Wood Block',
+      },
+      usedAt: '2026-04-01T12:00:00.000Z',
+    };
+
+    saveLastUsedMeditation(lastUsedMeditation);
+
+    expect(loadLastUsedMeditation()).toEqual(lastUsedMeditation);
+  });
+
+  it('drops invalid stored last used meditation payloads', () => {
+    localStorage.setItem(
+      rawLastUsedMeditationKey,
+      JSON.stringify({
+        kind: 'playlist',
+        playlistId: 123,
+        usedAt: 'not-a-date',
+      })
+    );
+
+    expect(loadLastUsedMeditation()).toBeNull();
+  });
+
+  it('removes the stored last used meditation when saving null', () => {
+    saveLastUsedMeditation({
+      kind: 'playlist',
+      playlistId: 'playlist-1',
+      playlistName: 'Evening Sequence',
+      usedAt: '2026-04-01T12:00:00.000Z',
+    });
+
+    saveLastUsedMeditation(null);
+
+    expect(loadLastUsedMeditation()).toBeNull();
+    expect(localStorage.getItem(rawLastUsedMeditationKey)).toBeNull();
   });
 });
 

@@ -37,38 +37,66 @@ frontend_port=$(frontend_dev_port)
 frontend_url=$(frontend_dev_url)
 frontend_log=$(component_log_file frontend)
 
-ensure_component_stopped frontend "$frontend_port"
+ensure_component_stopped frontend "$frontend_port" "$frontend_url"
 
 if [ "$start_backend" -eq 1 ]; then
   backend_port_value=$(backend_port)
   backend_url=$(backend_health_url)
   backend_log=$(component_log_file backend)
+  backend_log_offset=0
 
-  ensure_component_stopped backend "$backend_port_value"
+  ensure_component_stopped backend "$backend_port_value" "$backend_url"
 
+  if [ -f "$backend_log" ]; then
+    backend_log_offset=$(wc -c < "$backend_log")
+  fi
   append_log_header backend "Starting managed backend"
   nohup "$SCRIPT_DIR/dev-backend.sh" >> "$backend_log" 2>&1 &
   backend_pid=$!
   write_pid_file backend "$backend_pid"
 
-  if ! wait_for_http "$backend_url" 90; then
-    printf '%s\n' "Backend did not become healthy at $backend_url"
+  backend_wait_status=0
+  wait_for_http "$backend_url" 90 "$backend_pid" || backend_wait_status=$?
+  if [ "$backend_wait_status" -ne 0 ]; then
+    if [ "$backend_wait_status" -eq 2 ]; then
+      printf '%s\n' "Backend exited before becoming healthy at $backend_url"
+    else
+      printf '%s\n' "Backend did not become healthy at $backend_url"
+    fi
     printf '%s\n' "Recent backend log output:"
-    print_log_tail backend 40
+    print_log_tail_since_offset backend "$backend_log_offset" 40
+    if log_since_offset_contains backend "$backend_log_offset" "Detected applied migration not resolved locally"; then
+      printf '\n%s\n' "Local H2 startup recovery"
+      printf '%s\n' "The configured local development database at $(h2_db_dir)/$(h2_db_name) has Flyway history that this repo no longer resolves."
+      printf '%s\n' "If you do not need to preserve that local dev data, stop any backend using this database and run:"
+      printf '%s\n' "  npm run db:h2:reset -- --force"
+      printf '%s\n' "Then rerun:"
+      printf '%s\n' "  npm run start:app"
+    fi
     stop_component backend
     exit 1
   fi
 fi
 
+frontend_log_offset=0
+if [ -f "$frontend_log" ]; then
+  frontend_log_offset=$(wc -c < "$frontend_log")
+fi
 append_log_header frontend "Starting managed frontend"
 nohup "$SCRIPT_DIR/dev-frontend.sh" >> "$frontend_log" 2>&1 &
 frontend_pid=$!
 write_pid_file frontend "$frontend_pid"
 
-if ! wait_for_http "$frontend_url" 90; then
-  printf '%s\n' "Frontend did not become reachable at $frontend_url"
+frontend_wait_status=0
+wait_for_http "$frontend_url" 90 "$frontend_pid" || frontend_wait_status=$?
+if [ "$frontend_wait_status" -ne 0 ]; then
+  if [ "$frontend_wait_status" -eq 2 ]; then
+    printf '%s\n' "Frontend exited before becoming reachable at $frontend_url"
+  else
+    printf '%s\n' "Frontend did not become reachable at $frontend_url"
+  fi
   printf '%s\n' "Recent frontend log output:"
-  print_log_tail frontend 40
+  print_log_tail_since_offset frontend "$frontend_log_offset" 40
   stop_component frontend
   if [ "$start_backend" -eq 1 ]; then
     stop_component backend

@@ -26,6 +26,7 @@ Avoid:
 ## Required reading before work
 Always read these before changing behavior or structure:
 - README.md
+- requirements/intent.md
 - docs/product-requirements.md
 - docs/architecture.md
 - docs/ux-spec.md
@@ -33,7 +34,6 @@ Always read these before changing behavior or structure:
 - requirements/roadmap.md
 - requirements/decisions.md
 - requirements/session-handoff.md
-- requirements/prompts.md if present
 
 For complex or multi-step changes, also follow:
 - PLANS.md
@@ -214,21 +214,12 @@ When changing behavior:
 - for vertical slices, test the load-bearing logic first
 - when browser behavior matters, add or improve end-to-end style verification where practical
 
-## Session handoff expectations
+## Documentation expectations
 After each meaningful implementation slice:
-- update `requirements/session-handoff.md`
-- update `requirements/decisions.md`
-- summarize what was implemented
-- note what remains unfinished for the current feature area
-- record known limitations, shortcuts, and prototype assumptions
-- include a well-formed recommended next prompt in `requirements/session-handoff.md`
-
-The recommended next prompt must:
-- be implementation-ready
-- define a meaningful vertical slice
-- be bounded, not too granular and not too large
-- list what is included and excluded
-- require doc updates, verification, and a clear commit
+- update the durable product or operational docs that changed
+- update `requirements/decisions.md` when long-lived implementation or operational decisions change
+- update `requirements/session-handoff.md` when the current repo state, remaining gaps, or recommended next slice materially changes
+- keep `requirements/session-handoff.md` concise and current rather than appending step-by-step history
 
 ## Done means
 Before considering work complete:
@@ -239,8 +230,7 @@ Before considering work complete:
 5. tests pass
 6. build passes
 7. docs are updated if behavior or structure changed
-8. session-handoff and decisions are updated
-9. session-handoff includes the exact recommended next prompt for the next slice
+8. decisions and current-state docs are updated when needed
 
 ## Required commands
 Run these after meaningful changes where applicable:
@@ -294,3 +284,5 @@ A good ExecPlan should cover:
 - verification plan
 - decision log
 - progress log
+
+Keep ExecPlans focused on active work. When a task-specific ExecPlan stops being useful, fold any durable outcomes back into the long-lived docs instead of letting obsolete planning artifacts accumulate.

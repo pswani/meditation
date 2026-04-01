@@ -1,4 +1,5 @@
 import type { CustomPlay } from '../types/customPlay';
+import type { LastUsedMeditation } from '../types/home';
 import type { ActivePlaylistRun, Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
@@ -14,6 +15,7 @@ const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
 const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
 
@@ -381,6 +383,31 @@ function normalizeSankalpa(value: unknown): SankalpaGoal | null {
   };
 }
 
+function normalizeLastUsedMeditation(value: unknown): LastUsedMeditation | null {
+  if (!isObjectRecord(value) || !isValidIsoDate(value.usedAt)) {
+    return null;
+  }
+
+  if (value.kind === 'timer' && isTimerSettings(value.settings)) {
+    return {
+      kind: 'timer',
+      settings: normalizeTimerSettings(value.settings),
+      usedAt: value.usedAt,
+    };
+  }
+
+  if (value.kind === 'playlist' && typeof value.playlistId === 'string' && typeof value.playlistName === 'string') {
+    return {
+      kind: 'playlist',
+      playlistId: value.playlistId,
+      playlistName: value.playlistName,
+      usedAt: value.usedAt,
+    };
+  }
+
+  return null;
+}
+
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
   if (!raw) {
@@ -480,6 +507,29 @@ export function loadSankalpas(): SankalpaGoal[] {
 
 export function saveSankalpas(sankalpas: readonly SankalpaGoal[]): void {
   localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
+}
+
+export function loadLastUsedMeditation(): LastUsedMeditation | null {
+  const raw = localStorage.getItem(LAST_USED_MEDITATION_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return normalizeLastUsedMeditation(parsed);
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastUsedMeditation(lastUsedMeditation: LastUsedMeditation | null): void {
+  if (!lastUsedMeditation) {
+    localStorage.removeItem(LAST_USED_MEDITATION_KEY);
+    return;
+  }
+
+  localStorage.setItem(LAST_USED_MEDITATION_KEY, JSON.stringify(lastUsedMeditation));
 }
 
 interface StoredActivePlaylistRunState {
