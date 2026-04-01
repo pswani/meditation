@@ -471,7 +471,7 @@ The scripts under `scripts/` are the primary entry points for local build and se
 | `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain example.com --email ops@example.com` | none | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, starts nginx, and optionally runs Certbot. |
 | `./scripts/prod-macos-control.sh restart` | none | Cleanly restart the Mac Mini production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
 | `./scripts/prod-macos-control.sh logs --lines 80 --no-follow` | none | Tail or inspect Mac Mini production backend logs | Reads the installed backend production log with optional bounded output for quick inspection. |
-| `./scripts/h2-reset.sh` | `npm run db:h2:reset` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow after confirming no backend is still reachable on the configured local health URL. |
+| `./scripts/h2-reset.sh --force` | `npm run db:h2:reset -- --force` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow after confirming no backend is still reachable on the configured local health URL and after explicit destructive confirmation. |
 
 ### Environment and configuration variables
 
@@ -638,8 +638,8 @@ What they do:
 - `./scripts/prod-backend-logs.sh`
   - tails the prod backend log
 - `./scripts/h2-reset.sh`
-  - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows
-  - refuses to run while a backend is still reachable on the configured health URL so the reset stays local-only and safe
+  - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows only when passed `--force`
+  - refuses to run while a backend is still reachable on the configured health URL so the reset stays local-only and explicit
 
 If you prefer npm aliases, the lifecycle commands above also exist in `package.json` as thin wrappers around the same scripts.
 
@@ -648,7 +648,7 @@ Important note:
 - H2 reset clears the local DB files; Flyway recreates schema on the next backend startup
 - if `npm run start:app` reports `Detected applied migration not resolved locally`, the supported recovery path is:
   - stop any backend using the configured local DB
-  - run `npm run db:h2:reset`
+  - run `npm run db:h2:reset -- --force`
   - rerun `npm run start:app`
 - this reset is for local development data only
 
@@ -879,7 +879,7 @@ Flyway schema lives in:
 Use:
 
 ```bash
-npm run db:h2:reset
+npm run db:h2:reset -- --force
 ```
 
 Then restart the backend so Flyway can recreate the schema and seed data.

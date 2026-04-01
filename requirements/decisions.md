@@ -2,6 +2,14 @@
 
 ## Decision log
 
+### 2026-04-01 startup reliability review-fix decisions
+- Require an explicit `--force` flag for `npm run db:h2:reset` instead of treating port and health probes as enough proof that the database is unused:
+  - this keeps the reset path honest when developers use per-shell port overrides
+  - it turns H2 reset into an explicitly destructive local-development action instead of a casually "safe" default command
+- Treat a watched managed-process exit during startup as immediate failure rather than waiting for the full health-check timeout:
+  - backend and frontend startup should fail fast when the launched process dies
+  - the log-based recovery guidance should be shown from the current start attempt only, not from older stale log history
+
 ### 2026-04-01 startup reliability remediation decisions
 - Treat an already-responding configured frontend or backend URL as a hard stop for `npm run start:app`, even when the managed PID files are absent:
   - the managed stack must not treat another process's health response as proof that the new managed process started successfully

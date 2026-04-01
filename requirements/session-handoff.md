@@ -1,6 +1,45 @@
 # Session Handoff
 
 ## Current status
+The slice-1 review findings are fixed on `codex/intent-remediation-bundle`. The startup workflow now fails fast when the managed process dies, the Flyway recovery hint only keys off fresh log output, and the local H2 reset path requires explicit `--force` confirmation before deleting files. The next step is the next implementation slice from the bundle plan: Home `start last used meditation`.
+
+## 2026-04-01 startup reliability review fixes
+- Added and updated:
+  - `scripts/common.sh`
+  - `scripts/app-start.sh`
+  - `scripts/h2-reset.sh`
+  - `README.md`
+  - `requirements/decisions.md`
+  - `requirements/session-handoff.md`
+- What was completed:
+  - `npm run db:h2:reset` now refuses by default and requires `--force`, so the local-development DB wipe is an explicit destructive action rather than an implicitly safe reset
+  - `npm run start:app` now fails immediately when the launched backend or frontend process exits before becoming healthy, instead of waiting through the full health-check timeout
+  - Flyway recovery guidance in `npm run start:app` now inspects only the fresh log output from the current start attempt, avoiding false recovery hints from stale historical log content
+  - README recovery guidance now uses `npm run db:h2:reset -- --force`
+- Remaining risks:
+  - the managed lifecycle scripts still rely primarily on command-level verification instead of an automated shell test harness
+  - local operators still need to choose the correct configured port and DB path when using custom overrides; the scripts now make destructive reset explicit rather than trying to infer global workspace state
+- Verification completed:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - passed `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+  - verified `npm run db:h2:reset` now refuses without `--force`
+  - verified `MEDITATION_BACKEND_PORT=8081 npm run db:h2:reset -- --force` succeeds against the stopped default H2 path
+  - verified `MEDITATION_BACKEND_DEV_CMD='exit 1' MEDITATION_BACKEND_PORT=8082 MEDITATION_FRONTEND_DEV_PORT=5175 npm run start:app` now fails fast with only fresh log output from the current attempt
+  - re-verified the managed stack end to end on `8081` and `5174` against the default H2 path:
+    - `npm run start:app`
+    - `npm run status:app`
+    - `curl -i -s http://127.0.0.1:8081/api/health`
+    - `curl -i -s http://127.0.0.1:5174`
+    - `curl -i -s -X PUT http://127.0.0.1:8081/api/settings/timer ...`
+    - `curl -i -s http://127.0.0.1:8081/api/settings/timer`
+    - `npm run stop:app`
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, docs/review-intent-compliance-full-app.md, docs/pending-work-inventory.md, and requirements/execplan-intent-remediation-bundle.md. Then implement the next highest-priority unfinished remediation slice from requirements/execplan-intent-remediation-bundle.md, keeping scope bounded to Home start-last-used behavior. Include: persisting the last-used meditation launch context from the currently supported launch surfaces; adding a calm distinct Home action for starting that last-used meditation without mutating saved defaults; empty-state handling when no last-used meditation exists; focused tests; README updates if needed; requirements/decisions.md and requirements/session-handoff.md updates; npm run typecheck, npm run lint, npm run test, npm run build; relevant verification; and a clear commit message such as feat(home): add start last used meditation.`
+
+## Current status
 The startup-reliability slice has been reviewed on `codex/intent-remediation-bundle`. No product code changed in this step; the work documented two follow-up issues to fix before moving on from slice 1.
 
 ## 2026-04-01 startup reliability review

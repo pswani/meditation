@@ -372,11 +372,16 @@ ensure_component_stopped() {
 wait_for_http() {
   url=$1
   timeout_seconds=${2:-60}
+  watched_pid=${3:-}
   attempt=0
 
   while [ "$attempt" -lt "$timeout_seconds" ]; do
-    if curl -fsS "$url" >/dev/null 2>&1; then
+    if url_is_reachable "$url"; then
       return 0
+    fi
+
+    if [ -n "$watched_pid" ] && ! pid_is_running "$watched_pid"; then
+      return 2
     fi
 
     sleep 1
@@ -410,6 +415,35 @@ print_log_tail() {
   fi
 
   tail -n "$lines" "$log_file"
+}
+
+print_log_tail_since_offset() {
+  name=$1
+  offset=${2:-0}
+  lines=${3:-20}
+  log_file=$(component_log_file "$name")
+
+  if [ ! -f "$log_file" ]; then
+    printf '%s\n' "No log file found for $name at $log_file"
+    return 0
+  fi
+
+  start_byte=$((offset + 1))
+  tail -c +"$start_byte" "$log_file" 2>/dev/null | tail -n "$lines"
+}
+
+log_since_offset_contains() {
+  name=$1
+  offset=${2:-0}
+  pattern=$3
+  log_file=$(component_log_file "$name")
+
+  if [ ! -f "$log_file" ]; then
+    return 1
+  fi
+
+  start_byte=$((offset + 1))
+  tail -c +"$start_byte" "$log_file" 2>/dev/null | grep -F "$pattern" >/dev/null 2>&1
 }
 
 stop_component() {
