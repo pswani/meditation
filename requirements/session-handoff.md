@@ -1,6 +1,29 @@
 # Session Handoff
 
 ## Current status
+The pending-work inventory is complete. No product code changed in this step; the work added planning documentation that consolidates the remaining product, architecture, verification, and cleanup work needed to reach a clean, functional, trustworthy meditation app.
+
+## 2026-04-01 pending work inventory
+- Added and updated:
+  - `docs/pending-work-inventory.md`
+  - `requirements/session-handoff.md`
+- Inventory scope:
+  - synthesized unfinished work from the current codebase state, product and architecture docs, roadmap and decisions, the current handoff, and the material review and ExecPlan artifacts that still describe open gaps
+  - separated true core-product completion work from quality/trust work and optional polish
+- Current-state summary:
+  - the app already has a working timer, session logging, summaries, sankalpa progress, playlist CRUD, custom-play CRUD, responsive UI, backend REST integration, H2 persistence, offline queue foundations, and broad automated test coverage
+  - the biggest remaining product-scope gap is that `custom play` is still a saved timer preset with linked media metadata instead of a true pre-recorded meditation-session runtime
+  - the biggest remaining operational gap is that the documented managed local startup path is not currently trustworthy on the default persisted H2 database because `npm run start:app` fails Flyway validation there
+- Top backlog priorities:
+  - must: restore trustworthy default local startup and persistence compatibility
+  - must: implement true end-to-end `custom play` runtime
+  - must: complete playlist behavior to match intended sequencing scope
+  - must: add Home `start last used meditation`
+  - should: finish sankalpa lifecycle management, media workflow, `TimerContext` boundary cleanup, browser-level full-stack verification, degraded-state trust fixes, and doc alignment
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, docs/architecture.md, docs/review-intent-compliance-full-app.md, docs/pending-work-inventory.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan and implement a bounded startup-reliability slice that restores the documented managed local app flow on the default H2 path. Include: diagnosing and fixing the Flyway/default-database compatibility problem behind npm run start:app; if legacy local data needs repair, adding a safe repo-owned repair or reset path with explicit documentation instead of relying on an ad hoc clean-database workaround; verifying npm run start:app and npm run status:app, backend health, frontend reachability, and at least one representative persisted API flow on the repaired default stack; focused tests or verification improvements where practical; and doc updates in README.md, requirements/roadmap.md if needed, requirements/decisions.md, and requirements/session-handoff.md. Exclude unrelated product-feature work. Run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification, and commit with a clear message such as fix(dev): restore default local app startup reliability.`
+
+## Current status
 The full app intent-compliance audit is complete. No product code changed in this step; the work added review documentation and updated handoff guidance based on the current implementation, docs, automated verification, and backend startup checks.
 
 ## 2026-03-31 full app intent-compliance audit
