@@ -56,3 +56,5 @@
   - `requirements/decisions.md`
   - `requirements/session-handoff.md`
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
+- Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
+- Treat the next highest-value implementation slice as the missing runnable `custom play` flow now that the intent-remediation bundle has been merged back into `codex/review-and-cleanup`.

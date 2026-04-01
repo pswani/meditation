@@ -3,8 +3,9 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Active remediation branch before merge: `codex/intent-remediation-bundle`
-- Recorded parent branch for this bundle: `codex/review-and-cleanup`
+- Current branch: `codex/review-and-cleanup`
+- Latest completed bundle: `codex/intent-remediation-bundle`
+- Merge outcome: merged back into `codex/review-and-cleanup` on 2026-04-01 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
   - a React + TypeScript + Vite frontend
   - a Spring Boot backend in `backend/`
@@ -14,6 +15,10 @@ This file now tracks the durable current repository state rather than a prompt-b
   - managed local startup is now more reliable and explicit about local recovery
   - Home can restart the last used meditation through a persisted timer or playlist launch context
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
+- Bundle completion summary:
+  - restored the documented managed local startup flow and safer H2 recovery guidance
+  - added Home `start last used meditation`
+  - removed stale prompt, review, handoff-history, and ExecPlan artifacts after folding durable outcomes into the long-lived docs
 - Cleanup verification completed on 2026-04-01:
   - `npm run typecheck`
   - `npm run lint`
