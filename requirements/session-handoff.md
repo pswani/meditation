@@ -1,6 +1,32 @@
 # Session Handoff
 
 ## Current status
+The full app intent-compliance audit is complete. No product code changed in this step; the work added review documentation and updated handoff guidance based on the current implementation, docs, automated verification, and backend startup checks.
+
+## 2026-03-31 full app intent-compliance audit
+- Added and updated:
+  - `docs/review-intent-compliance-full-app.md`
+  - `requirements/session-handoff.md`
+- Audit scope:
+  - compared the current app against `requirements/intent.md` with supporting validation from product, architecture, UX, screen, roadmap, decisions, and README docs
+  - reviewed timer meditation, start/end/interval sounds and validation, pause/resume/end flow, custom plays, meditation types, session logging, summaries, sankalpa goals, playlists, responsiveness, persistence, API boundaries, and documentation accuracy
+- Supporting verification:
+  - passed `npm run typecheck`
+  - passed `npm run lint`
+  - passed `npm run test`
+  - passed `npm run build`
+  - `npm run start:app` failed against the default local H2 database because Flyway detected an applied migration `8` that is not resolved locally
+  - backend boot succeeded on a clean isolated H2 database using `MEDITATION_H2_DB_NAME=meditation-prompt05` and `MEDITATION_BACKEND_PORT=8081`, confirming the startup failure is tied to the persisted default local DB state rather than a clean-boot backend regression
+- Top findings:
+  - blocker: the default managed local app startup path is currently broken against `local-data/h2/meditation` because Flyway validation fails on missing migration history
+  - blocker: `custom play` is still a timer preset with linked media metadata, not a runnable pre-recorded meditation-session flow
+  - important: Home does not implement the documented `start last used meditation` behavior
+  - important: playlists remain timer-only and still do not support the documented optional small gap between items
+  - important: `requirements/roadmap.md` still describes the repo as front-end only even though the repo now contains a Spring backend and live REST integration
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, docs/review-intent-compliance-full-app.md, requirements/roadmap.md, requirements/decisions.md, and requirements/session-handoff.md. Then create an ExecPlan and implement a bounded custom-play runtime slice that makes a custom play an actual pre-recorded meditation-session flow instead of only a timer preset. Include: a primary Run Custom Play action from Practice and Home favorites; playback of the linked media session with the configured meditation type plus optional start/end sounds; trustworthy completion and end-early logging into History, Summary, and Sankalpa; the minimum backend/API and persistence updates needed; focused tests; and doc updates. Exclude playlist redesign and playlist runtime audio. If the default local H2 database still fails Flyway validation during verification, use a clean local dev DB or documented local reset only as needed for verification. Run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification, update requirements/decisions.md and requirements/session-handoff.md, and commit with a clear message such as feat(custom-plays): run prerecorded sessions end to end.`
+
+## Current status
 The timer defaults and runtime defects bundle is now merged into `main`. The defect-fix branch history has been preserved locally, and the repository is back on a clean parent branch state.
 
 ## 2026-03-31 timer defaults and runtime defects merge
