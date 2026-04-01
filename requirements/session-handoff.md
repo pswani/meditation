@@ -1,6 +1,21 @@
 # Session Handoff
 
 ## Current status
+The startup-reliability slice has been reviewed on `codex/intent-remediation-bundle`. No product code changed in this step; the work documented two follow-up issues to fix before moving on from slice 1.
+
+## 2026-04-01 startup reliability review
+- Added and updated:
+  - `docs/review-intent-remediation-slice-1.md`
+  - `requirements/session-handoff.md`
+- Top findings:
+  - `[P1]` `scripts/h2-reset.sh` still treats the reset path as safe based only on the currently configured backend URL and port, so a backend using the same H2 files on a different port override can still have its active DB deleted by a plain `npm run db:h2:reset`
+  - `[P2]` `scripts/app-start.sh` still waits the full health-check timeout before printing the new Flyway recovery guidance when the managed backend crashes immediately, which makes the failure look like a hang instead of a fast actionable error
+- Open question / assumption:
+  - assumed developers may run the backend on one port override and the reset command in another shell without matching overrides, because the repo documents those overrides as optional environment variables
+- Exact recommended next prompt:
+  - `Read AGENTS.md, PLANS.md, README.md, requirements/intent.md, docs/product-requirements.md, docs/architecture.md, docs/ux-spec.md, docs/screen-inventory.md, requirements/decisions.md, requirements/session-handoff.md, requirements/execplan-intent-remediation-bundle.md, and docs/review-intent-remediation-slice-1.md. Then create a small ExecPlan if needed and implement the important findings from docs/review-intent-remediation-slice-1.md, keeping scope bounded to the reviewed issues and regression-proofing for this slice. Fix blocker and important findings, include nice-to-have findings only if they are tightly related and low risk, add focused regression tests or verification improvements for each meaningful fix, avoid unrelated refactors, run npm run typecheck, npm run lint, npm run test, npm run build, plus relevant backend verification if backend or persistence code changed, update requirements/decisions.md and requirements/session-handoff.md with completion notes, remaining risks, and the exact recommended next prompt, and commit with a clear message such as fix(core): address slice 1 review findings.`
+
+## Current status
 The startup-reliability slice is complete on `codex/intent-remediation-bundle`. The managed local workflow is now more trustworthy about unmanaged port conflicts, the local H2 reset path is explicitly documented as the repo-owned recovery path for legacy Flyway mismatch, and the next step is a focused review of this slice.
 
 ## 2026-04-01 startup reliability remediation
