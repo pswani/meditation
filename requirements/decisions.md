@@ -20,6 +20,7 @@
 - Keep timer sound hydration backward compatible by remapping retired labels:
   - `Soft Chime` -> `Temple Bell`
   - `Wood Block` -> `Gong`
+- Keep shipped timer sounds inline-bundled into the frontend so playback does not depend on a backend `/media/**` route or separate runtime asset fetches.
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference

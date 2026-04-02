@@ -63,7 +63,8 @@ How playback wiring works:
 
 - timer setup, saved timer settings, active timer runtime, and `custom play` -> timer apply all keep using the stored label
 - the runtime resolves that label through `src/data/timerSoundCatalog.json`
-- the mapped file is then requested from `/media/sounds/<filename>`
+- shipped timer sounds resolve to inline frontend-bundled asset data so playback does not depend on the backend media route or a second static-file request
+- repo-local copies under `public/media/sounds/` and `local-data/media/sounds/` can still be kept for development parity and operational convenience
 - the current shipped selectable sounds are `None`, `Temple Bell`, and `Gong`
 - legacy saved labels still load safely:
   - `Soft Chime` -> `Temple Bell`

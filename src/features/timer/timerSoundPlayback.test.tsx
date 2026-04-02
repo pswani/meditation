@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SyncStatusProvider } from '../sync/SyncStatusProvider';
 import type { TimerSettings } from '../../types/timer';
 import { TimerProvider } from './TimerContext';
+import { resolveTimerSound } from './timerSoundCatalog';
 import { useTimer } from './useTimer';
 
 const validSettings: TimerSettings = {
@@ -113,6 +114,9 @@ function renderHarness(useStrictMode = false) {
 }
 
 describe('timer sound playback', () => {
+  const templeBellPath = resolveTimerSound('Temple Bell')?.filePath ?? 'temple-bell.mp3';
+  const gongPath = resolveTimerSound('Gong')?.filePath ?? 'gong.mp3';
+
   beforeEach(() => {
     localStorage.clear();
     vi.useFakeTimers();
@@ -136,7 +140,7 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
   });
 
   it('plays interval sounds at the elapsed timer cadence without replaying on pause and resume', async () => {
@@ -159,7 +163,7 @@ describe('timer sound playback', () => {
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
 
     fireEvent.click(screen.getByRole('button', { name: /resume session/i }));
     await flushAsyncWork();
@@ -169,14 +173,14 @@ describe('timer sound playback', () => {
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
 
     await act(async () => {
       vi.advanceTimersByTime(1_000);
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3', '/media/sounds/gong.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath, gongPath]);
 
     await act(async () => {
       vi.advanceTimersByTime(2 * 60_000);
@@ -184,9 +188,9 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(MockAudio.playCalls).toEqual([
-      '/media/sounds/temple-bell.mp3',
-      '/media/sounds/gong.mp3',
-      '/media/sounds/gong.mp3',
+      templeBellPath,
+      gongPath,
+      gongPath,
     ]);
   });
 
@@ -204,7 +208,7 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
-    expect(MockAudio.playCalls.filter((src) => src === '/media/sounds/gong.mp3')).toHaveLength(1);
+    expect(MockAudio.playCalls.filter((src) => src === gongPath)).toHaveLength(1);
   });
 
   it('plays the end sound once when the user ends a session early', async () => {
@@ -219,7 +223,7 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('outcome-status')).toHaveTextContent('ended early');
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3', '/media/sounds/gong.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath, gongPath]);
   });
 
   it('does not duplicate playback when rendered in StrictMode', async () => {
@@ -230,12 +234,12 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
   });
 
   it('fails safely when the browser blocks playback', async () => {
     mockAudioPlay.mockImplementation(async (src) => {
-      if (src === '/media/sounds/temple-bell.mp3') {
+      if (src === templeBellPath) {
         throw new DOMException('Playback requires user activation.', 'NotAllowedError');
       }
     });
@@ -260,7 +264,7 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
   });
 
   it('fails safely when a selected sound label is not mapped to a file', async () => {
