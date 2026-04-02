@@ -1,0 +1,643 @@
+Building and packaging the production deploy bundle
+Building frontend bundle
+Frontend fallback media root: /Users/prashantwani/wrk/meditation/public/media/custom-plays
+Backend media root: /Users/prashantwani/wrk/meditation/local-data/media/custom-plays
+
+> meditation-app@0.1.0 build
+> tsc -b && vite build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 94 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-4HGXEPeg.css   15.77 kB │ gzip:   3.77 kB
+dist/assets/index-BnO5TWNR.js   385.27 kB │ gzip: 108.51 kB
+✓ built in 445ms
+Building paired backend
+Running backend BUILD command in /Users/prashantwani/wrk/meditation/backend
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.meditation:backend >-----------------------
+[INFO] Building meditation-backend 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ backend ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] Copying 8 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ backend ---
+[INFO] Copying 2 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.meditation.backend.settings.TimerSettingsRepositoryTest
+21:32:50.680 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.meditation.backend.settings.TimerSettingsRepositoryTest]: TimerSettingsRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+21:32:50.720 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.settings.TimerSettingsRepositoryTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-04-01T21:32:50.840-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsRepositoryTest      : Starting TimerSettingsRepositoryTest using Java 21.0.10 with PID 66412 (started by prashantwani in /Users/prashantwani/wrk/meditation/backend)
+2026-04-01T21:32:50.841-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsRepositoryTest      : The following 1 profile is active: "test"
+2026-04-01T21:32:50.951-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-01T21:32:50.972-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 19 ms. Found 7 JPA repository interfaces.
+2026-04-01T21:32:50.994-05:00  INFO 66412 --- [meditation-backend] [           main] beddedDataSourceBeanFactoryPostProcessor : Replacing 'dataSource' DataSource bean with embedded version
+2026-04-01T21:32:51.058-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.j.d.e.EmbeddedDatabaseFactory        : Starting embedded database: url='jdbc:h2:mem:cf86a68a-0e1b-4a3f-b109-8849e2561cb6;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false', username='sa'
+2026-04-01T21:32:51.148-05:00  INFO 66412 --- [meditation-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:h2:mem:cf86a68a-0e1b-4a3f-b109-8849e2561cb6 (H2 2.2)
+2026-04-01T21:32:51.150-05:00  WARN 66412 --- [meditation-backend] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: H2 2.2.224 is newer than this version of Flyway and support has not been tested. The latest supported version of H2 is 2.2.220.
+2026-04-01T21:32:51.156-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "PUBLIC"."flyway_schema_history" does not exist yet
+2026-04-01T21:32:51.157-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 8 migrations (execution time 00:00.003s)
+2026-04-01T21:32:51.159-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "PUBLIC"."flyway_schema_history" ...
+2026-04-01T21:32:51.168-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "PUBLIC": << Empty Schema >>
+2026-04-01T21:32:51.174-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "1 - create core reference and domain tables"
+2026-04-01T21:32:51.189-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "2 - seed reference data"
+2026-04-01T21:32:51.192-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "3 - add session log sync and timer settings"
+2026-04-01T21:32:51.215-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "4 - add custom play sound fields"
+2026-04-01T21:32:51.220-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "5 - add playlist rest support"
+2026-04-01T21:32:51.224-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "6 - scope playlist item external id uniqueness"
+2026-04-01T21:32:51.227-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "7 - allow fractional sankalpa targets"
+2026-04-01T21:32:51.229-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "9 - add timer mode to timer settings and session logs"
+2026-04-01T21:32:51.235-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 8 migrations to schema "PUBLIC", now at version v9 (execution time 00:00.043s)
+2026-04-01T21:32:51.261-05:00  INFO 66412 --- [meditation-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-01T21:32:51.274-05:00  INFO 66412 --- [meditation-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.3.Final
+2026-04-01T21:32:51.281-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-01T21:32:51.362-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-01T21:32:51.617-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-01T21:32:51.623-05:00  INFO 66412 --- [meditation-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T21:32:51.766-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsRepositoryTest      : Started TimerSettingsRepositoryTest in 1.03 seconds (process running for 1.315)
+Hibernate: 
+    select
+        tse1_0.id,
+        tse1_0.duration_minutes,
+        tse1_0.end_sound,
+        tse1_0.interval_enabled,
+        tse1_0.interval_minutes,
+        tse1_0.interval_sound,
+        tse1_0.meditation_type_code,
+        tse1_0.start_sound,
+        tse1_0.timer_mode,
+        tse1_0.updated_at 
+    from
+        timer_settings tse1_0 
+    where
+        tse1_0.id=?
+Hibernate: 
+    update
+        timer_settings 
+    set
+        duration_minutes=?,
+        end_sound=?,
+        interval_enabled=?,
+        interval_minutes=?,
+        interval_sound=?,
+        meditation_type_code=?,
+        start_sound=?,
+        timer_mode=?,
+        updated_at=? 
+    where
+        id=?
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.398 s -- in com.meditation.backend.settings.TimerSettingsRepositoryTest
+[INFO] Running com.meditation.backend.settings.TimerSettingsControllerTest
+2026-04-01T21:32:52.027-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.settings.TimerSettingsControllerTest]: TimerSettingsControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:52.028-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.settings.TimerSettingsControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-04-01T21:32:52.046-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsControllerTest      : Starting TimerSettingsControllerTest using Java 21.0.10 with PID 66412 (started by prashantwani in /Users/prashantwani/wrk/meditation/backend)
+2026-04-01T21:32:52.046-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsControllerTest      : The following 1 profile is active: "test"
+2026-04-01T21:32:52.142-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-01T21:32:52.147-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 4 ms. Found 7 JPA repository interfaces.
+2026-04-01T21:32:52.200-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-01T21:32:52.203-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn7: url=jdbc:h2:mem:meditation-test user=SA
+2026-04-01T21:32:52.204-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-01T21:32:52.209-05:00  INFO 66412 --- [meditation-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:h2:mem:meditation-test (H2 2.2)
+2026-04-01T21:32:52.210-05:00  WARN 66412 --- [meditation-backend] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: H2 2.2.224 is newer than this version of Flyway and support has not been tested. The latest supported version of H2 is 2.2.220.
+2026-04-01T21:32:52.212-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "PUBLIC"."flyway_schema_history" does not exist yet
+2026-04-01T21:32:52.212-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 8 migrations (execution time 00:00.001s)
+2026-04-01T21:32:52.212-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "PUBLIC"."flyway_schema_history" ...
+2026-04-01T21:32:52.215-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "PUBLIC": << Empty Schema >>
+2026-04-01T21:32:52.217-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "1 - create core reference and domain tables"
+2026-04-01T21:32:52.224-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "2 - seed reference data"
+2026-04-01T21:32:52.226-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "3 - add session log sync and timer settings"
+2026-04-01T21:32:52.238-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "4 - add custom play sound fields"
+2026-04-01T21:32:52.247-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "5 - add playlist rest support"
+2026-04-01T21:32:52.253-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "6 - scope playlist item external id uniqueness"
+2026-04-01T21:32:52.255-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "7 - allow fractional sankalpa targets"
+2026-04-01T21:32:52.257-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "9 - add timer mode to timer settings and session logs"
+2026-04-01T21:32:52.260-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 8 migrations to schema "PUBLIC", now at version v9 (execution time 00:00.028s)
+2026-04-01T21:32:52.267-05:00  INFO 66412 --- [meditation-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-01T21:32:52.267-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-01T21:32:52.270-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-01T21:32:52.309-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-01T21:32:52.310-05:00  INFO 66412 --- [meditation-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T21:32:52.502-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-01T21:32:52.502-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-01T21:32:52.503-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-04-01T21:32:52.508-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.s.TimerSettingsControllerTest      : Started TimerSettingsControllerTest in 0.476 seconds (process running for 2.056)
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.548 s -- in com.meditation.backend.settings.TimerSettingsControllerTest
+[INFO] Running com.meditation.backend.playlist.PlaylistControllerTest
+2026-04-01T21:32:52.575-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.playlist.PlaylistControllerTest]: PlaylistControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:52.580-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.playlist.PlaylistControllerTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.107 s -- in com.meditation.backend.playlist.PlaylistControllerTest
+[INFO] Running com.meditation.backend.playlist.PlaylistRepositoryTest
+2026-04-01T21:32:52.683-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.playlist.PlaylistRepositoryTest]: PlaylistRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:52.691-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.playlist.PlaylistRepositoryTest
+Hibernate: 
+    select
+        pe1_0.id,
+        pe1_0.created_at,
+        pe1_0.favorite,
+        pe1_0.name,
+        pe1_0.small_gap_seconds,
+        pe1_0.updated_at 
+    from
+        playlist pe1_0 
+    where
+        pe1_0.id=?
+Hibernate: 
+    select
+        pe1_0.id,
+        pe1_0.created_at,
+        pe1_0.favorite,
+        pe1_0.name,
+        pe1_0.small_gap_seconds,
+        pe1_0.updated_at 
+    from
+        playlist pe1_0 
+    where
+        pe1_0.id=?
+Hibernate: 
+    insert 
+    into
+        playlist
+        (created_at, favorite, name, small_gap_seconds, updated_at, id) 
+    values
+        (?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        playlist
+        (created_at, favorite, name, small_gap_seconds, updated_at, id) 
+    values
+        (?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        playlist_item
+        (created_at, custom_play_id, duration_minutes, external_id, meditation_type_code, playlist_id, position_index, title, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, default)
+Hibernate: 
+    insert 
+    into
+        playlist_item
+        (created_at, custom_play_id, duration_minutes, external_id, meditation_type_code, playlist_id, position_index, title, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, default)
+Hibernate: 
+    select
+        pe1_0.id,
+        pe1_0.created_at,
+        pe1_0.favorite,
+        pe1_0.name,
+        pe1_0.small_gap_seconds,
+        pe1_0.updated_at 
+    from
+        playlist pe1_0 
+    order by
+        pe1_0.created_at desc
+Hibernate: 
+    select
+        pie1_0.id,
+        pie1_0.created_at,
+        pie1_0.custom_play_id,
+        pie1_0.duration_minutes,
+        pie1_0.external_id,
+        pie1_0.meditation_type_code,
+        pie1_0.playlist_id,
+        pie1_0.position_index,
+        pie1_0.title 
+    from
+        playlist_item pie1_0 
+    where
+        pie1_0.playlist_id in (?) 
+    order by
+        pie1_0.playlist_id,
+        pie1_0.position_index
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in com.meditation.backend.playlist.PlaylistRepositoryTest
+[INFO] Running com.meditation.backend.config.DevRuntimeConfigurationTest
+2026-04-01T21:32:52.699-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.config.DevRuntimeConfigurationTest]: DevRuntimeConfigurationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:52.701-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.config.DevRuntimeConfigurationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-04-01T21:32:52.712-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DevRuntimeConfigurationTest      : Starting DevRuntimeConfigurationTest using Java 21.0.10 with PID 66412 (started by prashantwani in /Users/prashantwani/wrk/meditation/backend)
+2026-04-01T21:32:52.713-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DevRuntimeConfigurationTest      : The following 1 profile is active: "dev"
+2026-04-01T21:32:52.740-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-01T21:32:52.744-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 3 ms. Found 7 JPA repository interfaces.
+2026-04-01T21:32:52.765-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-04-01T21:32:52.766-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection conn18: url=jdbc:h2:mem:backend-config-dev user=SA
+2026-04-01T21:32:52.766-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-04-01T21:32:52.766-05:00  INFO 66412 --- [meditation-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:h2:mem:backend-config-dev (H2 2.2)
+2026-04-01T21:32:52.767-05:00  WARN 66412 --- [meditation-backend] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: H2 2.2.224 is newer than this version of Flyway and support has not been tested. The latest supported version of H2 is 2.2.220.
+2026-04-01T21:32:52.768-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "PUBLIC"."flyway_schema_history" does not exist yet
+2026-04-01T21:32:52.768-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 8 migrations (execution time 00:00.000s)
+2026-04-01T21:32:52.768-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "PUBLIC"."flyway_schema_history" ...
+2026-04-01T21:32:52.770-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "PUBLIC": << Empty Schema >>
+2026-04-01T21:32:52.772-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "1 - create core reference and domain tables"
+2026-04-01T21:32:52.777-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "2 - seed reference data"
+2026-04-01T21:32:52.779-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "3 - add session log sync and timer settings"
+2026-04-01T21:32:52.785-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "4 - add custom play sound fields"
+2026-04-01T21:32:52.788-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "5 - add playlist rest support"
+2026-04-01T21:32:52.790-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "6 - scope playlist item external id uniqueness"
+2026-04-01T21:32:52.790-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "7 - allow fractional sankalpa targets"
+2026-04-01T21:32:52.792-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "9 - add timer mode to timer settings and session logs"
+2026-04-01T21:32:52.794-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 8 migrations to schema "PUBLIC", now at version v9 (execution time 00:00.012s)
+2026-04-01T21:32:52.798-05:00  INFO 66412 --- [meditation-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-01T21:32:52.799-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-01T21:32:52.801-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-01T21:32:52.839-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-01T21:32:52.839-05:00  INFO 66412 --- [meditation-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T21:32:52.872-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DevRuntimeConfigurationTest      : Started DevRuntimeConfigurationTest in 0.168 seconds (process running for 2.42)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.175 s -- in com.meditation.backend.config.DevRuntimeConfigurationTest
+[INFO] Running com.meditation.backend.config.DefaultRuntimeConfigurationTest
+2026-04-01T21:32:52.874-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.config.DefaultRuntimeConfigurationTest]: DefaultRuntimeConfigurationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:52.874-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.config.DefaultRuntimeConfigurationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-04-01T21:32:52.881-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DefaultRuntimeConfigurationTest  : Starting DefaultRuntimeConfigurationTest using Java 21.0.10 with PID 66412 (started by prashantwani in /Users/prashantwani/wrk/meditation/backend)
+2026-04-01T21:32:52.882-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DefaultRuntimeConfigurationTest  : No active profile set, falling back to 1 default profile: "default"
+2026-04-01T21:32:52.905-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-01T21:32:52.908-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 3 ms. Found 7 JPA repository interfaces.
+2026-04-01T21:32:52.924-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-04-01T21:32:52.925-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection conn22: url=jdbc:h2:mem:backend-config-default user=SA
+2026-04-01T21:32:52.925-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-04-01T21:32:52.925-05:00  INFO 66412 --- [meditation-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:h2:mem:backend-config-default (H2 2.2)
+2026-04-01T21:32:52.926-05:00  WARN 66412 --- [meditation-backend] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: H2 2.2.224 is newer than this version of Flyway and support has not been tested. The latest supported version of H2 is 2.2.220.
+2026-04-01T21:32:52.927-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "PUBLIC"."flyway_schema_history" does not exist yet
+2026-04-01T21:32:52.927-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 8 migrations (execution time 00:00.000s)
+2026-04-01T21:32:52.927-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "PUBLIC"."flyway_schema_history" ...
+2026-04-01T21:32:52.929-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "PUBLIC": << Empty Schema >>
+2026-04-01T21:32:52.930-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "1 - create core reference and domain tables"
+2026-04-01T21:32:52.940-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "2 - seed reference data"
+2026-04-01T21:32:52.942-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "3 - add session log sync and timer settings"
+2026-04-01T21:32:52.949-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "4 - add custom play sound fields"
+2026-04-01T21:32:52.951-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "5 - add playlist rest support"
+2026-04-01T21:32:52.953-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "6 - scope playlist item external id uniqueness"
+2026-04-01T21:32:52.954-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "7 - allow fractional sankalpa targets"
+2026-04-01T21:32:52.955-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "PUBLIC" to version "9 - add timer mode to timer settings and session logs"
+2026-04-01T21:32:52.957-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 8 migrations to schema "PUBLIC", now at version v9 (execution time 00:00.011s)
+2026-04-01T21:32:52.961-05:00  INFO 66412 --- [meditation-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-01T21:32:52.962-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-01T21:32:52.964-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-01T21:32:52.995-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-01T21:32:52.996-05:00  INFO 66412 --- [meditation-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T21:32:53.025-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.b.c.DefaultRuntimeConfigurationTest  : Started DefaultRuntimeConfigurationTest in 0.15 seconds (process running for 2.574)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.153 s -- in com.meditation.backend.config.DefaultRuntimeConfigurationTest
+[INFO] Running com.meditation.backend.health.ApiHealthControllerTest
+2026-04-01T21:32:53.028-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.health.ApiHealthControllerTest]: ApiHealthControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.030-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.health.ApiHealthControllerTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in com.meditation.backend.health.ApiHealthControllerTest
+[INFO] Running com.meditation.backend.customplay.CustomPlayControllerTest
+2026-04-01T21:32:53.036-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.customplay.CustomPlayControllerTest]: CustomPlayControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.039-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.customplay.CustomPlayControllerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in com.meditation.backend.customplay.CustomPlayControllerTest
+[INFO] Running com.meditation.backend.customplay.CustomPlayRepositoryTest
+2026-04-01T21:32:53.063-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.customplay.CustomPlayRepositoryTest]: CustomPlayRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.065-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.customplay.CustomPlayRepositoryTest
+Hibernate: 
+    select
+        cpe1_0.id,
+        cpe1_0.created_at,
+        cpe1_0.duration_minutes,
+        cpe1_0.end_sound,
+        cpe1_0.favorite,
+        cpe1_0.media_asset_id,
+        cpe1_0.meditation_type_code,
+        cpe1_0.notes,
+        cpe1_0.start_sound,
+        cpe1_0.title,
+        cpe1_0.updated_at 
+    from
+        custom_play cpe1_0 
+    where
+        cpe1_0.id=?
+Hibernate: 
+    select
+        cpe1_0.id,
+        cpe1_0.created_at,
+        cpe1_0.duration_minutes,
+        cpe1_0.end_sound,
+        cpe1_0.favorite,
+        cpe1_0.media_asset_id,
+        cpe1_0.meditation_type_code,
+        cpe1_0.notes,
+        cpe1_0.start_sound,
+        cpe1_0.title,
+        cpe1_0.updated_at 
+    from
+        custom_play cpe1_0 
+    where
+        cpe1_0.id=?
+Hibernate: 
+    insert 
+    into
+        custom_play
+        (created_at, duration_minutes, end_sound, favorite, media_asset_id, meditation_type_code, notes, start_sound, title, updated_at, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        custom_play
+        (created_at, duration_minutes, end_sound, favorite, media_asset_id, meditation_type_code, notes, start_sound, title, updated_at, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        cpe1_0.id,
+        cpe1_0.created_at,
+        cpe1_0.duration_minutes,
+        cpe1_0.end_sound,
+        cpe1_0.favorite,
+        cpe1_0.media_asset_id,
+        cpe1_0.meditation_type_code,
+        cpe1_0.notes,
+        cpe1_0.start_sound,
+        cpe1_0.title,
+        cpe1_0.updated_at 
+    from
+        custom_play cpe1_0 
+    order by
+        cpe1_0.created_at desc
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.meditation.backend.customplay.CustomPlayRepositoryTest
+[INFO] Running com.meditation.backend.sessionlog.SessionLogRepositoryTest
+2026-04-01T21:32:53.069-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.sessionlog.SessionLogRepositoryTest]: SessionLogRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.078-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.sessionlog.SessionLogRepositoryTest
+Hibernate: 
+    select
+        sle1_0.id,
+        sle1_0.completed_duration_seconds,
+        sle1_0.created_at,
+        sle1_0.end_sound,
+        sle1_0.ended_at,
+        sle1_0.interval_enabled,
+        sle1_0.interval_minutes,
+        sle1_0.interval_sound,
+        sle1_0.meditation_type_code,
+        sle1_0.planned_duration_seconds,
+        sle1_0.playlist_id,
+        sle1_0.playlist_item_count,
+        sle1_0.playlist_item_position,
+        sle1_0.playlist_name,
+        sle1_0.playlist_run_id,
+        sle1_0.playlist_run_started_at,
+        sle1_0.source,
+        sle1_0.start_sound,
+        sle1_0.started_at,
+        sle1_0.status,
+        sle1_0.timer_mode 
+    from
+        session_log sle1_0 
+    where
+        sle1_0.id=?
+Hibernate: 
+    select
+        sle1_0.id,
+        sle1_0.completed_duration_seconds,
+        sle1_0.created_at,
+        sle1_0.end_sound,
+        sle1_0.ended_at,
+        sle1_0.interval_enabled,
+        sle1_0.interval_minutes,
+        sle1_0.interval_sound,
+        sle1_0.meditation_type_code,
+        sle1_0.planned_duration_seconds,
+        sle1_0.playlist_id,
+        sle1_0.playlist_item_count,
+        sle1_0.playlist_item_position,
+        sle1_0.playlist_name,
+        sle1_0.playlist_run_id,
+        sle1_0.playlist_run_started_at,
+        sle1_0.source,
+        sle1_0.start_sound,
+        sle1_0.started_at,
+        sle1_0.status,
+        sle1_0.timer_mode 
+    from
+        session_log sle1_0 
+    where
+        sle1_0.id=?
+Hibernate: 
+    insert 
+    into
+        session_log
+        (completed_duration_seconds, created_at, end_sound, ended_at, interval_enabled, interval_minutes, interval_sound, meditation_type_code, planned_duration_seconds, playlist_id, playlist_item_count, playlist_item_position, playlist_name, playlist_run_id, playlist_run_started_at, source, start_sound, started_at, status, timer_mode, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        session_log
+        (completed_duration_seconds, created_at, end_sound, ended_at, interval_enabled, interval_minutes, interval_sound, meditation_type_code, planned_duration_seconds, playlist_id, playlist_item_count, playlist_item_position, playlist_name, playlist_run_id, playlist_run_started_at, source, start_sound, started_at, status, timer_mode, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        sle1_0.id,
+        sle1_0.completed_duration_seconds,
+        sle1_0.created_at,
+        sle1_0.end_sound,
+        sle1_0.ended_at,
+        sle1_0.interval_enabled,
+        sle1_0.interval_minutes,
+        sle1_0.interval_sound,
+        sle1_0.meditation_type_code,
+        sle1_0.planned_duration_seconds,
+        sle1_0.playlist_id,
+        sle1_0.playlist_item_count,
+        sle1_0.playlist_item_position,
+        sle1_0.playlist_name,
+        sle1_0.playlist_run_id,
+        sle1_0.playlist_run_started_at,
+        sle1_0.source,
+        sle1_0.start_sound,
+        sle1_0.started_at,
+        sle1_0.status,
+        sle1_0.timer_mode 
+    from
+        session_log sle1_0 
+    order by
+        sle1_0.ended_at desc,
+        sle1_0.created_at desc
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in com.meditation.backend.sessionlog.SessionLogRepositoryTest
+[INFO] Running com.meditation.backend.sessionlog.SessionLogControllerTest
+2026-04-01T21:32:53.083-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.sessionlog.SessionLogControllerTest]: SessionLogControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.084-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.sessionlog.SessionLogControllerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.032 s -- in com.meditation.backend.sessionlog.SessionLogControllerTest
+[INFO] Running com.meditation.backend.sankalpa.SankalpaControllerTest
+2026-04-01T21:32:53.116-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.sankalpa.SankalpaControllerTest]: SankalpaControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.119-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.sankalpa.SankalpaControllerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.032 s -- in com.meditation.backend.sankalpa.SankalpaControllerTest
+[INFO] Running com.meditation.backend.summary.SummaryControllerTest
+2026-04-01T21:32:53.147-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.summary.SummaryControllerTest]: SummaryControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.150-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.summary.SummaryControllerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in com.meditation.backend.summary.SummaryControllerTest
+[INFO] Running com.meditation.backend.media.MediaAssetServiceTest
+2026-04-01T21:32:53.172-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.media.MediaAssetServiceTest]: MediaAssetServiceTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.174-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.media.MediaAssetServiceTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.4)
+
+2026-04-01T21:32:53.180-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.backend.media.MediaAssetServiceTest  : Starting MediaAssetServiceTest using Java 21.0.10 with PID 66412 (started by prashantwani in /Users/prashantwani/wrk/meditation/backend)
+2026-04-01T21:32:53.180-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.backend.media.MediaAssetServiceTest  : The following 1 profile is active: "test"
+2026-04-01T21:32:53.209-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-01T21:32:53.213-05:00  INFO 66412 --- [meditation-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 3 ms. Found 7 JPA repository interfaces.
+2026-04-01T21:32:53.230-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2026-04-01T21:32:53.231-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection conn38: url=jdbc:h2:mem:meditation-test user=SA
+2026-04-01T21:32:53.231-05:00  INFO 66412 --- [meditation-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2026-04-01T21:32:53.231-05:00  INFO 66412 --- [meditation-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:h2:mem:meditation-test (H2 2.2)
+2026-04-01T21:32:53.232-05:00  WARN 66412 --- [meditation-backend] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: H2 2.2.224 is newer than this version of Flyway and support has not been tested. The latest supported version of H2 is 2.2.220.
+2026-04-01T21:32:53.234-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 8 migrations (execution time 00:00.002s)
+2026-04-01T21:32:53.235-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "PUBLIC": 9
+2026-04-01T21:32:53.235-05:00  INFO 66412 --- [meditation-backend] [           main] o.f.core.internal.command.DbMigrate      : Schema "PUBLIC" is up to date. No migration necessary.
+2026-04-01T21:32:53.240-05:00  INFO 66412 --- [meditation-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-01T21:32:53.240-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-01T21:32:53.243-05:00  INFO 66412 --- [meditation-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-01T21:32:53.279-05:00  INFO 66412 --- [meditation-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-01T21:32:53.280-05:00  INFO 66412 --- [meditation-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T21:32:53.326-05:00  INFO 66412 --- [meditation-backend] [           main] c.m.backend.media.MediaAssetServiceTest  : Started MediaAssetServiceTest in 0.152 seconds (process running for 2.874)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.meditation.backend.media.MediaAssetServiceTest
+[INFO] Running com.meditation.backend.media.MediaAssetRepositoryTest
+2026-04-01T21:32:53.330-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.media.MediaAssetRepositoryTest]: MediaAssetRepositoryTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.332-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.media.MediaAssetRepositoryTest
+Hibernate: 
+    select
+        mae1_0.id,
+        mae1_0.active,
+        mae1_0.asset_kind,
+        mae1_0.duration_seconds,
+        mae1_0.label,
+        mae1_0.meditation_type_code,
+        mae1_0.mime_type,
+        mae1_0.relative_path,
+        mae1_0.size_bytes,
+        mae1_0.updated_at 
+    from
+        media_asset mae1_0 
+    where
+        mae1_0.asset_kind=? 
+        and mae1_0.active 
+    order by
+        mae1_0.label
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in com.meditation.backend.media.MediaAssetRepositoryTest
+[INFO] Running com.meditation.backend.media.MediaAssetControllerTest
+2026-04-01T21:32:53.335-05:00  INFO 66412 --- [meditation-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.meditation.backend.media.MediaAssetControllerTest]: MediaAssetControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-01T21:32:53.336-05:00  INFO 66412 --- [meditation-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.meditation.backend.MeditationBackendApplication for test class com.meditation.backend.media.MediaAssetControllerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in com.meditation.backend.media.MediaAssetControllerTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 39, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ backend ---
+[INFO] 
+[INFO] --- spring-boot:3.3.4:repackage (repackage) @ backend ---
+[INFO] Replacing main artifact /Users/prashantwani/wrk/meditation/backend/target/backend-0.1.0-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to /Users/prashantwani/wrk/meditation/backend/target/backend-0.1.0-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.488 s
+[INFO] Finished at: 2026-04-01T21:32:53-05:00
+[INFO] ------------------------------------------------------------------------
+Wrote nginx config to /Users/prashantwani/wrk/meditation/local-data/deploy/nginx/meditation.conf
+Deployment bundle prepared under /Users/prashantwani/wrk/meditation/local-data/deploy
+Frontend static files: /Users/prashantwani/wrk/meditation/local-data/deploy/frontend
+Backend jar: /Users/prashantwani/wrk/meditation/local-data/deploy/backend/meditation-backend.jar
+nginx config: /Users/prashantwani/wrk/meditation/local-data/deploy/nginx/meditation.conf
+Backend env example: /Users/prashantwani/wrk/meditation/local-data/deploy/backend/meditation-backend.env.example
+Creating production directories under /opt/meditation
+Installing frontend bundle into /opt/meditation/app/frontend
+Installing backend jar into /opt/meditation/app/backend
+Installing backend support scripts into /opt/meditation/bin
+Keeping existing production env file at /opt/meditation/shared/meditation.env
+Rendering nginx site config into /opt/homebrew/etc/nginx/servers/meditation.conf
+Wrote nginx config to /opt/homebrew/etc/nginx/servers/meditation.conf
+Rendering launchd plist into /Library/LaunchDaemons/com.meditation.backend.plist
+Wrote launchd plist to /Library/LaunchDaemons/com.meditation.backend.plist
+Restarting the managed production services
+Backend launchd service is not loaded.
+nginx is already stopped.
+nginx service: none
+nginx site config: /opt/homebrew/etc/nginx/servers/meditation.conf
+backend launchd: not-loaded
+backend plist: /Library/LaunchDaemons/com.meditation.backend.plist
+backend jar: /opt/meditation/app/backend/meditation-backend.jar
+backend health: unreachable
+Starting or restarting nginx
+Service `nginx` already started, use `brew services restart nginx` to restart.
+Bootstrapping backend launchd service
+Backend health is up at http://127.0.0.1:8080/api/health
+nginx service: none
+nginx site config: /opt/homebrew/etc/nginx/servers/meditation.conf
+backend launchd: loaded
+backend plist: /Library/LaunchDaemons/com.meditation.backend.plist
+backend jar: /opt/meditation/app/backend/meditation-backend.jar
+backend health: healthy
+Skipping Certbot because --domain and --email were not both provided.
+Production app root: /opt/meditation
+Frontend install dir: /opt/meditation/app/frontend
+Backend jar: /opt/meditation/app/backend/meditation-backend.jar
+Backend env file: /opt/meditation/shared/meditation.env
+nginx site config: /opt/homebrew/etc/nginx/servers/meditation.conf
+launchd plist: /Library/LaunchDaemons/com.meditation.backend.plist
