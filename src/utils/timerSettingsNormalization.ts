@@ -1,4 +1,10 @@
 import type { TimerMode, TimerSettings } from '../types/timer';
+import {
+  DEFAULT_END_SOUND_LABEL,
+  DEFAULT_INTERVAL_SOUND_LABEL,
+  DEFAULT_START_SOUND_LABEL,
+  normalizeTimerSoundLabel,
+} from './timerSound';
 
 const DEFAULT_FIXED_DURATION_MINUTES = 20;
 
@@ -59,10 +65,10 @@ export function normalizeTimerSettings(settings: TimerSettingsLike): TimerSettin
     durationMinutes: normalizeFixedDurationMinutes(timerMode, settings.durationMinutes, settings.lastFixedDurationMinutes),
     lastFixedDurationMinutes: resolveLastFixedDurationMinutes(settings.durationMinutes, settings.lastFixedDurationMinutes),
     meditationType: settings.meditationType,
-    startSound: settings.startSound,
-    endSound: settings.endSound,
+    startSound: normalizeTimerSoundLabel(settings.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(settings.endSound, DEFAULT_END_SOUND_LABEL),
     intervalEnabled: settings.intervalEnabled,
     intervalMinutes: settings.intervalMinutes,
-    intervalSound: settings.intervalSound ?? 'Temple Bell',
+    intervalSound: normalizeTimerSoundLabel(settings.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
   };
 }

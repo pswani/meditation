@@ -6,27 +6,29 @@ describe('timer sound catalog', () => {
     expect(listPlayableTimerSounds()).toEqual([
       {
         label: 'Temple Bell',
-        filename: 'temple-bell.wav',
-        relativePath: 'sounds/temple-bell.wav',
-        filePath: '/media/sounds/temple-bell.wav',
+        filename: 'temple-bell.mp3',
+        relativePath: 'sounds/temple-bell.mp3',
+        filePath: '/media/sounds/temple-bell.mp3',
       },
       {
-        label: 'Soft Chime',
-        filename: 'soft-chime.wav',
-        relativePath: 'sounds/soft-chime.wav',
-        filePath: '/media/sounds/soft-chime.wav',
-      },
-      {
-        label: 'Wood Block',
-        filename: 'wood-block.wav',
-        relativePath: 'sounds/wood-block.wav',
-        filePath: '/media/sounds/wood-block.wav',
+        label: 'Gong',
+        filename: 'gong.mp3',
+        relativePath: 'sounds/gong.mp3',
+        filePath: '/media/sounds/gong.mp3',
       },
     ]);
   });
 
-  it('keeps None silent and fails safely for unknown labels', () => {
+  it('keeps None silent, maps legacy labels, and fails safely for unknown labels', () => {
     expect(resolveTimerSound('None')).toBeNull();
+    expect(resolveTimerSound('Soft Chime')).toMatchObject({
+      label: 'Temple Bell',
+      filePath: '/media/sounds/temple-bell.mp3',
+    });
+    expect(resolveTimerSound('Wood Block')).toMatchObject({
+      label: 'Gong',
+      filePath: '/media/sounds/gong.mp3',
+    });
     expect(resolveTimerSound('Missing Bell')).toBeNull();
   });
 });

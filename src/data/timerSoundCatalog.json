@@ -1,14 +1,10 @@
 [
   {
     "label": "Temple Bell",
-    "filename": "temple-bell.wav"
+    "filename": "temple-bell.mp3"
   },
   {
-    "label": "Soft Chime",
-    "filename": "soft-chime.wav"
-  },
-  {
-    "label": "Wood Block",
-    "filename": "wood-block.wav"
+    "label": "Gong",
+    "filename": "gong.mp3"
   }
 ]

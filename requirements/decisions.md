@@ -17,6 +17,9 @@
 - Keep persisted timer defaults separate from the Practice screen's in-progress draft state so Home, Settings, and Practice do not overwrite one another unintentionally.
 - Persist active timer recovery as one canonical active-session snapshot and preserve paused recovery truthfully instead of reconstructing timer state from looser fragments.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
+- Keep timer sound hydration backward compatible by remapping retired labels:
+  - `Soft Chime` -> `Temple Bell`
+  - `Wood Block` -> `Gong`
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference

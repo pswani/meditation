@@ -1,6 +1,5 @@
 import timerSoundCatalogData from '../../data/timerSoundCatalog.json';
-
-export const SILENT_TIMER_SOUND_LABEL = 'None';
+import { normalizeTimerSoundLabel, SILENT_TIMER_SOUND_LABEL } from '../../utils/timerSound';
 
 interface TimerSoundCatalogEntryRecord {
   readonly label: string;
@@ -23,11 +22,12 @@ const timerSoundCatalog = (timerSoundCatalogData as readonly TimerSoundCatalogEn
 const timerSoundCatalogByLabel = new Map(timerSoundCatalog.map((entry) => [entry.label, entry] as const));
 
 export function resolveTimerSound(label: string): TimerSoundCatalogEntry | null {
-  if (label === SILENT_TIMER_SOUND_LABEL) {
+  const normalizedLabel = normalizeTimerSoundLabel(label, label);
+  if (normalizedLabel === SILENT_TIMER_SOUND_LABEL) {
     return null;
   }
 
-  return timerSoundCatalogByLabel.get(label) ?? null;
+  return timerSoundCatalogByLabel.get(normalizedLabel) ?? null;
 }
 
 export function listPlayableTimerSounds(): readonly TimerSoundCatalogEntry[] {

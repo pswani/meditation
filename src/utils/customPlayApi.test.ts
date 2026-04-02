@@ -16,8 +16,8 @@ const customPlay: CustomPlay = {
   name: 'Morning Focus',
   meditationType: 'Vipassana',
   durationMinutes: 33,
-  startSound: 'Soft Chime',
-  endSound: 'Wood Block',
+  startSound: 'Temple Bell',
+  endSound: 'Gong',
   mediaAssetId: 'media-vipassana-sit-20',
   recordingLabel: 'Breath emphasis',
   favorite: false,
@@ -46,6 +46,25 @@ describe('custom play api boundary', () => {
         ok: true,
         status: 200,
         json: async () => [customPlay],
+      })
+    );
+
+    await expect(listCustomPlaysFromApi()).resolves.toEqual([customPlay]);
+  });
+
+  it('normalizes legacy sound labels returned by the backend', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            ...customPlay,
+            startSound: 'Soft Chime',
+            endSound: 'Wood Block',
+          },
+        ],
       })
     );
 

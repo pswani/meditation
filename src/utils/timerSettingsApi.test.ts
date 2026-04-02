@@ -54,11 +54,11 @@ describe('timer settings api boundary', () => {
         durationMinutes: 30,
         lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
-        startSound: 'Soft Chime',
+        startSound: 'Temple Bell',
         endSound: 'Temple Bell',
         intervalEnabled: true,
         intervalMinutes: 10,
-        intervalSound: 'Wood Block',
+        intervalSound: 'Gong',
       }),
     });
 
@@ -70,11 +70,11 @@ describe('timer settings api boundary', () => {
         durationMinutes: 30,
         lastFixedDurationMinutes: 30,
         meditationType: 'Ajapa',
-        startSound: 'Soft Chime',
+        startSound: 'Temple Bell',
         endSound: 'Temple Bell',
         intervalEnabled: true,
         intervalMinutes: 10,
-        intervalSound: 'Wood Block',
+        intervalSound: 'Gong',
       },
       {
         syncQueuedAt: '2026-03-27T10:15:00.000Z',
@@ -83,17 +83,17 @@ describe('timer settings api boundary', () => {
 
     expect(saved.intervalEnabled).toBe(true);
     expect(saved.intervalMinutes).toBe(10);
-    expect(saved.intervalSound).toBe('Wood Block');
+    expect(saved.intervalSound).toBe('Gong');
     expect(areTimerSettingsEqual(saved, {
       timerMode: 'fixed',
       durationMinutes: 30,
       lastFixedDurationMinutes: 30,
       meditationType: 'Ajapa',
-      startSound: 'Soft Chime',
+      startSound: 'Temple Bell',
       endSound: 'Temple Bell',
       intervalEnabled: true,
       intervalMinutes: 10,
-      intervalSound: 'Wood Block',
+      intervalSound: 'Gong',
     })).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/settings/timer',
@@ -133,6 +133,8 @@ describe('timer settings api boundary', () => {
     expect(settings.durationMinutes).toBeNull();
     expect(settings.lastFixedDurationMinutes).toBe(18);
     expect(settings.intervalEnabled).toBe(true);
+    expect(settings.startSound).toBe('Temple Bell');
+    expect(settings.intervalSound).toBe('Gong');
   });
 
   it('normalizes legacy fixed responses with missing current duration to a safe fallback', async () => {

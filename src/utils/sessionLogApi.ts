@@ -3,6 +3,12 @@ import type { ManualLogCreateRequest } from './manualLog';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  DEFAULT_END_SOUND_LABEL,
+  DEFAULT_INTERVAL_SOUND_LABEL,
+  DEFAULT_START_SOUND_LABEL,
+  normalizeTimerSoundLabel,
+} from './timerSound';
 
 export const SESSION_LOGS_COLLECTION_PATH = '/session-logs';
 export const SESSION_LOGS_COLLECTION_ENDPOINT = buildApiPath(SESSION_LOGS_COLLECTION_PATH);
@@ -87,11 +93,11 @@ function normalizeSessionLogPayload(payload: unknown): SessionLog {
     completedDurationSeconds: payload.completedDurationSeconds,
     status: payload.status,
     source: payload.source,
-    startSound: payload.startSound,
-    endSound: payload.endSound,
+    startSound: normalizeTimerSoundLabel(payload.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(payload.endSound, DEFAULT_END_SOUND_LABEL),
     intervalEnabled: payload.intervalEnabled,
     intervalMinutes: payload.intervalMinutes,
-    intervalSound: payload.intervalSound,
+    intervalSound: normalizeTimerSoundLabel(payload.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
     playlistId: payload.playlistId ?? undefined,
     playlistName: payload.playlistName ?? undefined,
     playlistRunId: payload.playlistRunId ?? undefined,

@@ -9,12 +9,13 @@ import { useTimer } from './useTimer';
 const validSettings: TimerSettings = {
   timerMode: 'fixed',
   durationMinutes: 10,
+  lastFixedDurationMinutes: 10,
   meditationType: 'Vipassana',
-  startSound: 'Soft Chime',
-  endSound: 'Temple Bell',
+  startSound: 'Temple Bell',
+  endSound: 'Gong',
   intervalEnabled: true,
   intervalMinutes: 2,
-  intervalSound: 'Wood Block',
+  intervalSound: 'Gong',
 };
 
 class MockAudio {
@@ -49,6 +50,18 @@ function SoundHarness() {
     <div>
       <button type="button" onClick={() => setSettings(validSettings)}>
         Load Valid Timer Settings
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setSettings({
+            ...validSettings,
+            startSound: 'Soft Chime',
+            intervalSound: 'Wood Block',
+          } as TimerSettings)
+        }
+      >
+        Load Legacy Timer Settings
       </button>
       <button
         type="button"
@@ -123,7 +136,7 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
   });
 
   it('plays interval sounds at the elapsed timer cadence without replaying on pause and resume', async () => {
@@ -146,7 +159,7 @@ describe('timer sound playback', () => {
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
 
     fireEvent.click(screen.getByRole('button', { name: /resume session/i }));
     await flushAsyncWork();
@@ -156,14 +169,14 @@ describe('timer sound playback', () => {
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
 
     await act(async () => {
       vi.advanceTimersByTime(1_000);
     });
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav', '/media/sounds/wood-block.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3', '/media/sounds/gong.mp3']);
 
     await act(async () => {
       vi.advanceTimersByTime(2 * 60_000);
@@ -171,9 +184,9 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(MockAudio.playCalls).toEqual([
-      '/media/sounds/soft-chime.wav',
-      '/media/sounds/wood-block.wav',
-      '/media/sounds/wood-block.wav',
+      '/media/sounds/temple-bell.mp3',
+      '/media/sounds/gong.mp3',
+      '/media/sounds/gong.mp3',
     ]);
   });
 
@@ -191,7 +204,7 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
-    expect(MockAudio.playCalls.filter((src) => src === '/media/sounds/temple-bell.wav')).toHaveLength(1);
+    expect(MockAudio.playCalls.filter((src) => src === '/media/sounds/gong.mp3')).toHaveLength(1);
   });
 
   it('plays the end sound once when the user ends a session early', async () => {
@@ -206,7 +219,7 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('outcome-status')).toHaveTextContent('ended early');
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav', '/media/sounds/temple-bell.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3', '/media/sounds/gong.mp3']);
   });
 
   it('does not duplicate playback when rendered in StrictMode', async () => {
@@ -217,12 +230,12 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
-    expect(MockAudio.playCalls).toEqual(['/media/sounds/soft-chime.wav']);
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
   });
 
   it('fails safely when the browser blocks playback', async () => {
     mockAudioPlay.mockImplementation(async (src) => {
-      if (src === '/media/sounds/soft-chime.wav') {
+      if (src === '/media/sounds/temple-bell.mp3') {
         throw new DOMException('Playback requires user activation.', 'NotAllowedError');
       }
     });
@@ -235,7 +248,19 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('active-session')).not.toHaveTextContent('none');
-    expect(screen.getByTestId('sound-message')).toHaveTextContent(/browser blocked the start sound "Soft Chime"/i);
+    expect(screen.getByTestId('sound-message')).toHaveTextContent(/browser blocked the start sound "Temple Bell"/i);
+  });
+
+  it('maps legacy labels to the current packaged sounds during playback', async () => {
+    renderHarness();
+    await flushAsyncWork();
+
+    fireEvent.click(screen.getByRole('button', { name: /load legacy timer settings/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await flushAsyncWork();
+
+    expect(MockAudio.playCalls).toEqual(['/media/sounds/temple-bell.mp3']);
   });
 
   it('fails safely when a selected sound label is not mapped to a file', async () => {

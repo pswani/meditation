@@ -1,6 +1,7 @@
 import type { ActiveSession } from '../../types/timer';
+import { SILENT_TIMER_SOUND_LABEL } from '../../utils/timerSound';
 import { getActiveSessionElapsedSeconds } from './time';
-import { resolveTimerSound, SILENT_TIMER_SOUND_LABEL } from './timerSoundCatalog';
+import { resolveTimerSound } from './timerSoundCatalog';
 
 export type TimerSoundCue = 'start' | 'interval' | 'end';
 export type TimerSoundPlaybackFailureReason = 'missing mapping' | 'audio blocked' | 'file unavailable' | 'playback failed';

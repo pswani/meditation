@@ -142,8 +142,8 @@ describe('CustomPlayManager UX', () => {
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });
-    fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Soft Chime' } });
-    fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Wood Block' } });
+    fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Temple Bell' } });
+    fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Gong' } });
     expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
     fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
@@ -165,8 +165,8 @@ describe('CustomPlayManager UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /show advanced options/i }));
     const timerStartSoundField = screen.getByLabelText(/^Start sound \(optional\)$/i) as HTMLSelectElement;
     const timerEndSoundField = screen.getByLabelText(/^End sound \(optional\)$/i) as HTMLSelectElement;
-    expect(timerStartSoundField.value).toBe('Soft Chime');
-    expect(timerEndSoundField.value).toBe('Wood Block');
+    expect(timerStartSoundField.value).toBe('Temple Bell');
+    expect(timerEndSoundField.value).toBe('Gong');
     expect(JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY) ?? '{}')).toMatchObject({
       durationMinutes: 20,
       lastFixedDurationMinutes: 20,

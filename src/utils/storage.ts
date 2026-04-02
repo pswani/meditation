@@ -7,6 +7,12 @@ import type { ActiveSession, TimerSettings } from '../types/timer';
 import {
   normalizeTimerSettings,
 } from './timerSettingsNormalization';
+import {
+  DEFAULT_END_SOUND_LABEL,
+  DEFAULT_INTERVAL_SOUND_LABEL,
+  DEFAULT_START_SOUND_LABEL,
+  normalizeTimerSoundLabel,
+} from './timerSound';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
@@ -266,8 +272,8 @@ function normalizeCustomPlay(value: unknown): CustomPlay | null {
     name: candidate.name,
     meditationType: candidate.meditationType,
     durationMinutes: candidate.durationMinutes,
-    startSound: typeof candidate.startSound === 'string' ? candidate.startSound : 'None',
-    endSound: typeof candidate.endSound === 'string' ? candidate.endSound : 'Temple Bell',
+    startSound: normalizeTimerSoundLabel(candidate.startSound as string | undefined, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(candidate.endSound as string | undefined, DEFAULT_END_SOUND_LABEL),
     mediaAssetId: typeof candidate.mediaAssetId === 'string' ? candidate.mediaAssetId : '',
     recordingLabel: typeof candidate.recordingLabel === 'string' ? candidate.recordingLabel : '',
     favorite: candidate.favorite,
@@ -444,6 +450,9 @@ export function loadSessionLogs(): SessionLog[] {
           .map((entry) => ({
             ...entry,
             timerMode: entry.timerMode ?? 'fixed',
+            startSound: normalizeTimerSoundLabel(entry.startSound, DEFAULT_START_SOUND_LABEL),
+            endSound: normalizeTimerSoundLabel(entry.endSound, DEFAULT_END_SOUND_LABEL),
+            intervalSound: normalizeTimerSoundLabel(entry.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
           }))
       : [];
   } catch {
@@ -540,6 +549,9 @@ interface StoredActivePlaylistRunState {
 function normalizePersistedActiveSession(session: ActiveSession): ActiveSession {
   return {
     ...session,
+    startSound: normalizeTimerSoundLabel(session.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(session.endSound, DEFAULT_END_SOUND_LABEL),
+    intervalSound: normalizeTimerSoundLabel(session.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
     lastResumedAtMs: session.isPaused ? null : session.lastResumedAtMs,
   };
 }
@@ -587,11 +599,11 @@ function normalizeLegacyActiveTimerState(activeSession: Record<string, unknown>,
     isPaused,
     lastResumedAtMs: isPaused ? null : nowMs,
     meditationType: activeSession.meditationType,
-    startSound: activeSession.startSound,
-    endSound: activeSession.endSound,
+    startSound: normalizeTimerSoundLabel(activeSession.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(activeSession.endSound, DEFAULT_END_SOUND_LABEL),
     intervalEnabled: activeSession.intervalEnabled,
     intervalMinutes: activeSession.intervalMinutes,
-    intervalSound: activeSession.intervalSound,
+    intervalSound: normalizeTimerSoundLabel(activeSession.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
   };
 }
 

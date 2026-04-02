@@ -2,6 +2,11 @@ import type { CustomPlay } from '../types/customPlay';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  DEFAULT_END_SOUND_LABEL,
+  DEFAULT_START_SOUND_LABEL,
+  normalizeTimerSoundLabel,
+} from './timerSound';
 
 export const CUSTOM_PLAYS_COLLECTION_PATH = '/custom-plays';
 export const CUSTOM_PLAYS_COLLECTION_ENDPOINT = buildApiPath(CUSTOM_PLAYS_COLLECTION_PATH);
@@ -85,8 +90,8 @@ function normalizeCustomPlayPayload(payload: unknown): CustomPlay {
     name: payload.name,
     meditationType: payload.meditationType,
     durationMinutes: payload.durationMinutes,
-    startSound: payload.startSound,
-    endSound: payload.endSound,
+    startSound: normalizeTimerSoundLabel(payload.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(payload.endSound, DEFAULT_END_SOUND_LABEL),
     mediaAssetId: payload.mediaAssetId ?? '',
     recordingLabel: payload.recordingLabel ?? '',
     favorite: payload.favorite,
@@ -109,8 +114,8 @@ function buildCustomPlayUpsertRequest(customPlay: CustomPlay): CustomPlayUpsertR
     name: customPlay.name,
     meditationType: customPlay.meditationType,
     durationMinutes: customPlay.durationMinutes,
-    startSound: customPlay.startSound,
-    endSound: customPlay.endSound,
+    startSound: normalizeTimerSoundLabel(customPlay.startSound, DEFAULT_START_SOUND_LABEL),
+    endSound: normalizeTimerSoundLabel(customPlay.endSound, DEFAULT_END_SOUND_LABEL),
     mediaAssetId: customPlay.mediaAssetId,
     recordingLabel: customPlay.recordingLabel,
     favorite: customPlay.favorite,

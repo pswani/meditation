@@ -1,9 +1,14 @@
 import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../types/customPlay';
 import type { TimerSettings } from '../types/timer';
 import { findCustomPlayMediaAssetById } from './mediaAssetApi';
+import {
+  DEFAULT_END_SOUND_LABEL,
+  DEFAULT_START_SOUND_LABEL,
+  normalizeTimerSoundLabel,
+} from './timerSound';
 
-const DEFAULT_CUSTOM_PLAY_START_SOUND = 'None';
-const DEFAULT_CUSTOM_PLAY_END_SOUND = 'Temple Bell';
+const DEFAULT_CUSTOM_PLAY_START_SOUND = DEFAULT_START_SOUND_LABEL;
+const DEFAULT_CUSTOM_PLAY_END_SOUND = DEFAULT_END_SOUND_LABEL;
 
 export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValidationResult {
   const errors: CustomPlayValidationResult['errors'] = {};
@@ -39,8 +44,8 @@ export function createCustomPlay(draft: CustomPlayDraft, now: Date): CustomPlay 
     name: draft.name.trim(),
     meditationType: draft.meditationType as CustomPlay['meditationType'],
     durationMinutes: draft.durationMinutes,
-    startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
-    endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
+    startSound: normalizeTimerSoundLabel(draft.startSound, DEFAULT_CUSTOM_PLAY_START_SOUND),
+    endSound: normalizeTimerSoundLabel(draft.endSound, DEFAULT_CUSTOM_PLAY_END_SOUND),
     mediaAssetId: selectedAsset?.id ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     favorite: false,
@@ -57,8 +62,8 @@ export function updateCustomPlay(existing: CustomPlay, draft: CustomPlayDraft, n
     name: draft.name.trim(),
     meditationType: draft.meditationType as CustomPlay['meditationType'],
     durationMinutes: draft.durationMinutes,
-    startSound: draft.startSound || DEFAULT_CUSTOM_PLAY_START_SOUND,
-    endSound: draft.endSound || DEFAULT_CUSTOM_PLAY_END_SOUND,
+    startSound: normalizeTimerSoundLabel(draft.startSound, DEFAULT_CUSTOM_PLAY_START_SOUND),
+    endSound: normalizeTimerSoundLabel(draft.endSound, DEFAULT_CUSTOM_PLAY_END_SOUND),
     mediaAssetId: selectedAsset?.id ?? '',
     recordingLabel: draft.recordingLabel.trim(),
     updatedAt: now.toISOString(),
@@ -75,8 +80,8 @@ export function applyCustomPlayToTimerSettings(
     durationMinutes: play.durationMinutes,
     lastFixedDurationMinutes: play.durationMinutes,
     meditationType: play.meditationType,
-    startSound: play.startSound,
-    endSound: play.endSound,
+    startSound: normalizeTimerSoundLabel(play.startSound, DEFAULT_CUSTOM_PLAY_START_SOUND),
+    endSound: normalizeTimerSoundLabel(play.endSound, DEFAULT_CUSTOM_PLAY_END_SOUND),
   };
 }
 

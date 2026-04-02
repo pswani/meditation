@@ -48,7 +48,7 @@ describe('storage timer settings', () => {
       endSound: 'Temple Bell',
       intervalEnabled: true,
       intervalMinutes: 5,
-      intervalSound: 'Soft Chime',
+      intervalSound: 'Gong',
     };
 
     saveTimerSettings(settings);
@@ -107,6 +107,29 @@ describe('storage timer settings', () => {
     localStorage.setItem(rawTimerSettingsKey, JSON.stringify({ durationMinutes: '20' }));
 
     expect(loadTimerSettings()).toBeNull();
+  });
+
+  it('maps legacy timer sound labels onto the supported sounds when loading stored settings', () => {
+    localStorage.setItem(
+      rawTimerSettingsKey,
+      JSON.stringify({
+        timerMode: 'fixed',
+        durationMinutes: 20,
+        lastFixedDurationMinutes: 20,
+        meditationType: 'Vipassana',
+        startSound: 'Soft Chime',
+        endSound: 'Wood Block',
+        intervalEnabled: true,
+        intervalMinutes: 5,
+        intervalSound: 'Wood Block',
+      })
+    );
+
+    expect(loadTimerSettings()).toMatchObject({
+      startSound: 'Temple Bell',
+      endSound: 'Gong',
+      intervalSound: 'Gong',
+    });
   });
 });
 
@@ -280,7 +303,7 @@ describe('storage last used meditation', () => {
         endSound: 'Temple Bell',
         intervalEnabled: true,
         intervalMinutes: 9,
-        intervalSound: 'Wood Block',
+        intervalSound: 'Gong',
       },
       usedAt: '2026-04-01T12:00:00.000Z',
     };
@@ -288,6 +311,35 @@ describe('storage last used meditation', () => {
     saveLastUsedMeditation(lastUsedMeditation);
 
     expect(loadLastUsedMeditation()).toEqual(lastUsedMeditation);
+  });
+
+  it('maps legacy sound labels inside stored last used timer settings', () => {
+    localStorage.setItem(
+      rawLastUsedMeditationKey,
+      JSON.stringify({
+        kind: 'timer',
+        settings: {
+          timerMode: 'fixed',
+          durationMinutes: 27,
+          lastFixedDurationMinutes: 27,
+          meditationType: 'Vipassana',
+          startSound: 'Soft Chime',
+          endSound: 'Temple Bell',
+          intervalEnabled: true,
+          intervalMinutes: 9,
+          intervalSound: 'Wood Block',
+        },
+        usedAt: '2026-04-01T12:00:00.000Z',
+      })
+    );
+
+    expect(loadLastUsedMeditation()).toMatchObject({
+      kind: 'timer',
+      settings: {
+        startSound: 'Temple Bell',
+        intervalSound: 'Gong',
+      },
+    });
   });
 
   it('drops invalid stored last used meditation payloads', () => {
@@ -330,7 +382,7 @@ describe('storage custom plays', () => {
         name: 'Morning Focus',
         meditationType: 'Vipassana',
         durationMinutes: 20,
-        startSound: 'Soft Chime',
+        startSound: 'Temple Bell',
         endSound: 'Temple Bell',
         mediaAssetId: 'media-vipassana-sit-20',
         recordingLabel: 'Session A',
@@ -342,6 +394,41 @@ describe('storage custom plays', () => {
 
     saveCustomPlays(customPlays);
     expect(loadCustomPlays()).toEqual(customPlays);
+  });
+
+  it('maps legacy custom play sound labels onto the supported sounds when loading storage', () => {
+    localStorage.setItem(
+      rawCustomPlaysKey,
+      JSON.stringify([
+        {
+          id: 'legacy-play-2',
+          name: 'Legacy Mapped Play',
+          meditationType: 'Vipassana',
+          durationMinutes: 20,
+          startSound: 'Soft Chime',
+          endSound: 'Wood Block',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    expect(loadCustomPlays()).toEqual([
+      {
+        id: 'legacy-play-2',
+        name: 'Legacy Mapped Play',
+        meditationType: 'Vipassana',
+        durationMinutes: 20,
+        startSound: 'Temple Bell',
+        endSound: 'Gong',
+        mediaAssetId: '',
+        recordingLabel: '',
+        favorite: false,
+        createdAt: '2026-03-24T08:00:00.000Z',
+        updatedAt: '2026-03-24T08:00:00.000Z',
+      },
+    ]);
   });
 
   it('applies defaults for legacy custom-play entries while preserving valid shape', () => {

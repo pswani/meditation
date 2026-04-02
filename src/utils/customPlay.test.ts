@@ -32,8 +32,8 @@ describe('custom play helpers', () => {
         name: 'Morning Focus',
         meditationType: 'Vipassana',
         durationMinutes: 20,
-        startSound: 'Soft Chime',
-        endSound: 'Wood Block',
+        startSound: 'Temple Bell',
+        endSound: 'Gong',
         mediaAssetId: 'media-vipassana-sit-20',
         recordingLabel: 'Session A',
       },
@@ -65,27 +65,48 @@ describe('custom play helpers', () => {
 
   it('applies custom play fields onto timer settings', () => {
     const settings: TimerSettings = {
+      timerMode: 'fixed',
       durationMinutes: 10,
+      lastFixedDurationMinutes: 10,
       meditationType: 'Ajapa',
-      startSound: 'Soft Chime',
+      startSound: 'Temple Bell',
       endSound: 'Temple Bell',
       intervalEnabled: true,
       intervalMinutes: 4,
-      intervalSound: 'Wood Block',
+      intervalSound: 'Gong',
     };
 
     const next = applyCustomPlayToTimerSettings(settings, {
       durationMinutes: 30,
       meditationType: 'Vipassana',
       startSound: 'None',
-      endSound: 'Wood Block',
+      endSound: 'Gong',
     });
 
     expect(next.durationMinutes).toBe(30);
+    expect(next.lastFixedDurationMinutes).toBe(30);
     expect(next.meditationType).toBe('Vipassana');
     expect(next.startSound).toBe('None');
-    expect(next.endSound).toBe('Wood Block');
+    expect(next.endSound).toBe('Gong');
     expect(next.intervalEnabled).toBe(true);
+  });
+
+  it('maps legacy custom play sound labels onto the supported sound set', () => {
+    const created = createCustomPlay(
+      {
+        name: 'Legacy Sounds',
+        meditationType: 'Vipassana',
+        durationMinutes: 20,
+        startSound: 'Soft Chime',
+        endSound: 'Wood Block',
+        mediaAssetId: '',
+        recordingLabel: '',
+      },
+      new Date('2026-03-23T10:00:00.000Z')
+    );
+
+    expect(created.startSound).toBe('Temple Bell');
+    expect(created.endSound).toBe('Gong');
   });
 
   it('flags unknown media-session selections', () => {

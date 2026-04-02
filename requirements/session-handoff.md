@@ -14,6 +14,8 @@ This file now tracks the durable current repository state rather than a prompt-b
 - The recent intent-remediation work closed two high-value trust gaps:
   - managed local startup is now more reliable and explicit about local recovery
   - Home can restart the last used meditation through a persisted timer or playlist launch context
+- Timer sound packaging now ships `Temple Bell` and `Gong` as bundled frontend/backend MP3 assets while retiring `Soft Chime` and `Wood Block` from the selectable catalog.
+- Frontend hydration now remaps legacy saved sound labels so existing timer settings, custom plays, active sessions, and cached timer-oriented state continue to load cleanly after the catalog change.
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance
