@@ -3,12 +3,10 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/custom-play-runtime-feature-bundle-with-branching`
-- Parent branch for active bundle: `codex/feature-refinement`
-- Active bundle: `custom-play-runtime-feature-bundle-with-branching`
-- Active bundle scope: implement a true runnable `custom play` prerecorded-session flow with runtime playback, end behavior, and trustworthy `session log` integration
-- Latest completed bundle: `codex/intent-remediation-bundle`
-- Merge outcome: merged back into `codex/review-and-cleanup` on 2026-04-01 with history preserved by a normal local merge commit
+- Current branch: `codex/feature-refinement`
+- No bundle is currently active.
+- Latest completed bundle: `custom-play-runtime-feature-bundle-with-branching`
+- Latest merge outcome: merged `codex/custom-play-runtime-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
   - a React + TypeScript + Vite frontend
   - a Spring Boot backend in `backend/`
@@ -56,6 +54,11 @@ This file now tracks the durable current repository state rather than a prompt-b
   - `npm run test`
   - `npm run build`
   - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- Bundle completion summary:
+  - added a dedicated runnable prerecorded `custom play` flow with persisted playback state and a dedicated active runtime screen
+  - connected Home and Practice shortcuts to start or resume `custom play` runs directly
+  - extended `session log` storage, API contracts, and History/Home rendering with `custom play` metadata
+  - fixed the final backend verification issues by narrowing the new Flyway migration and updating API tests to use a valid `custom play` fixture
 
 ## Verification baseline
 - `npm run typecheck`
@@ -71,4 +74,4 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/custom-play-runtime-feature-bundle-with-branching/99-merge-branch.md`
+- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/00-create-branch.md`
