@@ -38,3 +38,42 @@ export interface CustomPlaySaveResult extends CustomPlayValidationResult {
   readonly persisted: boolean;
   readonly persistenceError?: string;
 }
+
+export interface ActiveCustomPlayRun {
+  readonly runId: string;
+  readonly customPlayId: string;
+  readonly customPlayName: string;
+  readonly meditationType: MeditationType;
+  readonly recordingLabel: string;
+  readonly mediaAssetId: string;
+  readonly mediaLabel: string;
+  readonly mediaFilePath: string;
+  readonly durationSeconds: number;
+  readonly startedAt: string;
+  readonly startedAtMs: number;
+  readonly currentPositionSeconds: number;
+  readonly isPaused: boolean;
+  readonly startSound: string;
+  readonly endSound: string;
+}
+
+export interface CustomPlayRunOutcome {
+  readonly status: 'completed' | 'ended early';
+  readonly customPlayId: string;
+  readonly customPlayName: string;
+  readonly completedDurationSeconds: number;
+  readonly endedAt: string;
+}
+
+export type CustomPlayRunStartBlockReason =
+  | 'custom plays loading'
+  | 'timer session active'
+  | 'playlist run active'
+  | 'custom play run active'
+  | 'custom play not found'
+  | 'media unavailable';
+
+export interface CustomPlayRunStartResult {
+  readonly started: boolean;
+  readonly reason?: CustomPlayRunStartBlockReason;
+}

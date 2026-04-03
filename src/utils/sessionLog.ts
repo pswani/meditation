@@ -1,3 +1,4 @@
+import type { ActiveCustomPlayRun } from '../types/customPlay';
 import type { SessionLog, SessionLogStatus } from '../types/sessionLog';
 import type { ActiveSession } from '../types/timer';
 
@@ -31,6 +32,44 @@ export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, 
     intervalEnabled: session.intervalEnabled,
     intervalMinutes: session.intervalMinutes,
     intervalSound: session.intervalSound,
+  };
+}
+
+interface BuildCustomPlayLogEntryParams {
+  readonly customPlayRun: ActiveCustomPlayRun;
+  readonly endedAt: Date;
+  readonly completedDurationSeconds: number;
+  readonly status: SessionLogStatus;
+}
+
+export function buildCustomPlayLogEntry({
+  customPlayRun,
+  endedAt,
+  completedDurationSeconds,
+  status,
+}: BuildCustomPlayLogEntryParams): SessionLog {
+  const intendedDurationSeconds = customPlayRun.durationSeconds;
+  const safeCompletedDurationSeconds = Math.max(0, Math.min(intendedDurationSeconds, Math.round(completedDurationSeconds)));
+  const statusToken = status === 'completed' ? 'completed' : 'ended-early';
+
+  return {
+    id: `custom-play-log-${customPlayRun.runId}-${statusToken}`,
+    startedAt: customPlayRun.startedAt,
+    endedAt: endedAt.toISOString(),
+    meditationType: customPlayRun.meditationType,
+    timerMode: 'fixed',
+    intendedDurationSeconds,
+    completedDurationSeconds: safeCompletedDurationSeconds,
+    status,
+    source: 'auto log',
+    startSound: customPlayRun.startSound,
+    endSound: customPlayRun.endSound,
+    intervalEnabled: false,
+    intervalMinutes: 0,
+    intervalSound: 'None',
+    customPlayId: customPlayRun.customPlayId,
+    customPlayName: customPlayRun.customPlayName,
+    customPlayRecordingLabel: customPlayRun.recordingLabel || undefined,
   };
 }
 
@@ -73,7 +112,10 @@ export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolea
     left.playlistRunId === right.playlistRunId &&
     left.playlistRunStartedAt === right.playlistRunStartedAt &&
     left.playlistItemPosition === right.playlistItemPosition &&
-    left.playlistItemCount === right.playlistItemCount
+    left.playlistItemCount === right.playlistItemCount &&
+    left.customPlayId === right.customPlayId &&
+    left.customPlayName === right.customPlayName &&
+    left.customPlayRecordingLabel === right.customPlayRecordingLabel
   );
 }
 

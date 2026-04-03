@@ -20,6 +20,9 @@ public record SessionLogUpsertRequest(
     String playlistRunId,
     String playlistRunStartedAt,
     Integer playlistItemPosition,
-    Integer playlistItemCount
+    Integer playlistItemCount,
+    String customPlayId,
+    String customPlayName,
+    String customPlayRecordingLabel
 ) {
 }

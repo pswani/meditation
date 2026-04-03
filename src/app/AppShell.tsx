@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useTimer } from '../features/timer/useTimer';
@@ -23,16 +24,94 @@ function buildSyncStatusMessage(isOnline: boolean, pendingCount: number, failedC
   return null;
 }
 
+function buildCustomPlayMediaMessage(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Playback is waiting for a device interaction. Tap Resume to continue this custom play.';
+  }
+
+  if (error instanceof DOMException && error.name === 'NotSupportedError') {
+    return 'The linked recording could not be loaded on this device.';
+  }
+
+  if (error instanceof Error && error.message.toLowerCase().includes('network')) {
+    return 'The linked recording could not be loaded because the media file is unavailable right now.';
+  }
+
+  return 'The linked recording could not continue playing right now.';
+}
+
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeSession, activePlaylistRun, recoveryMessage, clearRecoveryMessage } = useTimer();
+  const {
+    activeSession,
+    activeCustomPlayRun,
+    activePlaylistRun,
+    recoveryMessage,
+    clearRecoveryMessage,
+    updateCustomPlayRunProgress,
+    completeCustomPlayRun,
+    reportCustomPlayRuntimeIssue,
+  } = useTimer();
   const {
     isOnline,
     summary: { nextRetryCount, failedCount },
   } = useSyncStatus();
   const activeNavItem = getActiveNavItem(location.pathname);
   const syncStatusMessage = buildSyncStatusMessage(isOnline, nextRetryCount, failedCount);
+  const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = customPlayAudioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    if (!activeCustomPlayRun) {
+      try {
+        audio.pause();
+      } catch {
+        // JSDOM does not implement media playback.
+      }
+      if (audio.getAttribute('src')) {
+        audio.removeAttribute('src');
+        audio.load();
+      }
+      return;
+    }
+
+    if (audio.src !== new URL(activeCustomPlayRun.mediaFilePath, window.location.origin).toString()) {
+      audio.src = activeCustomPlayRun.mediaFilePath;
+      audio.load();
+    }
+
+    const desiredPosition = Math.max(0, Math.min(activeCustomPlayRun.durationSeconds, activeCustomPlayRun.currentPositionSeconds));
+    if (Math.abs(audio.currentTime - desiredPosition) > 1) {
+      try {
+        audio.currentTime = desiredPosition;
+      } catch {
+        // Wait for metadata before seeking.
+      }
+    }
+
+    if (activeCustomPlayRun.isPaused) {
+      try {
+        audio.pause();
+      } catch {
+        // JSDOM does not implement media playback.
+      }
+      return;
+    }
+
+    void audio
+      .play()
+      .then(() => {
+        reportCustomPlayRuntimeIssue(null);
+      })
+      .catch((error) => {
+        reportCustomPlayRuntimeIssue(buildCustomPlayMediaMessage(error));
+      });
+  }, [activeCustomPlayRun, reportCustomPlayRuntimeIssue]);
 
   return (
     <div className="app-shell">
@@ -84,7 +163,21 @@ export default function AppShell() {
               </button>
             </div>
           ) : null}
-          {!activeSession && activePlaylistRun ? (
+          {!activeSession && activeCustomPlayRun ? (
+            <div className="shell-active-banner" role="status" aria-live="polite">
+              <p>
+                {activeCustomPlayRun.isPaused ? 'Paused custom play' : 'Active custom play'}: {activeCustomPlayRun.customPlayName}
+              </p>
+              <button
+                type="button"
+                className="secondary shell-active-action"
+                onClick={() => navigate('/practice/custom-plays/active')}
+              >
+                {activeCustomPlayRun.isPaused ? 'Resume Custom Play' : 'Open Custom Play'}
+              </button>
+            </div>
+          ) : null}
+          {!activeSession && !activeCustomPlayRun && activePlaylistRun ? (
             <div className="shell-active-banner" role="status" aria-live="polite">
               <p>
                 Active playlist run: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/
@@ -117,6 +210,40 @@ export default function AppShell() {
         <main id="main-content" className="content" tabIndex={-1}>
           <Outlet />
         </main>
+
+        <audio
+          ref={customPlayAudioRef}
+          style={{ display: 'none' }}
+          onLoadedMetadata={() => {
+            const audio = customPlayAudioRef.current;
+            if (!audio || !activeCustomPlayRun) {
+              return;
+            }
+
+            if (Math.abs(audio.currentTime - activeCustomPlayRun.currentPositionSeconds) > 1) {
+              try {
+                audio.currentTime = activeCustomPlayRun.currentPositionSeconds;
+              } catch {
+                // Ignore seek failures; playback can continue from the current loaded position.
+              }
+            }
+          }}
+          onTimeUpdate={() => {
+            const audio = customPlayAudioRef.current;
+            if (!audio) {
+              return;
+            }
+
+            updateCustomPlayRunProgress(audio.currentTime);
+          }}
+          onEnded={() => {
+            const audio = customPlayAudioRef.current;
+            completeCustomPlayRun(audio?.duration || audio?.currentTime || activeCustomPlayRun?.durationSeconds || 0);
+          }}
+          onError={() => {
+            reportCustomPlayRuntimeIssue('The linked recording could not be loaded from its media path.');
+          }}
+        />
 
         <nav className="bottom-nav" aria-label="Bottom navigation">
           {primaryNavItems.map((item) => (

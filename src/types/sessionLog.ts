@@ -24,4 +24,7 @@ export interface SessionLog {
   readonly playlistRunStartedAt?: string;
   readonly playlistItemPosition?: number;
   readonly playlistItemCount?: number;
+  readonly customPlayId?: string;
+  readonly customPlayName?: string;
+  readonly customPlayRecordingLabel?: string;
 }

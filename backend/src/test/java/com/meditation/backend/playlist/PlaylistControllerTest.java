@@ -151,6 +151,9 @@ class PlaylistControllerTest {
         1,
         "playlist-1-run-1",
         Instant.parse("2026-03-26T10:00:00Z"),
+        null,
+        null,
+        null,
         Instant.parse("2026-03-26T10:10:00Z")
     ));
 

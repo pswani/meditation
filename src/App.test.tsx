@@ -859,7 +859,10 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Offline Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
-    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '20' } });
+    await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-vipassana-sit-20' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
     expect(await screen.findByText(/custom play "Offline Focus" saved\./i)).toBeInTheDocument();
@@ -1408,9 +1411,10 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Sunrise Sit' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
-    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '24' } });
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
-    fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-vipassana-sit-20' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
     expect(await screen.findByText(/custom play "Sunrise Sit" saved\./i)).toBeInTheDocument();

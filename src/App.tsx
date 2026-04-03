@@ -3,6 +3,7 @@ import AppShell from './app/AppShell';
 import { SyncStatusProvider } from './features/sync/SyncStatusProvider';
 import { TimerProvider } from './features/timer/TimerContext';
 import ActiveTimerPage from './pages/ActiveTimerPage';
+import CustomPlayRunPage from './pages/CustomPlayRunPage';
 import HistoryPage from './pages/HistoryPage';
 import HomePage from './pages/HomePage';
 import PlaylistsPage from './pages/PlaylistsPage';
@@ -20,6 +21,7 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="practice" element={<PracticePage />} />
             <Route path="practice/active" element={<ActiveTimerPage />} />
+            <Route path="practice/custom-plays/active" element={<CustomPlayRunPage />} />
             <Route path="practice/playlists" element={<PlaylistsPage />} />
             <Route path="practice/playlists/active" element={<PlaylistRunPage />} />
             <Route path="history" element={<HistoryPage />} />

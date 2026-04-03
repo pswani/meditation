@@ -123,7 +123,11 @@ public class CustomPlayService {
     }
 
     String mediaAssetId = normalizeOptionalText(request.mediaAssetId());
-    if (mediaAssetId != null && !mediaAssetRepository.existsByIdAndAssetKindAndActiveTrue(mediaAssetId, CUSTOM_PLAY_ASSET_KIND)) {
+    if (mediaAssetId == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Linked media session is required.");
+    }
+
+    if (!mediaAssetRepository.existsByIdAndAssetKindAndActiveTrue(mediaAssetId, CUSTOM_PLAY_ASSET_KIND)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Linked media session is invalid.");
     }
   }

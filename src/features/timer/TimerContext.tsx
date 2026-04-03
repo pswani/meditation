@@ -1,13 +1,25 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { MutableRefObject, ReactNode } from 'react';
 import { useSyncStatus } from '../sync/useSyncStatus';
-import type { CustomPlay, CustomPlaySaveResult } from '../../types/customPlay';
+import type {
+  ActiveCustomPlayRun,
+  CustomPlay,
+  CustomPlayRunOutcome,
+  CustomPlayRunStartResult,
+  CustomPlaySaveResult,
+} from '../../types/customPlay';
 import type { LastUsedMeditation } from '../../types/home';
 import type { ActivePlaylistRun, Playlist, PlaylistRunOutcome, PlaylistSaveResult } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SyncQueueEntry } from '../../types/sync';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
-import { areCustomPlaysEqual, createCustomPlay, updateCustomPlay, validateCustomPlayDraft } from '../../utils/customPlay';
+import {
+  areCustomPlaysEqual,
+  createCustomPlay,
+  resolveCustomPlayMediaAsset,
+  updateCustomPlay,
+  validateCustomPlayDraft,
+} from '../../utils/customPlay';
 import { deleteCustomPlayFromApi, listCustomPlaysFromApi, persistCustomPlayToApi } from '../../utils/customPlayApi';
 import { isApiClientError } from '../../utils/apiClient';
 import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
@@ -16,7 +28,7 @@ import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } fro
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
 import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
-import { areSessionLogsEqual } from '../../utils/sessionLog';
+import { areSessionLogsEqual, buildCustomPlayLogEntry } from '../../utils/sessionLog';
 import {
   enqueueSyncQueueEntry,
   markFailedSyncQueueEntriesPending,
@@ -27,6 +39,7 @@ import {
 } from '../../utils/syncQueue';
 import {
   loadActivePlaylistRunState,
+  loadActiveCustomPlayRunState,
   loadActiveTimerState,
   loadCustomPlays,
   loadLastUsedMeditation,
@@ -34,6 +47,7 @@ import {
   loadSessionLogs,
   loadTimerSettings,
   saveActivePlaylistRunState,
+  saveActiveCustomPlayRunState,
   saveActiveTimerState,
   saveCustomPlays,
   saveLastUsedMeditation,
@@ -69,6 +83,7 @@ import { TimerContext, type TimerContextValue } from './timerContextObject';
 
 interface TimerHydration {
   readonly activeSession: ActiveSession | null;
+  readonly activeCustomPlayRun: ActiveCustomPlayRun | null;
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly isPlaylistRunPaused: boolean;
   readonly recoveryMessage: string | null;
@@ -81,11 +96,16 @@ interface TimerBootstrap {
   readonly playlists: ReturnType<typeof loadPlaylists>;
   readonly hydration: TimerHydration;
   readonly skipInitialActiveTimerPersist: boolean;
+  readonly skipInitialActiveCustomPlayPersist: boolean;
   readonly skipInitialActivePlaylistPersist: boolean;
 }
 
 function serializeActiveTimerPersistence(activeSession: ActiveSession | null): string {
   return activeSession ? JSON.stringify(activeSession) : 'null';
+}
+
+function serializeActiveCustomPlayPersistence(activeCustomPlayRun: ActiveCustomPlayRun | null): string {
+  return activeCustomPlayRun ? JSON.stringify(activeCustomPlayRun) : 'null';
 }
 
 function serializeActivePlaylistPersistence(activePlaylistRun: ActivePlaylistRun | null, isPaused: boolean): string {
@@ -178,12 +198,39 @@ function recoverActivePlaylistRun(
   };
 }
 
+function recoverActiveCustomPlayRun(
+  storedActiveCustomPlayRun: ActiveCustomPlayRun | null
+): { readonly activeCustomPlayRun: ActiveCustomPlayRun | null; readonly recoveryMessage: string | null } {
+  if (!storedActiveCustomPlayRun) {
+    return {
+      activeCustomPlayRun: null,
+      recoveryMessage: null,
+    };
+  }
+
+  if (storedActiveCustomPlayRun.currentPositionSeconds >= storedActiveCustomPlayRun.durationSeconds) {
+    return {
+      activeCustomPlayRun: null,
+      recoveryMessage: 'Your previous custom play was cleared because it had already finished.',
+    };
+  }
+
+  return {
+    activeCustomPlayRun: storedActiveCustomPlayRun,
+    recoveryMessage: storedActiveCustomPlayRun.isPaused
+      ? 'Recovered a paused custom play from your previous app state.'
+      : 'Recovered an active custom play from your previous app state.',
+  };
+}
+
 function createTimerHydration(
   storedTimerState: ReturnType<typeof loadActiveTimerState>,
+  storedCustomPlayRunState: ReturnType<typeof loadActiveCustomPlayRunState>,
   storedPlaylistRunState: ReturnType<typeof loadActivePlaylistRunState>,
   nowMs: number
 ): TimerHydration {
   const timerRecovery = recoverActiveSession(storedTimerState, nowMs);
+  const customPlayRecovery = recoverActiveCustomPlayRun(storedCustomPlayRunState);
   const playlistRecovery = recoverActivePlaylistRun(
     storedPlaylistRunState?.activePlaylistRun ?? null,
     storedPlaylistRunState?.isPaused ?? false,
@@ -192,9 +239,10 @@ function createTimerHydration(
 
   return {
     activeSession: timerRecovery.activeSession,
+    activeCustomPlayRun: customPlayRecovery.activeCustomPlayRun,
     activePlaylistRun: playlistRecovery.activePlaylistRun,
     isPlaylistRunPaused: playlistRecovery.activePlaylistRun ? (storedPlaylistRunState?.isPaused ?? false) : false,
-    recoveryMessage: timerRecovery.recoveryMessage ?? playlistRecovery.recoveryMessage,
+    recoveryMessage: timerRecovery.recoveryMessage ?? customPlayRecovery.recoveryMessage ?? playlistRecovery.recoveryMessage,
   };
 }
 
@@ -204,8 +252,9 @@ function createTimerBootstrap(nowMs: number): TimerBootstrap {
   const customPlays = loadCustomPlays();
   const playlists = loadPlaylists();
   const storedTimerState = loadActiveTimerState();
+  const storedCustomPlayRunState = loadActiveCustomPlayRunState();
   const storedPlaylistRunState = loadActivePlaylistRunState();
-  const hydration = createTimerHydration(storedTimerState, storedPlaylistRunState, nowMs);
+  const hydration = createTimerHydration(storedTimerState, storedCustomPlayRunState, storedPlaylistRunState, nowMs);
 
   return {
     settings,
@@ -216,6 +265,9 @@ function createTimerBootstrap(nowMs: number): TimerBootstrap {
     skipInitialActiveTimerPersist:
       serializeActiveTimerPersistence(hydration.activeSession) ===
       serializeActiveTimerPersistence(storedTimerState),
+    skipInitialActiveCustomPlayPersist:
+      serializeActiveCustomPlayPersistence(hydration.activeCustomPlayRun) ===
+      serializeActiveCustomPlayPersistence(storedCustomPlayRunState),
     skipInitialActivePlaylistPersist:
       serializeActivePlaylistPersistence(hydration.activePlaylistRun, hydration.isPlaylistRunPaused) ===
       serializeActivePlaylistPersistence(
@@ -363,6 +415,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   );
   const [customPlays, setCustomPlays] = useState<CustomPlay[]>(bootstrap.customPlays);
   const [playlists, setPlaylists] = useState<Playlist[]>(bootstrap.playlists);
+  const [activeCustomPlayRun, setActiveCustomPlayRun] = useState<ActiveCustomPlayRun | null>(bootstrap.hydration.activeCustomPlayRun);
+  const [customPlayRunOutcome, setCustomPlayRunOutcome] = useState<CustomPlayRunOutcome | null>(null);
   const [activePlaylistRun, setActivePlaylistRun] = useState<ActivePlaylistRun | null>(bootstrap.hydration.activePlaylistRun);
   const [playlistRunOutcome, setPlaylistRunOutcome] = useState<PlaylistRunOutcome | null>(null);
   const [isPlaylistRunPaused, setIsPlaylistRunPaused] = useState(bootstrap.hydration.isPlaylistRunPaused);
@@ -380,6 +434,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [isSettingsSyncing, setIsSettingsSyncing] = useState(false);
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const [timerSoundPlaybackMessage, setTimerSoundPlaybackMessage] = useState<string | null>(null);
+  const [customPlayRuntimeMessage, setCustomPlayRuntimeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isPlaylistsLoading || lastUsedMeditation?.kind !== 'playlist') {
@@ -390,6 +445,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       clearLastUsedMeditationRecord(setLastUsedMeditation);
     }
   }, [isPlaylistsLoading, lastUsedMeditation, playlists]);
+
+  useEffect(() => {
+    if (isCustomPlaysLoading || lastUsedMeditation?.kind !== 'custom-play') {
+      return;
+    }
+
+    if (!customPlays.some((play) => play.id === lastUsedMeditation.customPlayId)) {
+      clearLastUsedMeditationRecord(setLastUsedMeditation);
+    }
+  }, [customPlays, isCustomPlaysLoading, lastUsedMeditation]);
   const [activeSessionNowMs, setActiveSessionNowMs] = useState(() => Date.now());
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestCustomPlaysRef = useRef(customPlays);
@@ -402,6 +467,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const skipInitialCustomPlaysPersistRef = useRef(true);
   const skipInitialPlaylistsPersistRef = useRef(true);
   const skipInitialActiveTimerPersistRef = useRef(bootstrap.skipInitialActiveTimerPersist);
+  const skipInitialActiveCustomPlayPersistRef = useRef(bootstrap.skipInitialActiveCustomPlayPersist);
   const skipInitialActivePlaylistPersistRef = useRef(bootstrap.skipInitialActivePlaylistPersist);
   const remoteSessionLogsHydratedRef = useRef(false);
   const syncedSessionLogIdsRef = useRef<Set<string>>(new Set());
@@ -594,6 +660,15 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     saveActiveTimerState(activeTimerPersistence);
   }, [activeTimerPersistence]);
+
+  useEffect(() => {
+    if (skipInitialActiveCustomPlayPersistRef.current) {
+      skipInitialActiveCustomPlayPersistRef.current = false;
+      return;
+    }
+
+    saveActiveCustomPlayRunState(activeCustomPlayRun);
+  }, [activeCustomPlayRun]);
 
   useEffect(() => {
     if (skipInitialActivePlaylistPersistRef.current) {
@@ -1395,6 +1470,44 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     };
   }, [activePlaylistRun, isPlaylistRunPaused]);
 
+  const finalizeCustomPlayRun = useCallback(
+    (status: CustomPlayRunOutcome['status'], currentPositionSeconds = activeCustomPlayRun?.currentPositionSeconds ?? 0) => {
+      if (!activeCustomPlayRun) {
+        return;
+      }
+
+      const endedAt = new Date();
+      const completedDurationSeconds = Math.max(
+        0,
+        Math.min(activeCustomPlayRun.durationSeconds, Math.round(currentPositionSeconds))
+      );
+      const logEntry = buildCustomPlayLogEntry({
+        customPlayRun: activeCustomPlayRun,
+        endedAt,
+        completedDurationSeconds,
+        status,
+      });
+
+      dispatch({ type: 'ADD_SESSION_LOG', payload: logEntry });
+      setCustomPlayRunOutcome({
+        status,
+        customPlayId: activeCustomPlayRun.customPlayId,
+        customPlayName: activeCustomPlayRun.customPlayName,
+        completedDurationSeconds: logEntry.completedDurationSeconds,
+        endedAt: endedAt.toISOString(),
+      });
+      setActiveCustomPlayRun(null);
+      void attemptTimerSoundPlayback(
+        timerSoundPlayerRef.current,
+        handledSoundPlaybackMessageKeyRef,
+        setCustomPlayRuntimeMessage,
+        activeCustomPlayRun.endSound,
+        'end'
+      );
+    },
+    [activeCustomPlayRun]
+  );
+
   const value = useMemo<TimerContextValue>(
     () => ({
       settings: state.settings,
@@ -1406,6 +1519,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       customPlays,
       playlists,
       lastUsedMeditation,
+      activeCustomPlayRun,
+      customPlayRunOutcome,
       activePlaylistRun,
       playlistRunOutcome,
       isPaused,
@@ -1424,6 +1539,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSettingsSyncing,
       settingsSyncError,
       timerSoundPlaybackMessage,
+      customPlayRuntimeMessage,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: async (draft, editId): Promise<CustomPlaySaveResult> => {
         const validation = validateCustomPlayDraft(draft);
@@ -1478,7 +1594,15 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           return false;
         }
 
+        if (activeCustomPlayRun?.customPlayId === playId) {
+          setCustomPlaySyncError('Finish the active custom play before deleting it.');
+          return false;
+        }
+
         setCustomPlays((current) => current.filter((play) => play.id !== playId));
+        if (lastUsedMeditation?.kind === 'custom-play' && lastUsedMeditation.customPlayId === playId) {
+          clearLastUsedMeditationRecord(setLastUsedMeditation);
+        }
         mergeQueueEntry(updateQueue, {
           entityType: 'custom-play',
           operation: 'delete',
@@ -1520,6 +1644,119 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           setCustomPlaySyncError(null);
         }
         return true;
+      },
+      startCustomPlayRun: (playId): CustomPlayRunStartResult => {
+        if (isCustomPlaysLoading) {
+          return { started: false, reason: 'custom plays loading' };
+        }
+
+        if (state.activeSession) {
+          return { started: false, reason: 'timer session active' };
+        }
+
+        if (activePlaylistRun) {
+          return { started: false, reason: 'playlist run active' };
+        }
+
+        if (activeCustomPlayRun) {
+          return { started: false, reason: 'custom play run active' };
+        }
+
+        const play = customPlays.find((entry) => entry.id === playId);
+        if (!play) {
+          return { started: false, reason: 'custom play not found' };
+        }
+
+        const mediaAsset = resolveCustomPlayMediaAsset(play.mediaAssetId);
+        if (!mediaAsset) {
+          return { started: false, reason: 'media unavailable' };
+        }
+
+        const nowMs = Date.now();
+        const startedAt = new Date(nowMs).toISOString();
+        timerSoundPlayerRef.current.prepare([play.endSound].filter((label) => label !== play.startSound));
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setCustomPlayRuntimeMessage(null);
+        setCustomPlayRunOutcome(null);
+        void attemptTimerSoundPlayback(
+          timerSoundPlayerRef.current,
+          handledSoundPlaybackMessageKeyRef,
+          setCustomPlayRuntimeMessage,
+          play.startSound,
+          'start'
+        );
+        recordLastUsedMeditation(setLastUsedMeditation, {
+          kind: 'custom-play',
+          customPlayId: play.id,
+          customPlayName: play.name,
+          usedAt: startedAt,
+        });
+        setActiveCustomPlayRun({
+          runId: `${play.id}-${nowMs}`,
+          customPlayId: play.id,
+          customPlayName: play.name,
+          meditationType: play.meditationType,
+          recordingLabel: play.recordingLabel,
+          mediaAssetId: mediaAsset.id,
+          mediaLabel: mediaAsset.label,
+          mediaFilePath: mediaAsset.filePath,
+          durationSeconds: mediaAsset.durationSeconds,
+          startedAt,
+          startedAtMs: nowMs,
+          currentPositionSeconds: 0,
+          isPaused: false,
+          startSound: play.startSound,
+          endSound: play.endSound,
+        });
+        return { started: true };
+      },
+      pauseCustomPlayRun: () => {
+        if (!activeCustomPlayRun) {
+          return;
+        }
+
+        setActiveCustomPlayRun({
+          ...activeCustomPlayRun,
+          isPaused: true,
+        });
+      },
+      resumeCustomPlayRun: () => {
+        if (!activeCustomPlayRun) {
+          return;
+        }
+
+        setActiveCustomPlayRun({
+          ...activeCustomPlayRun,
+          isPaused: false,
+        });
+      },
+      updateCustomPlayRunProgress: (currentPositionSeconds) => {
+        if (!activeCustomPlayRun) {
+          return;
+        }
+
+        const nextPositionSeconds = Math.max(0, Math.min(activeCustomPlayRun.durationSeconds, currentPositionSeconds));
+        if (Math.abs(nextPositionSeconds - activeCustomPlayRun.currentPositionSeconds) < 0.25) {
+          return;
+        }
+
+        setActiveCustomPlayRun({
+          ...activeCustomPlayRun,
+          currentPositionSeconds: nextPositionSeconds,
+        });
+      },
+      completeCustomPlayRun: (currentPositionSeconds) => {
+        finalizeCustomPlayRun('completed', currentPositionSeconds);
+      },
+      endCustomPlayRunEarly: (currentPositionSeconds) => {
+        finalizeCustomPlayRun('ended early', currentPositionSeconds);
+      },
+      clearCustomPlayRunOutcome: () => {
+        setCustomPlayRunOutcome(null);
+      },
+      reportCustomPlayRuntimeIssue: (message) => {
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setCustomPlayRuntimeMessage(message);
       },
       savePlaylist: async (draft, editId): Promise<PlaylistSaveResult> => {
         const validation = validatePlaylistDraft(draft);
@@ -1632,6 +1869,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           playlists,
           isPlaylistsLoading,
           activeTimerSession: Boolean(state.activeSession),
+          activeCustomPlayRun: Boolean(activeCustomPlayRun),
           activePlaylistRun,
         });
 
@@ -1792,7 +2030,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         };
       },
       startSession: (settingsOverride) => {
-        if (activePlaylistRun) {
+        if (activePlaylistRun || activeCustomPlayRun) {
           return false;
         }
 
@@ -1842,12 +2080,20 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         handledSoundPlaybackMessageKeyRef.current = null;
         setTimerSoundPlaybackMessage(null);
       },
+      clearCustomPlayRuntimeMessage: () => {
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setCustomPlayRuntimeMessage(null);
+      },
       clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
     [
+      activeCustomPlayRun,
       activePlaylistRun,
       customPlays,
+      customPlayRunOutcome,
+      customPlayRuntimeMessage,
       customPlaySyncError,
+      finalizeCustomPlayRun,
       isOnline,
       isPaused,
       isCustomPlaysLoading,

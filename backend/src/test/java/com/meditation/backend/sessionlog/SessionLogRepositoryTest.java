@@ -39,6 +39,9 @@ class SessionLogRepositoryTest {
         null,
         null,
         null,
+        null,
+        null,
+        null,
         Instant.parse("2026-03-26T10:20:00Z")
     ));
     sessionLogRepository.save(new SessionLogEntity(
@@ -56,6 +59,9 @@ class SessionLogRepositoryTest {
         false,
         0,
         "None",
+        null,
+        null,
+        null,
         null,
         null,
         null,

@@ -25,7 +25,12 @@
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference
+- Keep Home's `start last used meditation` shortcut able to resume a `custom play` reference when that is the last launched meditation.
 - Keep stale playlist-based last-used shortcuts self-healing by clearing them as soon as playlist state proves the target no longer exists.
+- Keep runnable `custom play` sessions as a dedicated prerecorded-session runtime:
+  - active playback state is persisted separately from timer sessions
+  - linked media metadata is required before save and reused for runtime duration
+  - auto-created `session log` entries carry `custom play` name and recording context for History and summaries
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:
@@ -41,7 +46,6 @@
   - filesystem-backed H2 and media storage
 
 ## Current intentional limitations
-- `custom play` is still a timer-oriented flow with linked media metadata, not yet a dedicated runnable prerecorded-session runtime.
 - Playlist runtime still does not implement optional small gaps between items or true playlist audio playback.
 - `sankalpa` editing and archive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
@@ -63,4 +67,4 @@
   - `requirements/session-handoff.md`
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Treat the next highest-value implementation slice as the missing runnable `custom play` flow now that the intent-remediation bundle has been merged back into `codex/review-and-cleanup`.
+- Treat the next highest-value implementation slice as playlist runtime audio refinement now that the runnable `custom play` flow is in place.

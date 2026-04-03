@@ -30,12 +30,27 @@ This file now tracks the durable current repository state rather than a prompt-b
   - `playlist-runtime-audio-feature-bundle-with-branching`
   - `sankalpa-edit-archive-feature-bundle-with-branching`
   - `run-milestone-bundle.md`
+- The `custom play` runtime slice is now implemented on this feature branch:
+  - Practice and Home can start a true runnable prerecorded `custom play`
+  - active `custom play` state persists across route changes and reloads
+  - the shell keeps media playback aligned with runtime state through a hidden audio element
+  - completion and early end both create trustworthy `session log` entries with `custom play` metadata
+  - playlist and timer starts are blocked while a `custom play` run is active
+- Review and verification artifacts for this slice now live in:
+  - `docs/review-custom-play-runtime-feature.md`
+  - `docs/test-custom-play-runtime-feature.md`
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance
   - added Home `start last used meditation`
   - removed stale prompt, review, handoff-history, and ExecPlan artifacts after folding durable outcomes into the long-lived docs
 - Cleanup verification completed on 2026-04-01:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test`
+  - `npm run build`
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- Custom play runtime verification completed on 2026-04-02:
   - `npm run typecheck`
   - `npm run lint`
   - `npm run test`
@@ -51,10 +66,9 @@ This file now tracks the durable current repository state rather than a prompt-b
 
 ## Remaining known gaps
 - Finish verifying the new production-only scripts and docs end to end after the dev/preview removal.
-- Implement a true runnable `custom play` prerecorded-session flow instead of treating it only as timer metadata plus linked media.
 - Add optional small gaps between playlist items and complete playlist runtime audio behavior.
 - Add `sankalpa` edit and archive flows.
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/custom-play-runtime-feature-bundle-with-branching/01-implement-custom-play-runtime.md`
+- Exact recommended next prompt: `prompts/custom-play-runtime-feature-bundle-with-branching/99-merge-branch.md`

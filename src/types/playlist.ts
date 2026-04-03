@@ -69,6 +69,7 @@ export interface PlaylistRunOutcome {
 export type PlaylistRunStartBlockReason =
   | 'playlists loading'
   | 'timer session active'
+  | 'custom play run active'
   | 'playlist run active'
   | 'playlist not found'
   | 'playlist has no items';

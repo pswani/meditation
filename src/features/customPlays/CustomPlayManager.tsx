@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import type { TimerSettings } from '../../types/timer';
-import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
+import { applyCustomPlayToTimerSettings, deriveCustomPlayDurationMinutes } from '../../utils/customPlay';
 import type { MediaAssetCatalogIssue } from '../../utils/mediaAssetApi';
 import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
 import { meditationTypes, soundOptions } from '../timer/constants';
@@ -12,7 +12,7 @@ import { useTimer } from '../timer/useTimer';
 const initialDraft: CustomPlayDraft = {
   name: '',
   meditationType: '',
-  durationMinutes: 20,
+  durationMinutes: 0,
   startSound: 'None',
   endSound: 'Temple Bell',
   mediaAssetId: '',
@@ -28,14 +28,30 @@ function describeLinkedMedia(asset: MediaAssetMetadata): string {
 interface CustomPlayManagerProps {
   readonly timerSettings: TimerSettings;
   readonly onApplyCustomPlay: (nextSettings: TimerSettings) => void;
+  readonly onStartCustomPlay: () => void;
 }
 
-export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: CustomPlayManagerProps) {
+function customPlayStartBlockMessage(reason?: string): string {
+  const messages: Record<string, string> = {
+    'custom plays loading': 'Custom plays are still loading from the backend.',
+    'timer session active': 'Finish the active timer before starting a custom play.',
+    'playlist run active': 'Finish the active playlist run before starting a custom play.',
+    'custom play run active': 'A custom play is already active. Resume it to continue.',
+    'custom play not found': 'That custom play is no longer available.',
+    'media unavailable': 'The linked media session is unavailable right now.',
+  };
+
+  return reason ? messages[reason] ?? 'Unable to start that custom play right now.' : 'Unable to start that custom play right now.';
+}
+
+export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, onStartCustomPlay }: CustomPlayManagerProps) {
   const {
     customPlays,
     saveCustomPlay,
     deleteCustomPlay,
     toggleFavoriteCustomPlay,
+    startCustomPlayRun,
+    activeCustomPlayRun,
     isCustomPlaysLoading,
     isCustomPlaySyncing,
     customPlaySyncError,
@@ -101,6 +117,24 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
     setPendingDeleteId(null);
     setAppliedPlayId(match.id);
     setSaveFeedbackMessage(null);
+  }
+
+  function startCustomPlay(playId: string) {
+    const match = customPlays.find((play) => play.id === playId);
+    if (!match) {
+      return;
+    }
+
+    const result = startCustomPlayRun(playId);
+    if (!result.started) {
+      setSaveFeedbackMessage(customPlayStartBlockMessage(result.reason));
+      return;
+    }
+
+    setPendingDeleteId(null);
+    setAppliedPlayId(null);
+    setSaveFeedbackMessage(`Custom play "${match.name}" started.`);
+    onStartCustomPlay();
   }
 
   function requestDelete(playId: string) {
@@ -240,23 +274,18 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
             <input
               type="number"
               min={1}
-              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
-              value={draft.durationMinutes}
+              disabled
+              value={draft.durationMinutes || ''}
               aria-invalid={Boolean(errors.durationMinutes)}
               aria-describedby={customPlayDurationMessageId}
-              onChange={(event) => {
-                setSaveFeedbackMessage(null);
-                setDraft((current) => ({
-                  ...current,
-                  durationMinutes: Number(event.target.value),
-                }));
-              }}
+              readOnly
             />
             {errors.durationMinutes ? (
               <small id={customPlayDurationMessageId} className="error-text">
                 {errors.durationMinutes}
               </small>
             ) : null}
+            <small className="hint-text">Duration is derived from the linked media session.</small>
           </label>
 
           <label>
@@ -302,7 +331,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
           </label>
 
           <label>
-            <span>Media session (optional)</span>
+            <span>Linked media session</span>
             <select
               disabled={isCustomPlaysLoading || isCustomPlaySyncing}
               value={draft.mediaAssetId}
@@ -310,13 +339,16 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
               aria-describedby={customPlayMediaMessageId}
               onChange={(event) => {
                 setSaveFeedbackMessage(null);
+                const nextMediaAssetId = event.target.value;
+                const nextDurationMinutes = deriveCustomPlayDurationMinutes(nextMediaAssetId) ?? 0;
                 setDraft((current) => ({
                   ...current,
-                  mediaAssetId: event.target.value,
+                  mediaAssetId: nextMediaAssetId,
+                  durationMinutes: nextDurationMinutes,
                 }));
               }}
             >
-              <option value="">No linked media session</option>
+              <option value="">Select linked media session</option>
               {mediaAssets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
                   {asset.label}
@@ -422,8 +454,20 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
 
                   <div className="custom-play-side">
                     <div className="custom-play-actions">
-                      <button type="button" disabled={isCustomPlaysLoading || isCustomPlaySyncing} onClick={() => applyCustomPlay(play.id)}>
-                        Use Custom Play
+                      <button
+                        type="button"
+                        disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                        onClick={() => startCustomPlay(play.id)}
+                      >
+                        Start Custom Play
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+                        onClick={() => applyCustomPlay(play.id)}
+                      >
+                        Apply To Timer
                       </button>
                       <button
                         type="button"
@@ -453,7 +497,16 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay }: 
                         Delete
                       </button>
                     </div>
-
+                    {activeCustomPlayRun?.customPlayId === play.id ? (
+                      <p className="section-subtitle" role="status">
+                        Custom play running now.
+                      </p>
+                    ) : null}
+                    {appliedPlayId === play.id ? (
+                      <p className="section-subtitle" role="status">
+                        Custom play "{play.name}" applied to timer setup.
+                      </p>
+                    ) : null}
                     {pendingDeleteId === play.id ? (
                       <div className="confirm-sheet" role="dialog" aria-label={`Delete custom play ${play.name} confirmation`}>
                         <p>Delete custom play "{play.name}"?</p>

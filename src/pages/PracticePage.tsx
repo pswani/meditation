@@ -24,6 +24,7 @@ export default function PracticePage() {
   const {
     settings: defaultSettings,
     activeSession,
+    activeCustomPlayRun,
     activePlaylistRun,
     startSession,
     clearOutcome,
@@ -35,7 +36,7 @@ export default function PracticePage() {
   } = useTimer();
   const navigate = useNavigate();
   const location = useLocation();
-  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || isSettingsLoading;
+  const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || Boolean(activeCustomPlayRun) || isSettingsLoading;
   const areTimerSettingsControlsDisabled = isSettingsLoading;
   const advancedContentId = 'advanced-timer-settings';
   const practiceToolsContentId = 'practice-tools-content';
@@ -412,9 +413,15 @@ export default function PracticePage() {
           <p>
             {isSettingsLoading
               ? 'Timer defaults are still loading from the backend. Please wait a moment before starting.'
+              : activeCustomPlayRun
+              ? `Custom play active: ${activeCustomPlayRun.customPlayName}. Resume or end it before starting a separate timer session.`
               : 'A playlist run is active. Resume or end the playlist run before starting a separate timer session.'}
           </p>
-          {isSettingsLoading ? null : (
+          {isSettingsLoading ? null : activeCustomPlayRun ? (
+            <button type="button" className="link-button" onClick={() => navigate('/practice/custom-plays/active')}>
+              Resume Custom Play
+            </button>
+          ) : (
             <button type="button" className="link-button" onClick={() => navigate('/practice/playlists/active')}>
               Resume Playlist Run
             </button>
@@ -451,6 +458,15 @@ export default function PracticePage() {
           </div>
         ) : null}
 
+        {!activePlaylistRun && activeCustomPlayRun ? (
+          <div className="status-banner">
+            <p>Custom play active: {activeCustomPlayRun.customPlayName}</p>
+            <button type="button" className="link-button" onClick={() => navigate('/practice/custom-plays/active')}>
+              Resume Custom Play
+            </button>
+          </div>
+        ) : null}
+
         {toolsOpen ? (
           <div id={practiceToolsContentId} className="practice-tools-content">
             <CustomPlayManager
@@ -459,6 +475,7 @@ export default function PracticePage() {
                 setDraftSettings(nextSettings);
                 setIsDraftDirty(true);
               }}
+              onStartCustomPlay={() => navigate('/practice/custom-plays/active')}
             />
 
             <section className="playlist-entry-panel">
