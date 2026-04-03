@@ -41,6 +41,15 @@ Primary destinations:
 - Settings should show current notification capability and permission state in calm, explicit language
 - iPhone Safari notification copy should explain that browser support and permission still do not guarantee lock-screen reliability in browser-tab mode
 
+## Sankalpa UX rules
+- Archived sankalpas should surface explicit `Unarchive` and `Delete` actions in the archived section without reintroducing clutter into active goal lists
+- Only archived sankalpas should expose permanent delete, and delete should require calm confirmation copy before the action proceeds
+- Unarchiving should return the goal to its derived status:
+  - active when still within the goal window and incomplete
+  - completed when the target is already met
+  - expired when the goal window has already passed without completion
+- Delete and unarchive feedback should stay brief, calm, and clear about local-only fallback when the backend is unavailable
+
 ## Responsive layout notes
 - forms stay single-column on narrow screens
 - summaries may expand to multiple cards or columns on larger screens

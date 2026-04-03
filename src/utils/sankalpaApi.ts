@@ -1,5 +1,5 @@
 import type { SankalpaGoal, SankalpaProgress, SankalpaStatus, TimeOfDayBucket } from '../types/sankalpa';
-import { requestJson } from './apiClient';
+import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders } from './syncApi';
 
@@ -34,6 +34,20 @@ interface SankalpaApiOptions {
   readonly timeZone?: string;
   readonly syncQueuedAt?: string;
 }
+
+interface SankalpaDeleteApiResponse {
+  readonly outcome: 'deleted' | 'stale';
+  readonly currentSankalpa?: SankalpaProgressApiResponse | null;
+}
+
+export type SankalpaDeleteResult =
+  | {
+      readonly outcome: 'deleted';
+    }
+  | {
+      readonly outcome: 'stale';
+      readonly currentSankalpa: SankalpaProgress;
+    };
 
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
 const goalTypes = new Set(['duration-based', 'session-count-based']);
@@ -126,6 +140,26 @@ function normalizeProgressCollection(payload: unknown): SankalpaProgress[] {
   return payload.map(normalizeProgressPayload);
 }
 
+function normalizeDeleteResult(payload: unknown): SankalpaDeleteResult {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Sankalpa delete response is invalid.');
+  }
+
+  const candidate = payload as SankalpaDeleteApiResponse;
+  if (candidate.outcome === 'deleted') {
+    return { outcome: 'deleted' };
+  }
+
+  if (candidate.outcome === 'stale' && candidate.currentSankalpa) {
+    return {
+      outcome: 'stale',
+      currentSankalpa: normalizeProgressPayload(candidate.currentSankalpa),
+    };
+  }
+
+  throw new Error('Sankalpa delete response is invalid.');
+}
+
 export function buildSankalpaDetailPath(sankalpaId: string): string {
   return `${SANKALPAS_COLLECTION_PATH}/${sankalpaId}`;
 }
@@ -176,4 +210,53 @@ export async function persistSankalpaToApi(sankalpa: SankalpaGoal, options: Sank
   });
 
   return normalizeProgressPayload(payload);
+}
+
+export async function deleteSankalpaFromApi(
+  sankalpaId: string,
+  options: SankalpaApiOptions = {}
+): Promise<SankalpaDeleteResult> {
+  const url = buildApiUrl(buildSankalpaDetailRequestPath(sankalpaId, options.timeZone), options.apiBaseUrl);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        ...buildSyncMutationHeaders(options.syncQueuedAt),
+      },
+      signal: options.signal,
+    });
+  } catch {
+    throw new ApiClientError('Unable to reach the API right now.', url, {
+      kind: 'network',
+    });
+  }
+
+  if (response.status === 204) {
+    return {
+      outcome: 'deleted',
+    };
+  }
+
+  if (!response.ok) {
+    let detail: string | null = null;
+
+    try {
+      const responseText = await response.text();
+      detail = responseText.trim() ? responseText : null;
+    } catch {
+      detail = null;
+    }
+
+    throw new ApiClientError(`API request failed with status ${response.status}.`, url, {
+      status: response.status,
+      detail,
+      kind: 'http',
+    });
+  }
+
+  const payload = await response.json();
+  return normalizeDeleteResult(payload);
 }

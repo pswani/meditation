@@ -33,6 +33,9 @@ public class SankalpaGoalEntity {
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
+
   @Column(name = "completed_at")
   private Instant completedAt;
 
@@ -50,6 +53,7 @@ public class SankalpaGoalEntity {
       String meditationTypeCode,
       String timeOfDayBucket,
       Instant createdAt,
+      Instant updatedAt,
       Instant completedAt,
       boolean archived
   ) {
@@ -60,6 +64,7 @@ public class SankalpaGoalEntity {
     this.meditationTypeCode = meditationTypeCode;
     this.timeOfDayBucket = timeOfDayBucket;
     this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
     this.completedAt = completedAt;
     this.archived = archived;
   }
@@ -92,6 +97,10 @@ public class SankalpaGoalEntity {
     return createdAt;
   }
 
+  public Instant getUpdatedAt() {
+    return updatedAt;
+  }
+
   public Instant getCompletedAt() {
     return completedAt;
   }
@@ -100,13 +109,14 @@ public class SankalpaGoalEntity {
     return archived;
   }
 
-  public void updateFrom(SankalpaGoalUpsertRequest request, Instant createdAt) {
+  public void updateFrom(SankalpaGoalUpsertRequest request, Instant createdAt, Instant updatedAt) {
     this.goalType = request.goalType();
     this.targetValue = request.targetValue();
     this.days = request.days();
     this.meditationTypeCode = request.meditationType();
     this.timeOfDayBucket = request.timeOfDayBucket();
     this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
     this.completedAt = null;
     this.archived = request.archived();
   }

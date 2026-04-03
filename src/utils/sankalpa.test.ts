@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
-import { deriveSankalpaProgress, getTimeOfDayBucket, partitionSankalpaProgress, validateSankalpaDraft } from './sankalpa';
+import {
+  deriveSankalpaProgress,
+  getTimeOfDayBucket,
+  partitionSankalpaProgress,
+  unarchiveSankalpaGoal,
+  validateSankalpaDraft,
+} from './sankalpa';
 
 function localIso(year: number, monthIndex: number, day: number, hour: number, minute = 0): string {
   return new Date(year, monthIndex, day, hour, minute, 0, 0).toISOString();
@@ -263,6 +269,27 @@ describe('sankalpa helpers', () => {
 
     expect(progress.matchedSessionCount).toBe(2);
     expect(progress.status).toBe('archived');
+  });
+
+  it('restores archived goals into their derived non-archived status when unarchived', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-restored',
+      goalType: 'session-count-based',
+      targetValue: 2,
+      days: 3,
+      createdAt: localIso(2026, 2, 20, 0, 0),
+      archived: true,
+    };
+
+    const restoredGoal = unarchiveSankalpaGoal(goal);
+    const progress = deriveSankalpaProgress(
+      restoredGoal,
+      [createSessionLog({ endedAt: localIso(2026, 2, 21, 7, 0) })],
+      new Date(localIso(2026, 2, 22, 7, 0))
+    );
+
+    expect(restoredGoal.archived).toBe(false);
+    expect(progress.status).toBe('active');
   });
 
   it('maps time-of-day buckets at key clock boundaries', () => {
