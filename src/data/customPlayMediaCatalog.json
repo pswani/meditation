@@ -2,7 +2,9 @@
   {
     "id": "media-vipassana-sit-20",
     "label": "Vipassana Sit (20 min)",
+    "meditationType": "Vipassana",
     "filePath": "/media/custom-plays/vipassana-sit-20.mp3",
+    "relativePath": "custom-plays/vipassana-sit-20.mp3",
     "durationSeconds": 1200,
     "mimeType": "audio/mpeg",
     "sizeBytes": 9200000,
@@ -11,7 +13,9 @@
   {
     "id": "media-ajapa-breath-15",
     "label": "Ajapa Breath Cycle (15 min)",
+    "meditationType": "Ajapa",
     "filePath": "/media/custom-plays/ajapa-breath-15.mp3",
+    "relativePath": "custom-plays/ajapa-breath-15.mp3",
     "durationSeconds": 900,
     "mimeType": "audio/mpeg",
     "sizeBytes": 6900000,
@@ -20,7 +24,9 @@
   {
     "id": "media-tratak-focus-10",
     "label": "Tratak Focus Bellset (10 min)",
+    "meditationType": "Tratak",
     "filePath": "/media/custom-plays/tratak-focus-10.mp3",
+    "relativePath": "custom-plays/tratak-focus-10.mp3",
     "durationSeconds": 600,
     "mimeType": "audio/mpeg",
     "sizeBytes": 4500000,

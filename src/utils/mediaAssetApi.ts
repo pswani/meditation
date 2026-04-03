@@ -1,4 +1,6 @@
+import meditationTypesCatalog from '../data/meditationTypes.json';
 import type { MediaAssetMetadata } from '../types/mediaAsset';
+import type { MeditationType } from '../types/timer';
 import sampleCustomPlayMediaCatalog from '../data/customPlayMediaCatalog.json';
 import { ApiClientError, isApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
@@ -14,6 +16,7 @@ export function buildCustomPlayMediaListUrl(apiBaseUrl?: string): string {
 export interface MediaAssetApiResponse {
   readonly id: string;
   readonly label: string;
+  readonly meditationType?: string | null;
   readonly filePath: string;
   readonly relativePath?: string;
   readonly durationSeconds: number;
@@ -33,15 +36,25 @@ export interface MediaAssetCatalogResult {
 }
 
 const sampleMediaAssetCatalog = sampleCustomPlayMediaCatalog as readonly MediaAssetApiResponse[];
+const supportedMeditationTypes = new Set(meditationTypesCatalog as readonly MeditationType[]);
 
-let cachedMediaAssetCatalog: MediaAssetMetadata[] = sampleMediaAssetCatalog.map((entry) => ({ ...entry }));
+let cachedMediaAssetCatalog: MediaAssetMetadata[] = sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
 let cachedMediaAssetCatalogSource: MediaAssetCatalogSource = 'sample-fallback';
 
+function normalizeMeditationType(value: string | null | undefined): MeditationType | null {
+  return value && supportedMeditationTypes.has(value as MeditationType) ? (value as MeditationType) : null;
+}
+
 function normalizeMediaAssetResponse(entry: MediaAssetApiResponse): MediaAssetMetadata {
+  const derivedRelativePath =
+    entry.relativePath ?? (entry.filePath.startsWith('/media/') ? entry.filePath.slice('/media/'.length) : entry.filePath);
+
   return {
     id: entry.id,
     label: entry.label,
+    meditationType: normalizeMeditationType(entry.meditationType),
     filePath: entry.filePath,
+    relativePath: derivedRelativePath,
     durationSeconds: entry.durationSeconds,
     mimeType: entry.mimeType,
     sizeBytes: entry.sizeBytes,
@@ -63,7 +76,9 @@ function isMediaAssetApiResponse(value: unknown): value is MediaAssetApiResponse
   return (
     typeof candidate.id === 'string' &&
     typeof candidate.label === 'string' &&
+    (typeof candidate.meditationType === 'string' || candidate.meditationType === null || candidate.meditationType === undefined) &&
     typeof candidate.filePath === 'string' &&
+    (typeof candidate.relativePath === 'string' || candidate.relativePath === undefined) &&
     typeof candidate.durationSeconds === 'number' &&
     typeof candidate.mimeType === 'string' &&
     typeof candidate.sizeBytes === 'number' &&

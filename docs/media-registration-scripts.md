@@ -153,8 +153,8 @@ How it works:
 1. The frontend fallback catalog is updated so backend-unavailable flows know about the new recording.
 2. A brand-new Flyway migration is created instead of modifying the old seed migration.
 3. On the next backend startup, Flyway inserts the new `media_asset` row into H2.
-4. The custom-play media API then returns the new asset from `/api/media/custom-plays`.
-5. The `Custom Plays` UI can select it by `mediaAssetId`.
+4. The custom-play media API then returns the new asset from `/api/media/custom-plays`, including meditation type and relative path metadata.
+5. The `Custom Plays` UI can select it by `mediaAssetId`, show whether the backend or fallback library supplied it, and display the managed path for the linked recording.
 
 Why it creates a new migration:
 
@@ -181,3 +181,17 @@ These files are now the editable catalogs used by the scripts:
 - [`src/data/customPlayMediaCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/customPlayMediaCatalog.json)
 
 The scripts update those files so the repo stays consistent without manual copy-paste edits across multiple modules.
+
+## Current scope
+
+This workflow creates the current managed custom-play media library foundation:
+
+- the backend owns the authoritative `media_asset` metadata and `/api/media/custom-plays` response
+- the frontend can fall back to `src/data/customPlayMediaCatalog.json` when the backend media API is unavailable
+- the Practice screen now labels these entries as managed media sessions and shows their relative managed path when selected or already linked
+
+Still intentionally out of scope for now:
+
+- browser-based upload/import
+- in-app media editing or deletion tools
+- end-user file browsing outside the repo/script registration flow

@@ -28,6 +28,7 @@ describe('media asset api boundary', () => {
           {
             id: 'media-vipassana-sit-20',
             label: 'Vipassana Sit (20 min)',
+            meditationType: 'Vipassana',
             filePath: '/media/custom-plays/vipassana-sit-20.mp3',
             relativePath: 'custom-plays/vipassana-sit-20.mp3',
             durationSeconds: 1200,
@@ -46,6 +47,8 @@ describe('media asset api boundary', () => {
     expect(buildCustomPlayMediaListUrl('http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/media/custom-plays');
     expect(assets.length).toBeGreaterThan(0);
     expect(assets[0]?.filePath).toContain(CUSTOM_PLAY_MEDIA_DIRECTORY);
+    expect(assets[0]?.meditationType).toBe('Vipassana');
+    expect(assets[0]?.relativePath).toBe('custom-plays/vipassana-sit-20.mp3');
     expect(assets[0]?.mimeType).toBe('audio/mpeg');
   });
 
@@ -72,8 +75,10 @@ describe('media asset api boundary', () => {
     expect(result.errorMessage).toMatch(/built-in media session options/i);
     expect(first?.id).toBeTruthy();
     expect(first?.label).toBeTruthy();
+    expect(first?.meditationType).toBeTruthy();
     expect(first?.durationSeconds).toBeGreaterThan(0);
     expect(first?.filePath).toContain('/media/custom-plays/');
+    expect(first?.relativePath).toContain('custom-plays/');
   });
 
   it('surfaces invalid backend media payloads as explicit integration errors', async () => {
@@ -120,6 +125,7 @@ describe('media asset api boundary', () => {
           {
             id: 'media-backend-only',
             label: 'Backend Only Session',
+            meditationType: 'Sahaj',
             filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/backend-only.mp3`,
             relativePath: 'custom-plays/backend-only.mp3',
             durationSeconds: 300,
@@ -134,6 +140,33 @@ describe('media asset api boundary', () => {
     await loadCustomPlayMediaAssets();
 
     expect(findCustomPlayMediaAssetById('media-backend-only')?.label).toBe('Backend Only Session');
+    expect(findCustomPlayMediaAssetById('media-backend-only')?.relativePath).toBe('custom-plays/backend-only.mp3');
     expect(findCustomPlayMediaAssetById('media-vipassana-sit-20')).toBeNull();
+  });
+
+  it('derives a relative path when older backend payloads omit it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            id: 'media-older-shape',
+            label: 'Older Shape',
+            meditationType: 'Ajapa',
+            filePath: '/media/custom-plays/older-shape.mp3',
+            durationSeconds: 600,
+            mimeType: 'audio/mpeg',
+            sizeBytes: 1000,
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          },
+        ],
+      })
+    );
+
+    const assets = await listCustomPlayMediaAssets();
+
+    expect(assets[0]?.relativePath).toBe('custom-plays/older-shape.mp3');
   });
 });

@@ -69,7 +69,7 @@
   - filesystem-backed H2 and media storage
 
 ## Current intentional limitations
-- Playlist runs can only play recordings that come from linked `custom play` entries backed by the current seeded media catalog; there is still no broader user-managed media library.
+- Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.
 - `sankalpa` delete and unarchive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 

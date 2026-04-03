@@ -4,7 +4,7 @@ import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/cu
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import type { TimerSettings } from '../../types/timer';
 import { applyCustomPlayToTimerSettings, deriveCustomPlayDurationMinutes } from '../../utils/customPlay';
-import type { MediaAssetCatalogIssue } from '../../utils/mediaAssetApi';
+import type { MediaAssetCatalogIssue, MediaAssetCatalogSource } from '../../utils/mediaAssetApi';
 import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
 import { meditationTypes, soundOptions } from '../timer/constants';
 import { useTimer } from '../timer/useTimer';
@@ -22,7 +22,15 @@ const initialDraft: CustomPlayDraft = {
 const initialErrors: CustomPlayValidationResult['errors'] = {};
 
 function describeLinkedMedia(asset: MediaAssetMetadata): string {
-  return asset.label;
+  return asset.meditationType ? `${asset.label} · ${asset.meditationType}` : asset.label;
+}
+
+function describeManagedLibrarySource(source: MediaAssetCatalogSource, count: number): string {
+  if (source === 'backend') {
+    return `${count} managed media session${count === 1 ? '' : 's'} loaded from the backend library.`;
+  }
+
+  return `${count} built-in fallback media session${count === 1 ? '' : 's'} shown while the backend library is unavailable.`;
 }
 
 interface CustomPlayManagerProps {
@@ -63,6 +71,8 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
   const [appliedPlayId, setAppliedPlayId] = useState<string | null>(null);
   const [saveFeedbackMessage, setSaveFeedbackMessage] = useState<string | null>(null);
   const [mediaAssets, setMediaAssets] = useState<MediaAssetMetadata[]>([]);
+  const [mediaCatalogSource, setMediaCatalogSource] = useState<MediaAssetCatalogSource>('sample-fallback');
+  const [isMediaCatalogLoading, setIsMediaCatalogLoading] = useState(true);
   const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
   const [mediaLoadIssueKind, setMediaLoadIssueKind] = useState<MediaAssetCatalogIssue | null>(null);
 
@@ -75,15 +85,19 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
           return;
         }
         setMediaAssets(result.assets);
+        setMediaCatalogSource(result.source);
         setMediaLoadError(result.errorMessage);
         setMediaLoadIssueKind(result.errorKind);
+        setIsMediaCatalogLoading(false);
       })
       .catch(() => {
         if (!mounted) {
           return;
         }
+        setMediaCatalogSource('sample-fallback');
         setMediaLoadError('Unable to load media session options right now.');
         setMediaLoadIssueKind('backend-error');
+        setIsMediaCatalogLoading(false);
       });
 
     return () => {
@@ -188,6 +202,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
   const customPlayMeditationTypeMessageId = errors.meditationType ? 'custom-play-meditation-type-error' : undefined;
   const customPlayDurationMessageId = errors.durationMinutes ? 'custom-play-duration-error' : undefined;
   const customPlayMediaMessageId = errors.mediaAssetId ? 'custom-play-media-error' : 'custom-play-media-hint';
+  const showManagedLibraryEmptyState = !isMediaCatalogLoading && !isCustomPlaysLoading && mediaAssets.length === 0;
 
   return (
     <section className="custom-play-panel">
@@ -217,6 +232,22 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
           <p>{saveFeedbackMessage}</p>
         </div>
       ) : null}
+
+      {isMediaCatalogLoading ? (
+        <div className="status-banner" role="status">
+          <p>Loading managed media sessions from the backend library.</p>
+        </div>
+      ) : showManagedLibraryEmptyState ? (
+        <div className="status-banner warn" role="status">
+          <p>No managed media sessions are available yet.</p>
+          <p>Register a custom-play recording through the repo media workflow, restart the backend, then reload this screen.</p>
+        </div>
+      ) : (
+        <div className={`status-banner ${mediaCatalogSource === 'backend' ? 'ok' : ''}`} role="status">
+          <p>{describeManagedLibrarySource(mediaCatalogSource, mediaAssets.length)}</p>
+          {mediaLoadError ? <p>{mediaLoadError}</p> : null}
+        </div>
+      )}
 
       <div className="custom-play-manager-layout">
         <form className="form-grid custom-play-form" onSubmit={onSubmit}>
@@ -333,7 +364,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
           <label>
             <span>Linked media session</span>
             <select
-              disabled={isCustomPlaysLoading || isCustomPlaySyncing}
+              disabled={isCustomPlaysLoading || isCustomPlaySyncing || isMediaCatalogLoading}
               value={draft.mediaAssetId}
               aria-invalid={Boolean(errors.mediaAssetId)}
               aria-describedby={customPlayMediaMessageId}
@@ -351,7 +382,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
               <option value="">Select linked media session</option>
               {mediaAssets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
-                  {asset.label}
+                  {describeLinkedMedia(asset)}
                 </option>
               ))}
             </select>
@@ -359,18 +390,23 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
               <small id={customPlayMediaMessageId} className="error-text">
                 {errors.mediaAssetId}
               </small>
+            ) : isMediaCatalogLoading ? (
+              <small id={customPlayMediaMessageId} className="hint-text">
+                Loading managed media sessions from the backend library.
+              </small>
             ) : selectedMediaAsset ? (
               <>
                 <small id={customPlayMediaMessageId} className="hint-text">
-                  Linked media session: {describeLinkedMedia(selectedMediaAsset)}
+                  Managed library entry: {describeLinkedMedia(selectedMediaAsset)}
                 </small>
-                <small className="hint-text">This keeps the custom play connected to the selected media session.</small>
+                <small className="hint-text">Managed path: {selectedMediaAsset.relativePath}</small>
+                <small className="hint-text">This keeps the custom play connected to the selected managed media session.</small>
               </>
             ) : (
               <>
                 {mediaLoadError ? <small id={customPlayMediaMessageId} className={mediaLoadMessageClassName}>{mediaLoadError}</small> : null}
                 <small className="hint-text">
-                  Choose a linked media session to remember which recording this custom play uses.
+                  Choose a managed media session to remember which recording this custom play uses.
                 </small>
               </>
             )}
@@ -441,7 +477,10 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
                       Sounds: {play.startSound} start · {play.endSound} end
                     </p>
                     {linkedAsset ? (
-                      <p className="section-subtitle">Media session: {describeLinkedMedia(linkedAsset)}</p>
+                      <>
+                        <p className="section-subtitle">Media session: {describeLinkedMedia(linkedAsset)}</p>
+                        <p className="section-subtitle">Managed path: {linkedAsset.relativePath}</p>
+                      </>
                     ) : play.mediaAssetId ? (
                       <p className="section-subtitle">Linked media session unavailable right now.</p>
                     ) : null}
