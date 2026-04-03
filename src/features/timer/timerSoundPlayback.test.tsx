@@ -21,6 +21,7 @@ const validSettings: TimerSettings = {
 
 class MockAudio {
   static playCalls: string[] = [];
+  static mutedPlayCalls: string[] = [];
   static primedSources = new Set<string>();
   static blockedUntilPrimed = new Set<string>();
 
@@ -34,6 +35,7 @@ class MockAudio {
 
   play() {
     if (this.muted) {
+      MockAudio.mutedPlayCalls.push(this.src);
       MockAudio.primedSources.add(this.src);
       return Promise.resolve();
     }
@@ -136,6 +138,7 @@ describe('timer sound playback', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-27T15:00:00.000Z'));
     MockAudio.playCalls = [];
+    MockAudio.mutedPlayCalls = [];
     MockAudio.primedSources = new Set();
     MockAudio.blockedUntilPrimed = new Set();
     mockAudioPlay.mockReset();
@@ -156,6 +159,18 @@ describe('timer sound playback', () => {
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
     await flushAsyncWork();
 
+    expect(MockAudio.playCalls).toEqual([templeBellPath]);
+  });
+
+  it('primes only the later cues so Safari-friendly preparation does not compete with the start sound', async () => {
+    renderHarness();
+    await flushAsyncWork();
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await flushAsyncWork();
+
+    expect(MockAudio.mutedPlayCalls).toEqual([gongPath]);
     expect(MockAudio.playCalls).toEqual([templeBellPath]);
   });
 
@@ -313,5 +328,28 @@ describe('timer sound playback', () => {
 
     expect(screen.getByTestId('active-session')).not.toHaveTextContent('none');
     expect(screen.getByTestId('sound-message')).toHaveTextContent(/start sound "Missing Bell" is not mapped/i);
+  });
+
+  it('shows a warning when the end sound is blocked at completion', async () => {
+    mockAudioPlay.mockImplementation(async (src) => {
+      if (src === gongPath) {
+        throw new DOMException('Playback requires user activation.', 'NotAllowedError');
+      }
+    });
+
+    renderHarness();
+    await flushAsyncWork();
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await flushAsyncWork();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    await flushAsyncWork();
+
+    expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
+    expect(screen.getByTestId('sound-message')).toHaveTextContent(/browser blocked the end sound "Gong"/i);
   });
 });

@@ -221,6 +221,23 @@ After each meaningful implementation slice:
 - update `requirements/session-handoff.md` when the current repo state, remaining gaps, or recommended next slice materially changes
 - keep `requirements/session-handoff.md` concise and current rather than appending step-by-step history
 
+## Prompt bundle expectations
+When creating reusable prompts for future work:
+- place them under `prompts/`
+- keep each bundle focused on one meaningful vertical slice
+- prefer one folder per slice using a clear suffix such as `-feature-bundle-with-branching`
+- include the same bounded sequence unless the user explicitly wants a different flow:
+  - `00-create-branch.md`
+  - `01-implement-*.md`
+  - `02-review-*.md`
+  - `03-test-*.md`
+  - `04-fix-*.md`
+  - `99-merge-branch.md`
+- include or update a reusable parameterized runner prompt when it helps execute bundles consistently
+- make each prompt file self-contained about required docs, scope, verification, documentation updates, and expected commit style
+- keep prompt bundles production-aware and aligned with the current repo workflow instead of reviving removed dev-only paths
+- avoid generating prompt bundles that are overly granular, overlapping, or disconnected from the product roadmap
+
 ## Done means
 Before considering work complete:
 1. behavior matches requirements

@@ -110,6 +110,7 @@ export function createTimerSoundPlayer(
     : UnsupportedAudio
 ): TimerSoundPlayer {
   const audioByLabel = new Map<string, AudioLike>();
+  const primingByLabel = new Map<string, Promise<void>>();
 
   function getPreparedAudio(label: string): AudioLike | null {
     if (label === SILENT_TIMER_SOUND_LABEL) {
@@ -133,13 +134,21 @@ export function createTimerSoundPlayer(
 
   return {
     prepare(labels) {
-      for (const label of labels) {
+      const uniqueLabels = [...new Set(labels)];
+
+      for (const label of uniqueLabels) {
         const audio = getPreparedAudio(label);
-        if (!audio) {
+        if (!audio || primingByLabel.has(label)) {
           continue;
         }
 
-        void unlockPreparedAudio(audio);
+        const primingPromise = unlockPreparedAudio(audio).finally(() => {
+          if (primingByLabel.get(label) === primingPromise) {
+            primingByLabel.delete(label);
+          }
+        });
+
+        primingByLabel.set(label, primingPromise);
       }
     },
     async play(label, cue) {

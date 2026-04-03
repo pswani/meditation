@@ -16,11 +16,17 @@ This file now tracks the durable current repository state rather than a prompt-b
   - Home can restart the last used meditation through a persisted timer or playlist launch context
 - Timer sound packaging now ships `Temple Bell` and `Gong` as bundled frontend/backend MP3 assets while retiring `Soft Chime` and `Wood Block` from the selectable catalog.
 - Timer playback now resolves shipped sounds from inline frontend-bundled assets instead of requiring the backend media route, which avoids 404s when the UI is paired with an unmanaged backend and removes separate sound-file fetches.
+- Timer playback now starts the selected start cue directly from the Start action and primes only deferred interval/end cues from that same user gesture, which is intended to keep iPhone Safari playback working after reloads or fresh tab opens.
 - Frontend hydration now remaps legacy saved sound labels so existing timer settings, custom plays, active sessions, and cached timer-oriented state continue to load cleanly after the catalog change.
 - The repo now uses a production-only operational workflow:
   - removed dev, preview, and managed local-stack scripts plus the Spring `dev` profile
   - added `./scripts/prod-build.sh` and `./scripts/prod-release.sh`
   - centered package scripts and docs on one golden path: build/package/install/restart through the production Mac flow
+- Prompt bundles for the next three major product slices now live under `prompts/`, along with a reusable parameterized runner prompt:
+  - `custom-play-runtime-feature-bundle-with-branching`
+  - `playlist-runtime-audio-feature-bundle-with-branching`
+  - `sankalpa-edit-archive-feature-bundle-with-branching`
+  - `run-milestone-bundle.md`
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance

@@ -21,6 +21,7 @@
   - `Soft Chime` -> `Temple Bell`
   - `Wood Block` -> `Gong`
 - Keep shipped timer sounds inline-bundled into the frontend so playback does not depend on a backend `/media/**` route or separate runtime asset fetches.
+- Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference
@@ -31,6 +32,7 @@
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
+- Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep the production-style deployment model centered on:
   - static frontend files served by `nginx`

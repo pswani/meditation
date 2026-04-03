@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { MutableRefObject, ReactNode } from 'react';
 import { useSyncStatus } from '../sync/useSyncStatus';
 import type { CustomPlay, CustomPlaySaveResult } from '../../types/customPlay';
 import type { LastUsedMeditation } from '../../types/home';
@@ -60,6 +60,8 @@ import {
   buildTimerSoundPlaybackMessage,
   createTimerSoundPlayer,
   getElapsedIntervalCueCount,
+  type TimerSoundCue,
+  type TimerSoundPlayer,
 } from './timerSoundPlayback';
 import { getActiveSessionElapsedSeconds } from './time';
 import { createInitialTimerState, timerReducer } from './timerReducer';
@@ -322,6 +324,27 @@ function clearLastUsedMeditationRecord(
   saveLastUsedMeditation(null);
 }
 
+async function attemptTimerSoundPlayback(
+  player: TimerSoundPlayer,
+  handledMessageKeyRef: MutableRefObject<string | null>,
+  setTimerSoundPlaybackMessage: (message: string | null) => void,
+  label: string,
+  cue: TimerSoundCue
+) {
+  const result = await player.play(label, cue);
+  if (result.status !== 'failed') {
+    return;
+  }
+
+  const messageKey = `${result.cue}:${result.label}:${result.reason}:${result.filePath ?? 'none'}`;
+  if (handledMessageKeyRef.current === messageKey) {
+    return;
+  }
+
+  handledMessageKeyRef.current = messageKey;
+  setTimerSoundPlaybackMessage(buildTimerSoundPlaybackMessage(result));
+}
+
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const { isOnline, queue, updateQueue } = useSyncStatus();
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
@@ -409,6 +432,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     lastIntervalCueCount: 0,
   });
   const lastActiveSessionRef = useRef(state.activeSession);
+  const pendingEndedSessionRef = useRef<ActiveSession | null>(null);
   const handledSoundPlaybackMessageKeyRef = useRef<string | null>(null);
   const handledTimerOutcomeEndedAtRef = useRef<string | null>(null);
   const isPaused = state.activeSession?.isPaused ?? false;
@@ -1208,21 +1232,6 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [state.activeSession, isPaused]);
 
   useEffect(() => {
-    async function playTimerSound(label: string, cue: 'start' | 'interval' | 'end') {
-      const result = await timerSoundPlayerRef.current.play(label, cue);
-      if (result.status !== 'failed') {
-        return;
-      }
-
-      const messageKey = `${result.cue}:${result.label}:${result.reason}:${result.filePath ?? 'none'}`;
-      if (handledSoundPlaybackMessageKeyRef.current === messageKey) {
-        return;
-      }
-
-      handledSoundPlaybackMessageKeyRef.current = messageKey;
-      setTimerSoundPlaybackMessage(buildTimerSoundPlaybackMessage(result));
-    }
-
     const activeSession = state.activeSession;
     const soundState = activeSessionSoundStateRef.current;
     const nowMs = activeSessionNowMs;
@@ -1241,11 +1250,18 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       }
 
       lastActiveSessionRef.current = activeSession;
+      pendingEndedSessionRef.current = activeSession;
       handledTimerOutcomeEndedAtRef.current = null;
 
       if (!soundState.startHandled) {
         soundState.startHandled = true;
-        void playTimerSound(activeSession.startSound, 'start');
+        void attemptTimerSoundPlayback(
+          timerSoundPlayerRef.current,
+          handledSoundPlaybackMessageKeyRef,
+          setTimerSoundPlaybackMessage,
+          activeSession.startSound,
+          'start'
+        );
       }
 
       // Interval playback follows actual elapsed session milestones so pause/resume and timer drift do not double-fire cues.
@@ -1253,7 +1269,13 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs);
         if (elapsedIntervalCueCount > soundState.lastIntervalCueCount) {
           soundState.lastIntervalCueCount = elapsedIntervalCueCount;
-          void playTimerSound(activeSession.intervalSound, 'interval');
+          void attemptTimerSoundPlayback(
+            timerSoundPlayerRef.current,
+            handledSoundPlaybackMessageKeyRef,
+            setTimerSoundPlaybackMessage,
+            activeSession.intervalSound,
+            'interval'
+          );
         }
       }
 
@@ -1271,15 +1293,24 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     if (!state.lastOutcome) {
       handledTimerOutcomeEndedAtRef.current = null;
       lastActiveSessionRef.current = null;
+      pendingEndedSessionRef.current = null;
       return;
     }
 
-    if (!lastActiveSessionRef.current || handledTimerOutcomeEndedAtRef.current === state.lastOutcome.endedAt) {
+    const completedSession = pendingEndedSessionRef.current ?? lastActiveSessionRef.current;
+    if (!completedSession || handledTimerOutcomeEndedAtRef.current === state.lastOutcome.endedAt) {
       return;
     }
 
     handledTimerOutcomeEndedAtRef.current = state.lastOutcome.endedAt;
-    void playTimerSound(lastActiveSessionRef.current.endSound, 'end');
+    pendingEndedSessionRef.current = null;
+    void attemptTimerSoundPlayback(
+      timerSoundPlayerRef.current,
+      handledSoundPlaybackMessageKeyRef,
+      setTimerSoundPlaybackMessage,
+      completedSession.endSound,
+      'end'
+    );
   }, [activeSessionNowMs, isPaused, state.activeSession, state.lastOutcome]);
 
   useEffect(() => {
@@ -1772,14 +1803,26 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         const nowMs = Date.now();
-        const laterCueLabels = [nextSettings.intervalSound, nextSettings.endSound].filter(
-          (label) => label !== nextSettings.startSound
+        const startedAt = new Date(nowMs).toISOString();
+        const preparedLabels = [...new Set([nextSettings.intervalSound, nextSettings.endSound])]
+          .filter((label) => label !== nextSettings.startSound);
+        timerSoundPlayerRef.current.prepare(preparedLabels);
+        activeSessionSoundStateRef.current.sessionId = startedAt;
+        activeSessionSoundStateRef.current.startHandled = true;
+        activeSessionSoundStateRef.current.lastIntervalCueCount = 0;
+        handledSoundPlaybackMessageKeyRef.current = null;
+        setTimerSoundPlaybackMessage(null);
+        void attemptTimerSoundPlayback(
+          timerSoundPlayerRef.current,
+          handledSoundPlaybackMessageKeyRef,
+          setTimerSoundPlaybackMessage,
+          nextSettings.startSound,
+          'start'
         );
-        timerSoundPlayerRef.current.prepare(laterCueLabels);
         recordLastUsedMeditation(setLastUsedMeditation, {
           kind: 'timer',
           settings: nextSettings,
-          usedAt: new Date(nowMs).toISOString(),
+          usedAt: startedAt,
         });
         dispatch({ type: 'START_SESSION', nowMs, settings: nextSettings });
         return true;
@@ -1791,6 +1834,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         dispatch({ type: 'RESUME_SESSION', nowMs: Date.now() });
       },
       endSessionEarly: () => {
+        pendingEndedSessionRef.current = state.activeSession;
         dispatch({ type: 'END_EARLY', nowMs: Date.now() });
       },
       clearOutcome: () => dispatch({ type: 'CLEAR_OUTCOME' }),
