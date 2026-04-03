@@ -217,6 +217,29 @@ function recoverActivePlaylistRun(
   const currentItem = getPlaylistRunCurrentItem(storedActivePlaylistRun);
   const durationSeconds = currentItem ? getPlaylistItemDurationSeconds(currentItem) : remainingSeconds;
 
+  if (currentItem && isAudioBackedPlaylistItem(currentItem)) {
+    if (storedActivePlaylistRun.currentSegment.elapsedSeconds >= durationSeconds) {
+      return {
+        activePlaylistRun: null,
+        recoveryMessage: 'Your previous playlist run was cleared because it could not be safely resumed.',
+      };
+    }
+
+    return {
+      activePlaylistRun: {
+        ...storedActivePlaylistRun,
+        currentSegment: {
+          ...storedActivePlaylistRun.currentSegment,
+          startedAt: new Date(nowMs - storedActivePlaylistRun.currentSegment.elapsedSeconds * 1000).toISOString(),
+          startedAtMs: nowMs - storedActivePlaylistRun.currentSegment.elapsedSeconds * 1000,
+          remainingSeconds: Math.max(0, durationSeconds - storedActivePlaylistRun.currentSegment.elapsedSeconds),
+          endAtMs: nowMs + Math.max(0, durationSeconds - storedActivePlaylistRun.currentSegment.elapsedSeconds) * 1000,
+        },
+      },
+      recoveryMessage: 'Recovered an active playlist run from your previous app state.',
+    };
+  }
+
   return {
     activePlaylistRun: {
       ...storedActivePlaylistRun,

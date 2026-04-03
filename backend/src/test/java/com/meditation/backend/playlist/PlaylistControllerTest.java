@@ -111,6 +111,29 @@ class PlaylistControllerTest {
   }
 
   @Test
+  void rejectsUnknownLinkedCustomPlayIds() throws Exception {
+    mockMvc.perform(put("/api/playlists/playlist-invalid-link")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "playlist-invalid-link",
+                  "name": "Broken Link Sequence",
+                  "favorite": false,
+                  "items": [
+                    {
+                      "id": "item-1",
+                      "title": "Recorded Vipassana",
+                      "meditationType": "Vipassana",
+                      "durationMinutes": 20,
+                      "customPlayId": "missing-custom-play"
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void deletingAPlaylistPreservesReadableHistoryContext() throws Exception {
     mockMvc.perform(put("/api/playlists/playlist-1")
             .contentType(APPLICATION_JSON)

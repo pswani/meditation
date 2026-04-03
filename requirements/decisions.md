@@ -34,8 +34,10 @@
 - Keep playlist runs modeled as a runtime snapshot instead of reading mutable playlist records live during playback:
   - each run stores resolved item titles, durations, and any linked `custom play` media metadata at launch time
   - optional small gaps are stored at the playlist level and replayed as explicit runtime segments
+  - recording-backed recovery resumes from the persisted playback position instead of advancing from stale wall-clock timing after reload
   - linked-recording items fail fast before launch if their referenced `custom play` or media asset can no longer be resolved
   - playlist item completion and early-end logging stays per item rather than inventing a second aggregate-only history model
+- Keep backend playlist saves referentially safe for linked recordings by rejecting a `customPlayId` that does not currently resolve to a saved `custom play`.
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:

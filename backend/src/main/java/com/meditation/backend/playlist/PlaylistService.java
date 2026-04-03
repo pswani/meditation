@@ -1,5 +1,6 @@
 package com.meditation.backend.playlist;
 
+import com.meditation.backend.customplay.CustomPlayRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -19,13 +20,16 @@ public class PlaylistService {
 
   private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
 
+  private final CustomPlayRepository customPlayRepository;
   private final PlaylistRepository playlistRepository;
   private final PlaylistItemRepository playlistItemRepository;
 
   public PlaylistService(
+      CustomPlayRepository customPlayRepository,
       PlaylistRepository playlistRepository,
       PlaylistItemRepository playlistItemRepository
   ) {
+    this.customPlayRepository = customPlayRepository;
     this.playlistRepository = playlistRepository;
     this.playlistItemRepository = playlistItemRepository;
   }
@@ -189,6 +193,10 @@ public class PlaylistService {
 
       if (item.customPlayId() != null && item.customPlayId().isBlank()) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id cannot be blank.");
+      }
+
+      if (item.customPlayId() != null && !item.customPlayId().isBlank() && !customPlayRepository.existsById(item.customPlayId().trim())) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id is invalid.");
       }
     }
   }
