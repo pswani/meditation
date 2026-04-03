@@ -3,11 +3,11 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/feature-refinement`
-- Active bundle: none
-- Parent branch for the active bundle: none
-- Active feature branch for the bundle: none
-- Active bundle scope: none
+- Current branch: `codex/sankalpa-edit-archive-feature-bundle-with-branching`
+- Active bundle: `sankalpa-edit-archive-feature-bundle-with-branching`
+- Parent branch for the active bundle: `codex/feature-refinement`
+- Active feature branch for the bundle: `codex/sankalpa-edit-archive-feature-bundle-with-branching`
+- Active bundle scope: implement sankalpa edit and archive flows with review, verification, and follow-up fixes
 - Latest completed bundle: `playlist-runtime-audio-feature-bundle-with-branching`
 - Latest merge outcome: merged `codex/playlist-runtime-audio-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
@@ -110,4 +110,4 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Browser-level media playback behavior for linked playlist recordings is still unverified in automation; current confidence comes from unit/UI tests plus runtime copy paths.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/sankalpa-edit-archive-feature-bundle-with-branching/00-create-branch.md`
+- Exact recommended next prompt: `prompts/sankalpa-edit-archive-feature-bundle-with-branching/01-implement-sankalpa-edit-and-archive.md`
