@@ -32,6 +32,7 @@ Primary destinations:
 - pause/resume prominent during session
 - active timer should clearly label countdown vs elapsed time
 - ending a session should confirm intent
+- for iPhone Safari, active timer guidance should explain that lock-screen browser suspension can defer the completion bell until Safari returns to foreground
 
 ## Responsive layout notes
 - forms stay single-column on narrow screens

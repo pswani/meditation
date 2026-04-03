@@ -121,6 +121,13 @@ export default function ActiveTimerPage() {
           ? 'Stay present. Pause or resume anytime, then end the session whenever it feels complete.'
           : 'Stay present. Pause or resume anytime, or end early if needed.'}
       </p>
+      {!isOpenEndedSession ? (
+        <div className="status-banner" role="status">
+          <p>
+            On iPhone Safari, if the phone is locked, the completion bell may play when you return to Safari.
+          </p>
+        </div>
+      ) : null}
 
       {timerSoundPlaybackMessage ? (
         <div className="status-banner warn" role="status">
