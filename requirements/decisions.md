@@ -62,6 +62,7 @@
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
+- Keep iPhone Safari browser-tab timer release confidence grounded in a reusable manual checklist until the product has a stronger platform-level completion guarantee than browser-tab background execution can provide.
 - Keep the production-style deployment model centered on:
   - static frontend files served by `nginx`
   - a loopback-bound Spring Boot backend
