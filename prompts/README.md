@@ -16,6 +16,8 @@ Current bundles:
 - `custom-play-runtime-feature-bundle-with-branching`
 - `playlist-runtime-audio-feature-bundle-with-branching`
 - `sankalpa-edit-archive-feature-bundle-with-branching`
+- `ios-lock-screen-end-bell-fix-feature-bundle-with-branching`
+- `ios-safari-ux-hardening-feature-bundle-with-branching`
 
 Reusable runner:
 
@@ -34,4 +36,3 @@ The bundle prompts are intended to work with the repository guidance in:
 - `README.md`
 - `requirements/decisions.md`
 - `requirements/session-handoff.md`
-

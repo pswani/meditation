@@ -15,6 +15,9 @@ describe('ActiveTimerPage UX', () => {
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     await waitFor(() => expect(screen.getByRole('button', { name: /start session/i })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    expect(
+      screen.getByText(/on iphone safari, if the phone is locked, the completion bell may play when you return to safari\./i)
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /end early/i }));
     expect(screen.getByRole('dialog', { name: /end session early confirmation/i })).toBeInTheDocument();

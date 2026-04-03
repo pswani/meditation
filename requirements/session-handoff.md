@@ -20,6 +20,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - playlist runtime with linked `custom play` audio, optional small gaps, and per-item logging
   - summary views with backend-backed and local fallback behavior
   - sankalpa create, edit, and archive flows with backend-backed archived-state persistence
+- Timer lock-screen mitigation now includes:
+  - foreground catch-up sync on `visibilitychange` and `pageshow` so fixed sessions finalize immediately after Safari returns
+  - active fixed-session guidance that iPhone Safari lock can defer completion-bell playback until foreground
+  - completion notification attempts only when Notification permission is granted and the document is hidden
 - Sankalpa behavior now includes:
   - editing existing goals while preserving `id` and `createdAt`
   - recalculating progress from edited goal fields against the original goal window
@@ -29,8 +33,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
+- Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
+- Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
+- Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
+- Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
 
 ## Verification baseline
 - `npm run typecheck`
@@ -49,6 +57,18 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review outcome:
   - no blocker, high, or medium findings were recorded for the sankalpa edit/archive slice
 
+- iOS lock-screen end-bell bundle verification executed on 2026-04-03:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 41 files and 271 tests
+  - `npm run build`
+  - `npm run test -- src/features/timer/timerSoundPlayback.test.tsx src/features/timer/TimerContext.test.tsx`
+- iOS lock-screen end-bell mitigation implementation verified on 2026-04-03:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 42 files and 277 tests
+  - `npm run build`
+
 ## Remaining known gaps
 - `sankalpa` delete and unarchive flows are still unimplemented.
 - There is still no broader user-managed media library beyond the seeded catalog and filesystem conventions.
@@ -56,4 +76,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: no further milestone bundle exists yet. Author the next bounded bundle under `prompts/`, then execute it through `prompts/run-milestone-bundle.md`.
+- Exact recommended next prompt: `ios-safari-ux-hardening-feature-bundle-with-branching` under `prompts/`, executed through `prompts/run-milestone-bundle.md`.
