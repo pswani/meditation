@@ -20,6 +20,7 @@ class MediaAssetServiceTest {
     List<MediaAssetResponse> assets = mediaAssetService.listCustomPlayMediaAssets();
 
     assertEquals(3, assets.size());
+    assertEquals("Ajapa", assets.get(0).meditationType());
     assertEquals("/media/custom-plays/ajapa-breath-15.mp3", assets.get(0).filePath());
     assertEquals("custom-plays/ajapa-breath-15.mp3", assets.get(0).relativePath());
   }

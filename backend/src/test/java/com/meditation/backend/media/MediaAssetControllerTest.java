@@ -34,7 +34,9 @@ class MediaAssetControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(3)))
         .andExpect(jsonPath("$[0].id").value("media-ajapa-breath-15"))
+        .andExpect(jsonPath("$[0].meditationType").value("Ajapa"))
         .andExpect(jsonPath("$[0].filePath").value("/media/custom-plays/ajapa-breath-15.mp3"))
+        .andExpect(jsonPath("$[0].relativePath").value("custom-plays/ajapa-breath-15.mp3"))
         .andExpect(jsonPath("$[1].id").value("media-tratak-focus-10"))
         .andExpect(jsonPath("$[2].id").value("media-vipassana-sit-20"));
   }

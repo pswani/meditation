@@ -31,6 +31,7 @@ public class MediaAssetService {
     return new MediaAssetResponse(
         entity.getId(),
         entity.getLabel(),
+        entity.getMeditationTypeCode(),
         mediaStorageProperties.toPublicPath(entity.getRelativePath()),
         entity.getRelativePath(),
         entity.getDurationSeconds(),

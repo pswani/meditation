@@ -30,12 +30,13 @@ Single-page React application with route-based screens and feature-oriented modu
 ## Confirmed current gaps
 - full-stack wiring is now in place for:
   - custom plays
+  - custom-play media asset metadata and managed-library selection
   - playlists
   - sankalpas
   - summaries
   - timer settings
   - session logs
-- no media upload/import workflow yet
+- no browser upload/import workflow yet; managed custom-play media registration is still script-driven
 - playlist runtime now supports:
   - mixed timed items and linked-recording items backed by saved `custom play` media
   - optional small gaps between playlist items
