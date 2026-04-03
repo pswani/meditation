@@ -3,8 +3,11 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/feature-refinement`
-- No bundle is currently active.
+- Current branch: `codex/playlist-runtime-audio-feature-bundle-with-branching`
+- Active bundle: `playlist-runtime-audio-feature-bundle-with-branching`
+- Parent branch for the active bundle: `codex/feature-refinement`
+- Active feature branch for the bundle: `codex/playlist-runtime-audio-feature-bundle-with-branching`
+- Active bundle scope: implement playlist runtime audio playback, optional small gaps, trustworthy playlist logging, and supporting review/verification work
 - Latest completed bundle: `custom-play-runtime-feature-bundle-with-branching`
 - Latest merge outcome: merged `codex/custom-play-runtime-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
@@ -74,4 +77,4 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/00-create-branch.md`
+- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/01-implement-playlist-runtime-audio.md`
