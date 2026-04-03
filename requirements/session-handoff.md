@@ -1,113 +1,59 @@
 # Current State
 
-This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
+This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/sankalpa-edit-archive-feature-bundle-with-branching`
-- Active bundle: `sankalpa-edit-archive-feature-bundle-with-branching`
-- Parent branch for the active bundle: `codex/feature-refinement`
-- Active feature branch for the bundle: `codex/sankalpa-edit-archive-feature-bundle-with-branching`
-- Active bundle scope: implement sankalpa edit and archive flows with review, verification, and follow-up fixes
-- Latest completed bundle: `playlist-runtime-audio-feature-bundle-with-branching`
-- Latest merge outcome: merged `codex/playlist-runtime-audio-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
-- The app is a working full-stack meditation application with:
+- Current branch: `codex/feature-refinement`
+- Active bundle: none
+- Latest completed bundle: `sankalpa-edit-archive-feature-bundle-with-branching`
+- Latest merge outcome: merged `codex/sankalpa-edit-archive-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with a normal local merge commit
+
+## Product state
+- The repo is a working full-stack meditation application with:
   - a React + TypeScript + Vite frontend
   - a Spring Boot backend in `backend/`
   - H2 persistence plus Flyway migrations
-  - local-first offline-capable behavior for the implemented backend-backed domains
-- The recent intent-remediation work closed two high-value trust gaps:
-  - managed local startup is now more reliable and explicit about local recovery
-  - Home can restart the last used meditation through a persisted timer or playlist launch context
-- Timer sound packaging now ships `Temple Bell` and `Gong` as bundled frontend/backend MP3 assets while retiring `Soft Chime` and `Wood Block` from the selectable catalog.
-- Timer playback now resolves shipped sounds from inline frontend-bundled assets instead of requiring the backend media route, which avoids 404s when the UI is paired with an unmanaged backend and removes separate sound-file fetches.
-- Timer playback now starts the selected start cue directly from the Start action and primes only deferred interval/end cues from that same user gesture, which is intended to keep iPhone Safari playback working after reloads or fresh tab opens.
-- Frontend hydration now remaps legacy saved sound labels so existing timer settings, custom plays, active sessions, and cached timer-oriented state continue to load cleanly after the catalog change.
-- The repo now uses a production-only operational workflow:
-  - removed dev, preview, and managed local-stack scripts plus the Spring `dev` profile
-  - added `./scripts/prod-build.sh` and `./scripts/prod-release.sh`
-  - centered package scripts and docs on one golden path: build/package/install/restart through the production Mac flow
-- Prompt bundles for the next three major product slices now live under `prompts/`, along with a reusable parameterized runner prompt:
-  - `custom-play-runtime-feature-bundle-with-branching`
-  - `playlist-runtime-audio-feature-bundle-with-branching`
-  - `sankalpa-edit-archive-feature-bundle-with-branching`
-  - `run-milestone-bundle.md`
-- The `custom play` runtime slice is now implemented on this feature branch:
-  - Practice and Home can start a true runnable prerecorded `custom play`
-  - active `custom play` state persists across route changes and reloads
-  - the shell keeps media playback aligned with runtime state through a hidden audio element
-  - completion and early end both create trustworthy `session log` entries with `custom play` metadata
-  - playlist and timer starts are blocked while a `custom play` run is active
-- The playlist runtime audio slice is now implemented on this feature branch:
-  - playlists can define an optional small gap between items
-  - playlist items can stay timed-only or link to saved `custom play` recordings for true runtime playback
-  - active playlist runs persist the current item or gap phase across route changes and reloads
-  - playlist completion and early-stop behavior now create trustworthy per-item `session log` entries
-  - playlist launch fails safely when a linked recording can no longer be resolved
-- Review and verification artifacts for this slice now live in:
-  - `docs/review-custom-play-runtime-feature.md`
-  - `docs/test-custom-play-runtime-feature.md`
-- Playlist runtime audio review findings now live in:
-  - `docs/review-playlist-runtime-audio-feature.md`
-- Playlist runtime audio verification artifacts now live in:
-  - `docs/execplan-playlist-runtime-audio-test.md`
-  - `docs/test-playlist-runtime-audio-feature.md`
-- Playlist runtime audio fix planning now lives in:
-  - `docs/execplan-playlist-runtime-audio-fixes.md`
-- The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
-- Bundle completion summary:
-  - restored the documented managed local startup flow and safer H2 recovery guidance
-  - added Home `start last used meditation`
-  - removed stale prompt, review, handoff-history, and ExecPlan artifacts after folding durable outcomes into the long-lived docs
-- Cleanup verification completed on 2026-04-01:
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run test`
-  - `npm run build`
-  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
-- Custom play runtime verification completed on 2026-04-02:
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run test`
-  - `npm run build`
-  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
-- Playlist runtime audio implementation verification completed on 2026-04-02:
-  - `npm run typecheck`
-  - `npm run lint`
-  - `npm run test`
-  - `npm run build`
-  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
-- Playlist runtime audio verification scenarios now cover:
-  - linked-recording playlist item resolution and launch failure when a linked recording is unavailable
-  - optional small-gap sequencing and remaining-time math
-  - playlist early-end logging and History continuity
-  - timed playlist persistence write-throttling regression coverage
-- Playlist runtime audio findings were addressed on 2026-04-02:
-  - recording-backed playlist recovery now resumes from the persisted playback position instead of stale wall-clock timing
-  - backend playlist saves now reject dangling `customPlayId` references
-  - frontend verification now passes with 41 files and 266 tests
-  - backend verification now passes with 39 tests
-- Playlist runtime audio bundle completion summary:
-  - added true playlist runtime playback for linked `custom play` recordings alongside timed playlist items
-  - added optional small gaps, richer active-run persistence, and per-item playlist logging
-  - reviewed, tested, and fixed the recording-backed recovery and linked-recording validation gaps before merge
-- Bundle completion summary:
-  - added a dedicated runnable prerecorded `custom play` flow with persisted playback state and a dedicated active runtime screen
-  - connected Home and Practice shortcuts to start or resume `custom play` runs directly
-  - extended `session log` storage, API contracts, and History/Home rendering with `custom play` metadata
-  - fixed the final backend verification issues by narrowing the new Flyway migration and updating API tests to use a valid `custom play` fixture
+  - local-first queue-backed behavior for the implemented backend-backed domains
+- Implemented vertical slices now include:
+  - timer setup, active runtime, sounds, and session logging
+  - dedicated prerecorded `custom play` runtime with persisted recovery
+  - playlist runtime with linked `custom play` audio, optional small gaps, and per-item logging
+  - summary views with backend-backed and local fallback behavior
+  - sankalpa create, edit, and archive flows with backend-backed archived-state persistence
+- Sankalpa behavior now includes:
+  - editing existing goals while preserving `id` and `createdAt`
+  - recalculating progress from edited goal fields against the original goal window
+  - archiving active, completed, or expired goals into a dedicated archived section
+  - aligned frontend, storage, and backend handling for `active`, `completed`, `expired`, and `archived` states
+
+## Evidence and artifacts
+- Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
+- Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
+- Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
+- Verification report: `docs/test-sankalpa-edit-archive-feature.md`
 
 ## Verification baseline
 - `npm run typecheck`
 - `npm run lint`
 - `npm run test`
 - `npm run build`
-- `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/` when backend-facing operational or setup guidance changes
+- `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+
+## Latest verification
+- Sankalpa edit/archive verification completed on 2026-04-02:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 41 files and 271 tests
+  - `npm run build`
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` with 40 backend tests
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the sankalpa edit/archive slice
 
 ## Remaining known gaps
-- Finish verifying the new production-only scripts and docs end to end after the dev/preview removal.
-- Add `sankalpa` edit and archive flows.
-- Reduce `TimerContext` size only when doing directly related feature or maintenance work.
-- Browser-level media playback behavior for linked playlist recordings is still unverified in automation; current confidence comes from unit/UI tests plus runtime copy paths.
+- `sankalpa` delete and unarchive flows are still unimplemented.
+- There is still no broader user-managed media library beyond the seeded catalog and filesystem conventions.
+- Browser-automation coverage for goals-screen responsive/archive-confirmation behavior is still absent; current confidence comes from unit, component, and backend tests.
+- The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/sankalpa-edit-archive-feature-bundle-with-branching/01-implement-sankalpa-edit-and-archive.md`
+- Exact recommended next prompt: no further milestone bundle exists yet. Author the next bounded bundle under `prompts/`, then execute it through `prompts/run-milestone-bundle.md`.
