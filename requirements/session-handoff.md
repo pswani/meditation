@@ -34,6 +34,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
+- Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
