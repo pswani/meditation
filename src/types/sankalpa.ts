@@ -2,7 +2,7 @@ import type { MeditationType } from './timer';
 
 export type SankalpaGoalType = 'duration-based' | 'session-count-based';
 export type TimeOfDayBucket = 'morning' | 'afternoon' | 'evening' | 'night';
-export type SankalpaStatus = 'active' | 'completed' | 'expired';
+export type SankalpaStatus = 'active' | 'completed' | 'expired' | 'archived';
 
 export interface SankalpaGoal {
   readonly id: string;
@@ -12,6 +12,7 @@ export interface SankalpaGoal {
   readonly meditationType?: MeditationType;
   readonly timeOfDayBucket?: TimeOfDayBucket;
   readonly createdAt: string;
+  readonly archived?: boolean;
 }
 
 export interface SankalpaDraft {

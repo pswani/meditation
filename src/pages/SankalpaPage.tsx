@@ -16,12 +16,15 @@ import {
 } from '../utils/summary';
 import { loadSummaryFromApi } from '../utils/summaryApi';
 import {
+  archiveSankalpaGoal,
   createInitialSankalpaDraft,
+  createSankalpaDraftFromGoal,
   createSankalpaGoal,
   getSankalpaGoalTypeLabel,
   partitionSankalpaProgress,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
+  updateSankalpaGoal,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
 import { getUserTimeZone } from '../utils/timeZone';
@@ -29,6 +32,7 @@ import { getUserTimeZone } from '../utils/timeZone';
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 type SaveMessageTone = 'ok' | 'warn' | 'error';
+type SankalpaSaveAction = 'create' | 'edit' | 'archive';
 
 function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'duration-based') {
@@ -130,9 +134,23 @@ interface SankalpaSectionProps {
   readonly title: string;
   readonly emptyText: string;
   readonly items: SankalpaProgress[];
+  readonly pendingArchiveGoalId: string | null;
+  readonly onEditGoal?: (goal: SankalpaGoal) => void;
+  readonly onStartArchive?: (goalId: string) => void;
+  readonly onCancelArchive?: () => void;
+  readonly onConfirmArchive?: (goal: SankalpaGoal) => void;
 }
 
-function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
+function SankalpaSection({
+  title,
+  emptyText,
+  items,
+  pendingArchiveGoalId,
+  onEditGoal,
+  onStartArchive,
+  onCancelArchive,
+  onConfirmArchive,
+}: SankalpaSectionProps) {
   return (
     <section className="sankalpa-section">
       <h3 className="section-title">{title}</h3>
@@ -161,12 +179,59 @@ function SankalpaSection({ title, emptyText, items }: SankalpaSectionProps) {
               <p className="section-subtitle">
                 Progress: {progressDetail(progress)} · {remainingDetail(progress)}
               </p>
+              {onEditGoal || onStartArchive ? (
+                <div className="timer-actions">
+                  {onEditGoal ? (
+                    <button type="button" className="secondary" onClick={() => onEditGoal(progress.goal)}>
+                      Edit
+                    </button>
+                  ) : null}
+                  {onStartArchive ? (
+                    <button type="button" className="secondary" onClick={() => onStartArchive(progress.goal.id)}>
+                      Archive
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              {pendingArchiveGoalId === progress.goal.id && onCancelArchive && onConfirmArchive ? (
+                <div className="confirm-sheet" role="dialog" aria-label={`Archive ${title} confirmation`}>
+                  <p>Archive this sankalpa and move it out of the active goal lists?</p>
+                  <div className="timer-actions">
+                    <button type="button" className="secondary" onClick={onCancelArchive}>
+                      Keep Goal
+                    </button>
+                    <button type="button" onClick={() => onConfirmArchive(progress.goal)}>
+                      Archive Sankalpa
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
     </section>
   );
+}
+
+function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageTone): string {
+  if (tone === 'warn') {
+    if (action === 'create') {
+      return 'Sankalpa created locally because the backend could not be reached.';
+    }
+    if (action === 'edit') {
+      return 'Sankalpa changes saved locally because the backend could not be reached.';
+    }
+    return 'Sankalpa archived locally because the backend could not be reached.';
+  }
+
+  if (action === 'create') {
+    return 'Sankalpa created.';
+  }
+  if (action === 'edit') {
+    return 'Sankalpa updated.';
+  }
+  return 'Sankalpa archived.';
 }
 
 export default function SankalpaPage() {
@@ -185,6 +250,8 @@ export default function SankalpaPage() {
   const [errors, setErrors] = useState<SankalpaValidationResult['errors']>(initialErrors);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [pendingArchiveGoalId, setPendingArchiveGoalId] = useState<string | null>(null);
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
@@ -350,7 +417,34 @@ export default function SankalpaPage() {
     return partitionSankalpaProgress(sankalpaProgressEntries);
   }, [sankalpaProgressEntries]);
 
-  async function onCreateSankalpa(event: FormEvent<HTMLFormElement>) {
+  function resetDraftState() {
+    setDraft(createInitialSankalpaDraft());
+    setErrors(initialErrors);
+    setEditingGoalId(null);
+  }
+
+  function beginEdit(goal: SankalpaGoal) {
+    setDraft(createSankalpaDraftFromGoal(goal));
+    setErrors(initialErrors);
+    setSaveMessage(null);
+    setEditingGoalId(goal.id);
+    setPendingArchiveGoalId(null);
+  }
+
+  function cancelEdit() {
+    resetDraftState();
+    setSaveMessage(null);
+  }
+
+  async function persistGoal(goal: SankalpaGoal, action: SankalpaSaveAction) {
+    const result = await saveSankalpa(goal);
+    resetDraftState();
+    setPendingArchiveGoalId(null);
+    setSaveMessageTone(result.tone);
+    setSaveMessage(buildSankalpaSaveMessage(action, result.tone));
+  }
+
+  async function onSubmitSankalpa(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validation = validateSankalpaDraft(draft);
     setErrors(validation.errors);
@@ -360,12 +454,19 @@ export default function SankalpaPage() {
       return;
     }
 
-    const nextGoal = createSankalpaGoal(draft, new Date());
-    const result = await saveSankalpa(nextGoal);
-    setDraft(createInitialSankalpaDraft());
-    setErrors(initialErrors);
-    setSaveMessageTone(result.tone);
-    setSaveMessage(result.message);
+    const existingGoal = editingGoalId
+      ? sankalpaProgressEntries.find((entry) => entry.goal.id === editingGoalId)?.goal ?? null
+      : null;
+    const nextGoal = existingGoal ? updateSankalpaGoal(existingGoal, draft) : createSankalpaGoal(draft, new Date());
+    await persistGoal(nextGoal, existingGoal ? 'edit' : 'create');
+  }
+
+  async function confirmArchive(goal: SankalpaGoal) {
+    if (editingGoalId === goal.id) {
+      resetDraftState();
+    }
+
+    await persistGoal(archiveSankalpaGoal(goal), 'archive');
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
@@ -537,11 +638,18 @@ export default function SankalpaPage() {
       </section>
 
       <section className="sankalpa-panel">
-        <h3 className="section-title">Create Sankalpa</h3>
+        <h3 className="section-title">{editingGoalId ? 'Edit Sankalpa' : 'Create Sankalpa'}</h3>
         <p className="section-subtitle">
-          Counting rules: both <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count
-          matching session log entries. Duration-based goals sum matching completed duration, including ended-early entries.
-          Matching also respects optional filters and the goal window from creation time through deadline.
+          {editingGoalId
+            ? 'Editing keeps this sankalpa in its existing goal window, so progress and deadline stay anchored to the original creation date.'
+            : 'Counting rules: both '}
+          {!editingGoalId ? (
+            <>
+              <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count matching session
+              log entries. Duration-based goals sum matching completed duration, including ended-early entries. Matching also
+              respects optional filters and the goal window from creation time through deadline.
+            </>
+          ) : null}
         </p>
 
         {saveMessage ? (
@@ -552,7 +660,7 @@ export default function SankalpaPage() {
         {isSankalpaLoading ? <p className="section-subtitle">Refreshing sankalpa progress from the backend.</p> : null}
         {sankalpaSyncMessage ? <p className="section-subtitle">{sankalpaSyncMessage}</p> : null}
 
-        <form className="form-grid" onSubmit={onCreateSankalpa}>
+        <form className="form-grid" onSubmit={onSubmitSankalpa}>
           <label>
             <span>Goal type</span>
             <select
@@ -650,21 +758,51 @@ export default function SankalpaPage() {
           </label>
 
           <div className="timer-actions">
-            <button type="submit">Create Sankalpa</button>
+            <button type="submit">{editingGoalId ? 'Save Changes' : 'Create Sankalpa'}</button>
+            {editingGoalId ? (
+              <button type="button" className="secondary" onClick={cancelEdit}>
+                Cancel Edit
+              </button>
+            ) : null}
           </div>
         </form>
       </section>
 
-      <SankalpaSection title="Active Sankalpas" emptyText="No active sankalpas. Create one above." items={progressByStatus.active} />
+      <SankalpaSection
+        title="Active Sankalpas"
+        emptyText="No active sankalpas. Create one above."
+        items={progressByStatus.active}
+        pendingArchiveGoalId={pendingArchiveGoalId}
+        onEditGoal={beginEdit}
+        onStartArchive={setPendingArchiveGoalId}
+        onCancelArchive={() => setPendingArchiveGoalId(null)}
+        onConfirmArchive={confirmArchive}
+      />
       <SankalpaSection
         title="Completed Sankalpas"
         emptyText="Completed sankalpas will appear here."
         items={progressByStatus.completed}
+        pendingArchiveGoalId={pendingArchiveGoalId}
+        onEditGoal={beginEdit}
+        onStartArchive={setPendingArchiveGoalId}
+        onCancelArchive={() => setPendingArchiveGoalId(null)}
+        onConfirmArchive={confirmArchive}
       />
       <SankalpaSection
         title="Expired Sankalpas"
         emptyText="Expired sankalpas will appear here if deadlines pass before completion."
         items={progressByStatus.expired}
+        pendingArchiveGoalId={pendingArchiveGoalId}
+        onEditGoal={beginEdit}
+        onStartArchive={setPendingArchiveGoalId}
+        onCancelArchive={() => setPendingArchiveGoalId(null)}
+        onConfirmArchive={confirmArchive}
+      />
+      <SankalpaSection
+        title="Archived Sankalpas"
+        emptyText="Archived sankalpas will appear here."
+        items={progressByStatus.archived}
+        pendingArchiveGoalId={pendingArchiveGoalId}
       />
     </section>
   );

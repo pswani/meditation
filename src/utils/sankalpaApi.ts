@@ -14,6 +14,7 @@ interface SankalpaGoalApiResponse {
   readonly meditationType?: SankalpaGoal['meditationType'] | null;
   readonly timeOfDayBucket?: TimeOfDayBucket | null;
   readonly createdAt: string;
+  readonly archived?: boolean;
 }
 
 interface SankalpaProgressApiResponse {
@@ -36,7 +37,7 @@ interface SankalpaApiOptions {
 
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
 const goalTypes = new Set(['duration-based', 'session-count-based']);
-const statuses = new Set(['active', 'completed', 'expired']);
+const statuses = new Set(['active', 'completed', 'expired', 'archived']);
 const timeOfDayBuckets = new Set(['morning', 'afternoon', 'evening', 'night']);
 
 function isValidIsoDate(value: unknown): value is string {
@@ -64,7 +65,8 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     (typeof candidate.timeOfDayBucket === 'undefined' ||
       candidate.timeOfDayBucket === null ||
       timeOfDayBuckets.has(candidate.timeOfDayBucket as string)) &&
-    isValidIsoDate(candidate.createdAt)
+    isValidIsoDate(candidate.createdAt) &&
+    (typeof candidate.archived === 'undefined' || typeof candidate.archived === 'boolean')
   );
 }
 
@@ -95,6 +97,7 @@ function normalizeGoalPayload(payload: SankalpaGoalApiResponse): SankalpaGoal {
     meditationType: payload.meditationType ?? undefined,
     timeOfDayBucket: payload.timeOfDayBucket ?? undefined,
     createdAt: payload.createdAt,
+    archived: payload.archived ?? false,
   };
 }
 

@@ -29,6 +29,7 @@ export interface SankalpaProgressByStatus {
   readonly active: SankalpaProgress[];
   readonly completed: SankalpaProgress[];
   readonly expired: SankalpaProgress[];
+  readonly archived: SankalpaProgress[];
 }
 
 export function createInitialSankalpaDraft(): SankalpaDraft {
@@ -85,6 +86,36 @@ export function createSankalpaGoal(draft: SankalpaDraft, now: Date): SankalpaGoa
     meditationType: draft.meditationType || undefined,
     timeOfDayBucket: draft.timeOfDayBucket || undefined,
     createdAt: now.toISOString(),
+    archived: false,
+  };
+}
+
+export function createSankalpaDraftFromGoal(goal: SankalpaGoal): SankalpaDraft {
+  return {
+    goalType: goal.goalType,
+    targetValue: goal.targetValue,
+    days: goal.days,
+    meditationType: goal.meditationType ?? '',
+    timeOfDayBucket: goal.timeOfDayBucket ?? '',
+  };
+}
+
+export function updateSankalpaGoal(existing: SankalpaGoal, draft: SankalpaDraft): SankalpaGoal {
+  return {
+    ...existing,
+    goalType: draft.goalType as SankalpaGoal['goalType'],
+    targetValue: draft.targetValue,
+    days: draft.days,
+    meditationType: draft.meditationType || undefined,
+    timeOfDayBucket: draft.timeOfDayBucket || undefined,
+    archived: false,
+  };
+}
+
+export function archiveSankalpaGoal(goal: SankalpaGoal): SankalpaGoal {
+  return {
+    ...goal,
+    archived: true,
   };
 }
 
@@ -143,11 +174,13 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
   const deadlineAt = new Date(deadlineMs).toISOString();
 
   const status: SankalpaStatus =
-    progressValue >= targetValue
-      ? 'completed'
-      : now.getTime() > deadlineMs
-        ? 'expired'
-        : 'active';
+    goal.archived === true
+      ? 'archived'
+      : progressValue >= targetValue
+        ? 'completed'
+        : now.getTime() > deadlineMs
+          ? 'expired'
+          : 'active';
 
   return {
     goal,
@@ -166,5 +199,6 @@ export function partitionSankalpaProgress(progressList: readonly SankalpaProgres
     active: progressList.filter((entry) => entry.status === 'active'),
     completed: progressList.filter((entry) => entry.status === 'completed'),
     expired: progressList.filter((entry) => entry.status === 'expired'),
+    archived: progressList.filter((entry) => entry.status === 'archived'),
   };
 }

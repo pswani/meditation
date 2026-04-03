@@ -37,7 +37,7 @@ public class SankalpaService {
     Instant now = Instant.now();
     ZoneId zoneId = parseZoneId(timeZoneRaw);
 
-    return sankalpaGoalRepository.findAllByArchivedFalseOrderByCreatedAtDesc()
+    return sankalpaGoalRepository.findAllByOrderByCreatedAtDesc()
         .stream()
         .map((goal) -> toProgressResponse(goal, sessionLogs, now, zoneId))
         .toList();
@@ -59,7 +59,7 @@ public class SankalpaService {
             normalizeOptionalText(request.timeOfDayBucket()),
             createdAt,
             null,
-            false
+            request.archived()
         ));
 
     entity.updateFrom(
@@ -70,7 +70,8 @@ public class SankalpaService {
             request.days(),
             normalizeOptionalText(request.meditationType()),
             normalizeOptionalText(request.timeOfDayBucket()),
-            request.createdAt()
+            request.createdAt(),
+            request.archived()
         ),
         createdAt
     );
@@ -103,7 +104,9 @@ public class SankalpaService {
     Instant deadlineAt = goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
 
     String status;
-    if (progressValue >= targetValue) {
+    if (goal.isArchived()) {
+      status = "archived";
+    } else if (progressValue >= targetValue) {
       status = "completed";
     } else if (now.isAfter(deadlineAt)) {
       status = "expired";
@@ -131,7 +134,8 @@ public class SankalpaService {
         entity.getDays(),
         entity.getMeditationTypeCode(),
         entity.getTimeOfDayBucket(),
-        entity.getCreatedAt().toString()
+        entity.getCreatedAt().toString(),
+        entity.isArchived()
     );
   }
 

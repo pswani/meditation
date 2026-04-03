@@ -7,6 +7,7 @@ public record SankalpaGoalResponse(
     int days,
     String meditationType,
     String timeOfDayBucket,
-    String createdAt
+    String createdAt,
+    boolean archived
 ) {
 }

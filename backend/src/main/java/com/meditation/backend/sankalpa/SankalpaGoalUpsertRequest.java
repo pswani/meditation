@@ -9,6 +9,7 @@ public record SankalpaGoalUpsertRequest(
     int days,
     String meditationType,
     String timeOfDayBucket,
-    String createdAt
+    String createdAt,
+    boolean archived
 ) {
 }

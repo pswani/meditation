@@ -157,7 +157,7 @@ function deriveSankalpaProgressResponses(
       return {
         goal,
         status:
-          progressValue >= targetValue ? 'completed' : nowMs > deadlineAtMs ? 'expired' : 'active',
+          goal.archived === true ? 'archived' : progressValue >= targetValue ? 'completed' : nowMs > deadlineAtMs ? 'expired' : 'active',
         deadlineAt: new Date(deadlineAtMs).toISOString(),
         matchedSessionCount,
         matchedDurationSeconds,

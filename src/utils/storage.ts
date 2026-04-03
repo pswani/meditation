@@ -465,6 +465,7 @@ function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     timeOfDayBucket:
       typeof candidate.timeOfDayBucket === 'string' && candidate.timeOfDayBucket !== '' ? candidate.timeOfDayBucket : undefined,
     createdAt: candidate.createdAt,
+    archived: candidate.archived === true,
   };
 }
 

@@ -242,6 +242,29 @@ describe('sankalpa helpers', () => {
     expect(progress.status).toBe('completed');
   });
 
+  it('marks archived goals as archived while preserving derived progress details', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-archived',
+      goalType: 'session-count-based',
+      targetValue: 3,
+      days: 7,
+      createdAt: localIso(2026, 2, 20, 0, 0),
+      archived: true,
+    };
+
+    const progress = deriveSankalpaProgress(
+      goal,
+      [
+        createSessionLog({ id: 'matching-log-1', endedAt: localIso(2026, 2, 21, 7, 0) }),
+        createSessionLog({ id: 'matching-log-2', endedAt: localIso(2026, 2, 21, 8, 0) }),
+      ],
+      new Date(localIso(2026, 2, 22, 7, 0))
+    );
+
+    expect(progress.matchedSessionCount).toBe(2);
+    expect(progress.status).toBe('archived');
+  });
+
   it('maps time-of-day buckets at key clock boundaries', () => {
     expect(getTimeOfDayBucket(new Date(2026, 2, 20, 4, 59, 0, 0))).toBe('night');
     expect(getTimeOfDayBucket(new Date(2026, 2, 20, 5, 0, 0, 0))).toBe('morning');
@@ -276,6 +299,14 @@ describe('sankalpa helpers', () => {
         days: 1,
         createdAt: localIso(2026, 2, 20, 0, 0),
       },
+      {
+        id: 'archived',
+        goalType: 'session-count-based',
+        targetValue: 2,
+        days: 3,
+        createdAt: localIso(2026, 2, 20, 0, 0),
+        archived: true,
+      },
     ];
 
     const logs = [
@@ -287,6 +318,7 @@ describe('sankalpa helpers', () => {
       deriveSankalpaProgress(goals[0], logs, new Date(localIso(2026, 2, 21, 8, 0))),
       deriveSankalpaProgress(goals[1], logs, new Date(localIso(2026, 2, 21, 8, 0))),
       deriveSankalpaProgress(goals[2], logs, new Date(localIso(2026, 2, 25, 8, 0))),
+      deriveSankalpaProgress(goals[3], logs, new Date(localIso(2026, 2, 21, 8, 0))),
     ];
 
     const partitioned = partitionSankalpaProgress(progressList);
@@ -294,5 +326,6 @@ describe('sankalpa helpers', () => {
     expect(partitioned.active).toHaveLength(1);
     expect(partitioned.completed).toHaveLength(1);
     expect(partitioned.expired).toHaveLength(1);
+    expect(partitioned.archived).toHaveLength(1);
   });
 });
