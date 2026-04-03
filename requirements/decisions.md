@@ -22,6 +22,10 @@
   - `Wood Block` -> `Gong`
 - Keep shipped timer sounds inline-bundled into the frontend so playback does not depend on a backend `/media/**` route or separate runtime asset fetches.
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
+- Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
+  - force timer catch-up evaluation on `visibilitychange`/`pageshow` foreground return
+  - show calm in-session guidance about lock-screen bell deferral behavior
+  - attempt completion notifications only when browser permission is granted and the document is hidden
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference

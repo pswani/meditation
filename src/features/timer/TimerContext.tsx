@@ -73,6 +73,7 @@ import {
 } from '../../utils/timerSettingsApi';
 import { normalizeTimerSettings } from '../../utils/timerSettingsNormalization';
 import { validateTimerSettings } from '../../utils/timerValidation';
+import { notifyTimerCompletion } from '../../utils/timerCompletionNotice';
 import { defaultTimerSettings } from './constants';
 import {
   applyQueuedCollectionMutations,
@@ -1324,18 +1325,36 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [isOnline, queue, updateQueue]);
 
   useEffect(() => {
+    function syncTimerClockAndSessionState(): void {
+      const nowMs = Date.now();
+      setActiveSessionNowMs(nowMs);
+      dispatch({ type: 'SYNC_TICK', nowMs });
+    }
+
     if (!state.activeSession || isPaused) {
       return;
     }
 
     const intervalId = window.setInterval(() => {
-      const nowMs = Date.now();
-      setActiveSessionNowMs(nowMs);
-      dispatch({ type: 'SYNC_TICK', nowMs });
+      syncTimerClockAndSessionState();
     }, 500);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncTimerClockAndSessionState();
+      }
+    };
+    const handlePageShow = () => {
+      syncTimerClockAndSessionState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [state.activeSession, isPaused]);
 
@@ -1412,6 +1431,11 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     handledTimerOutcomeEndedAtRef.current = state.lastOutcome.endedAt;
     pendingEndedSessionRef.current = null;
+
+    if (state.lastOutcome.status === 'completed') {
+      notifyTimerCompletion(`Your ${completedSession.meditationType} session has completed.`);
+    }
+
     void attemptTimerSoundPlayback(
       timerSoundPlayerRef.current,
       handledSoundPlaybackMessageKeyRef,

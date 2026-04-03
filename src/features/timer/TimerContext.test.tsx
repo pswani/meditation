@@ -32,7 +32,8 @@ async function flushProviderHydration() {
 }
 
 function PersistenceHarness() {
-  const { setSettings, startSession, pauseSession, startPlaylistRun, pausePlaylistRun, activeSession, activePlaylistRun } = useTimer();
+  const { setSettings, startSession, pauseSession, startPlaylistRun, pausePlaylistRun, activeSession, activePlaylistRun, lastOutcome } =
+    useTimer();
   const playlistElapsed =
     activePlaylistRun?.currentSegment.phase === 'item' ? activePlaylistRun.currentSegment.elapsedSeconds : 'none';
   const playlistRemaining = activePlaylistRun?.currentSegment.remainingSeconds ?? 'none';
@@ -55,6 +56,7 @@ function PersistenceHarness() {
         Pause Playlist Run
       </button>
       <p data-testid="timer-elapsed">{activeSession?.elapsedSeconds ?? 'none'}</p>
+      <p data-testid="timer-outcome">{lastOutcome?.status ?? 'none'}</p>
       <p data-testid="playlist-elapsed">{playlistElapsed}</p>
       <p data-testid="playlist-remaining">{playlistRemaining}</p>
     </div>
@@ -218,5 +220,32 @@ describe('TimerProvider persistence behavior', () => {
 
     expect(screen.getByTestId('playlist-elapsed')).toHaveTextContent('65');
     expect(screen.getByTestId('playlist-remaining')).toHaveTextContent('1135');
+  });
+
+  it('forces an immediate sync tick when returning to the foreground', () => {
+    render(
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    expect(screen.getByTestId('timer-outcome')).toHaveTextContent('none');
+
+    vi.setSystemTime(new Date('2026-03-25T12:10:01.000Z'));
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(screen.getByTestId('timer-outcome')).toHaveTextContent('completed');
   });
 });
