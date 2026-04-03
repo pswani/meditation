@@ -73,7 +73,9 @@ describe('CustomPlayManager UX', () => {
             {
               id: 'media-vipassana-sit-20',
               label: 'Vipassana Sit (20 min)',
+              meditationType: 'Vipassana',
               filePath: '/media/custom-plays/vipassana-sit-20.mp3',
+              relativePath: 'custom-plays/vipassana-sit-20.mp3',
               durationSeconds: 1200,
               mimeType: 'audio/mpeg',
               sizeBytes: 9200000,
@@ -82,7 +84,9 @@ describe('CustomPlayManager UX', () => {
             {
               id: 'media-ajapa-breath-15',
               label: 'Ajapa Breath Cycle (15 min)',
+              meditationType: 'Ajapa',
               filePath: '/media/custom-plays/ajapa-breath-15.mp3',
+              relativePath: 'custom-plays/ajapa-breath-15.mp3',
               durationSeconds: 900,
               mimeType: 'audio/mpeg',
               sizeBytes: 6900000,
@@ -91,7 +95,9 @@ describe('CustomPlayManager UX', () => {
             {
               id: 'media-tratak-focus-10',
               label: 'Tratak Focus Bellset (10 min)',
+              meditationType: 'Tratak',
               filePath: '/media/custom-plays/tratak-focus-10.mp3',
+              relativePath: 'custom-plays/tratak-focus-10.mp3',
               durationSeconds: 600,
               mimeType: 'audio/mpeg',
               sizeBytes: 4500000,
@@ -138,13 +144,14 @@ describe('CustomPlayManager UX', () => {
 
     await waitForPracticeToolsReady();
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    expect(await screen.findByText(/managed media sessions loaded from the backend library/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Temple Bell' } });
     fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Gong' } });
-    expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
-    await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
+    expect(screen.getByText(/choose a managed media session to remember which recording this custom play uses/i)).toBeInTheDocument();
+    await screen.findByRole('option', { name: /vipassana sit \(20 min\) · vipassana/i });
     fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
       target: { value: 'media-vipassana-sit-20' },
     });
@@ -152,8 +159,8 @@ describe('CustomPlayManager UX', () => {
 
     expect(await screen.findByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
     expect(screen.getByText('Morning Focus')).toBeInTheDocument();
-    expect(screen.getByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
-    expect(screen.queryByText(/managed path/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/managed path: custom-plays\/vipassana-sit-20\.mp3/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/media session: vipassana sit \(20 min\) · vipassana/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /apply to timer/i }));
     expect(screen.getAllByText(/custom play "Morning Focus" applied to timer setup/i).length).toBeGreaterThan(0);
@@ -206,7 +213,7 @@ describe('CustomPlayManager UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Evening Reset' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Sahaj' } });
-    await screen.findByRole('option', { name: /ajapa breath cycle \(15 min\)/i });
+    await screen.findByRole('option', { name: /ajapa breath cycle \(15 min\) · ajapa/i });
     fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
       target: { value: 'media-ajapa-breath-15' },
     });
@@ -245,8 +252,9 @@ describe('CustomPlayManager UX', () => {
     await waitForPracticeToolsReady();
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
 
-    expect(await screen.findByText(/backend media session data is invalid/i)).toBeInTheDocument();
-    expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
+    expect(await screen.findByText(/built-in fallback media sessions shown while the backend library is unavailable/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/backend media session data is invalid/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/choose a managed media session to remember which recording this custom play uses/i)).toBeInTheDocument();
   });
 
   it('keeps the latest custom play available when a queued delete is stale in the backend', async () => {
@@ -285,7 +293,9 @@ describe('CustomPlayManager UX', () => {
             {
               id: 'media-vipassana-sit-20',
               label: 'Vipassana Sit (20 min)',
+              meditationType: 'Vipassana',
               filePath: '/media/custom-plays/vipassana-sit-20.mp3',
+              relativePath: 'custom-plays/vipassana-sit-20.mp3',
               durationSeconds: 1200,
               mimeType: 'audio/mpeg',
               sizeBytes: 9200000,
@@ -327,7 +337,7 @@ describe('CustomPlayManager UX', () => {
 
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
-    await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
+    await screen.findByRole('option', { name: /vipassana sit \(20 min\) · vipassana/i });
     fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
       target: { value: 'media-vipassana-sit-20' },
     });
@@ -342,5 +352,63 @@ describe('CustomPlayManager UX', () => {
       await screen.findByText(/a newer custom play version already exists in the backend, so this delete was not applied/i)
     ).toBeInTheDocument();
     expect(screen.getByText('Morning Focus')).toBeInTheDocument();
+  });
+
+  it('shows an actionable empty-state warning when the managed backend library has no media sessions yet', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeToolsReady();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+
+    expect(await screen.findByText(/no managed media sessions are available yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/register a custom-play recording through the repo media workflow, restart the backend, then reload this screen/i)
+    ).toBeInTheDocument();
   });
 });

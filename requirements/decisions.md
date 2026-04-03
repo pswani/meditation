@@ -62,6 +62,7 @@
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
+- Keep iPhone Safari browser-tab timer release confidence grounded in a reusable manual checklist until the product has a stronger platform-level completion guarantee than browser-tab background execution can provide.
 - Keep the production-style deployment model centered on:
   - static frontend files served by `nginx`
   - a loopback-bound Spring Boot backend
@@ -69,7 +70,7 @@
   - filesystem-backed H2 and media storage
 
 ## Current intentional limitations
-- Playlist runs can only play recordings that come from linked `custom play` entries backed by the current seeded media catalog; there is still no broader user-managed media library.
+- Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.
 - `sankalpa` delete and unarchive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 

@@ -148,7 +148,9 @@ try {
   const updatedCatalog = [...catalog, {
     id,
     label,
+    meditationType,
     filePath: publicFilePath,
+    relativePath,
     durationSeconds,
     mimeType,
     sizeBytes,
