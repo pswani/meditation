@@ -16,6 +16,7 @@ Current bundles:
 - `custom-play-runtime-feature-bundle-with-branching`
 - `playlist-runtime-audio-feature-bundle-with-branching`
 - `sankalpa-edit-archive-feature-bundle-with-branching`
+- `ios-lock-screen-end-bell-fix-feature-bundle-with-branching`
 
 Reusable runner:
 
