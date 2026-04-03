@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `chore/ios-safari-real-device-qa`
-- Active bundle: `ios-safari-real-device-qa-bundle`
-- Latest completed bundle: `custom-play-media-library-feature-bundle`
-- Latest merge outcome: merged `feat/custom-play-media-library` back into `pending-wrk` on 2026-04-03 with a normal local merge commit
+- Current branch: `pending-wrk`
+- Active bundle: none
+- Latest completed bundle: `ios-safari-real-device-qa-bundle`
+- Latest merge outcome: merged `chore/ios-safari-real-device-qa` back into `pending-wrk` on 2026-04-03 with a normal local merge commit
 
 ## Product state
 - The repo is a working full-stack meditation application with:
