@@ -27,6 +27,17 @@ import { arePlaylistsEqual, createPlaylist, updatePlaylist, validatePlaylistDraf
 import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } from '../../utils/playlistApi';
 import { buildPlaylistItemLogEntry } from '../../utils/playlistLog';
 import { evaluatePlaylistDelete, evaluatePlaylistRunStart } from '../../utils/playlistRunPolicy';
+import {
+  buildActivePlaylistRun,
+  completePlaylistRunCurrentSegment,
+  getPlaylistItemDurationSeconds,
+  getPlaylistRunCurrentItem,
+  isAudioBackedPlaylistItem,
+  pausePlaylistRun as pauseActivePlaylistRun,
+  resumePlaylistRun as resumeActivePlaylistRun,
+  updatePlaylistRunAudioProgress,
+  updatePlaylistRunTimedProgress,
+} from '../../utils/playlistRuntime';
 import { listSessionLogsFromApi, persistSessionLogToApi } from '../../utils/sessionLogApi';
 import { areSessionLogsEqual, buildCustomPlayLogEntry } from '../../utils/sessionLog';
 import {
@@ -181,7 +192,7 @@ function recoverActivePlaylistRun(
     };
   }
 
-  const remainingSeconds = Math.ceil((storedActivePlaylistRun.currentItemEndAtMs - nowMs) / 1000);
+  const remainingSeconds = Math.ceil((storedActivePlaylistRun.currentSegment.endAtMs - nowMs) / 1000);
   if (remainingSeconds <= 0) {
     return {
       activePlaylistRun: null,
@@ -189,10 +200,32 @@ function recoverActivePlaylistRun(
     };
   }
 
+  if (storedActivePlaylistRun.currentSegment.phase === 'gap') {
+    return {
+      activePlaylistRun: {
+        ...storedActivePlaylistRun,
+        currentSegment: {
+          ...storedActivePlaylistRun.currentSegment,
+          remainingSeconds,
+          endAtMs: nowMs + remainingSeconds * 1000,
+        },
+      },
+      recoveryMessage: 'Recovered an active playlist run from your previous app state.',
+    };
+  }
+
+  const currentItem = getPlaylistRunCurrentItem(storedActivePlaylistRun);
+  const durationSeconds = currentItem ? getPlaylistItemDurationSeconds(currentItem) : remainingSeconds;
+
   return {
     activePlaylistRun: {
       ...storedActivePlaylistRun,
-      currentItemRemainingSeconds: remainingSeconds,
+      currentSegment: {
+        ...storedActivePlaylistRun.currentSegment,
+        elapsedSeconds: Math.max(0, durationSeconds - remainingSeconds),
+        remainingSeconds,
+        endAtMs: nowMs + remainingSeconds * 1000,
+      },
     },
     recoveryMessage: 'Recovered an active playlist run from your previous app state.',
   };
@@ -435,6 +468,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const [settingsSyncError, setSettingsSyncError] = useState<string | null>(null);
   const [timerSoundPlaybackMessage, setTimerSoundPlaybackMessage] = useState<string | null>(null);
   const [customPlayRuntimeMessage, setCustomPlayRuntimeMessage] = useState<string | null>(null);
+  const [playlistRuntimeMessage, setPlaylistRuntimeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isPlaylistsLoading || lastUsedMeditation?.kind !== 'playlist') {
@@ -503,79 +537,48 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const handledTimerOutcomeEndedAtRef = useRef<string | null>(null);
   const isPaused = state.activeSession?.isPaused ?? false;
   const activeTimerPersistence = state.activeSession;
-  const activePlaylistRunId = activePlaylistRun?.runId ?? null;
-  const activePlaylistId = activePlaylistRun?.playlistId ?? null;
-  const activePlaylistName = activePlaylistRun?.playlistName ?? null;
-  const activePlaylistRunStartedAt = activePlaylistRun?.runStartedAt ?? null;
-  const activePlaylistItems = activePlaylistRun?.items ?? null;
-  const activePlaylistCurrentIndex = activePlaylistRun?.currentIndex ?? null;
-  const activePlaylistCurrentItemStartedAt = activePlaylistRun?.currentItemStartedAt ?? null;
-  const activePlaylistCurrentItemStartedAtMs = activePlaylistRun?.currentItemStartedAtMs ?? null;
-  const activePlaylistCurrentItemRemainingSeconds = activePlaylistRun?.currentItemRemainingSeconds ?? null;
-  const activePlaylistCurrentItemEndAtMs = activePlaylistRun?.currentItemEndAtMs ?? null;
-  const activePlaylistCompletedItems = activePlaylistRun?.completedItems ?? null;
-  const activePlaylistCompletedDurationSeconds = activePlaylistRun?.completedDurationSeconds ?? null;
-  const activePlaylistTotalIntendedDurationSeconds = activePlaylistRun?.totalIntendedDurationSeconds ?? null;
-  const isRecoveredRunningPlaylist =
-    !isPlaylistRunPaused &&
-    activePlaylistRunId !== null &&
-    bootstrap.hydration.activePlaylistRun?.runId === activePlaylistRunId &&
-    bootstrap.hydration.activePlaylistRun?.currentItemEndAtMs === activePlaylistCurrentItemEndAtMs;
-  const persistedPlaylistRemainingSeconds = activePlaylistRunId
-    ? isPlaylistRunPaused || isRecoveredRunningPlaylist
-      ? activePlaylistCurrentItemRemainingSeconds
-      : Math.round(((activePlaylistItems?.[activePlaylistCurrentIndex ?? 0]?.durationMinutes) ?? 0) * 60)
-    : null;
   const activePlaylistPersistence = useMemo(
-    () =>
-      activePlaylistRunId &&
-      activePlaylistId !== null &&
-      activePlaylistName !== null &&
-      activePlaylistRunStartedAt !== null &&
-      activePlaylistItems !== null &&
-      activePlaylistCurrentIndex !== null &&
-      activePlaylistCurrentItemStartedAt !== null &&
-      activePlaylistCurrentItemStartedAtMs !== null &&
-      persistedPlaylistRemainingSeconds !== null &&
-      activePlaylistCurrentItemEndAtMs !== null &&
-      activePlaylistCompletedItems !== null &&
-      activePlaylistCompletedDurationSeconds !== null &&
-      activePlaylistTotalIntendedDurationSeconds !== null
-        ? {
-            activePlaylistRun: {
-              runId: activePlaylistRunId,
-              playlistId: activePlaylistId,
-              playlistName: activePlaylistName,
-              runStartedAt: activePlaylistRunStartedAt,
-              items: activePlaylistItems,
-              currentIndex: activePlaylistCurrentIndex,
-              currentItemStartedAt: activePlaylistCurrentItemStartedAt,
-              currentItemStartedAtMs: activePlaylistCurrentItemStartedAtMs,
-              currentItemRemainingSeconds: persistedPlaylistRemainingSeconds,
-              currentItemEndAtMs: activePlaylistCurrentItemEndAtMs,
-              completedItems: activePlaylistCompletedItems,
-              completedDurationSeconds: activePlaylistCompletedDurationSeconds,
-              totalIntendedDurationSeconds: activePlaylistTotalIntendedDurationSeconds,
-            } satisfies ActivePlaylistRun,
-            isPaused: isPlaylistRunPaused,
-          }
-        : null,
-    [
-      activePlaylistRunId,
-      activePlaylistId,
-      activePlaylistName,
-      activePlaylistRunStartedAt,
-      activePlaylistItems,
-      activePlaylistCurrentIndex,
-      activePlaylistCurrentItemStartedAt,
-      activePlaylistCurrentItemStartedAtMs,
-      persistedPlaylistRemainingSeconds,
-      activePlaylistCurrentItemEndAtMs,
-      activePlaylistCompletedItems,
-      activePlaylistCompletedDurationSeconds,
-      activePlaylistTotalIntendedDurationSeconds,
-      isPlaylistRunPaused,
-    ]
+    () => {
+      if (!activePlaylistRun) {
+        return null;
+      }
+
+      const currentItem = getPlaylistRunCurrentItem(activePlaylistRun);
+      let persistedSegment = activePlaylistRun.currentSegment;
+
+      if (!isPlaylistRunPaused && activePlaylistRun.currentSegment.phase === 'gap') {
+        persistedSegment = {
+          ...activePlaylistRun.currentSegment,
+          remainingSeconds: activePlaylistRun.smallGapSeconds,
+        };
+      }
+
+      if (
+        !isPlaylistRunPaused &&
+        activePlaylistRun.currentSegment.phase === 'item' &&
+        currentItem &&
+        !isAudioBackedPlaylistItem(currentItem)
+      ) {
+        persistedSegment = {
+          ...activePlaylistRun.currentSegment,
+          elapsedSeconds: 0,
+          remainingSeconds: getPlaylistItemDurationSeconds(currentItem),
+        };
+      }
+
+      return {
+        activePlaylistRun: {
+          ...activePlaylistRun,
+          currentSegment: persistedSegment,
+        },
+        isPaused: isPlaylistRunPaused,
+      };
+    },
+    [activePlaylistRun, isPlaylistRunPaused]
+  );
+  const serializedActivePlaylistPersistence = useMemo(
+    () => (activePlaylistPersistence ? JSON.stringify(activePlaylistPersistence) : 'null'),
+    [activePlaylistPersistence]
   );
 
   useEffect(() => {
@@ -676,11 +679,18 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       return;
     }
 
-    saveActivePlaylistRunState(
-      activePlaylistPersistence?.activePlaylistRun ?? null,
-      activePlaylistPersistence?.isPaused ?? false
-    );
-  }, [activePlaylistPersistence]);
+    if (serializedActivePlaylistPersistence === 'null') {
+      saveActivePlaylistRunState(null, false);
+      return;
+    }
+
+    const parsed = JSON.parse(serializedActivePlaylistPersistence) as {
+      readonly activePlaylistRun: ActivePlaylistRun;
+      readonly isPaused: boolean;
+    };
+
+    saveActivePlaylistRunState(parsed.activePlaylistRun, parsed.isPaused);
+  }, [serializedActivePlaylistPersistence]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1388,31 +1398,48 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     );
   }, [activeSessionNowMs, isPaused, state.activeSession, state.lastOutcome]);
 
-  useEffect(() => {
-    if (!activePlaylistRun || isPlaylistRunPaused) {
-      return;
-    }
+  const finalizePlaylistRunSegment = useCallback(
+    (status: PlaylistRunOutcome['status'], currentPositionSeconds?: number) => {
+      if (!activePlaylistRun) {
+        return;
+      }
 
-    const intervalId = window.setInterval(() => {
       const nowMs = Date.now();
-      const currentItem = activePlaylistRun.items[activePlaylistRun.currentIndex];
+      const endedAt = new Date(nowMs);
+
+      if (activePlaylistRun.currentSegment.phase === 'gap') {
+        if (status === 'completed') {
+          const nextRun = completePlaylistRunCurrentSegment(activePlaylistRun, nowMs);
+          if (nextRun) {
+            setActivePlaylistRun(nextRun);
+          }
+          return;
+        }
+
+        setPlaylistRunOutcome({
+          status: 'ended early',
+          playlistName: activePlaylistRun.playlistName,
+          completedItems: activePlaylistRun.completedItems,
+          totalItems: activePlaylistRun.items.length,
+          completedDurationSeconds: activePlaylistRun.completedDurationSeconds,
+          endedAt: endedAt.toISOString(),
+        });
+        setActivePlaylistRun(null);
+        setIsPlaylistRunPaused(false);
+        return;
+      }
+
+      const currentItem = getPlaylistRunCurrentItem(activePlaylistRun);
       if (!currentItem) {
         return;
       }
 
-      const remainingSeconds = Math.max(0, Math.ceil((activePlaylistRun.currentItemEndAtMs - nowMs) / 1000));
+      const intendedDurationSeconds = getPlaylistItemDurationSeconds(currentItem);
+      const completedCurrentItemSeconds =
+        status === 'completed'
+          ? intendedDurationSeconds
+          : Math.max(0, Math.min(intendedDurationSeconds, Math.round(currentPositionSeconds ?? activePlaylistRun.currentSegment.elapsedSeconds)));
 
-      if (remainingSeconds > 0) {
-        if (remainingSeconds !== activePlaylistRun.currentItemRemainingSeconds) {
-          setActivePlaylistRun({
-            ...activePlaylistRun,
-            currentItemRemainingSeconds: remainingSeconds,
-          });
-        }
-        return;
-      }
-
-      const intendedDurationSeconds = Math.round(currentItem.durationMinutes * 60);
       const completedLog = buildPlaylistItemLogEntry({
         playlistId: activePlaylistRun.playlistId,
         playlistName: activePlaylistRun.playlistName,
@@ -1421,54 +1448,99 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         item: currentItem,
         itemPosition: activePlaylistRun.currentIndex + 1,
         itemCount: activePlaylistRun.items.length,
-        startedAt: activePlaylistRun.currentItemStartedAt,
-        endedAt: new Date(nowMs),
-        completedDurationSeconds: intendedDurationSeconds,
-        status: 'completed',
+        startedAt: activePlaylistRun.currentSegment.startedAt,
+        endedAt,
+        completedDurationSeconds: completedCurrentItemSeconds,
+        status,
       });
 
       dispatch({ type: 'ADD_SESSION_LOG', payload: completedLog });
 
-      const completedItems = activePlaylistRun.completedItems + 1;
-      const completedDurationSeconds = activePlaylistRun.completedDurationSeconds + intendedDurationSeconds;
-      const nextIndex = activePlaylistRun.currentIndex + 1;
+      if (status === 'ended early') {
+        setPlaylistRunOutcome({
+          status: 'ended early',
+          playlistName: activePlaylistRun.playlistName,
+          completedItems: activePlaylistRun.completedItems,
+          totalItems: activePlaylistRun.items.length,
+          completedDurationSeconds: activePlaylistRun.completedDurationSeconds + completedCurrentItemSeconds,
+          endedAt: endedAt.toISOString(),
+        });
+        setActivePlaylistRun(null);
+        setIsPlaylistRunPaused(false);
+        return;
+      }
 
-      if (nextIndex >= activePlaylistRun.items.length) {
+      const nextRun = completePlaylistRunCurrentSegment(activePlaylistRun, nowMs);
+      if (!nextRun) {
         setActivePlaylistRun(null);
         setIsPlaylistRunPaused(false);
         setPlaylistRunOutcome({
           status: 'completed',
           playlistName: activePlaylistRun.playlistName,
-          completedItems,
+          completedItems: activePlaylistRun.completedItems + 1,
           totalItems: activePlaylistRun.items.length,
-          completedDurationSeconds,
-          endedAt: new Date(nowMs).toISOString(),
+          completedDurationSeconds: activePlaylistRun.completedDurationSeconds + intendedDurationSeconds,
+          endedAt: endedAt.toISOString(),
         });
         return;
       }
 
-      const nextItem = activePlaylistRun.items[nextIndex];
-      if (!nextItem) {
+      setActivePlaylistRun(nextRun);
+    },
+    [activePlaylistRun]
+  );
+
+  useEffect(() => {
+    if (!activePlaylistRun || isPlaylistRunPaused) {
+      return;
+    }
+
+    const currentItem = getPlaylistRunCurrentItem(activePlaylistRun);
+    if (
+      activePlaylistRun.currentSegment.phase === 'item' &&
+      currentItem &&
+      isAudioBackedPlaylistItem(currentItem)
+    ) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const nowMs = Date.now();
+
+      if (activePlaylistRun.currentSegment.phase === 'gap') {
+        const remainingSeconds = Math.max(0, Math.ceil((activePlaylistRun.currentSegment.endAtMs - nowMs) / 1000));
+        if (remainingSeconds > 0) {
+          if (remainingSeconds !== activePlaylistRun.currentSegment.remainingSeconds) {
+            setActivePlaylistRun({
+              ...activePlaylistRun,
+              currentSegment: {
+                ...activePlaylistRun.currentSegment,
+                remainingSeconds,
+              },
+            });
+          }
+          return;
+        }
+
+        finalizePlaylistRunSegment('completed');
         return;
       }
-      const nextDurationSeconds = Math.round(nextItem.durationMinutes * 60);
 
-      setActivePlaylistRun({
-        ...activePlaylistRun,
-        currentIndex: nextIndex,
-        currentItemStartedAt: new Date(nowMs).toISOString(),
-        currentItemStartedAtMs: nowMs,
-        currentItemRemainingSeconds: nextDurationSeconds,
-        currentItemEndAtMs: nowMs + nextDurationSeconds * 1000,
-        completedItems,
-        completedDurationSeconds,
-      });
+      const nextRun = updatePlaylistRunTimedProgress(activePlaylistRun, nowMs);
+      if (nextRun.currentSegment.remainingSeconds > 0) {
+        if (nextRun.currentSegment.remainingSeconds !== activePlaylistRun.currentSegment.remainingSeconds) {
+          setActivePlaylistRun(nextRun);
+        }
+        return;
+      }
+
+      finalizePlaylistRunSegment('completed');
     }, 500);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [activePlaylistRun, isPlaylistRunPaused]);
+  }, [activePlaylistRun, finalizePlaylistRunSegment, isPlaylistRunPaused]);
 
   const finalizeCustomPlayRun = useCallback(
     (status: CustomPlayRunOutcome['status'], currentPositionSeconds = activeCustomPlayRun?.currentPositionSeconds ?? 0) => {
@@ -1540,6 +1612,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       settingsSyncError,
       timerSoundPlaybackMessage,
       customPlayRuntimeMessage,
+      playlistRuntimeMessage,
       setSettings: (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings }),
       saveCustomPlay: async (draft, editId): Promise<CustomPlaySaveResult> => {
         const validation = validateCustomPlayDraft(draft);
@@ -1887,16 +1960,16 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
         const nowMs = Date.now();
         const runStartedAt = new Date(nowMs).toISOString();
-        const firstItem = playlist.items[0];
-        if (!firstItem) {
+        const activeRun = buildActivePlaylistRun(playlist, customPlays, nowMs);
+        if (!activeRun) {
           return {
             started: false,
-            reason: 'playlist has no items',
+            reason: 'playlist item unavailable',
           };
         }
-        const firstDurationSeconds = Math.round(firstItem.durationMinutes * 60);
 
         setPlaylistRunOutcome(null);
+        setPlaylistRuntimeMessage(null);
         setIsPlaylistRunPaused(false);
         recordLastUsedMeditation(setLastUsedMeditation, {
           kind: 'playlist',
@@ -1904,23 +1977,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           playlistName: playlist.name,
           usedAt: runStartedAt,
         });
-        setActivePlaylistRun({
-          runId: `${playlist.id}-${nowMs}`,
-          playlistId: playlist.id,
-          playlistName: playlist.name,
-          runStartedAt,
-          items: playlist.items,
-          currentIndex: 0,
-          currentItemStartedAt: runStartedAt,
-          currentItemStartedAtMs: nowMs,
-          currentItemRemainingSeconds: firstDurationSeconds,
-          currentItemEndAtMs: nowMs + firstDurationSeconds * 1000,
-          completedItems: 0,
-          completedDurationSeconds: 0,
-          totalIntendedDurationSeconds: Math.round(
-            playlist.items.reduce((total, item) => total + item.durationMinutes, 0) * 60
-          ),
-        });
+        setActivePlaylistRun(activeRun);
 
         return startResult;
       },
@@ -1932,14 +1989,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           return;
         }
 
-        const nowMs = Date.now();
-        const remainingSeconds = Math.max(0, Math.ceil((activePlaylistRun.currentItemEndAtMs - nowMs) / 1000));
-
-        setActivePlaylistRun({
-          ...activePlaylistRun,
-          currentItemRemainingSeconds: remainingSeconds,
-          currentItemEndAtMs: nowMs + remainingSeconds * 1000,
-        });
+        setActivePlaylistRun(pauseActivePlaylistRun(activePlaylistRun, Date.now()));
         setIsPlaylistRunPaused(true);
       },
       resumePlaylistRun: () => {
@@ -1947,56 +1997,36 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           return;
         }
 
-        const nowMs = Date.now();
-        setActivePlaylistRun({
-          ...activePlaylistRun,
-          currentItemEndAtMs: nowMs + activePlaylistRun.currentItemRemainingSeconds * 1000,
-        });
+        setPlaylistRuntimeMessage(null);
+        setActivePlaylistRun(resumeActivePlaylistRun(activePlaylistRun, Date.now()));
         setIsPlaylistRunPaused(false);
+      },
+      updatePlaylistRunProgress: (currentPositionSeconds) => {
+        if (!activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
+          return;
+        }
+
+        const currentItem = getPlaylistRunCurrentItem(activePlaylistRun);
+        if (!currentItem || !isAudioBackedPlaylistItem(currentItem)) {
+          return;
+        }
+
+        setActivePlaylistRun(updatePlaylistRunAudioProgress(activePlaylistRun, currentPositionSeconds));
+      },
+      completePlaylistRunCurrentItem: (currentPositionSeconds) => {
+        finalizePlaylistRunSegment('completed', currentPositionSeconds);
       },
       endPlaylistRunEarly: () => {
         if (!activePlaylistRun) {
           return;
         }
 
-        const nowMs = Date.now();
-        const currentItem = activePlaylistRun.items[activePlaylistRun.currentIndex];
-        if (!currentItem) {
-          return;
-        }
-
-        const remainingSeconds = Math.max(0, Math.ceil((activePlaylistRun.currentItemEndAtMs - nowMs) / 1000));
-        const intendedDurationSeconds = Math.round(currentItem.durationMinutes * 60);
-        const completedCurrentItemSeconds = intendedDurationSeconds - remainingSeconds;
-
-        const endedEarlyLog = buildPlaylistItemLogEntry({
-          playlistId: activePlaylistRun.playlistId,
-          playlistName: activePlaylistRun.playlistName,
-          playlistRunId: activePlaylistRun.runId,
-          playlistRunStartedAt: activePlaylistRun.runStartedAt,
-          item: currentItem,
-          itemPosition: activePlaylistRun.currentIndex + 1,
-          itemCount: activePlaylistRun.items.length,
-          startedAt: activePlaylistRun.currentItemStartedAt,
-          endedAt: new Date(nowMs),
-          completedDurationSeconds: completedCurrentItemSeconds,
-          status: 'ended early',
-        });
-
-        dispatch({ type: 'ADD_SESSION_LOG', payload: endedEarlyLog });
-
-        setPlaylistRunOutcome({
-          status: 'ended early',
-          playlistName: activePlaylistRun.playlistName,
-          completedItems: activePlaylistRun.completedItems,
-          totalItems: activePlaylistRun.items.length,
-          completedDurationSeconds: activePlaylistRun.completedDurationSeconds + completedCurrentItemSeconds,
-          endedAt: new Date(nowMs).toISOString(),
-        });
-        setActivePlaylistRun(null);
-        setIsPlaylistRunPaused(false);
+        finalizePlaylistRunSegment('ended early');
       },
       clearPlaylistRunOutcome: () => setPlaylistRunOutcome(null),
+      reportPlaylistRuntimeIssue: (message) => {
+        setPlaylistRuntimeMessage(message);
+      },
       addManualLog: async (input): Promise<ManualLogSaveResult> => {
         const validation = validateManualLogInput(input);
         if (!validation.isValid) {
@@ -2084,6 +2114,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         handledSoundPlaybackMessageKeyRef.current = null;
         setCustomPlayRuntimeMessage(null);
       },
+      clearPlaylistRuntimeMessage: () => {
+        setPlaylistRuntimeMessage(null);
+      },
       clearRecoveryMessage: () => setRecoveryMessage(null),
     }),
     [
@@ -2094,6 +2127,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       customPlayRuntimeMessage,
       customPlaySyncError,
       finalizeCustomPlayRun,
+      finalizePlaylistRunSegment,
       isOnline,
       isPaused,
       isCustomPlaysLoading,
@@ -2106,6 +2140,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       isSettingsLoading,
       isSettingsSyncing,
       lastUsedMeditation,
+      playlistRuntimeMessage,
       playlistRunOutcome,
       playlists,
       playlistSyncError,

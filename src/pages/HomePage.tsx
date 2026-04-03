@@ -22,6 +22,7 @@ function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
     'playlist run active': 'A playlist run is already active. Open it to continue.',
     'playlist not found': 'That playlist is no longer available.',
     'playlist has no items': 'Add at least one item before starting this playlist run.',
+    'playlist item unavailable': 'A linked custom play or recording for this playlist is unavailable. Update the playlist and try again.',
   };
 
   return reasonToMessage[result.reason];

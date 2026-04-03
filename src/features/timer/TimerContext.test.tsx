@@ -110,12 +110,14 @@ describe('TimerProvider persistence behavior', () => {
         {
           id: 'playlist-1',
           name: 'Morning Sequence',
+          smallGapSeconds: 0,
           favorite: false,
           createdAt: '2026-03-24T08:00:00.000Z',
           updatedAt: '2026-03-24T08:00:00.000Z',
           items: [
             {
               id: 'item-1',
+              title: 'Vipassana',
               meditationType: 'Vipassana',
               durationMinutes: 10,
             },
@@ -153,6 +155,6 @@ describe('TimerProvider persistence behavior', () => {
 
     const pausedPayload = JSON.parse(String(playlistPersistenceCalls.at(-1)?.[1]));
     expect(pausedPayload.isPaused).toBe(true);
-    expect(pausedPayload.activePlaylistRun.currentItemRemainingSeconds).toBeLessThan(600);
+    expect(pausedPayload.activePlaylistRun.currentSegment.remainingSeconds).toBeLessThan(600);
   });
 });

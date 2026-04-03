@@ -15,12 +15,14 @@ import { SYNC_QUEUED_AT_HEADER } from './syncApi';
 const playlist: Playlist = {
   id: 'playlist-1',
   name: 'Evening Sequence',
+  smallGapSeconds: 0,
   favorite: false,
   createdAt: '2026-03-24T08:00:00.000Z',
   updatedAt: '2026-03-24T08:00:00.000Z',
   items: [
     {
       id: 'item-1',
+      title: 'Tratak',
       meditationType: 'Tratak',
       durationMinutes: 14,
     },

@@ -25,8 +25,6 @@
 - local persistence
 
 ## Remaining v1 release-candidate gaps
-- implement actual audio playback for playlist runtime audio
-- add optional small gaps between playlist items
 - replace the fixed custom-play media catalog with a fuller user-managed or backend-backed media source when that work is in scope
 
 ## Current implementation notes

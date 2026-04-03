@@ -53,6 +53,7 @@ export interface TimerContextValue {
   readonly settingsSyncError: string | null;
   readonly timerSoundPlaybackMessage: string | null;
   readonly customPlayRuntimeMessage: string | null;
+  readonly playlistRuntimeMessage: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => Promise<CustomPlaySaveResult>;
   readonly deleteCustomPlay: (playId: string) => Promise<boolean>;
@@ -72,8 +73,11 @@ export interface TimerContextValue {
   readonly clearLastUsedMeditation: () => void;
   readonly pausePlaylistRun: () => void;
   readonly resumePlaylistRun: () => void;
+  readonly updatePlaylistRunProgress: (currentPositionSeconds: number) => void;
+  readonly completePlaylistRunCurrentItem: (currentPositionSeconds?: number) => void;
   readonly endPlaylistRunEarly: () => void;
   readonly clearPlaylistRunOutcome: () => void;
+  readonly reportPlaylistRuntimeIssue: (message: string | null) => void;
   readonly addManualLog: (input: ManualLogInput) => Promise<ManualLogSaveResult>;
   readonly startSession: (settings?: TimerSettings) => boolean;
   readonly pauseSession: () => void;
@@ -82,6 +86,7 @@ export interface TimerContextValue {
   readonly clearOutcome: () => void;
   readonly clearTimerSoundPlaybackMessage: () => void;
   readonly clearCustomPlayRuntimeMessage: () => void;
+  readonly clearPlaylistRuntimeMessage: () => void;
   readonly clearRecoveryMessage: () => void;
 }
 
