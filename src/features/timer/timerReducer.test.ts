@@ -107,8 +107,25 @@ describe('timerReducer', () => {
 
     expect(completed.activeSession).toBeNull();
     expect(completed.lastOutcome?.status).toBe('completed');
+    expect(completed.lastOutcome?.deferredCompletion).toBe(false);
     expect(completed.sessionLogs[0].status).toBe('completed');
     expect(completed.sessionLogs[0].completedDurationSeconds).toBe(600);
+  });
+
+  it('marks fixed-session completion as deferred when foreground catch-up finalizes it', () => {
+    const started = timerReducer(createInitialTimerState(validSettings, []), {
+      type: 'START_SESSION',
+      nowMs: Date.parse('2026-03-23T10:00:00.000Z'),
+    });
+
+    const completed = timerReducer(started, {
+      type: 'SYNC_TICK',
+      nowMs: Date.parse('2026-03-23T10:10:01.000Z'),
+      source: 'foreground-return',
+    });
+
+    expect(completed.lastOutcome?.status).toBe('completed');
+    expect(completed.lastOutcome?.deferredCompletion).toBe(true);
   });
 
   it('treats open-ended sessions as completed when manually ended', () => {
@@ -127,6 +144,7 @@ describe('timerReducer', () => {
 
     expect(ended.activeSession).toBeNull();
     expect(ended.lastOutcome?.status).toBe('completed');
+    expect(ended.lastOutcome?.deferredCompletion).toBe(false);
     expect(ended.sessionLogs[0].timerMode).toBe('open-ended');
     expect(ended.sessionLogs[0].intendedDurationSeconds).toBeNull();
     expect(ended.sessionLogs[0].completedDurationSeconds).toBe(240);

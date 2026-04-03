@@ -36,6 +36,7 @@ export interface TimerOutcome {
   readonly endedAt: string;
   readonly completedDurationSeconds: number;
   readonly timerMode: TimerMode;
+  readonly deferredCompletion: boolean;
 }
 
 export interface TimerValidationResult {

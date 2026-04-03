@@ -75,6 +75,22 @@ async function waitForSettingsPageReady() {
   await waitFor(() => expect(screen.getByLabelText(/default duration \(minutes\)/i)).toBeEnabled());
 }
 
+function stubNotificationApi(initialPermission: NotificationPermission = 'default') {
+  const NotificationMock = class {
+    static permission: NotificationPermission = initialPermission;
+    static requestPermission = vi.fn(async () => NotificationMock.permission);
+    constructor() {}
+  } as unknown as typeof Notification;
+
+  Object.defineProperty(window, 'Notification', {
+    configurable: true,
+    writable: true,
+    value: NotificationMock,
+  });
+
+  return NotificationMock;
+}
+
 describe('SettingsPage UX', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -98,6 +114,11 @@ describe('SettingsPage UX', () => {
       intervalEnabled: false,
       intervalMinutes: 5,
       intervalSound: 'Temple Bell',
+    });
+    Object.defineProperty(window, 'Notification', {
+      configurable: true,
+      writable: true,
+      value: undefined,
     });
   });
 
@@ -286,5 +307,44 @@ describe('SettingsPage UX', () => {
         intervalSound: 'Temple Bell',
       })
     );
+  });
+
+  it('shows notification capability and enables permission on demand', async () => {
+    const NotificationMock = stubNotificationApi('default');
+    NotificationMock.requestPermission = vi.fn(async () => {
+      NotificationMock.permission = 'granted';
+      return 'granted';
+    });
+
+    renderSettingsPage();
+
+    await waitForSettingsPageReady();
+    expect(screen.getByText(/capability:/i)).toHaveTextContent('Capability: Available in this browser context.');
+    expect(screen.getByText(/permission:/i)).toHaveTextContent('Permission: Not requested yet.');
+
+    fireEvent.click(screen.getByRole('button', { name: /enable completion notifications/i }));
+
+    expect(await screen.findByText(/completion notifications enabled/i)).toBeInTheDocument();
+    expect(screen.getByText(/permission:/i)).toHaveTextContent('Permission: Allowed.');
+    expect(screen.getByRole('button', { name: /notifications enabled/i })).toBeDisabled();
+  });
+
+  it('shows a blocked notification state when permission is denied', async () => {
+    stubNotificationApi('denied');
+
+    renderSettingsPage();
+
+    await waitForSettingsPageReady();
+    expect(screen.getByText(/permission:/i)).toHaveTextContent('Permission: Blocked.');
+    expect(screen.getByRole('button', { name: /notifications blocked/i })).toBeDisabled();
+  });
+
+  it('shows notification capability as unavailable when the API is missing', async () => {
+    renderSettingsPage();
+
+    await waitForSettingsPageReady();
+    expect(screen.getByText(/capability:/i)).toHaveTextContent('Capability: Unavailable in this browser context.');
+    expect(screen.getByText(/permission:/i)).toHaveTextContent('Permission: Unavailable.');
+    expect(screen.getByRole('button', { name: /notifications unavailable/i })).toBeDisabled();
   });
 });

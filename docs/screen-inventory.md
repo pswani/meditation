@@ -41,3 +41,8 @@
 - archived
 - create and edit sankalpa form
 - archive confirmation
+
+## Settings
+- default timer preferences
+- optional completion notification capability state
+- optional completion notification permission action

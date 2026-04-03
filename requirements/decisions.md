@@ -24,8 +24,14 @@
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
   - force timer catch-up evaluation on `visibilitychange`/`pageshow` foreground return
-  - show calm in-session guidance about lock-screen bell deferral behavior
+  - coalesce overlapping foreground events so one foreground return produces one catch-up pass
+  - show calm Safari-specific guidance only in likely iPhone Safari browser contexts
+  - preserve deferred-completion metadata on fixed timer outcomes so the completion UI can explain foreground catch-up
   - attempt completion notifications only when browser permission is granted and the document is hidden
+- Keep timer completion notification UX explicit in Settings:
+  - derive capability and permission state from the current browser runtime
+  - expose a user-controlled permission request action only when the browser can actually prompt
+  - keep iPhone Safari copy explicit that browser-tab lock-screen behavior can still defer completion handling
 - Keep Home's `start last used meditation` shortcut modeled as either:
   - a timer settings snapshot
   - a playlist reference

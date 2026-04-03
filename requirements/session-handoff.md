@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/feature-refinement`
-- Active bundle: none
+- Current branch: `fix/ios-safari-ux-hardening`
+- Active bundle: `ios-safari-ux-hardening-feature-bundle-with-branching`
 - Latest completed bundle: `sankalpa-edit-archive-feature-bundle-with-branching`
 - Latest merge outcome: merged `codex/sankalpa-edit-archive-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with a normal local merge commit
 
@@ -22,7 +22,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - sankalpa create, edit, and archive flows with backend-backed archived-state persistence
 - Timer lock-screen mitigation now includes:
   - foreground catch-up sync on `visibilitychange` and `pageshow` so fixed sessions finalize immediately after Safari returns
-  - active fixed-session guidance that iPhone Safari lock can defer completion-bell playback until foreground
+  - coalesced foreground catch-up so overlapping `visibilitychange` and `pageshow` events do not trigger duplicate completion handling
+  - targeted fixed-session guidance that only appears in likely iPhone Safari browser contexts
+  - deferred-completion messaging after foreground catch-up finalizes a fixed session
+  - optional Settings notification UX that shows capability and permission state and provides an explicit permission request action when supported
   - completion notification attempts only when Notification permission is granted and the document is hidden
 - Sankalpa behavior now includes:
   - editing existing goals while preserving `id` and `createdAt`
@@ -31,10 +34,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - aligned frontend, storage, and backend handling for `active`, `completed`, `expired`, and `archived` states
 
 ## Evidence and artifacts
+- Implementation planning: `docs/execplan-ios-safari-ux-hardening-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
+- Review artifact: `docs/review-ios-safari-ux-hardening.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
+- Verification report: `docs/test-ios-safari-ux-hardening.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
@@ -68,6 +74,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `npm run lint`
   - `npm run test` with 42 files and 277 tests
   - `npm run build`
+- iOS Safari UX hardening implementation verified on 2026-04-03:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 44 files and 293 tests
+  - `npm run build`
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the iOS Safari UX hardening slice
 
 ## Remaining known gaps
 - `sankalpa` delete and unarchive flows are still unimplemented.
@@ -76,4 +89,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: `ios-safari-ux-hardening-feature-bundle-with-branching` under `prompts/`, executed through `prompts/run-milestone-bundle.md`.
+- Exact recommended next prompt: none while `ios-safari-ux-hardening-feature-bundle-with-branching` remains active on `fix/ios-safari-ux-hardening`.

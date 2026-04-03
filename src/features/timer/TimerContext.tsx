@@ -75,6 +75,7 @@ import { normalizeTimerSettings } from '../../utils/timerSettingsNormalization';
 import { validateTimerSettings } from '../../utils/timerValidation';
 import { notifyTimerCompletion } from '../../utils/timerCompletionNotice';
 import { defaultTimerSettings } from './constants';
+import { shouldRunForegroundCatchUp } from './foregroundCatchUp';
 import {
   applyQueuedCollectionMutations,
   areOrderedCollectionsEqual,
@@ -559,6 +560,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const pendingEndedSessionRef = useRef<ActiveSession | null>(null);
   const handledSoundPlaybackMessageKeyRef = useRef<string | null>(null);
   const handledTimerOutcomeEndedAtRef = useRef<string | null>(null);
+  const lastForegroundCatchUpAtMsRef = useRef<number | null>(null);
   const isPaused = state.activeSession?.isPaused ?? false;
   const activeTimerPersistence = state.activeSession;
   const activePlaylistPersistence = useMemo(
@@ -1325,27 +1327,40 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   }, [isOnline, queue, updateQueue]);
 
   useEffect(() => {
-    function syncTimerClockAndSessionState(): void {
+    function syncTimerClockAndSessionState(source: 'interval' | 'foreground-return'): void {
       const nowMs = Date.now();
       setActiveSessionNowMs(nowMs);
-      dispatch({ type: 'SYNC_TICK', nowMs });
+      dispatch({ type: 'SYNC_TICK', nowMs, source });
+    }
+
+    function runForegroundCatchUp(): void {
+      const nowMs = Date.now();
+      if (!shouldRunForegroundCatchUp(lastForegroundCatchUpAtMsRef.current, nowMs)) {
+        return;
+      }
+
+      lastForegroundCatchUpAtMsRef.current = nowMs;
+      setActiveSessionNowMs(nowMs);
+      dispatch({ type: 'SYNC_TICK', nowMs, source: 'foreground-return' });
     }
 
     if (!state.activeSession || isPaused) {
       return;
     }
 
+    lastForegroundCatchUpAtMsRef.current = null;
+
     const intervalId = window.setInterval(() => {
-      syncTimerClockAndSessionState();
+      syncTimerClockAndSessionState('interval');
     }, 500);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        syncTimerClockAndSessionState();
+        runForegroundCatchUp();
       }
     };
     const handlePageShow = () => {
-      syncTimerClockAndSessionState();
+      runForegroundCatchUp();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

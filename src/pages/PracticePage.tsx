@@ -5,6 +5,7 @@ import { meditationTypes, soundOptions } from '../features/timer/constants';
 import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
 import type { MeditationType, TimerMode, TimerSettings } from '../types/timer';
+import { detectTimerRuntimeEnvironment } from '../utils/timerRuntime';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 
 type SetupField = 'durationMinutes' | 'meditationType' | 'intervalMinutes';
@@ -48,8 +49,10 @@ export default function PracticePage() {
   const [entryMessage, setEntryMessage] = useState<string | null>(null);
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [touched, setTouched] = useState<Record<SetupField, boolean>>(initialTouchedState);
+  const timerRuntime = useMemo(() => detectTimerRuntimeEnvironment(), []);
   const validation = useMemo(() => validateTimerSettings(draftSettings), [draftSettings]);
   const fixedDurationMinutes = draftSettings.durationMinutes ?? draftSettings.lastFixedDurationMinutes;
+  const showSafariLockGuidance = draftSettings.timerMode === 'fixed' && timerRuntime.isLikelyIPhoneSafariBrowser;
 
   const intervalCount = useMemo(
     () =>
@@ -178,6 +181,15 @@ export default function PracticePage() {
         </div>
       ) : null}
 
+      {showSafariLockGuidance ? (
+        <div className="status-banner" role="status">
+          <p>
+            On iPhone Safari browser tabs, if the phone locks before a fixed timer ends, completion can wait until Safari
+            returns to the foreground.
+          </p>
+        </div>
+      ) : null}
+
       {lastOutcome ? (
         <div className={`status-banner ${sessionLogSyncError ? 'warn' : lastOutcome.status === 'completed' ? 'ok' : 'warn'}`}>
           <p>
@@ -186,6 +198,9 @@ export default function PracticePage() {
               ? `Saving ${formatRemainingTime(lastOutcome.completedDurationSeconds)} to backend history.`
               : `An auto log was created for ${formatRemainingTime(lastOutcome.completedDurationSeconds)}.`}
           </p>
+          {lastOutcome.deferredCompletion ? (
+            <p>This fixed timer reached its scheduled end while Safari was in the background, so completion was confirmed on return.</p>
+          ) : null}
           {sessionLogSyncError ? <p>{sessionLogSyncError}</p> : null}
           <button type="button" className="link-button" onClick={clearOutcome}>
             Dismiss
