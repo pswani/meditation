@@ -46,6 +46,8 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Review and verification artifacts for this slice now live in:
   - `docs/review-custom-play-runtime-feature.md`
   - `docs/test-custom-play-runtime-feature.md`
+- Playlist runtime audio review findings now live in:
+  - `docs/review-playlist-runtime-audio-feature.md`
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance
@@ -86,7 +88,9 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Finish verifying the new production-only scripts and docs end to end after the dev/preview removal.
 - Add `sankalpa` edit and archive flows.
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
-- Review, test, and, if needed, fix the new playlist runtime audio slice before merging it back into `codex/feature-refinement`.
+- Review finding: recording-backed playlist run recovery currently trusts stale `endAtMs` wall-clock state instead of the persisted playback position after reload.
+- Review finding: backend playlist saves still accept dangling `customPlayId` references, so broken linked items can persist until runtime launch.
+- Run the dedicated verification pass, then fix the important findings before merging the feature branch back into `codex/feature-refinement`.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/02-review-playlist-runtime-audio.md`
+- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/03-test-playlist-runtime-audio.md`
