@@ -78,13 +78,38 @@ class SankalpaControllerTest {
                   "days": 5,
                   "meditationType": "Vipassana",
                   "timeOfDayBucket": "morning",
-                  "createdAt": "2026-03-24T08:00:00Z"
+                  "createdAt": "2026-03-24T08:00:00Z",
+                  "archived": false
                 }
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.goal.id").value("goal-1"))
         .andExpect(jsonPath("$.goal.targetValue").value(12.5))
+        .andExpect(jsonPath("$.goal.archived").value(false))
         .andExpect(jsonPath("$.targetDurationSeconds").value(750));
+  }
+
+  @Test
+  void returnsArchivedGoalsWithArchivedStatus() throws Exception {
+    sankalpaGoalRepository.save(
+        new SankalpaGoalEntity(
+            "goal-archived",
+            "session-count-based",
+            java.math.BigDecimal.ONE,
+            7,
+            null,
+            null,
+            Instant.parse("2026-03-24T00:00:00Z"),
+            null,
+            true
+        )
+    );
+
+    mockMvc.perform(get("/api/sankalpas").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].goal.id").value("goal-archived"))
+        .andExpect(jsonPath("$[0].goal.archived").value(true))
+        .andExpect(jsonPath("$[0].status").value("archived"));
   }
 
   @Test
@@ -97,7 +122,8 @@ class SankalpaControllerTest {
                   "goalType": "duration-based",
                   "targetValue": 12.5,
                   "days": 5,
-                  "createdAt": "2026-03-24T08:00:00Z"
+                  "createdAt": "2026-03-24T08:00:00Z",
+                  "archived": false
                 }
                 """))
         .andExpect(status().isBadRequest());
@@ -110,7 +136,8 @@ class SankalpaControllerTest {
                   "goalType": "session-count-based",
                   "targetValue": 2.5,
                   "days": 5,
-                  "createdAt": "2026-03-24T08:00:00Z"
+                  "createdAt": "2026-03-24T08:00:00Z",
+                  "archived": false
                 }
                 """))
         .andExpect(status().isBadRequest());
@@ -129,7 +156,8 @@ class SankalpaControllerTest {
                   "goalType": "duration-based",
                   "targetValue": 12.5,
                   "days": 5,
-                  "createdAt": "2026-03-24T08:00:00Z"
+                  "createdAt": "2026-03-24T08:00:00Z",
+                  "archived": false
                 }
                 """))
         .andExpect(status().isBadRequest());

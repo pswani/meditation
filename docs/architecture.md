@@ -35,7 +35,6 @@ Single-page React application with route-based screens and feature-oriented modu
   - summaries
   - timer settings
   - session logs
-- sankalpa editing/archive flows are still not implemented
 - no media upload/import workflow yet
 - playlist runtime now supports:
   - mixed timed items and linked-recording items backed by saved `custom play` media
@@ -145,7 +144,9 @@ Single-page React application with route-based screens and feature-oriented modu
   - newer backend state wins over an older queued mutation
   - stale queued deletes return the current backend-backed record so the UI can restore it with explicit warning copy instead of treating the delete as silent success
 - `Session log` replay uses stable client ids and idempotent `PUT` behavior so retrying the same queued write does not duplicate persisted history rows.
-- The current `sankalpa` flow remains create-only in the UI, so prompt 03 keeps its replay model simple and id-stable rather than adding a premature edit-conflict layer.
+- `Sankalpa` replay stays id-stable across create, edit, and archive writes:
+  - edits preserve the original goal id and `createdAt` so deadline windows stay trustworthy
+  - archive remains a boolean goal-state mutation on the same record instead of creating a second history entity
 
 ## Frontend reconciliation boundaries
 - `src/features/timer/TimerContext.tsx` owns local-first hydration and queue flushing for timer settings, session logs, custom plays, and playlists.

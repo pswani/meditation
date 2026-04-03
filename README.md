@@ -51,13 +51,16 @@ This README is intentionally grounded in the current repository contents. It exp
   - optional small gaps between playlist items
   - persisted active-run recovery for the current item or gap phase
   - automatic per-item `session log` entries for completion and early-stop outcomes
+- Sankalpa management now supports:
+  - editing existing goals while preserving the original goal window and id
+  - archiving active, completed, or expired goals into a dedicated archived section
+  - backend-backed archived-state persistence with local cache fallback
 
 ## Confirmed Full-Stack Gaps
 
 The current repository still needs all of the following before it can be considered a functioning full-stack app:
 
 - richer media-file management flows beyond seeded metadata and directory conventions
-- deeper sankalpa management beyond create/list progress flows, such as edit/archive behavior
 
 ## Planned Full-Stack Target
 
@@ -1363,7 +1366,7 @@ Optional build-time override when pairing the built front end with a separate ba
 
 - playlist item runtime audio now works for linked `custom play` recordings, but timer-style sound cues inside playlist runs remain limited to the linked recording's own start/end sounds or silent timed items
 - custom-play media falls back to built-in sample metadata and is not yet a user-managed library
-- sankalpa editing, archival, and delete flows are still unimplemented
+- sankalpa delete and unarchive flows are still unimplemented
 
 ## Operator Notes
 

@@ -108,7 +108,7 @@ public class SankalpaGoalEntity {
     this.timeOfDayBucket = request.timeOfDayBucket();
     this.createdAt = createdAt;
     this.completedAt = null;
-    this.archived = false;
+    this.archived = request.archived();
   }
 
   public void setCompletedAt(Instant completedAt) {

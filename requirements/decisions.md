@@ -38,6 +38,12 @@
   - linked-recording items fail fast before launch if their referenced `custom play` or media asset can no longer be resolved
   - playlist item completion and early-end logging stays per item rather than inventing a second aggregate-only history model
 - Keep backend playlist saves referentially safe for linked recordings by rejecting a `customPlayId` that does not currently resolve to a saved `custom play`.
+- Keep `sankalpa` edits id-stable:
+  - preserve `id` and `createdAt` when editing goal fields so progress and deadline windows stay anchored to the original goal
+  - recalculate progress from the updated goal fields without inventing a second versioned goal history model
+- Keep `sankalpa` archival as a first-class persisted goal state:
+  - frontend, local cache, and backend contracts all carry the same `archived` flag
+  - archived goals stay visible in a dedicated read-only section instead of being deleted from the product surface
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:
@@ -54,7 +60,7 @@
 
 ## Current intentional limitations
 - Playlist runs can only play recordings that come from linked `custom play` entries backed by the current seeded media catalog; there is still no broader user-managed media library.
-- `sankalpa` editing and archive flows are still unimplemented.
+- `sankalpa` delete and unarchive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 
 ## Documentation and planning
@@ -74,4 +80,4 @@
   - `requirements/session-handoff.md`
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Treat the next highest-value implementation slice as `sankalpa` edit and archive behavior now that playlist runtime audio and optional gaps are in place.
+- Author the next bounded prompt bundle before running the milestone runner again; the current bundled slices are now complete.

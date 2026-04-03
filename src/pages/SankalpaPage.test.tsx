@@ -379,6 +379,250 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByText(/progress: 2 \/ 3 session logs · 1 session log remaining/i)).toBeInTheDocument();
   });
 
+  it('edits an existing sankalpa while preserving the original goal identity and window', async () => {
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-edit',
+          goalType: 'duration-based',
+          targetValue: 180,
+          days: 7,
+          createdAt: '2026-03-23T08:00:00.000Z',
+          archived: false,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+
+    expect(screen.getByRole('heading', { name: /edit sankalpa/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/target duration \(minutes\)/i), { target: { value: '240' } });
+    fireEvent.change(screen.getByLabelText(/^days$/i), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa updated\./i)).toBeInTheDocument());
+
+    const storedGoals = JSON.parse(localStorage.getItem(SANKALPAS_KEY) ?? '[]');
+    expect(storedGoals).toHaveLength(1);
+    expect(storedGoals[0]).toMatchObject({
+      id: 'goal-edit',
+      targetValue: 240,
+      days: 10,
+      createdAt: '2026-03-23T08:00:00.000Z',
+      archived: false,
+    });
+  });
+
+  it('edits goal type and optional filters, then recalculates visible progress from the original window', async () => {
+    const now = Date.now();
+    const createdAt = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const eveningMatchEndedAt = new Date();
+    eveningMatchEndedAt.setDate(eveningMatchEndedAt.getDate() - 1);
+    eveningMatchEndedAt.setHours(18, 0, 0, 0);
+    const morningOtherEndedAt = new Date();
+    morningOtherEndedAt.setDate(morningOtherEndedAt.getDate() - 1);
+    morningOtherEndedAt.setHours(8, 0, 0, 0);
+
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-evening-match', eveningMatchEndedAt.toISOString(), 'auto log', 'completed', 900),
+        createSessionLog('log-morning-other', morningOtherEndedAt.toISOString(), 'manual log', 'completed', 1200),
+      ])
+    );
+
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-edit-filters',
+          goalType: 'duration-based',
+          targetValue: 30,
+          days: 7,
+          meditationType: 'Ajapa',
+          timeOfDayBucket: 'morning',
+          createdAt,
+          archived: false,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+
+    fireEvent.change(screen.getByLabelText(/goal type/i), { target: { value: 'session-count-based' } });
+    expect(screen.getByLabelText(/target session logs/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/target session logs/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/^days$/i), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText(/meditation type filter \(optional\)/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/time-of-day filter \(optional\)/i), { target: { value: 'evening' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa updated\./i)).toBeInTheDocument());
+
+    expect(screen.getByText(/1 session log in 5 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/filters: meditation type: vipassana · time of day: evening/i)).toBeInTheDocument();
+    expect(screen.getByText(/progress: 1 \/ 1 session logs · 0 session logs remaining/i)).toBeInTheDocument();
+
+    const storedGoals = JSON.parse(localStorage.getItem(SANKALPAS_KEY) ?? '[]');
+    expect(storedGoals[0]).toMatchObject({
+      id: 'goal-edit-filters',
+      goalType: 'session-count-based',
+      targetValue: 1,
+      days: 5,
+      meditationType: 'Vipassana',
+      timeOfDayBucket: 'evening',
+      createdAt,
+      archived: false,
+    });
+  });
+
+  it('archives a sankalpa and moves it into the archived section', async () => {
+    const activeCreatedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-archive',
+          goalType: 'session-count-based',
+          targetValue: 3,
+          days: 7,
+          createdAt: activeCreatedAt,
+          archived: false,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    const confirmDialog = screen.getByRole('dialog', { name: /archive active sankalpas confirmation/i });
+    fireEvent.click(within(confirmDialog).getByRole('button', { name: /archive sankalpa/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa archived\./i)).toBeInTheDocument());
+
+    const archivedHeading = screen.getByRole('heading', { name: /archived sankalpas/i });
+    const archivedSection = archivedHeading.closest('section');
+    expect(archivedSection).not.toBeNull();
+    if (!archivedSection) {
+      throw new Error('Expected archived sankalpa section to exist');
+    }
+
+    expect(within(archivedSection).getByText(/3 session logs in 7 days/i)).toBeInTheDocument();
+    expect(within(archivedSection).getByText(/^archived$/i)).toBeInTheDocument();
+
+    const storedGoals = JSON.parse(localStorage.getItem(SANKALPAS_KEY) ?? '[]');
+    expect(storedGoals[0]).toMatchObject({
+      id: 'goal-archive',
+      archived: true,
+    });
+  });
+
+  it('archives completed and expired sankalpas from their current sections', async () => {
+    const now = Date.now();
+    const completedCreatedAt = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const expiredCreatedAt = new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString();
+    const completedLogEndedAt = new Date();
+    completedLogEndedAt.setDate(completedLogEndedAt.getDate() - 2);
+    completedLogEndedAt.setHours(7, 0, 0, 0);
+
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        createSessionLog('log-completed', completedLogEndedAt.toISOString(), 'auto log', 'completed', 1200),
+      ])
+    );
+
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-completed-archive',
+          goalType: 'session-count-based',
+          targetValue: 1,
+          days: 7,
+          createdAt: completedCreatedAt,
+          archived: false,
+        },
+        {
+          id: 'goal-expired-archive',
+          goalType: 'session-count-based',
+          targetValue: 3,
+          days: 1,
+          createdAt: expiredCreatedAt,
+          archived: false,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const completedSection = screen.getByRole('heading', { name: /completed sankalpas/i }).closest('section');
+    expect(completedSection).not.toBeNull();
+    if (!completedSection) {
+      throw new Error('Expected completed sankalpa section to exist');
+    }
+
+    fireEvent.click(within(completedSection).getByRole('button', { name: /^archive$/i }));
+    const completedConfirmDialog = screen.getByRole('dialog', { name: /archive completed sankalpas confirmation/i });
+    fireEvent.click(within(completedConfirmDialog).getByRole('button', { name: /archive sankalpa/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa archived\./i)).toBeInTheDocument());
+
+    const expiredSection = screen.getByRole('heading', { name: /expired sankalpas/i }).closest('section');
+    expect(expiredSection).not.toBeNull();
+    if (!expiredSection) {
+      throw new Error('Expected expired sankalpa section to exist');
+    }
+
+    fireEvent.click(within(expiredSection).getByRole('button', { name: /^archive$/i }));
+    const expiredConfirmDialog = screen.getByRole('dialog', { name: /archive expired sankalpas confirmation/i });
+    fireEvent.click(within(expiredConfirmDialog).getByRole('button', { name: /archive sankalpa/i }));
+
+    await waitFor(() => expect(screen.getAllByText(/sankalpa archived\./i).length).toBeGreaterThan(0));
+
+    const archivedSection = screen.getByRole('heading', { name: /archived sankalpas/i }).closest('section');
+    expect(archivedSection).not.toBeNull();
+    if (!archivedSection) {
+      throw new Error('Expected archived sankalpa section to exist');
+    }
+
+    expect(within(archivedSection).getByText(/1 session log in 7 days/i)).toBeInTheDocument();
+    expect(within(archivedSection).getByText(/3 session logs in 1 day/i)).toBeInTheDocument();
+
+    const storedGoals = JSON.parse(localStorage.getItem(SANKALPAS_KEY) ?? '[]');
+    expect(storedGoals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'goal-completed-archive', archived: true }),
+        expect.objectContaining({ id: 'goal-expired-archive', archived: true }),
+      ])
+    );
+  });
+
   it('keeps a locally saved sankalpa visible without replaying failed sync attempts on every queue update', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;

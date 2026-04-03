@@ -38,3 +38,6 @@
 - active sankalpas
 - completed
 - expired
+- archived
+- create and edit sankalpa form
+- archive confirmation

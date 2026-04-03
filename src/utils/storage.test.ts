@@ -694,6 +694,7 @@ describe('storage sankalpas', () => {
         targetValue: 120,
         days: 7,
         createdAt: '2026-03-24T08:00:00.000Z',
+        archived: false,
       },
       {
         id: 'goal-2',
@@ -703,6 +704,7 @@ describe('storage sankalpas', () => {
         meditationType: 'Vipassana',
         timeOfDayBucket: 'morning',
         createdAt: '2026-03-24T08:30:00.000Z',
+        archived: false,
       },
     ];
 
@@ -757,6 +759,7 @@ describe('storage sankalpas', () => {
         meditationType: 'Ajapa',
         timeOfDayBucket: 'evening',
         createdAt: '2026-03-24T08:00:00.000Z',
+        archived: false,
       },
     ]);
   });

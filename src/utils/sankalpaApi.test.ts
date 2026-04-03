@@ -43,6 +43,7 @@ describe('sankalpa api boundary', () => {
               meditationType: 'Vipassana',
               timeOfDayBucket: 'morning',
               createdAt: '2026-03-24T08:00:00.000Z',
+              archived: false,
             },
             status: 'active',
             deadlineAt: '2026-04-03T08:00:00.000Z',
@@ -66,6 +67,7 @@ describe('sankalpa api boundary', () => {
           meditationType: 'Vipassana',
           timeOfDayBucket: 'morning',
           createdAt: '2026-03-24T08:00:00.000Z',
+          archived: false,
         },
         status: 'active',
         deadlineAt: '2026-04-03T08:00:00.000Z',
@@ -89,8 +91,9 @@ describe('sankalpa api boundary', () => {
           targetValue: 12.5,
           days: 7,
           createdAt: '2026-03-24T08:00:00.000Z',
+          archived: true,
         },
-        status: 'active',
+        status: 'archived',
         deadlineAt: '2026-03-31T08:00:00.000Z',
         matchedSessionCount: 0,
         matchedDurationSeconds: 0,
@@ -110,6 +113,7 @@ describe('sankalpa api boundary', () => {
           targetValue: 12.5,
           days: 7,
           createdAt: '2026-03-24T08:00:00.000Z',
+          archived: true,
         },
         {
           timeZone: 'America/Chicago',
@@ -120,6 +124,7 @@ describe('sankalpa api boundary', () => {
       goal: {
         id: 'goal-1',
         targetValue: 12.5,
+        archived: true,
       },
       targetDurationSeconds: 750,
     });
