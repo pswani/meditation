@@ -18,6 +18,10 @@ Current bundles:
 - `sankalpa-edit-archive-feature-bundle-with-branching`
 - `ios-lock-screen-end-bell-fix-feature-bundle-with-branching`
 - `ios-safari-ux-hardening-feature-bundle-with-branching`
+- `sankalpa-delete-unarchive-feature-bundle`
+- `ios-safari-real-device-qa-bundle`
+- `custom-play-media-library-feature-bundle`
+- `main-upstream-publish-bundle`
 
 Reusable runner:
 
