@@ -32,7 +32,14 @@ Primary destinations:
 - pause/resume prominent during session
 - active timer should clearly label countdown vs elapsed time
 - ending a session should confirm intent
-- for iPhone Safari, active timer guidance should explain that lock-screen browser suspension can defer the completion bell until Safari returns to foreground
+- for likely iPhone Safari browser contexts, timer setup and active timer should explain that lock-screen browser suspension can defer completion handling until Safari returns to foreground
+- after foreground catch-up finalizes a fixed timer, the completion UI should explain that the scheduled end was reached while Safari was in the background
+- Safari-specific guidance should stay hidden for unrelated desktop and Android contexts
+
+## Settings UX rules
+- Settings should expose an optional, user-controlled action to request timer completion notifications when browser support exists
+- Settings should show current notification capability and permission state in calm, explicit language
+- iPhone Safari notification copy should explain that browser support and permission still do not guarantee lock-screen reliability in browser-tab mode
 
 ## Responsive layout notes
 - forms stay single-column on narrow screens

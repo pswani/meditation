@@ -18,7 +18,7 @@ export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'REPLACE_SESSION_LOGS'; payload: readonly SessionLog[] }
   | { type: 'START_SESSION'; nowMs: number; settings?: TimerSettings }
-  | { type: 'SYNC_TICK'; nowMs: number }
+  | { type: 'SYNC_TICK'; nowMs: number; source?: 'interval' | 'foreground-return' }
   | { type: 'PAUSE_SESSION'; nowMs: number }
   | { type: 'RESUME_SESSION'; nowMs: number }
   | { type: 'END_EARLY'; nowMs: number }
@@ -110,7 +110,9 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         intendedDurationSeconds !== null &&
         getActiveSessionElapsedMilliseconds(state.activeSession, action.nowMs) >= intendedDurationSeconds * 1000
       ) {
-        return finalizeSession(state, 'completed', action.nowMs, intendedDurationSeconds);
+        return finalizeSession(state, 'completed', action.nowMs, intendedDurationSeconds, {
+          deferredCompletion: action.source === 'foreground-return',
+        });
       }
 
       return state;
@@ -174,7 +176,10 @@ function finalizeSession(
   state: TimerState,
   status: 'completed' | 'ended early',
   nowMs: number,
-  completedDurationSeconds: number
+  completedDurationSeconds: number,
+  options: {
+    readonly deferredCompletion?: boolean;
+  } = {}
 ): TimerState {
   if (!state.activeSession) {
     return state;
@@ -204,6 +209,8 @@ function finalizeSession(
       endedAt: new Date(nowMs).toISOString(),
       completedDurationSeconds: logEntry.completedDurationSeconds,
       timerMode: logEntry.timerMode,
+      deferredCompletion:
+        status === 'completed' && state.activeSession.timerMode === 'fixed' && options.deferredCompletion === true,
     },
     sessionLogs: appendSessionLog(state.sessionLogs, logEntry),
   };

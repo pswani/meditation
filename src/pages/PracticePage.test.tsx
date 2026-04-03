@@ -7,6 +7,8 @@ import PracticePage from './PracticePage';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
+const iphoneSafariUserAgent =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -64,12 +66,22 @@ async function waitForPracticeSettingsHydration() {
 }
 
 describe('PracticePage UX', () => {
+  const originalUserAgent = window.navigator.userAgent;
+
   beforeEach(() => {
     localStorage.clear();
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: originalUserAgent,
+    });
   });
 
   afterEach(() => {
     cleanup();
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: originalUserAgent,
+    });
   });
 
   it('keeps required meditation type error hidden until start attempt', async () => {
@@ -356,5 +368,29 @@ describe('PracticePage UX', () => {
 
     await waitFor(() => expect(screen.getByLabelText(/duration \(minutes\)/i)).toBeEnabled());
     expect(screen.getByRole('combobox', { name: /meditation type/i })).toBeEnabled();
+  });
+
+  it('shows lock-screen guidance only for likely iPhone Safari browser setup flow', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: iphoneSafariUserAgent,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeSettingsHydration();
+    expect(
+      screen.getByText(/on iphone safari browser tabs, if the phone locks before a fixed timer ends/i)
+    ).toBeInTheDocument();
   });
 });

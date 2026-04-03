@@ -2,10 +2,32 @@ import { useEffect, useMemo, useState } from 'react';
 import { meditationTypes, soundOptions, defaultTimerSettings } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { TimerMode, TimerSettings } from '../types/timer';
+import { detectTimerRuntimeEnvironment, requestTimerNotificationPermission } from '../utils/timerRuntime';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 
 type SavePhase = 'idle' | 'awaiting-sync-start' | 'saving';
-type SaveMessageTone = 'ok' | 'status';
+type SaveMessageTone = 'ok' | 'status' | 'warn';
+
+function getNotificationCapabilityCopy(
+  capability: ReturnType<typeof detectTimerRuntimeEnvironment>['notificationCapability']
+): string {
+  return capability === 'available' ? 'Available in this browser context.' : 'Unavailable in this browser context.';
+}
+
+function getNotificationPermissionCopy(
+  permission: ReturnType<typeof detectTimerRuntimeEnvironment>['notificationPermission']
+): string {
+  switch (permission) {
+    case 'granted':
+      return 'Allowed.';
+    case 'denied':
+      return 'Blocked.';
+    case 'default':
+      return 'Not requested yet.';
+    default:
+      return 'Unavailable.';
+  }
+}
 
 function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings): boolean {
   return (
@@ -28,6 +50,10 @@ export default function SettingsPage() {
   const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
   const [savePhase, setSavePhase] = useState<SavePhase>('idle');
   const [errors, setErrors] = useState<ReturnType<typeof validateTimerSettings>['errors']>({});
+  const [notificationRuntime, setNotificationRuntime] = useState(() => detectTimerRuntimeEnvironment());
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+  const [notificationMessageTone, setNotificationMessageTone] = useState<SaveMessageTone>('status');
+  const [isRequestingNotificationPermission, setIsRequestingNotificationPermission] = useState(false);
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
   const fixedDurationMinutes = draft.durationMinutes ?? draft.lastFixedDurationMinutes;
   const areSettingsControlsDisabled = isSettingsLoading || isSettingsSyncing;
@@ -38,6 +64,10 @@ export default function SettingsPage() {
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
+
+  useEffect(() => {
+    setNotificationRuntime(detectTimerRuntimeEnvironment());
+  }, []);
 
   useEffect(() => {
     if (savePhase === 'idle') {
@@ -143,13 +173,64 @@ export default function SettingsPage() {
     setSavePhase('awaiting-sync-start');
   }
 
+  async function enableCompletionNotifications() {
+    setNotificationMessage(null);
+    setIsRequestingNotificationPermission(true);
+
+    try {
+      const permission = await requestTimerNotificationPermission();
+      const nextRuntime = detectTimerRuntimeEnvironment();
+      setNotificationRuntime(nextRuntime);
+
+      if (permission === 'granted') {
+        setNotificationMessage('Completion notifications enabled.');
+        setNotificationMessageTone('ok');
+        return;
+      }
+
+      if (permission === 'denied') {
+        setNotificationMessage('Notification permission was not granted in this browser.');
+        setNotificationMessageTone('warn');
+        return;
+      }
+
+      if (permission === 'unsupported') {
+        setNotificationMessage('Notification permission is unavailable in this browser context.');
+        setNotificationMessageTone('warn');
+        return;
+      }
+
+      setNotificationMessage('Notification permission is still waiting for your decision.');
+      setNotificationMessageTone('status');
+    } catch {
+      setNotificationRuntime(detectTimerRuntimeEnvironment());
+      setNotificationMessage('Notification permission could not be requested right now.');
+      setNotificationMessageTone('warn');
+    } finally {
+      setIsRequestingNotificationPermission(false);
+    }
+  }
+
+  const notificationActionLabel = isRequestingNotificationPermission
+    ? 'Requesting Permission...'
+    : notificationRuntime.notificationPermission === 'granted'
+      ? 'Notifications Enabled'
+      : notificationRuntime.notificationPermission === 'denied'
+        ? 'Notifications Blocked'
+        : notificationRuntime.notificationCapability === 'unavailable'
+          ? 'Notifications Unavailable'
+          : 'Enable Completion Notifications';
+
   return (
     <section className="page-card settings-screen">
       <h2 className="page-title">Settings</h2>
       <p className="page-description">Adjust default timer preferences for a steady, low-friction practice flow.</p>
 
       {saveMessage ? (
-        <div className={`status-banner ${saveMessageTone === 'ok' ? 'ok' : ''}`} role="status">
+        <div
+          className={`status-banner ${saveMessageTone === 'ok' ? 'ok' : saveMessageTone === 'warn' ? 'warn' : ''}`}
+          role="status"
+        >
           <p>{saveMessage}</p>
         </div>
       ) : null}
@@ -349,6 +430,48 @@ export default function SettingsPage() {
           </button>
           <button type="button" className="secondary" onClick={resetDefaults} disabled={areSettingsControlsDisabled}>
             Reset To App Defaults
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-panel">
+        <h3 className="section-title">Completion Notifications</h3>
+        <div className="mode-hint-card">
+          <strong>Optional completion notice</strong>
+          <p className="section-subtitle">
+            If the browser allows it, the app can post a timer completion notice while the app is not visible.
+          </p>
+        </div>
+
+        {notificationMessage ? (
+          <div
+            className={`status-banner ${notificationMessageTone === 'ok' ? 'ok' : notificationMessageTone === 'warn' ? 'warn' : ''}`}
+            role="status"
+          >
+            <p>{notificationMessage}</p>
+          </div>
+        ) : null}
+
+        <p className="section-subtitle">Capability: {getNotificationCapabilityCopy(notificationRuntime.notificationCapability)}</p>
+        <p className="section-subtitle">Permission: {getNotificationPermissionCopy(notificationRuntime.notificationPermission)}</p>
+
+        {notificationRuntime.isLikelyIPhoneSafariBrowser ? (
+          <p className="hint-text">
+            In iPhone Safari browser tabs, timer completion can still wait until Safari returns to the foreground. This
+            setting only helps when browser support and permission are both available.
+          </p>
+        ) : null}
+
+        <div className="timer-actions">
+          <button
+            type="button"
+            className={notificationRuntime.canRequestNotificationPermission ? '' : 'secondary'}
+            disabled={!notificationRuntime.canRequestNotificationPermission || isRequestingNotificationPermission}
+            onClick={() => {
+              void enableCompletionNotifications();
+            }}
+          >
+            {notificationActionLabel}
           </button>
         </div>
       </section>

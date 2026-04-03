@@ -5,6 +5,14 @@ import type { TimerSettings } from '../../types/timer';
 import { TimerProvider } from './TimerContext';
 import { useTimer } from './useTimer';
 
+const { notifyTimerCompletionMock } = vi.hoisted(() => ({
+  notifyTimerCompletionMock: vi.fn(),
+}));
+
+vi.mock('../../utils/timerCompletionNotice', () => ({
+  notifyTimerCompletion: notifyTimerCompletionMock,
+}));
+
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
@@ -57,6 +65,7 @@ function PersistenceHarness() {
       </button>
       <p data-testid="timer-elapsed">{activeSession?.elapsedSeconds ?? 'none'}</p>
       <p data-testid="timer-outcome">{lastOutcome?.status ?? 'none'}</p>
+      <p data-testid="timer-deferred-completion">{lastOutcome?.deferredCompletion ? 'yes' : 'no'}</p>
       <p data-testid="playlist-elapsed">{playlistElapsed}</p>
       <p data-testid="playlist-remaining">{playlistRemaining}</p>
     </div>
@@ -72,6 +81,7 @@ describe('TimerProvider persistence behavior', () => {
 
   afterEach(() => {
     cleanup();
+    notifyTimerCompletionMock.mockReset();
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -247,5 +257,34 @@ describe('TimerProvider persistence behavior', () => {
     });
 
     expect(screen.getByTestId('timer-outcome')).toHaveTextContent('completed');
+    expect(screen.getByTestId('timer-deferred-completion')).toHaveTextContent('yes');
+  });
+
+  it('coalesces rapid visibility and pageshow foreground events into one completion handling pass', () => {
+    render(
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    vi.setSystemTime(new Date('2026-03-25T12:10:01.000Z'));
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new PageTransitionEvent('pageshow'));
+    });
+
+    expect(screen.getByTestId('timer-outcome')).toHaveTextContent('completed');
+    expect(notifyTimerCompletionMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingTime, getActiveSessionClockSeconds } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
+import { detectTimerRuntimeEnvironment } from '../utils/timerRuntime';
 
 export default function ActiveTimerPage() {
   const {
@@ -20,6 +21,7 @@ export default function ActiveTimerPage() {
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
   const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+  const timerRuntime = useMemo(() => detectTimerRuntimeEnvironment(), []);
 
   useEffect(() => {
     if (!activeSession) {
@@ -53,6 +55,11 @@ export default function ActiveTimerPage() {
           <p className="page-description">
             You completed {formatRemainingTime(lastOutcome.completedDurationSeconds)}.
           </p>
+          {lastOutcome.deferredCompletion ? (
+            <div className="status-banner" role="status">
+              <p>This fixed timer reached its scheduled end while Safari was in the background, so completion was confirmed on return.</p>
+            </div>
+          ) : null}
           {isSessionLogSyncing ? (
             <div className="status-banner" role="status">
               <p>Saving the latest auto log to the backend history.</p>
@@ -109,6 +116,7 @@ export default function ActiveTimerPage() {
   const timerClockLabel = isOpenEndedSession ? 'Elapsed' : 'Remaining';
   const endActionLabel = isOpenEndedSession ? 'End Session' : 'End Early';
   const confirmationLabel = isOpenEndedSession ? 'End session confirmation' : 'End session early confirmation';
+  const showSafariLockGuidance = !isOpenEndedSession && timerRuntime.isLikelyIPhoneSafariBrowser;
 
   return (
     <section className="page-card active-timer">
@@ -121,10 +129,11 @@ export default function ActiveTimerPage() {
           ? 'Stay present. Pause or resume anytime, then end the session whenever it feels complete.'
           : 'Stay present. Pause or resume anytime, or end early if needed.'}
       </p>
-      {!isOpenEndedSession ? (
+      {showSafariLockGuidance ? (
         <div className="status-banner" role="status">
           <p>
-            On iPhone Safari, if the phone is locked, the completion bell may play when you return to Safari.
+            On iPhone Safari browser tabs, if the phone is locked before this timer ends, completion can wait until Safari
+            returns to the foreground.
           </p>
         </div>
       ) : null}
