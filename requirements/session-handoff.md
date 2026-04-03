@@ -3,13 +3,13 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/playlist-runtime-audio-feature-bundle-with-branching`
-- Active bundle: `playlist-runtime-audio-feature-bundle-with-branching`
-- Parent branch for the active bundle: `codex/feature-refinement`
-- Active feature branch for the bundle: `codex/playlist-runtime-audio-feature-bundle-with-branching`
-- Active bundle scope: implement playlist runtime audio playback, optional small gaps, trustworthy playlist logging, and supporting review/verification work
-- Latest completed bundle: `custom-play-runtime-feature-bundle-with-branching`
-- Latest merge outcome: merged `codex/custom-play-runtime-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
+- Current branch: `codex/feature-refinement`
+- Active bundle: none
+- Parent branch for the active bundle: none
+- Active feature branch for the bundle: none
+- Active bundle scope: none
+- Latest completed bundle: `playlist-runtime-audio-feature-bundle-with-branching`
+- Latest merge outcome: merged `codex/playlist-runtime-audio-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
   - a React + TypeScript + Vite frontend
   - a Spring Boot backend in `backend/`
@@ -86,6 +86,10 @@ This file now tracks the durable current repository state rather than a prompt-b
   - backend playlist saves now reject dangling `customPlayId` references
   - frontend verification now passes with 41 files and 266 tests
   - backend verification now passes with 39 tests
+- Playlist runtime audio bundle completion summary:
+  - added true playlist runtime playback for linked `custom play` recordings alongside timed playlist items
+  - added optional small gaps, richer active-run persistence, and per-item playlist logging
+  - reviewed, tested, and fixed the recording-backed recovery and linked-recording validation gaps before merge
 - Bundle completion summary:
   - added a dedicated runnable prerecorded `custom play` flow with persisted playback state and a dedicated active runtime screen
   - connected Home and Practice shortcuts to start or resume `custom play` runs directly
@@ -104,7 +108,6 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Add `sankalpa` edit and archive flows.
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 - Browser-level media playback behavior for linked playlist recordings is still unverified in automation; current confidence comes from unit/UI tests plus runtime copy paths.
-- Merge the verified feature branch back into `codex/feature-refinement`.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/99-merge-branch.md`
+- Exact recommended next prompt: `prompts/sankalpa-edit-archive-feature-bundle-with-branching/00-create-branch.md`
