@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `pending-wrk`
+- Current branch: `main`
 - Active bundle: none
-- Latest completed bundle: `ios-safari-real-device-qa-bundle`
-- Latest merge outcome: merged `chore/ios-safari-real-device-qa` back into `pending-wrk` on 2026-04-03 with a normal local merge commit
+- Latest completed bundle: `main-upstream-publish-bundle`
+- Latest merge outcome: merged `chore/main-upstream-publish` back into `main` on 2026-04-03 with a normal local merge commit
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -39,12 +39,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
+- Review artifact: `docs/review-main-upstream-publish.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
+- Verification report: `docs/test-main-upstream-publish.md`
 - Verification planning: `docs/ios-safari-real-device-qa-checklist.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
@@ -59,6 +61,18 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
 
 ## Latest verification
+- Main upstream publication readiness verified on 2026-04-03:
+  - `git status --short --branch`
+  - `git log --oneline origin/main..main`
+  - `git log --oneline origin/main..pending-wrk`
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 44 files and 295 tests
+  - `npm run build`
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` with 40 backend tests
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the main upstream publication bundle
+
 - Custom-play media library foundation verified on 2026-04-03:
   - `npm run typecheck`
   - `npm run lint`
