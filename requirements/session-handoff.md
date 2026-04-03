@@ -48,6 +48,9 @@ This file now tracks the durable current repository state rather than a prompt-b
   - `docs/test-custom-play-runtime-feature.md`
 - Playlist runtime audio review findings now live in:
   - `docs/review-playlist-runtime-audio-feature.md`
+- Playlist runtime audio verification artifacts now live in:
+  - `docs/execplan-playlist-runtime-audio-test.md`
+  - `docs/test-playlist-runtime-audio-feature.md`
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance
@@ -71,6 +74,11 @@ This file now tracks the durable current repository state rather than a prompt-b
   - `npm run test`
   - `npm run build`
   - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- Playlist runtime audio verification scenarios now cover:
+  - linked-recording playlist item resolution and launch failure when a linked recording is unavailable
+  - optional small-gap sequencing and remaining-time math
+  - playlist early-end logging and History continuity
+  - timed playlist persistence write-throttling regression coverage
 - Bundle completion summary:
   - added a dedicated runnable prerecorded `custom play` flow with persisted playback state and a dedicated active runtime screen
   - connected Home and Practice shortcuts to start or resume `custom play` runs directly
@@ -90,7 +98,8 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 - Review finding: recording-backed playlist run recovery currently trusts stale `endAtMs` wall-clock state instead of the persisted playback position after reload.
 - Review finding: backend playlist saves still accept dangling `customPlayId` references, so broken linked items can persist until runtime launch.
-- Run the dedicated verification pass, then fix the important findings before merging the feature branch back into `codex/feature-refinement`.
+- Browser-level media playback behavior for linked playlist recordings is still unverified in automation; current confidence comes from unit/UI tests plus runtime copy paths.
+- Fix the important review findings before merging the feature branch back into `codex/feature-refinement`.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/03-test-playlist-runtime-audio.md`
+- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/04-fix-playlist-runtime-audio-findings.md`
