@@ -1,4 +1,4 @@
-import type { PlaylistItem } from '../types/playlist';
+import type { ActivePlaylistRunItem } from '../types/playlist';
 import type { SessionLog, SessionLogStatus } from '../types/sessionLog';
 
 interface BuildPlaylistItemLogEntryParams {
@@ -6,7 +6,7 @@ interface BuildPlaylistItemLogEntryParams {
   readonly playlistName: string;
   readonly playlistRunId: string;
   readonly playlistRunStartedAt: string;
-  readonly item: PlaylistItem;
+  readonly item: ActivePlaylistRunItem;
   readonly itemPosition: number;
   readonly itemCount: number;
   readonly startedAt: string;
@@ -42,8 +42,8 @@ export function buildPlaylistItemLogEntry({
     completedDurationSeconds: Math.max(0, Math.min(intendedDurationSeconds, completedDurationSeconds)),
     status,
     source: 'auto log',
-    startSound: 'None',
-    endSound: 'None',
+    startSound: item.startSound,
+    endSound: item.endSound,
     intervalEnabled: false,
     intervalMinutes: 0,
     intervalSound: 'None',
@@ -53,5 +53,8 @@ export function buildPlaylistItemLogEntry({
     playlistRunStartedAt,
     playlistItemPosition: itemPosition,
     playlistItemCount: itemCount,
+    customPlayId: item.customPlayId,
+    customPlayName: item.customPlayName,
+    customPlayRecordingLabel: item.customPlayRecordingLabel,
   };
 }

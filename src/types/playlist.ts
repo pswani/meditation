@@ -3,14 +3,17 @@ import type { MeditationType } from './timer';
 
 export interface PlaylistItem {
   readonly id: string;
+  readonly title: string;
   readonly meditationType: MeditationType;
   readonly durationMinutes: number;
+  readonly customPlayId?: string;
 }
 
 export interface Playlist {
   readonly id: string;
   readonly name: string;
   readonly items: readonly PlaylistItem[];
+  readonly smallGapSeconds: number;
   readonly favorite: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -18,12 +21,15 @@ export interface Playlist {
 
 export interface PlaylistDraftItem {
   readonly id: string;
+  title: string;
   meditationType: MeditationType | '';
   durationMinutes: number;
+  customPlayId: string;
 }
 
 export interface PlaylistDraft {
   name: string;
+  smallGapSeconds: number;
   items: PlaylistDraftItem[];
 }
 
@@ -31,8 +37,9 @@ export interface PlaylistValidationResult {
   readonly isValid: boolean;
   readonly errors: {
     name?: string;
+    smallGapSeconds?: string;
     items?: string;
-    itemErrors: Record<string, { meditationType?: string; durationMinutes?: string }>;
+    itemErrors: Record<string, { meditationType?: string; durationMinutes?: string; customPlayId?: string }>;
   };
 }
 
@@ -41,17 +48,49 @@ export interface PlaylistSaveResult extends PlaylistValidationResult {
   readonly persistenceError?: string;
 }
 
+export interface ActivePlaylistRunItem {
+  readonly id: string;
+  readonly title: string;
+  readonly meditationType: MeditationType;
+  readonly durationMinutes: number;
+  readonly customPlayId?: string;
+  readonly customPlayName?: string;
+  readonly customPlayRecordingLabel?: string;
+  readonly mediaAssetId?: string;
+  readonly mediaLabel?: string;
+  readonly mediaFilePath?: string;
+  readonly startSound: string;
+  readonly endSound: string;
+}
+
+export interface ActivePlaylistRunItemSegment {
+  readonly phase: 'item';
+  readonly startedAt: string;
+  readonly startedAtMs: number;
+  readonly elapsedSeconds: number;
+  readonly remainingSeconds: number;
+  readonly endAtMs: number;
+}
+
+export interface ActivePlaylistRunGapSegment {
+  readonly phase: 'gap';
+  readonly startedAt: string;
+  readonly startedAtMs: number;
+  readonly remainingSeconds: number;
+  readonly endAtMs: number;
+}
+
+export type ActivePlaylistRunSegment = ActivePlaylistRunItemSegment | ActivePlaylistRunGapSegment;
+
 export interface ActivePlaylistRun {
   readonly runId: string;
   readonly playlistId: string;
   readonly playlistName: string;
   readonly runStartedAt: string;
-  readonly items: readonly PlaylistItem[];
+  readonly items: readonly ActivePlaylistRunItem[];
+  readonly smallGapSeconds: number;
   readonly currentIndex: number;
-  readonly currentItemStartedAt: string;
-  readonly currentItemStartedAtMs: number;
-  readonly currentItemRemainingSeconds: number;
-  readonly currentItemEndAtMs: number;
+  readonly currentSegment: ActivePlaylistRunSegment;
   readonly completedItems: number;
   readonly completedDurationSeconds: number;
   readonly totalIntendedDurationSeconds: number;
@@ -72,7 +111,8 @@ export type PlaylistRunStartBlockReason =
   | 'custom play run active'
   | 'playlist run active'
   | 'playlist not found'
-  | 'playlist has no items';
+  | 'playlist has no items'
+  | 'playlist item unavailable';
 
 export interface PlaylistRunStartResult {
   readonly started: boolean;

@@ -1,5 +1,6 @@
 package com.meditation.backend.playlist;
 
+import com.meditation.backend.customplay.CustomPlayRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -19,13 +20,16 @@ public class PlaylistService {
 
   private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
 
+  private final CustomPlayRepository customPlayRepository;
   private final PlaylistRepository playlistRepository;
   private final PlaylistItemRepository playlistItemRepository;
 
   public PlaylistService(
+      CustomPlayRepository customPlayRepository,
       PlaylistRepository playlistRepository,
       PlaylistItemRepository playlistItemRepository
   ) {
+    this.customPlayRepository = customPlayRepository;
     this.playlistRepository = playlistRepository;
     this.playlistItemRepository = playlistItemRepository;
   }
@@ -67,7 +71,7 @@ public class PlaylistService {
         request.id(),
         request.name().trim(),
         request.favorite(),
-        existingPlaylist == null ? 0 : existingPlaylist.getSmallGapSeconds(),
+        request.smallGapSeconds() != null ? request.smallGapSeconds() : existingPlaylist == null ? 0 : existingPlaylist.getSmallGapSeconds(),
         createdAt,
         mutationTimestamp
     ));
@@ -81,9 +85,9 @@ public class PlaylistService {
           item.id().trim(),
           index,
           item.meditationType(),
-          item.meditationType(),
+          normalizeItemTitle(item),
           item.durationMinutes(),
-          null,
+          normalizeOptionalId(item.customPlayId()),
           mutationTimestamp
       ));
     }
@@ -118,6 +122,7 @@ public class PlaylistService {
         playlist.getId(),
         playlist.getName(),
         items.stream().map(this::toItemResponse).toList(),
+        playlist.getSmallGapSeconds(),
         playlist.isFavorite(),
         playlist.getCreatedAt(),
         playlist.getUpdatedAt()
@@ -127,8 +132,10 @@ public class PlaylistService {
   private PlaylistItemResponse toItemResponse(PlaylistItemEntity item) {
     return new PlaylistItemResponse(
         item.getExternalId(),
+        item.getTitle(),
         item.getMeditationTypeCode(),
-        item.getDurationMinutes()
+        item.getDurationMinutes(),
+        item.getCustomPlayId()
     );
   }
 
@@ -157,6 +164,10 @@ public class PlaylistService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist must contain at least 1 item.");
     }
 
+    if (request.smallGapSeconds() != null && request.smallGapSeconds() < 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist small gap must be 0 or greater.");
+    }
+
     Set<String> seenItemIds = new HashSet<>();
     for (PlaylistItemUpsertRequest item : request.items()) {
       if (item.id() == null || item.id().isBlank()) {
@@ -175,7 +186,35 @@ public class PlaylistService {
       if (item.durationMinutes() <= 0) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item duration must be greater than 0.");
       }
+
+      if (item.title() != null && item.title().isBlank()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item title cannot be blank.");
+      }
+
+      if (item.customPlayId() != null && item.customPlayId().isBlank()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id cannot be blank.");
+      }
+
+      if (item.customPlayId() != null && !item.customPlayId().isBlank() && !customPlayRepository.existsById(item.customPlayId().trim())) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id is invalid.");
+      }
     }
+  }
+
+  private String normalizeItemTitle(PlaylistItemUpsertRequest item) {
+    if (item.title() == null || item.title().isBlank()) {
+      return item.meditationType();
+    }
+
+    return item.title().trim();
+  }
+
+  private String normalizeOptionalId(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    return value.trim();
   }
 
   private Instant resolveMutationTimestamp(String syncQueuedAtRaw, String requestUpdatedAt) {

@@ -7,6 +7,7 @@ public record PlaylistUpsertRequest(
     String name,
     String createdAt,
     String updatedAt,
+    Integer smallGapSeconds,
     List<PlaylistItemUpsertRequest> items,
     boolean favorite
 ) {

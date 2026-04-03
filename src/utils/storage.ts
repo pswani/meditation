@@ -218,9 +218,40 @@ function isPlaylistRunItem(value: unknown): value is ActivePlaylistRun['items'][
   const candidate = value as Record<string, unknown>;
   return (
     typeof candidate.id === 'string' &&
+    typeof candidate.title === 'string' &&
     isMeditationType(candidate.meditationType) &&
-    isFinitePositiveNumber(candidate.durationMinutes)
+    isFinitePositiveNumber(candidate.durationMinutes) &&
+    (typeof candidate.customPlayId === 'string' || typeof candidate.customPlayId === 'undefined') &&
+    (typeof candidate.customPlayName === 'string' || typeof candidate.customPlayName === 'undefined') &&
+    (typeof candidate.customPlayRecordingLabel === 'string' || typeof candidate.customPlayRecordingLabel === 'undefined') &&
+    (typeof candidate.mediaAssetId === 'string' || typeof candidate.mediaAssetId === 'undefined') &&
+    (typeof candidate.mediaLabel === 'string' || typeof candidate.mediaLabel === 'undefined') &&
+    (typeof candidate.mediaFilePath === 'string' || typeof candidate.mediaFilePath === 'undefined') &&
+    typeof candidate.startSound === 'string' &&
+    typeof candidate.endSound === 'string'
   );
+}
+
+function isActivePlaylistRunSegment(value: unknown): value is ActivePlaylistRun['currentSegment'] {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isValidIsoDate(candidate.startedAt) ||
+    !isFiniteInteger(candidate.startedAtMs) ||
+    !isFiniteNonNegativeNumber(candidate.remainingSeconds) ||
+    !isFiniteInteger(candidate.endAtMs)
+  ) {
+    return false;
+  }
+
+  if (candidate.phase === 'gap') {
+    return true;
+  }
+
+  return candidate.phase === 'item' && isFiniteNonNegativeNumber(candidate.elapsedSeconds);
 }
 
 function isActivePlaylistRun(value: unknown): value is ActivePlaylistRun {
@@ -235,11 +266,10 @@ function isActivePlaylistRun(value: unknown): value is ActivePlaylistRun {
     typeof candidate.playlistName !== 'string' ||
     !isValidIsoDate(candidate.runStartedAt) ||
     !Array.isArray(candidate.items) ||
+    !isFiniteInteger(candidate.smallGapSeconds) ||
+    candidate.smallGapSeconds < 0 ||
     !isFiniteInteger(candidate.currentIndex) ||
-    !isValidIsoDate(candidate.currentItemStartedAt) ||
-    !isFiniteInteger(candidate.currentItemStartedAtMs) ||
-    !isFiniteNonNegativeNumber(candidate.currentItemRemainingSeconds) ||
-    !isFiniteInteger(candidate.currentItemEndAtMs) ||
+    !isActivePlaylistRunSegment(candidate.currentSegment) ||
     !isFiniteNonNegativeNumber(candidate.completedItems) ||
     !isFiniteNonNegativeNumber(candidate.completedDurationSeconds) ||
     !isFiniteNonNegativeNumber(candidate.totalIntendedDurationSeconds)
@@ -327,17 +357,24 @@ function normalizePlaylistItem(value: unknown): Playlist['items'][number] | null
   const candidate = value as Record<string, unknown>;
   if (
     typeof candidate.id !== 'string' ||
+    (typeof candidate.title !== 'string' && typeof candidate.title !== 'undefined') ||
     !isMeditationType(candidate.meditationType) ||
     typeof candidate.durationMinutes !== 'number' ||
-    candidate.durationMinutes <= 0
+    candidate.durationMinutes <= 0 ||
+    (typeof candidate.customPlayId !== 'string' && typeof candidate.customPlayId !== 'undefined')
   ) {
     return null;
   }
 
   return {
     id: candidate.id,
+    title:
+      typeof candidate.title === 'string' && candidate.title.trim().length > 0
+        ? candidate.title
+        : candidate.meditationType,
     meditationType: candidate.meditationType,
     durationMinutes: candidate.durationMinutes,
+    customPlayId: typeof candidate.customPlayId === 'string' && candidate.customPlayId.length > 0 ? candidate.customPlayId : undefined,
   };
 }
 
@@ -350,6 +387,7 @@ function normalizePlaylist(value: unknown): Playlist | null {
   if (
     typeof candidate.id !== 'string' ||
     typeof candidate.name !== 'string' ||
+    (typeof candidate.smallGapSeconds !== 'number' && typeof candidate.smallGapSeconds !== 'undefined') ||
     typeof candidate.favorite !== 'boolean' ||
     typeof candidate.createdAt !== 'string' ||
     typeof candidate.updatedAt !== 'string' ||
@@ -367,6 +405,10 @@ function normalizePlaylist(value: unknown): Playlist | null {
     id: candidate.id,
     name: candidate.name,
     items: normalizedItems,
+    smallGapSeconds:
+      typeof candidate.smallGapSeconds === 'number' && Number.isInteger(candidate.smallGapSeconds) && candidate.smallGapSeconds >= 0
+        ? candidate.smallGapSeconds
+        : 0,
     favorite: candidate.favorite,
     createdAt: candidate.createdAt,
     updatedAt: candidate.updatedAt,
@@ -595,6 +637,70 @@ interface StoredActivePlaylistRunState {
   readonly isPaused: boolean;
 }
 
+function normalizeLegacyActivePlaylistRunState(value: Record<string, unknown>): StoredActivePlaylistRunState | null {
+  if (!isObjectRecord(value.activePlaylistRun) || typeof value.isPaused !== 'boolean') {
+    return null;
+  }
+
+  const candidate = value.activePlaylistRun as Record<string, unknown>;
+  if (
+    typeof candidate.runId !== 'string' ||
+    typeof candidate.playlistId !== 'string' ||
+    typeof candidate.playlistName !== 'string' ||
+    !isValidIsoDate(candidate.runStartedAt) ||
+    !Array.isArray(candidate.items) ||
+    !isFiniteInteger(candidate.currentIndex) ||
+    !isValidIsoDate(candidate.currentItemStartedAt) ||
+    !isFiniteInteger(candidate.currentItemStartedAtMs) ||
+    !isFiniteNonNegativeNumber(candidate.currentItemRemainingSeconds) ||
+    !isFiniteInteger(candidate.currentItemEndAtMs) ||
+    !isFiniteNonNegativeNumber(candidate.completedItems) ||
+    !isFiniteNonNegativeNumber(candidate.completedDurationSeconds) ||
+    !isFiniteNonNegativeNumber(candidate.totalIntendedDurationSeconds)
+  ) {
+    return null;
+  }
+
+  const items = candidate.items
+    .map(normalizePlaylistItem)
+    .filter((entry): entry is Playlist['items'][number] => entry !== null)
+    .map((item) => ({
+      ...item,
+      startSound: 'None',
+      endSound: 'None',
+    }));
+  if (items.length === 0 || candidate.currentIndex < 0 || candidate.currentIndex >= items.length) {
+    return null;
+  }
+
+  const currentItem = items[candidate.currentIndex]!;
+  const durationSeconds = Math.round(currentItem.durationMinutes * 60);
+
+  return {
+    activePlaylistRun: {
+      runId: candidate.runId,
+      playlistId: candidate.playlistId,
+      playlistName: candidate.playlistName,
+      runStartedAt: candidate.runStartedAt,
+      items,
+      smallGapSeconds: 0,
+      currentIndex: candidate.currentIndex,
+      currentSegment: {
+        phase: 'item',
+        startedAt: candidate.currentItemStartedAt,
+        startedAtMs: candidate.currentItemStartedAtMs,
+        elapsedSeconds: Math.max(0, durationSeconds - candidate.currentItemRemainingSeconds),
+        remainingSeconds: candidate.currentItemRemainingSeconds,
+        endAtMs: candidate.currentItemEndAtMs,
+      },
+      completedItems: candidate.completedItems,
+      completedDurationSeconds: candidate.completedDurationSeconds,
+      totalIntendedDurationSeconds: candidate.totalIntendedDurationSeconds,
+    },
+    isPaused: value.isPaused,
+  };
+}
+
 function normalizePersistedActiveSession(session: ActiveSession): ActiveSession {
   return {
     ...session,
@@ -735,7 +841,7 @@ export function loadActivePlaylistRunState(): StoredActivePlaylistRunState | nul
 
     const candidate = parsed as Record<string, unknown>;
     if (!isActivePlaylistRun(candidate.activePlaylistRun) || typeof candidate.isPaused !== 'boolean') {
-      return null;
+      return normalizeLegacyActivePlaylistRunState(candidate);
     }
 
     return {

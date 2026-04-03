@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingTime } from '../features/timer/time';
 import { useTimer } from '../features/timer/useTimer';
+import {
+  computePlaylistRunRemainingSeconds,
+  getPlaylistRunCurrentItem,
+  getPlaylistRunUpcomingItem,
+  isAudioBackedPlaylistItem,
+} from '../utils/playlistRuntime';
 import { formatDurationLabel } from '../utils/sessionLog';
 
 export default function PlaylistRunPage() {
@@ -13,6 +19,8 @@ export default function PlaylistRunPage() {
     endPlaylistRunEarly,
     playlistRunOutcome,
     clearPlaylistRunOutcome,
+    playlistRuntimeMessage,
+    clearPlaylistRuntimeMessage,
   } = useTimer();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
@@ -65,31 +73,70 @@ export default function PlaylistRunPage() {
     );
   }
 
-  const currentItem = activePlaylistRun.items[activePlaylistRun.currentIndex];
-  const nextItem = activePlaylistRun.items[activePlaylistRun.currentIndex + 1];
+  const currentItem = getPlaylistRunCurrentItem(activePlaylistRun);
+  const upcomingItem = getPlaylistRunUpcomingItem(activePlaylistRun);
+  const remainingPhaseSeconds = activePlaylistRun.currentSegment.remainingSeconds;
+  const remainingRunSeconds = computePlaylistRunRemainingSeconds(activePlaylistRun);
+  const inGapPhase = activePlaylistRun.currentSegment.phase === 'gap';
+  const currentItemIsRecording = currentItem ? isAudioBackedPlaylistItem(currentItem) : false;
 
   return (
     <section className="page-card playlist-run-screen">
       <p className="eyebrow">Playlist Run</p>
       <h2 className="page-title">{activePlaylistRun.playlistName}</h2>
-      <p className={`session-state ${isPlaylistRunPaused ? 'paused' : ''}`}>{isPlaylistRunPaused ? 'Paused' : 'Running'}</p>
+      <p className={`session-state ${isPlaylistRunPaused ? 'paused' : ''}`}>{isPlaylistRunPaused ? 'Paused' : inGapPhase ? 'Gap' : 'Running'}</p>
       <p className="section-subtitle">
-        Item {activePlaylistRun.currentIndex + 1} of {activePlaylistRun.items.length}
+        {inGapPhase ? 'Settling gap before the next item' : `Item ${activePlaylistRun.currentIndex + 1} of ${activePlaylistRun.items.length}`}
       </p>
-      <p className="section-subtitle">Current meditation type: {currentItem.meditationType}</p>
-      {nextItem ? (
+      {currentItem ? (
         <p className="section-subtitle">
-          Up next: {nextItem.meditationType} ({nextItem.durationMinutes} min)
+          {inGapPhase ? 'Next item' : 'Current item'}: {currentItem.title}
+          {currentItemIsRecording ? ' · linked recording' : ''}
+        </p>
+      ) : null}
+      {currentItem && !inGapPhase ? (
+        <p className="section-subtitle">Current meditation type: {currentItem.meditationType}</p>
+      ) : null}
+      {upcomingItem ? (
+        <p className="section-subtitle">
+          Up next: {upcomingItem.title} ({upcomingItem.durationMinutes} min)
         </p>
       ) : (
-        <p className="section-subtitle">Up next: Final item in this playlist run.</p>
+        <p className="section-subtitle">{inGapPhase ? 'Up next: Final item in this playlist run.' : 'Up next: Final item in this playlist run.'}</p>
       )}
-      <h3 className="timer-clock">{formatRemainingTime(activePlaylistRun.currentItemRemainingSeconds)}</h3>
+      <h3 className="timer-clock">{formatRemainingTime(remainingPhaseSeconds)}</h3>
 
+      <div className="home-summary-grid">
+        <article className="summary-card">
+          <p className="summary-label">Meditation completed</p>
+          <p className="summary-value">{formatDurationLabel(activePlaylistRun.completedDurationSeconds)}</p>
+        </article>
+        <article className="summary-card">
+          <p className="summary-label">Playlist remaining</p>
+          <p className="summary-value">{formatRemainingTime(remainingRunSeconds)}</p>
+        </article>
+      </div>
       <p className="section-subtitle">
         Completed so far: {activePlaylistRun.completedItems}/{activePlaylistRun.items.length} items ·{' '}
         {formatDurationLabel(activePlaylistRun.completedDurationSeconds)}
       </p>
+
+      <p className="page-description">
+        {inGapPhase
+          ? 'Stay settled. The next item will begin automatically after the short gap.'
+          : currentItemIsRecording
+          ? 'The linked recording continues here while playlist progress stays in sync.'
+          : 'Stay present. This timed item will move to the next segment automatically.'}
+      </p>
+
+      {playlistRuntimeMessage ? (
+        <div className="status-banner warn" role="status">
+          <p>{playlistRuntimeMessage}</p>
+          <button type="button" className="link-button" onClick={clearPlaylistRuntimeMessage}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className="timer-actions">
         {isPlaylistRunPaused ? (

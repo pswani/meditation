@@ -37,7 +37,11 @@ Single-page React application with route-based screens and feature-oriented modu
   - session logs
 - sankalpa editing/archive flows are still not implemented
 - no media upload/import workflow yet
-- playlist runtime audio playback is still unimplemented
+- playlist runtime now supports:
+  - mixed timed items and linked-recording items backed by saved `custom play` media
+  - optional small gaps between playlist items
+  - persisted active-run recovery for the current item or gap phase
+  - per-item `session log` creation for completion and early-end outcomes
 
 ## Chosen full-stack target architecture
 - keep the current React front end and route model

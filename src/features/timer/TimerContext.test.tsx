@@ -33,6 +33,9 @@ async function flushProviderHydration() {
 
 function PersistenceHarness() {
   const { setSettings, startSession, pauseSession, startPlaylistRun, pausePlaylistRun, activeSession, activePlaylistRun } = useTimer();
+  const playlistElapsed =
+    activePlaylistRun?.currentSegment.phase === 'item' ? activePlaylistRun.currentSegment.elapsedSeconds : 'none';
+  const playlistRemaining = activePlaylistRun?.currentSegment.remainingSeconds ?? 'none';
 
   return (
     <div>
@@ -52,7 +55,8 @@ function PersistenceHarness() {
         Pause Playlist Run
       </button>
       <p data-testid="timer-elapsed">{activeSession?.elapsedSeconds ?? 'none'}</p>
-      <p data-testid="playlist-remaining">{activePlaylistRun?.currentItemRemainingSeconds ?? 'none'}</p>
+      <p data-testid="playlist-elapsed">{playlistElapsed}</p>
+      <p data-testid="playlist-remaining">{playlistRemaining}</p>
     </div>
   );
 }
@@ -110,12 +114,14 @@ describe('TimerProvider persistence behavior', () => {
         {
           id: 'playlist-1',
           name: 'Morning Sequence',
+          smallGapSeconds: 0,
           favorite: false,
           createdAt: '2026-03-24T08:00:00.000Z',
           updatedAt: '2026-03-24T08:00:00.000Z',
           items: [
             {
               id: 'item-1',
+              title: 'Vipassana',
               meditationType: 'Vipassana',
               durationMinutes: 10,
             },
@@ -153,6 +159,64 @@ describe('TimerProvider persistence behavior', () => {
 
     const pausedPayload = JSON.parse(String(playlistPersistenceCalls.at(-1)?.[1]));
     expect(pausedPayload.isPaused).toBe(true);
-    expect(pausedPayload.activePlaylistRun.currentItemRemainingSeconds).toBeLessThan(600);
+    expect(pausedPayload.activePlaylistRun.currentSegment.remainingSeconds).toBeLessThan(600);
+  });
+
+  it('recovers recording-backed playlist items from stored playback progress instead of stale wall-clock time', async () => {
+    localStorage.setItem(
+      ACTIVE_PLAYLIST_RUN_STATE_KEY,
+      JSON.stringify({
+        activePlaylistRun: {
+          runId: 'playlist-1-1000',
+          playlistId: 'playlist-1',
+          playlistName: 'Morning Sequence',
+          runStartedAt: '2026-03-24T10:00:00.000Z',
+          items: [
+            {
+              id: 'item-1',
+              title: 'Recorded Vipassana',
+              meditationType: 'Vipassana',
+              durationMinutes: 20,
+              customPlayId: 'custom-play-1',
+              customPlayName: 'Recorded Vipassana',
+              customPlayRecordingLabel: 'Vipassana Sit (20 min)',
+              mediaAssetId: 'media-vipassana-sit-20',
+              mediaLabel: 'Vipassana Sit (20 min)',
+              mediaFilePath: '/media/custom-plays/vipassana-sit-20.mp3',
+              startSound: 'Temple Bell',
+              endSound: 'Gong',
+            },
+          ],
+          smallGapSeconds: 0,
+          currentIndex: 0,
+          currentSegment: {
+            phase: 'item',
+            startedAt: '2026-03-24T10:00:00.000Z',
+            startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+            elapsedSeconds: 65,
+            remainingSeconds: 1135,
+            endAtMs: Date.parse('2026-03-24T10:20:00.000Z'),
+          },
+          completedItems: 0,
+          completedDurationSeconds: 0,
+          totalIntendedDurationSeconds: 1200,
+        },
+        isPaused: false,
+      })
+    );
+    vi.setSystemTime(new Date('2026-03-24T10:10:00.000Z'));
+
+    render(
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
+    );
+
+    await flushProviderHydration();
+
+    expect(screen.getByTestId('playlist-elapsed')).toHaveTextContent('65');
+    expect(screen.getByTestId('playlist-remaining')).toHaveTextContent('1135');
   });
 });

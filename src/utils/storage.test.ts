@@ -604,12 +604,14 @@ describe('storage playlists', () => {
       {
         id: 'playlist-1',
         name: 'Morning Sequence',
+        smallGapSeconds: 0,
         favorite: true,
         createdAt: '2026-03-24T08:00:00.000Z',
         updatedAt: '2026-03-24T08:00:00.000Z',
         items: [
           {
             id: 'item-1',
+            title: 'Vipassana',
             meditationType: 'Vipassana',
             durationMinutes: 10,
           },
@@ -628,12 +630,14 @@ describe('storage playlists', () => {
         {
           id: 'playlist-valid',
           name: 'Valid Sequence',
+          smallGapSeconds: 0,
           favorite: false,
           createdAt: '2026-03-24T08:00:00.000Z',
           updatedAt: '2026-03-24T08:00:00.000Z',
           items: [
             {
               id: 'item-1',
+              title: 'Ajapa',
               meditationType: 'Ajapa',
               durationMinutes: 12,
             },
@@ -660,12 +664,14 @@ describe('storage playlists', () => {
       {
         id: 'playlist-valid',
         name: 'Valid Sequence',
+        smallGapSeconds: 0,
         favorite: false,
         createdAt: '2026-03-24T08:00:00.000Z',
         updatedAt: '2026-03-24T08:00:00.000Z',
         items: [
           {
             id: 'item-1',
+            title: 'Ajapa',
             meditationType: 'Ajapa',
             durationMinutes: 12,
           },
@@ -858,15 +864,23 @@ describe('storage active runtime state', () => {
         items: [
           {
             id: 'item-1',
+            title: 'Ajapa',
             meditationType: 'Ajapa',
             durationMinutes: 10,
+            startSound: 'None',
+            endSound: 'None',
           },
         ],
+        smallGapSeconds: 0,
         currentIndex: 0,
-        currentItemStartedAt: '2026-03-24T10:00:00.000Z',
-        currentItemStartedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
-        currentItemRemainingSeconds: 500,
-        currentItemEndAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        currentSegment: {
+          phase: 'item',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          elapsedSeconds: 100,
+          remainingSeconds: 500,
+          endAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        },
         completedItems: 0,
         completedDurationSeconds: 0,
         totalIntendedDurationSeconds: 600,
@@ -883,15 +897,23 @@ describe('storage active runtime state', () => {
         items: [
           {
             id: 'item-1',
+            title: 'Ajapa',
             meditationType: 'Ajapa',
             durationMinutes: 10,
+            startSound: 'None',
+            endSound: 'None',
           },
         ],
+        smallGapSeconds: 0,
         currentIndex: 0,
-        currentItemStartedAt: '2026-03-24T10:00:00.000Z',
-        currentItemStartedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
-        currentItemRemainingSeconds: 500,
-        currentItemEndAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        currentSegment: {
+          phase: 'item',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          startedAtMs: Date.parse('2026-03-24T10:00:00.000Z'),
+          elapsedSeconds: 100,
+          remainingSeconds: 500,
+          endAtMs: Date.parse('2026-03-24T10:10:00.000Z'),
+        },
         completedItems: 0,
         completedDurationSeconds: 0,
         totalIntendedDurationSeconds: 600,

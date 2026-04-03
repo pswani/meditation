@@ -8,14 +8,17 @@ export const PLAYLISTS_COLLECTION_ENDPOINT = buildApiPath(PLAYLISTS_COLLECTION_P
 
 interface PlaylistItemApiResponse {
   readonly id: string;
+  readonly title: string;
   readonly meditationType: Playlist['items'][number]['meditationType'];
   readonly durationMinutes: number;
+  readonly customPlayId?: string | null;
 }
 
 interface PlaylistApiResponse {
   readonly id: string;
   readonly name: string;
   readonly items: readonly PlaylistItemApiResponse[];
+  readonly smallGapSeconds: number;
   readonly favorite: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -26,10 +29,13 @@ interface PlaylistUpsertRequest {
   readonly name: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly smallGapSeconds: number;
   readonly items: readonly {
     readonly id: string;
+    readonly title: string;
     readonly meditationType: Playlist['items'][number]['meditationType'];
     readonly durationMinutes: number;
+    readonly customPlayId?: string;
   }[];
   readonly favorite: boolean;
 }
@@ -60,9 +66,11 @@ function isPlaylistItemApiResponse(value: unknown): value is PlaylistItemApiResp
   const candidate = value as Record<string, unknown>;
   return (
     typeof candidate.id === 'string' &&
+    (typeof candidate.title === 'string' || typeof candidate.title === 'undefined' || candidate.title === null) &&
     typeof candidate.meditationType === 'string' &&
     typeof candidate.durationMinutes === 'number' &&
-    candidate.durationMinutes > 0
+    candidate.durationMinutes > 0 &&
+    (typeof candidate.customPlayId === 'string' || typeof candidate.customPlayId === 'undefined' || candidate.customPlayId === null)
   );
 }
 
@@ -77,6 +85,7 @@ function isPlaylistApiResponse(value: unknown): value is PlaylistApiResponse {
     typeof candidate.name === 'string' &&
     Array.isArray(candidate.items) &&
     candidate.items.every(isPlaylistItemApiResponse) &&
+    (typeof candidate.smallGapSeconds === 'number' || typeof candidate.smallGapSeconds === 'undefined' || candidate.smallGapSeconds === null) &&
     typeof candidate.favorite === 'boolean' &&
     isValidIsoDate(candidate.createdAt) &&
     isValidIsoDate(candidate.updatedAt)
@@ -93,9 +102,15 @@ function normalizePlaylistPayload(payload: unknown): Playlist {
     name: payload.name,
     items: payload.items.map((item) => ({
       id: item.id,
+      title: item.title ?? item.meditationType,
       meditationType: item.meditationType,
       durationMinutes: item.durationMinutes,
+      customPlayId: item.customPlayId ?? undefined,
     })),
+    smallGapSeconds:
+      typeof payload.smallGapSeconds === 'number' && Number.isInteger(payload.smallGapSeconds) && payload.smallGapSeconds >= 0
+        ? payload.smallGapSeconds
+        : 0,
     favorite: payload.favorite,
     createdAt: payload.createdAt,
     updatedAt: payload.updatedAt,
@@ -116,11 +131,14 @@ function buildPlaylistUpsertRequest(playlist: Playlist): PlaylistUpsertRequest {
     name: playlist.name,
     createdAt: playlist.createdAt,
     updatedAt: playlist.updatedAt,
+    smallGapSeconds: playlist.smallGapSeconds,
     favorite: playlist.favorite,
     items: playlist.items.map((item) => ({
       id: item.id,
+      title: item.title,
       meditationType: item.meditationType,
       durationMinutes: item.durationMinutes,
+      customPlayId: item.customPlayId,
     })),
   };
 }

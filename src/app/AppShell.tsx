@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useTimer } from '../features/timer/useTimer';
+import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/playlistRuntime';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
 function buildSyncStatusMessage(isOnline: boolean, pendingCount: number, failedCount: number): string | null {
@@ -40,6 +41,22 @@ function buildCustomPlayMediaMessage(error: unknown): string {
   return 'The linked recording could not continue playing right now.';
 }
 
+function buildPlaylistMediaMessage(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Playback is waiting for a device interaction. Tap Resume to continue this playlist item.';
+  }
+
+  if (error instanceof DOMException && error.name === 'NotSupportedError') {
+    return 'The linked playlist recording could not be loaded on this device.';
+  }
+
+  if (error instanceof Error && error.message.toLowerCase().includes('network')) {
+    return 'The linked playlist recording could not be loaded because the media file is unavailable right now.';
+  }
+
+  return 'The linked playlist recording could not continue playing right now.';
+}
+
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,11 +64,15 @@ export default function AppShell() {
     activeSession,
     activeCustomPlayRun,
     activePlaylistRun,
+    isPlaylistRunPaused,
     recoveryMessage,
     clearRecoveryMessage,
     updateCustomPlayRunProgress,
     completeCustomPlayRun,
     reportCustomPlayRuntimeIssue,
+    updatePlaylistRunProgress,
+    completePlaylistRunCurrentItem,
+    reportPlaylistRuntimeIssue,
   } = useTimer();
   const {
     isOnline,
@@ -60,6 +81,14 @@ export default function AppShell() {
   const activeNavItem = getActiveNavItem(location.pathname);
   const syncStatusMessage = buildSyncStatusMessage(isOnline, nextRetryCount, failedCount);
   const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activePlaylistItem = getPlaylistRunCurrentItem(activePlaylistRun);
+  const activePlaylistAudioItem =
+    activePlaylistRun?.currentSegment.phase === 'item' &&
+    activePlaylistItem &&
+    isAudioBackedPlaylistItem(activePlaylistItem)
+      ? activePlaylistItem
+      : null;
 
   useEffect(() => {
     const audio = customPlayAudioRef.current;
@@ -112,6 +141,63 @@ export default function AppShell() {
         reportCustomPlayRuntimeIssue(buildCustomPlayMediaMessage(error));
       });
   }, [activeCustomPlayRun, reportCustomPlayRuntimeIssue]);
+
+  useEffect(() => {
+    const audio = playlistAudioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    if (!activePlaylistAudioItem || !activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
+      try {
+        audio.pause();
+      } catch {
+        // JSDOM does not implement media playback.
+      }
+      if (audio.getAttribute('src')) {
+        audio.removeAttribute('src');
+        audio.load();
+      }
+      return;
+    }
+
+    if (!activePlaylistAudioItem.mediaFilePath) {
+      reportPlaylistRuntimeIssue('The linked playlist recording is missing its media path.');
+      return;
+    }
+
+    if (audio.src !== new URL(activePlaylistAudioItem.mediaFilePath, window.location.origin).toString()) {
+      audio.src = activePlaylistAudioItem.mediaFilePath;
+      audio.load();
+    }
+
+    const desiredPosition = Math.max(0, Math.min(audio.duration || Number.MAX_SAFE_INTEGER, activePlaylistRun.currentSegment.elapsedSeconds));
+    if (Math.abs(audio.currentTime - desiredPosition) > 1) {
+      try {
+        audio.currentTime = desiredPosition;
+      } catch {
+        // Wait for metadata before seeking.
+      }
+    }
+
+    if (isPlaylistRunPaused) {
+      try {
+        audio.pause();
+      } catch {
+        // JSDOM does not implement media playback.
+      }
+      return;
+    }
+
+    void audio
+      .play()
+      .then(() => {
+        reportPlaylistRuntimeIssue(null);
+      })
+      .catch((error) => {
+        reportPlaylistRuntimeIssue(buildPlaylistMediaMessage(error));
+      });
+  }, [activePlaylistAudioItem, activePlaylistRun, isPlaylistRunPaused, reportPlaylistRuntimeIssue]);
 
   return (
     <div className="app-shell">
@@ -242,6 +328,40 @@ export default function AppShell() {
           }}
           onError={() => {
             reportCustomPlayRuntimeIssue('The linked recording could not be loaded from its media path.');
+          }}
+        />
+
+        <audio
+          ref={playlistAudioRef}
+          style={{ display: 'none' }}
+          onLoadedMetadata={() => {
+            const audio = playlistAudioRef.current;
+            if (!audio || !activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
+              return;
+            }
+
+            if (Math.abs(audio.currentTime - activePlaylistRun.currentSegment.elapsedSeconds) > 1) {
+              try {
+                audio.currentTime = activePlaylistRun.currentSegment.elapsedSeconds;
+              } catch {
+                // Ignore seek failures; playback can continue from the current loaded position.
+              }
+            }
+          }}
+          onTimeUpdate={() => {
+            const audio = playlistAudioRef.current;
+            if (!audio) {
+              return;
+            }
+
+            updatePlaylistRunProgress(audio.currentTime);
+          }}
+          onEnded={() => {
+            const audio = playlistAudioRef.current;
+            completePlaylistRunCurrentItem(audio?.duration || audio?.currentTime || 0);
+          }}
+          onError={() => {
+            reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded from its media path.');
           }}
         />
 

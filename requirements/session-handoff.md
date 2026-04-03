@@ -3,8 +3,11 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/feature-refinement`
-- No bundle is currently active.
+- Current branch: `codex/playlist-runtime-audio-feature-bundle-with-branching`
+- Active bundle: `playlist-runtime-audio-feature-bundle-with-branching`
+- Parent branch for the active bundle: `codex/feature-refinement`
+- Active feature branch for the bundle: `codex/playlist-runtime-audio-feature-bundle-with-branching`
+- Active bundle scope: implement playlist runtime audio playback, optional small gaps, trustworthy playlist logging, and supporting review/verification work
 - Latest completed bundle: `custom-play-runtime-feature-bundle-with-branching`
 - Latest merge outcome: merged `codex/custom-play-runtime-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
@@ -34,9 +37,22 @@ This file now tracks the durable current repository state rather than a prompt-b
   - the shell keeps media playback aligned with runtime state through a hidden audio element
   - completion and early end both create trustworthy `session log` entries with `custom play` metadata
   - playlist and timer starts are blocked while a `custom play` run is active
+- The playlist runtime audio slice is now implemented on this feature branch:
+  - playlists can define an optional small gap between items
+  - playlist items can stay timed-only or link to saved `custom play` recordings for true runtime playback
+  - active playlist runs persist the current item or gap phase across route changes and reloads
+  - playlist completion and early-stop behavior now create trustworthy per-item `session log` entries
+  - playlist launch fails safely when a linked recording can no longer be resolved
 - Review and verification artifacts for this slice now live in:
   - `docs/review-custom-play-runtime-feature.md`
   - `docs/test-custom-play-runtime-feature.md`
+- Playlist runtime audio review findings now live in:
+  - `docs/review-playlist-runtime-audio-feature.md`
+- Playlist runtime audio verification artifacts now live in:
+  - `docs/execplan-playlist-runtime-audio-test.md`
+  - `docs/test-playlist-runtime-audio-feature.md`
+- Playlist runtime audio fix planning now lives in:
+  - `docs/execplan-playlist-runtime-audio-fixes.md`
 - The repository documentation surface has been cleaned up to keep durable product, architecture, operations, and current-state guidance while removing stale prompt-tracking artifacts.
 - Bundle completion summary:
   - restored the documented managed local startup flow and safer H2 recovery guidance
@@ -54,6 +70,22 @@ This file now tracks the durable current repository state rather than a prompt-b
   - `npm run test`
   - `npm run build`
   - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- Playlist runtime audio implementation verification completed on 2026-04-02:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test`
+  - `npm run build`
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- Playlist runtime audio verification scenarios now cover:
+  - linked-recording playlist item resolution and launch failure when a linked recording is unavailable
+  - optional small-gap sequencing and remaining-time math
+  - playlist early-end logging and History continuity
+  - timed playlist persistence write-throttling regression coverage
+- Playlist runtime audio findings were addressed on 2026-04-02:
+  - recording-backed playlist recovery now resumes from the persisted playback position instead of stale wall-clock timing
+  - backend playlist saves now reject dangling `customPlayId` references
+  - frontend verification now passes with 41 files and 266 tests
+  - backend verification now passes with 39 tests
 - Bundle completion summary:
   - added a dedicated runnable prerecorded `custom play` flow with persisted playback state and a dedicated active runtime screen
   - connected Home and Practice shortcuts to start or resume `custom play` runs directly
@@ -69,9 +101,10 @@ This file now tracks the durable current repository state rather than a prompt-b
 
 ## Remaining known gaps
 - Finish verifying the new production-only scripts and docs end to end after the dev/preview removal.
-- Add optional small gaps between playlist items and complete playlist runtime audio behavior.
 - Add `sankalpa` edit and archive flows.
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
+- Browser-level media playback behavior for linked playlist recordings is still unverified in automation; current confidence comes from unit/UI tests plus runtime copy paths.
+- Merge the verified feature branch back into `codex/feature-refinement`.
 
 ## Recommended next slice
-- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/00-create-branch.md`
+- Exact recommended next prompt: `prompts/playlist-runtime-audio-feature-bundle-with-branching/99-merge-branch.md`

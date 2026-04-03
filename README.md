@@ -46,6 +46,11 @@ This README is intentionally grounded in the current repository contents. It exp
   - resumeable playback state
   - pause, resume, completion, and early-end controls
   - automatic `session log` entries carrying `custom play` context and linked recording metadata
+- Playlist runtime now supports:
+  - mixed timed items and linked-recording items that reuse saved `custom play` media
+  - optional small gaps between playlist items
+  - persisted active-run recovery for the current item or gap phase
+  - automatic per-item `session log` entries for completion and early-stop outcomes
 
 ## Confirmed Full-Stack Gaps
 
@@ -661,8 +666,8 @@ The backend foundation now includes schema, seeded reference data, and the live 
 
 Important current limitations:
 
-- playlist runtime audio playback is still not implemented
 - browser autoplay policies can still block timer sounds until the user starts a session with an allowed interaction
+- browser autoplay policies can still block linked playlist or `custom play` recordings until the user resumes playback from an allowed interaction
 - labels added without a playback mapping fail safely and keep the timer usable
 
 The concrete media-path conventions currently used in code are:
@@ -918,7 +923,7 @@ Current limitations:
 
 - if you omit both `--file` and `--filename`, the label is selectable but not playable yet
 - browser autoplay rules can still block playback until the session is started through an allowed user interaction
-- playlist runtime playback is still not implemented
+- playlist runs reuse these sound labels only through linked `custom play` recordings, not as standalone timer-style cues for timed playlist items
 
 ### Example: add a new sound option in the current repo
 
@@ -942,7 +947,7 @@ What happens immediately:
 What still may not happen:
 
 - the browser may still block playback if it rejects audio for the current interaction context
-- playlist runtime playback remains outside this slice
+- timed-only playlist items still do not synthesize separate timer-style cue playback from this sound-registration flow
 
 ### Add a new enum-backed option and wire it through backend, database, API, and front end
 
@@ -1356,8 +1361,7 @@ Optional build-time override when pairing the built front end with a separate ba
 
 ### Known limitations and TODOs
 
-- timer and playlist sound selections are still UI-only; real playback is not implemented
-- optional small gap support between playlist items is not implemented
+- playlist item runtime audio now works for linked `custom play` recordings, but timer-style sound cues inside playlist runs remain limited to the linked recording's own start/end sounds or silent timed items
 - custom-play media falls back to built-in sample metadata and is not yet a user-managed library
 - sankalpa editing, archival, and delete flows are still unimplemented
 

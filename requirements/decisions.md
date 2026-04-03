@@ -31,6 +31,13 @@
   - active playback state is persisted separately from timer sessions
   - linked media metadata is required before save and reused for runtime duration
   - auto-created `session log` entries carry `custom play` name and recording context for History and summaries
+- Keep playlist runs modeled as a runtime snapshot instead of reading mutable playlist records live during playback:
+  - each run stores resolved item titles, durations, and any linked `custom play` media metadata at launch time
+  - optional small gaps are stored at the playlist level and replayed as explicit runtime segments
+  - recording-backed recovery resumes from the persisted playback position instead of advancing from stale wall-clock timing after reload
+  - linked-recording items fail fast before launch if their referenced `custom play` or media asset can no longer be resolved
+  - playlist item completion and early-end logging stays per item rather than inventing a second aggregate-only history model
+- Keep backend playlist saves referentially safe for linked recordings by rejecting a `customPlayId` that does not currently resolve to a saved `custom play`.
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:
@@ -46,7 +53,7 @@
   - filesystem-backed H2 and media storage
 
 ## Current intentional limitations
-- Playlist runtime still does not implement optional small gaps between items or true playlist audio playback.
+- Playlist runs can only play recordings that come from linked `custom play` entries backed by the current seeded media catalog; there is still no broader user-managed media library.
 - `sankalpa` editing and archive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 
@@ -67,4 +74,4 @@
   - `requirements/session-handoff.md`
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Treat the next highest-value implementation slice as playlist runtime audio refinement now that the runnable `custom play` flow is in place.
+- Treat the next highest-value implementation slice as `sankalpa` edit and archive behavior now that playlist runtime audio and optional gaps are in place.
