@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `fix/ios-safari-ux-hardening`
-- Active bundle: `ios-safari-ux-hardening-feature-bundle-with-branching`
-- Latest completed bundle: `sankalpa-edit-archive-feature-bundle-with-branching`
-- Latest merge outcome: merged `codex/sankalpa-edit-archive-feature-bundle-with-branching` back into `codex/feature-refinement` on 2026-04-02 with a normal local merge commit
+- Current branch: `main`
+- Active bundle: none
+- Latest completed bundle: `ios-safari-ux-hardening-feature-bundle-with-branching`
+- Latest merge outcome: merged `fix/ios-safari-ux-hardening` back into `main` on 2026-04-03 with a normal local merge commit
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -89,4 +89,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: none while `ios-safari-ux-hardening-feature-bundle-with-branching` remains active on `fix/ios-safari-ux-hardening`.
+- Exact recommended next prompt: none currently recorded after `ios-safari-ux-hardening-feature-bundle-with-branching`; choose the next bounded slice from the roadmap after product reprioritization.
