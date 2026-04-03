@@ -32,11 +32,10 @@ done
 load_local_env
 
 if [ "$skip_build" -eq 0 ]; then
-  "$SCRIPT_DIR/build-local.sh"
+  "$SCRIPT_DIR/prod-build.sh"
 fi
 
 frontend_dist_dir=$(resolve_path "dist")
-backend_jar=$(backend_jar_path)
 deploy_root=$(deploy_dir)
 frontend_output_dir=$(deploy_frontend_dir)
 backend_output_dir=$(deploy_backend_dir)
@@ -44,16 +43,24 @@ nginx_output_dir=$(deploy_nginx_dir)
 nginx_output_path=$(deploy_nginx_config_path)
 backend_output_jar=$(deploy_backend_jar_path)
 backend_env_example=$(deploy_backend_env_example_path)
+backend_jar=$(backend_jar_path)
+
+if [ "$backend_jar" = "$backend_output_jar" ]; then
+  target_dir=$(backend_target_dir)
+  if [ -n "$target_dir" ] && [ -d "$target_dir" ]; then
+    backend_jar=$(find "$target_dir" -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | sort | tail -n 1)
+  fi
+fi
 
 if [ ! -d "$frontend_dist_dir" ]; then
   printf '%s\n' "Frontend dist directory not found at $frontend_dist_dir"
-  printf '%s\n' "Run ./scripts/build-local.sh first or omit --skip-build."
+  printf '%s\n' "Run ./scripts/prod-build.sh first or omit --skip-build."
   exit 1
 fi
 
 if [ -z "$backend_jar" ] || [ ! -f "$backend_jar" ]; then
   printf '%s\n' "Backend jar not found."
-  printf '%s\n' "Run ./scripts/build-local.sh first or set MEDITATION_BACKEND_JAR_PATH."
+  printf '%s\n' "Run ./scripts/prod-build.sh first or set MEDITATION_BACKEND_JAR_PATH."
   exit 1
 fi
 

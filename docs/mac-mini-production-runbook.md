@@ -46,7 +46,21 @@ What this does:
 
 ## Step 2: Build the production bundle
 
-Build the bundle locally in this repo:
+Recommended golden path:
+
+```bash
+./scripts/prod-release.sh --dry-run
+```
+
+Normal release path:
+
+```bash
+./scripts/prod-release.sh
+```
+
+That command packages the bundle and installs it in one pass.
+
+If you want the explicit step-by-step production flow instead, build the bundle locally in this repo with:
 
 ```bash
 ./scripts/package-deploy.sh
@@ -159,14 +173,19 @@ sudo brew services list | grep nginx
 For an update:
 
 1. Pull the latest repo changes.
-2. Rebuild the deploy bundle with `./scripts/package-deploy.sh`.
-3. Re-run:
+2. Run the golden path:
 
 ```bash
-./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain meditation.example.com --email ops@example.com
+./scripts/prod-release.sh --domain meditation.example.com --email ops@example.com
 ```
 
-This re-installs the frontend/backend files, refreshes the nginx config, and restarts the managed services.
+If you already have a fresh bundle and only want to reinstall it, re-run:
+
+```bash
+./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --skip-build --domain meditation.example.com --email ops@example.com
+```
+
+Either path re-installs the frontend/backend files, refreshes the nginx config, and restarts the managed services.
 
 If you only need a clean runtime restart without reinstalling files:
 

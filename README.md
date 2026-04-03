@@ -292,7 +292,7 @@ requirements/           Intent, roadmap, decisions, and current-state notes
 backend/                Spring Boot + H2 backend foundation
 ```
 
-## Local Development
+## Production Workflow
 
 ### Prerequisites
 
@@ -300,7 +300,7 @@ backend/                Spring Boot + H2 backend foundation
 - npm 10 or newer recommended
 - Java 21
 - Maven 3.9 or newer
-- a modern desktop browser
+- macOS admin access if you are installing onto the production Mac host
 
 ### Install
 
@@ -308,219 +308,162 @@ backend/                Spring Boot + H2 backend foundation
 npm ci
 ```
 
-Backend dependencies are resolved when you first run the backend commands.
-
-### Prepare local media root
+### Prepare media roots
 
 ```bash
 ./scripts/setup-media-root.sh
 ```
 
-This prepares both media directories used by the repo:
+This keeps the tracked frontend fallback media tree and the backend media-storage tree present under:
 
-- `public/media/custom-plays/` for frontend-only fallback checks
-- `local-data/media/custom-plays/` for backend-served media files
+- `public/media/`
+- `local-data/media/`
 
-Optional npm wrapper: `npm run media:setup`
-
-### Run the front end
+Optional npm wrapper:
 
 ```bash
-./scripts/dev-frontend.sh
+npm run media:setup
 ```
 
-The Vite dev server is configured to bind to the local network on port `5173`.
+### Golden path
 
-Open:
-
-- on the developer machine: `http://localhost:5173/`
-- on other devices on the same Wi-Fi: `http://<LAN-IP>:5173/`
-
-Notes:
-
-- the backend CORS allowlist already supports the local dev and preview ports used by this repo:
-  - `5173`
-  - `5174`
-  - `4173`
-  - `4174`
-- if you need an isolated local full-stack run without using the default frontend port, prefer `5174` over an arbitrary port so the existing backend CORS config continues to work without extra changes
-- for an isolated frontend run pointed at a non-default backend port, this prompt verified:
+Use one release command for the normal build, package, install, and restart flow:
 
 ```bash
-MEDITATION_FRONTEND_DEV_HOST=127.0.0.1 \
-MEDITATION_FRONTEND_DEV_PORT=5174 \
-VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 \
-./scripts/dev-frontend.sh
+./scripts/prod-release.sh
 ```
 
-Optional npm wrapper: `npm run dev:frontend`
+That command:
 
-### Run the back end
+1. builds the frontend and backend production artifacts
+2. assembles the deploy bundle under `local-data/deploy/`
+3. installs the app from that bundle through `./scripts/prod-macos-setup.sh install-app --skip-build`
+4. refreshes the nginx and backend service configuration on the production Mac host
 
-The repo now includes an in-repo backend module under `backend/`.
-
-The cleanest way to start it is:
+Helpful variants:
 
 ```bash
-./scripts/dev-backend.sh
+./scripts/prod-release.sh --dry-run
+./scripts/prod-release.sh --skip-build
+./scripts/prod-release.sh --domain meditation.example.com --email ops@example.com
 ```
 
-Default behavior:
+### Step-by-step production flow
 
-- the root helper auto-detects `backend/pom.xml`
-- the default backend command is `mvn -Dmaven.repo.local=../local-data/m2 spring-boot:run -Dspring-boot.run.profiles=dev`
-- the backend listens on port `8080` unless `MEDITATION_BACKEND_PORT` is set
-
-For an isolated local verification run that does not reuse the default H2 file or backend port, this prompt verified:
+Use the individual commands only when you want finer control over the same production path:
 
 ```bash
-MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 ./scripts/dev-backend.sh
+./scripts/prod-build.sh
+./scripts/package-deploy.sh
+./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
 ```
 
-You can still override the backend location or command through `.env.local` if you later split the backend into another workspace.
+What each one does:
 
-Optional npm wrapper: `npm run dev:backend`
+- `./scripts/prod-build.sh`
+  - builds the frontend production bundle
+  - runs the backend production build command
+- `./scripts/package-deploy.sh`
+  - assembles `local-data/deploy/frontend`
+  - copies the packaged backend jar into `local-data/deploy/backend`
+  - renders the nginx config into `local-data/deploy/nginx/meditation.conf`
+- `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy`
+  - installs the packaged app into the production Mac layout
+  - refreshes `launchd` and nginx configuration
+  - restarts the installed services
 
-### Run both together
+### First-time host preparation
 
-Use the app-level helper:
+Run this once on a new Mac production host:
 
 ```bash
-./scripts/dev-stack.sh
+./scripts/prod-macos-setup.sh prepare-host
 ```
 
-Behavior:
+That installs production prerequisites such as `nginx`, `certbot`, and Java 21, then creates the default production directory layout under `/opt/meditation`.
 
-- always prepares both media roots
-- starts the front end
-- starts the in-repo backend by default when `backend/pom.xml` is present
-- still supports an overridden external backend command when explicitly configured
+### Production operations
 
-Optional npm wrapper: `npm run dev:all`
-
-### Start and stop the managed local stack
-
-Use the managed stack helpers when you want background processes, PID files, health checks, and logs:
+Once the app is installed, operate it through one control surface:
 
 ```bash
-./scripts/app-start.sh
-./scripts/app-status.sh
-./scripts/app-logs.sh --tail 40
-./scripts/app-restart.sh
-./scripts/app-restart.sh --no-db
-./scripts/app-stop.sh
+./scripts/prod-macos-control.sh start
+./scripts/prod-macos-control.sh stop
+./scripts/prod-macos-control.sh restart
+./scripts/prod-macos-control.sh status
+./scripts/prod-macos-control.sh logs --lines 120 --no-follow
 ```
 
-Behavior:
+### npm wrappers
 
-- `./scripts/app-start.sh`
-  - prepares both media roots
-  - starts the backend dev server in the background
-  - waits for backend health before starting the frontend dev server
-  - writes PID files and logs under `local-data/runtime/`
-- `./scripts/app-stop.sh`
-  - stops only the managed frontend and backend processes started by `./scripts/app-start.sh`
-- `./scripts/app-restart.sh`
-  - restarts the managed frontend and backend together
-- `./scripts/app-restart.sh --no-db`
-  - restarts only the frontend so the current backend process and embedded H2 state stay up
-  - this repo uses file-backed H2 inside the backend process, so there is no separate DB daemon to restart independently
-- `./scripts/app-status.sh`
-  - shows managed PID, URL, health, and log-path details
-  - calls out when the configured frontend or backend URL is healthy because of another unmanaged process rather than the managed stack
-- `./scripts/app-logs.sh`
-  - tails the managed frontend and backend logs
-
-Optional npm wrappers:
+If you prefer npm aliases, the production-only wrappers are:
 
 ```bash
-npm run start:app
-npm run status:app
-npm run logs:app -- --tail 40
-npm run restart:app
-npm run restart:app -- --no-db
-npm run stop:app
+npm run build:prod
+npm run package:prod
+npm run prepare:prod
+npm run install:prod
+npm run release:prod
+npm run start:prod
+npm run stop:prod
+npm run restart:prod
+npm run status:prod
+npm run logs:prod
 ```
 
 ### Script reference
 
-The scripts under `scripts/` are the primary entry points for local build and server lifecycle management. The `npm run ...` commands are convenience wrappers around the same flows.
+These are the supported operational entry points in the repo now:
 
 | Script | npm wrapper | When to use it | What it does |
 | --- | --- | --- | --- |
 | `./scripts/setup-media-root.sh` | `npm run media:setup` | Media directory prep | Creates the frontend fallback and backend-served media roots for `custom-plays` and `sounds`. |
-| `./scripts/dev-frontend.sh` | `npm run dev:frontend` | Frontend-only local UI work | Ensures local media roots exist, then starts the Vite dev server on `MEDITATION_FRONTEND_DEV_HOST:MEDITATION_FRONTEND_DEV_PORT` or `0.0.0.0:5173`. |
-| `./scripts/dev-backend.sh` | `npm run dev:backend` | Backend-only local API work | Starts the configured backend dev command, which defaults to the in-repo Spring Boot app with the `dev` profile on port `8080`. |
-| `./scripts/dev-stack.sh` | `npm run dev:all` | Foreground full-stack local work | Starts the backend in the background for the current shell session, then runs the frontend dev server in the foreground. |
-| `./scripts/build-local.sh` | `npm run build:app` | Full local build verification | Builds the frontend bundle and, when a backend build command is configured, also runs backend verify/package work. |
-| `./scripts/app-start.sh` | `npm run start:app` | Managed background local stack | Starts the backend and frontend as background processes, waits for health checks, refuses to reuse URLs already served by another process, and writes PID files plus logs under `local-data/runtime/`. |
-| `./scripts/app-stop.sh` | `npm run stop:app` | Stop managed processes | Stops only the managed frontend and backend processes created by `./scripts/app-start.sh`. |
-| `./scripts/app-restart.sh` | `npm run restart:app` | Restart the managed stack | Stops and restarts the managed frontend and backend together. |
-| `./scripts/app-restart.sh --no-db` | `npm run restart:app -- --no-db` | Restart UI without cycling the backend | Restarts only the managed frontend, leaving the current backend process and embedded H2 state running. |
-| `./scripts/app-status.sh` | `npm run status:app` | Inspect managed process health | Prints managed PIDs, URLs, health checks, log paths, the current H2 file location, and notes when another unmanaged process is already responding on the configured URL. |
-| `./scripts/app-logs.sh --tail 40` | `npm run logs:app -- --tail 40` | Check managed logs | Tails the managed frontend and backend logs, with optional component selection and line count. |
-| `./scripts/preview-local.sh` | `npm run preview:app` | Production-like local preview | Rebuilds the frontend, then starts Vite preview on `MEDITATION_FRONTEND_PREVIEW_HOST:MEDITATION_FRONTEND_PREVIEW_PORT` or `0.0.0.0:4173`. |
-| `./scripts/package-deploy.sh` | none | Build a deployable prod bundle | Builds the frontend and backend, then assembles a deploy bundle with static frontend files, backend jar, nginx config, and backend env example under `local-data/deploy/` by default. |
-| `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate prod nginx config | Renders an nginx site config that serves the frontend `dist` bundle and proxies `/api` and `/media` to the Spring Boot backend. |
-| `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist` | none | Generate a backend `launchd` plist | Renders a macOS `launchd` plist for a production backend service. |
-| `./scripts/prod-backend-start.sh` | none | Start the prod backend jar | Starts the packaged Spring Boot backend jar in the background using a production-oriented runtime directory and health checks. |
-| `./scripts/prod-backend-stop.sh` | none | Stop the prod backend jar | Stops the backend process started by `./scripts/prod-backend-start.sh`. |
-| `./scripts/prod-backend-restart.sh` | none | Restart the prod backend jar | Restarts the backend process managed by the prod lifecycle scripts. |
-| `./scripts/prod-backend-status.sh` | none | Inspect prod backend health | Prints the backend PID, jar path, health URL, health state, log path, and database file location. |
-| `./scripts/prod-backend-logs.sh --tail 40` | none | Tail prod backend logs | Tails the backend log written by the prod lifecycle scripts. |
-| `./scripts/prod-macos-setup.sh prepare-host` | none | Prepare a Mac Mini production host | Installs macOS production prerequisites such as Homebrew packages and creates the default production directory layout. |
-| `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy --domain example.com --email ops@example.com` | none | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, starts nginx, and optionally runs Certbot. |
-| `./scripts/prod-macos-control.sh restart` | none | Cleanly restart the Mac Mini production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
-| `./scripts/prod-macos-control.sh logs --lines 80 --no-follow` | none | Tail or inspect Mac Mini production backend logs | Reads the installed backend production log with optional bounded output for quick inspection. |
-| `./scripts/h2-reset.sh --force` | `npm run db:h2:reset -- --force` | Reset the local development database | Clears the configured local H2 database files for the paired backend workflow after confirming no backend is still reachable on the configured local health URL and after explicit destructive confirmation. |
+| `./scripts/prod-build.sh` | `npm run build:prod` | Production build verification | Builds the frontend bundle and runs the backend production build command. |
+| `./scripts/package-deploy.sh` | `npm run package:prod` | Build a deployable production bundle | Packages static frontend files, the backend jar, nginx config, and backend env example under `local-data/deploy/`. |
+| `./scripts/prod-release.sh` | `npm run release:prod` | Golden path release | Packages the production bundle and installs it through the macOS production installer. |
+| `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate production nginx config | Renders an nginx site config that serves the frontend bundle and proxies `/api` and `/media` to the backend. |
+| `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist` | none | Generate a backend `launchd` plist | Renders a macOS `launchd` plist for the backend service. |
+| `./scripts/prod-backend-start.sh` | none | Start the packaged backend jar | Starts the backend jar in the background using the production runtime directory and health checks. |
+| `./scripts/prod-backend-stop.sh` | none | Stop the packaged backend jar | Stops the backend process started by `./scripts/prod-backend-start.sh`. |
+| `./scripts/prod-backend-restart.sh` | none | Restart the packaged backend jar | Restarts the backend process managed by the production lifecycle scripts. |
+| `./scripts/prod-backend-status.sh` | none | Inspect packaged backend health | Prints the backend PID, jar path, health URL, health state, log path, and database file location. |
+| `./scripts/prod-backend-logs.sh --tail 40` | none | Tail packaged backend logs | Tails the backend log written by the production lifecycle scripts. |
+| `./scripts/prod-macos-setup.sh prepare-host` | `npm run prepare:prod` | Prepare a Mac production host | Installs macOS production prerequisites and creates the default production directory layout. |
+| `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy` | `npm run install:prod` | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, and starts nginx. |
+| `./scripts/prod-macos-control.sh restart` | `npm run restart:prod` | Cleanly restart the Mac production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
+| `./scripts/prod-macos-control.sh logs --lines 120 --no-follow` | `npm run logs:prod` | Inspect installed production logs | Reads the installed backend production log with bounded output for quick inspection. |
+| `node ./scripts/add-sound-option.mjs --help` | `npm run sound:add -- --help` | Register a shipped timer sound | Updates the sound-option catalog and copies a file into the supported media locations. |
+| `node ./scripts/add-custom-play-media.mjs --help` | `npm run media:add:custom-play -- --help` | Register a custom-play media asset | Adds or mirrors the media file and updates the metadata registration flow used by the app. |
 
 ### Environment and configuration variables
 
-There are no required environment variables for the default local workflow.
+There are no required environment variables for the default production path.
 
-An optional example file is included:
+Optional example file:
 
 - `.env.example`
 
-Optional variables:
+Optional production variables:
 
 - `VITE_API_BASE_URL`
   - default behavior when unset: same-origin `/api`
-  - in local frontend development, Vite proxies `/api` to the backend origin
-  - use this when you are pairing the front end with a separate backend host or port, including LAN testing
-  - example LAN override: `VITE_API_BASE_URL=http://192.168.1.50:8080/api`
-- `VITE_DEV_BACKEND_ORIGIN`
-  - used only by the Vite dev proxy when `VITE_API_BASE_URL` is unset
-  - default: `http://127.0.0.1:8080`
-  - example override: `VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:9090`
-- `MEDITATION_BACKEND_DIR`
-  - optional override for backend workspace location
-- `MEDITATION_BACKEND_DEV_CMD`
-  - optional override for backend local-dev startup
+  - keep this unset for the supported nginx-backed production install so the frontend always calls the same origin
 - `MEDITATION_BACKEND_BUILD_CMD`
-  - optional override for backend build
-- `MEDITATION_RUNTIME_DIR`
-  - optional runtime directory for managed PID files and logs
+  - optional override for the backend production build command
 - `MEDITATION_DEPLOY_DIR`
   - optional deployment bundle output directory for `./scripts/package-deploy.sh`
 - `MEDITATION_BACKEND_BIND_HOST`
-  - optional backend bind address for prod backend scripts and generated nginx upstream config
-- `MEDITATION_FRONTEND_DEV_HOST`
-  - optional host override for `npm run dev:frontend` and `npm run start:app`
-- `MEDITATION_FRONTEND_DEV_PORT`
-  - optional port override for `npm run dev:frontend` and `npm run start:app`
-- `MEDITATION_FRONTEND_PREVIEW_HOST`
-  - optional host override for `npm run preview:app`
-- `MEDITATION_FRONTEND_PREVIEW_PORT`
-  - optional port override for `npm run preview:app`
+  - optional backend bind address for the production backend scripts and generated nginx upstream config
+- `MEDITATION_BACKEND_PORT`
+  - optional backend port for the packaged backend service and generated nginx upstream config
 - `MEDITATION_H2_DB_DIR`
-  - optional H2 file directory for reset/init helper flows
+  - optional H2 file directory override
 - `MEDITATION_H2_DB_NAME`
   - optional H2 database filename prefix
 - `MEDITATION_BACKEND_JAR_PATH`
-  - optional jar override for the prod backend lifecycle scripts
+  - optional jar override for the production backend lifecycle scripts
 - `MEDITATION_MEDIA_ROOT`
-  - optional frontend fallback media root override
+  - optional frontend fallback media root override for tracked static assets
 - `MEDITATION_MEDIA_STORAGE_ROOT`
   - optional backend media-storage root override
 - `MEDITATION_NGINX_SERVER_NAME`
@@ -534,143 +477,29 @@ Optional variables:
 - `MEDITATION_PROD_RUNTIME_DIR`
   - optional runtime directory override for `./scripts/prod-macos-setup.sh`
 
-Code audit results:
-
-- no `.env` file is present
-- no `process.env` frontend config exists
-- backend runtime configuration now lives in `backend/src/main/resources/application.yml`
-
 Current operational meaning:
 
-- install dependencies
-- optionally prepare both media roots:
-  - `public/media/custom-plays`
-  - `local-data/media/custom-plays`
-- start Vite
-- start Spring Boot + H2 from `backend/`
-- use backend + H2 persistence for:
-  - custom plays
-  - playlists
-  - sankalpas
-  - timer settings
-  - session logs
-- fetch custom-play media metadata from the backend when available
-- keep browser local storage as a migration/fallback cache for custom plays, playlists, sankalpas, timer settings, and session logs
-- keep the sync queue available for deferred offline writes across the implemented backend-backed domains
-- optionally override the API base with `VITE_API_BASE_URL`
-
-### App-level helper commands
-
-Use these scripts for the cleanest local workflow:
-
-```bash
-./scripts/setup-media-root.sh
-node ./scripts/add-sound-option.mjs --help
-node ./scripts/add-custom-play-media.mjs --help
-./scripts/dev-frontend.sh
-./scripts/dev-backend.sh
-./scripts/dev-stack.sh
-./scripts/build-local.sh
-./scripts/app-start.sh
-./scripts/app-stop.sh
-./scripts/app-restart.sh
-./scripts/app-status.sh
-./scripts/app-logs.sh
-./scripts/preview-local.sh
-./scripts/package-deploy.sh
-./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf
-./scripts/prod-backend-start.sh
-./scripts/prod-backend-stop.sh
-./scripts/prod-backend-restart.sh
-./scripts/prod-backend-status.sh
-./scripts/prod-backend-logs.sh
-./scripts/h2-reset.sh
-```
-
-What they do:
-
-- `./scripts/setup-media-root.sh`
-  - ensures both the frontend fallback and backend-served media roots exist for:
-    - `custom-plays`
-    - `sounds`
-- `node ./scripts/add-sound-option.mjs --help`
-  - shows the CLI for adding a timer sound label and optional playback mapping
-- `node ./scripts/add-custom-play-media.mjs --help`
-  - shows the CLI for registering a prerecorded `custom play` meditation asset
-- `./scripts/dev-frontend.sh`
-  - prepares the media root and starts the Vite dev server
-- `./scripts/dev-backend.sh`
-  - runs the in-repo backend by default and still allows explicit overrides
-  - starts the backend with the `dev` profile so local-only developer surfaces stay available without being part of the default runtime
-- `./scripts/dev-stack.sh`
-  - starts the frontend plus the backend
-- `./scripts/build-local.sh`
-  - builds the frontend and runs backend verification/package work
-- `./scripts/app-start.sh`
-  - starts the managed frontend and backend in the background and records runtime state under `local-data/runtime`
-- `./scripts/app-stop.sh`
-  - stops the managed frontend and backend
-- `./scripts/app-restart.sh`
-  - restarts the managed frontend and backend
-  - pass `--no-db` to leave the current backend process and embedded H2 state running while cycling only the frontend
-- `./scripts/app-status.sh`
-  - prints the managed process, health, and log status
-- `./scripts/app-logs.sh`
-  - tails the managed process logs
-- `./scripts/preview-local.sh`
-  - rebuilds the frontend and starts a production-like Vite preview server
-- `./scripts/package-deploy.sh`
-  - builds the frontend and backend, then assembles a deploy bundle under `local-data/deploy`
-  - writes:
-    - frontend static files
-    - backend jar
-    - nginx site config
-    - backend env example
-- `./scripts/render-nginx-config.sh --output ...`
-  - renders an nginx site config that serves the production frontend bundle with SPA fallback and proxies `/api` plus `/media` to the backend
-- `./scripts/prod-backend-start.sh`
-  - starts the packaged backend jar in the background using `local-data/runtime-production` unless `MEDITATION_RUNTIME_DIR` is overridden
-- `./scripts/prod-backend-stop.sh`
-  - stops the packaged backend jar started by the prod backend scripts
-- `./scripts/prod-backend-restart.sh`
-  - restarts the packaged backend jar
-- `./scripts/prod-backend-status.sh`
-  - prints prod backend pid, health, log, jar, and database details
-- `./scripts/prod-backend-logs.sh`
-  - tails the prod backend log
-- `./scripts/h2-reset.sh`
-  - prepares a local H2 directory and clears the configured H2 files for paired-backend workflows only when passed `--force`
-  - refuses to run while a backend is still reachable on the configured health URL so the reset stays local-only and explicit
-
-If you prefer npm aliases, the lifecycle commands above also exist in `package.json` as thin wrappers around the same scripts.
-
-Important note:
-
-- H2 reset clears the local DB files; Flyway recreates schema on the next backend startup
-- if `npm run start:app` reports `Detected applied migration not resolved locally`, the supported recovery path is:
-  - stop any backend using the configured local DB
-  - run `npm run db:h2:reset -- --force`
-  - rerun `npm run start:app`
-- this reset is for local development data only
+- build the frontend as static files
+- package the backend as one Spring Boot jar
+- serve the frontend and `/api` from the same origin through nginx
+- run the backend on loopback behind nginx
+- store H2 data and media files on disk under the configured production roots
+- keep browser local storage only as a fallback cache and migration source for supported domains
 
 ### Default ports and URLs
 
-Current repo defaults:
+Current production defaults:
 
-- front end dev server: `http://localhost:5173/` on the developer machine, `http://<LAN-IP>:5173/` from other devices
-- front end preview server: `http://localhost:4173/` on the developer machine, `http://<LAN-IP>:4173/` from other devices
-- backend server: `http://localhost:8080/`
-- backend health endpoint: `http://localhost:8080/api/health`
-- backend media catalog endpoint: `http://localhost:8080/api/media/custom-plays`
-- backend media path example: `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3`
-- backend H2 console in `dev` profile only: `http://localhost:8080/h2-console`
-- backend API base URL: `http://localhost:8080/api`
-- frontend API path during Vite dev: `/api` through the local dev proxy when `VITE_API_BASE_URL` is unset
-- frontend API path during Vite preview: use a build created with `VITE_API_BASE_URL=http://<HOST>:<PORT>/api`, or serve the built frontend and backend from the same origin in a real deployment
+- installed app root: `/opt/meditation`
+- public app URL after install: `http://<MAC-LAN-IP>/` or your configured domain
+- backend bind URL: `http://127.0.0.1:8080/`
+- backend health endpoint: `http://127.0.0.1:8080/api/health`
+- backend media catalog endpoint: `http://127.0.0.1:8080/api/media/custom-plays`
+- backend API base URL behind nginx: same-origin `/api`
 
 ### How the front end is configured to call backend APIs
 
-The frontend now uses one shared API-base helper and typed JSON client:
+The frontend uses one shared API-base helper and typed JSON client:
 
 - `src/utils/apiConfig.ts`
 - `src/utils/apiClient.ts`
@@ -678,153 +507,18 @@ The frontend now uses one shared API-base helper and typed JSON client:
 - `src/utils/sankalpaApi.ts`
 - `src/utils/mediaAssetApi.ts`
 
-Current behavior:
+Current production behavior:
 
-- stable same-origin endpoint paths resolve to `/api/...`
-- URL builders can derive fully qualified URLs from `VITE_API_BASE_URL`
-- when `VITE_API_BASE_URL` is unset, Vite dev proxies `/api` to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
+- endpoint paths resolve to same-origin `/api/...`
+- URL builders can still derive fully qualified URLs from `VITE_API_BASE_URL` when explicitly configured
 - `mediaAssetApi` performs live fetches and falls back to built-in sample metadata if the backend is unavailable
-- playlist and sankalpa persistence now use the backend, while local caches remain in place for fallback and migration
+- playlist and sankalpa persistence use the backend while local caches remain in place for fallback and migration
 
-This means:
+This keeps the runtime shape simple:
 
-- the media catalog is now exercised through the real REST boundary
-- the current custom-play UX continues working even when the backend is down
-- future backend migrations should reuse `apiClient` and the existing boundary modules instead of adding ad hoc `fetch` code inside screens
-
-## Accessing The App From Other Devices On The Same Wi-Fi
-
-### Frontend + backend foundation workflow in this repo
-
-This repository is now enough to run:
-
-- the frontend on another device on the same network
-- the backend health endpoint and media catalog on the developer machine
-
-The frontend now uses the live backend media catalog in this workflow, and the main practice, history, playlist, summary, and sankalpa flows can all talk to the local backend.
-
-Start the dev server:
-
-```bash
-npm run dev:frontend
-```
-
-Start the local production preview:
-
-```bash
-npm run preview:app
-```
-
-Ports used:
-
-- dev: `5173`
-- preview: `4173`
-
-Open on your phone or another device:
-
-- dev: `http://<LAN-IP>:5173/`
-- preview: `http://<LAN-IP>:4173/`
-
-Important note:
-
-- `localhost` on your phone means the phone itself, not your development machine
-- the preview server is network-accessible, but a connected preview build still needs an explicit `VITE_API_BASE_URL` unless the backend will be served from the same origin as the built app
-
-### How to find the developer machine LAN IP
-
-Common commands:
-
-- macOS Wi-Fi: `ipconfig getifaddr en0`
-- macOS alternate interface: `ipconfig getifaddr en1`
-- Linux: `hostname -I`
-- Windows: `ipconfig`
-
-Use the IPv4 address for the interface connected to your Wi-Fi network.
-
-### Example URLs
-
-If your machine IP is `192.168.1.50`, open:
-
-- `http://192.168.1.50:5173/` for dev
-- `http://192.168.1.50:4173/` for preview
-
-### Using the in-repo backend on the same LAN
-
-If you want other devices to reach the backend directly, start it and use the developer machine LAN IP:
-
-```bash
-npm run dev:backend
-```
-
-Then open:
-
-- `http://<LAN-IP>:8080/api/health`
-- `http://<LAN-IP>:8080/api/media/custom-plays`
-- `http://<LAN-IP>:8080/media/custom-plays/vipassana-sit-20.mp3`
-
-If you are testing against a separate backend outside this repo instead, use this pattern:
-
-1. Start the backend on the developer machine and make it listen on `0.0.0.0` or the machine LAN IP.
-2. Start the front end with a LAN-safe API base URL:
-
-```bash
-VITE_API_BASE_URL=http://<LAN-IP>:<BACKEND-PORT>/api npm run dev:frontend
-```
-
-3. Open the front end from your phone with:
-
-```text
-http://<LAN-IP>:5173/
-```
-
-### How the API base URL works
-
-- when `VITE_API_BASE_URL` is unset, API paths default to same-origin `/api`
-- in Vite dev, `/api` is proxied to `VITE_DEV_BACKEND_ORIGIN` or `http://127.0.0.1:8080`
-- when `VITE_API_BASE_URL` is set, REST boundary helpers build URLs from that configured base
-- Vite preview does not proxy `/api`, so a connected preview build must be created with `VITE_API_BASE_URL` unless the backend is deployed on the same origin path
-- root-relative static asset paths such as `/media/custom-plays/...` remain same-origin and already work with LAN access
-
-This keeps the default setup clean for local development while avoiding hardcoded `localhost` assumptions for LAN or external backend testing.
-
-### Firewall and OS caveats
-
-If another device cannot reach the app:
-
-- confirm both devices are on the same Wi-Fi network
-- confirm the dev machine firewall allows incoming connections for Node.js or the terminal app you used to start Vite
-- confirm no VPN or network isolation setting is blocking peer-to-peer LAN traffic
-- confirm the port is open on the developer machine:
-  - `5173` for dev
-  - `4173` for preview
-
-### How to test from another device
-
-For the current checked-in app:
-
-1. Start `npm run dev:frontend`.
-2. Open `http://<LAN-IP>:5173/` on the phone.
-3. Navigate through the app and create or edit data such as a custom play, playlist, manual log, or sankalpa.
-4. Confirm the UI behaves normally on the phone.
-
-Important limitation:
-
-- the app currently stores data in each device's own browser `localStorage`, so phone changes and laptop changes do not sync with each other
-
-### Troubleshooting if the phone loads the UI but API calls fail
-
-For the current checked-in app, the most likely live API failure is the custom-play media catalog call.
-
-Check these first:
-
-- `VITE_API_BASE_URL` must use the developer machine LAN IP, not `localhost`
-- the backend must listen on `0.0.0.0` or the LAN IP
-- the backend must expose the expected `/api/...` routes
-- backend CORS must allow the front-end origin:
-  - the default backend config now allows common local/LAN hosts on ports `5173`, `5174`, `4173`, and `4174`
-  - if you use different ports or tighter policies, update backend CORS config explicitly
-- opening `http://<LAN-IP>:<BACKEND-PORT>/api/...` directly from another device should reach the backend
-- browser devtools network errors such as `ERR_CONNECTION_REFUSED` or CORS failures usually point to bind-address or origin-allowlist issues
+- no frontend dev proxy
+- no preview server
+- no CORS split between UI and API in the supported deployment
 
 ## Current Persistence Model
 
@@ -845,7 +539,7 @@ These keys are defined in `src/utils/storage.ts`.
 
 ### Start with a clean local state
 
-Because there is no database yet, the clean-start workflow is clearing browser storage.
+Browser storage is no longer the system of record, but it still acts as a fallback cache and migration source for some flows. If you need to clear the frontend cache on one device, clear the `meditation.*` keys in that browser.
 
 Manual option:
 
@@ -869,7 +563,6 @@ Object.keys(localStorage)
 H2 is configured in:
 
 - `backend/src/main/resources/application.yml`
-- `backend/src/main/resources/application-dev.yml`
 
 Flyway schema lives in:
 
@@ -878,13 +571,13 @@ Flyway schema lives in:
 
 ### How to start with a clean DB
 
-Use:
+The supported production-first flow is to point H2 at the desired runtime directory through the production environment file and reinstall or restart the backend. There is no longer a repo reset helper for destructive local database wipes.
 
-```bash
-npm run db:h2:reset -- --force
-```
+If you intentionally want a clean database:
 
-Then restart the backend so Flyway can recreate the schema and seed data.
+1. Stop the installed backend service.
+2. Remove the H2 files from the configured `MEDITATION_H2_DB_DIR`.
+3. Start the backend again so Flyway recreates schema and seed data.
 
 ### Where the schema lives
 
@@ -930,7 +623,7 @@ Today the backend media API is the preferred source of truth for linked media sh
 
 ### Current model vs intended backend model
 
-Current implemented local model:
+Current implemented model:
 
 - `TimerSettings`
 - `SessionLog`
@@ -951,7 +644,7 @@ Intended backend/H2 model, inferred from the current front-end domain types and 
 - `session_log`
 - `sankalpa_goal`
 
-The backend foundation now includes schema and seeded reference/media data, but the broader domain APIs are still future work.
+The backend foundation now includes schema, seeded reference data, and the live APIs used by the current frontend.
 
 ## Media Files And Storage
 
@@ -963,17 +656,18 @@ Important current limitations:
 - browser autoplay policies can still block timer sounds until the user starts a session with an allowed interaction
 - labels added without a playback mapping fail safely and keep the timer usable
 
-The concrete media path convention currently used in code is:
+The concrete media-path conventions currently used in code are:
 
 - `src/utils/mediaAssetApi.ts` defines `CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays'`
 - backend media metadata responses use that same public path prefix
-- `src/features/timer/timerSoundCatalog.ts` resolves timer sound labels to `/media/sounds/<filename>`
+- timer sounds ship from inline-bundled frontend assets
+- backend media storage still serves `/media/**` for custom-play files and any fallback static sound copies
 
-### Exact directory structure to use for local custom play media
+### Exact directory structure to use for custom play media
 
 `npm run media:setup` prepares both directory trees below so local verification starts from the right paths.
 
-For backend-backed local development, place files under the backend media root:
+Place backend-served media files under the backend media root:
 
 ```text
 local-data/
@@ -984,7 +678,7 @@ local-data/
       tratak-focus-10.mp3
 ```
 
-For frontend-only static checks during `npm run dev:frontend`, you can also place files under:
+Tracked fallback copies may also exist under `public/` so packaged frontend builds include known static assets:
 
 ```text
 public/
@@ -994,17 +688,15 @@ public/
       ajapa-breath-15.mp3
       tratak-focus-10.mp3
     sounds/
-      temple-bell.wav
-      soft-chime.wav
-      wood-block.wav
+      temple-bell.mp3
+      gong.mp3
 ```
 
 Why there are two useful locations:
 
 - the backend now serves `/media/**` from `local-data/media` by default
-- Vite still serves `public/` files from the frontend site root during frontend-only dev
-- the repo ships tracked fallback timer sound files in `public/media/sounds/`
-- `npm run media:setup` mirrors those shipped timer sounds into `local-data/media/sounds/` for backend-served local development
+- the packaged frontend build includes `public/` assets as static files
+- `npm run media:setup` mirrors tracked sound files into `local-data/media/sounds/` for backend-served fallback parity
 
 ### How media file paths are referenced in H2
 
@@ -1034,10 +726,10 @@ That is a root-relative URL path, not an absolute filesystem path.
 Current answer:
 
 - the backend now serves `/media/**` from the configured media root
-- Vite can also serve matching files from `public/` during frontend-only dev
-- no runtime code actually fetches or plays the file today
+- the packaged frontend includes matching `public/` files as static assets
+- timer playback uses inline-bundled shipped sounds for `Temple Bell` and `Gong`
 
-The app still only displays linked media metadata today. It does not yet play the file.
+The app still does not play custom-play media files yet. Today that path remains metadata plus linking, not playback.
 
 ### Does the DB store file paths, relative paths, or URLs
 
@@ -1051,15 +743,14 @@ For the current backend-backed foundation, the registration flow is:
 
 1. Run `npm run media:add:custom-play -- --help` to review the parameters.
 2. Register the asset with `npm run media:add:custom-play -- ...`.
-3. Restart the backend so Flyway applies the generated migration.
-4. Run `npm run dev:frontend` if needed.
-5. Open `Practice` -> `Show Tools` -> `Custom Plays`.
-6. Select the entry from `Media session (optional)`.
-7. Save a custom play.
+3. Rebuild and reinstall with `./scripts/prod-release.sh`, or restart the installed backend if you only changed backend-served media metadata.
+4. Open `Practice` -> `Show Tools` -> `Custom Plays`.
+5. Select the entry from `Media session (optional)`.
+6. Save a custom play.
 
 Current fallback-only shortcut:
 
-1. Use `npm run media:add:custom-play -- ... --skip-frontend-copy` only if you explicitly do not want the public fallback copy.
+1. Use `npm run media:add:custom-play -- ... --skip-frontend-copy` only if you explicitly do not want the packaged frontend fallback copy.
 2. Otherwise let the script mirror the file into `public/media/custom-plays/` for backend-unavailable fallback behavior.
 
 What "use it" means today:
@@ -1084,10 +775,9 @@ There are two separate concepts in the current code:
    - values:
      - `None`
      - `Temple Bell`
-     - `Soft Chime`
-     - `Wood Block`
+     - `Gong`
    - used by timer setup, settings, custom plays, and session logs
-   - resolved to `/media/sounds/<filename>` during timer playback
+   - resolved at runtime through the shared timer sound catalog
    - `None` remains silent and never loads a file
 
 2. Custom play media sessions
@@ -1104,20 +794,20 @@ Current code conventions suggest:
 - filenames: lowercase kebab-case, for example `vipassana-sit-20.mp3`
 - paths: root-relative under `/media/custom-plays`
 - labels: human-readable practice-facing titles, for example `Vipassana Sit (20 min)`
-- timer sound filenames: lowercase kebab-case under `/media/sounds/`, for example `temple-bell.wav`
+- timer sound filenames: lowercase kebab-case, for example `temple-bell.mp3`
 
 ### Supported formats
 
 Current shipped entries use:
 
 - timer sounds:
-  - file extension: `.wav`
-  - path prefix: `/media/sounds/`
+  - file extension: `.mp3`
+  - bundled inline in the frontend for shipped sounds
 - custom play media:
   - file extension: `.mp3`
   - MIME type: `audio/mpeg`
 
-No runtime validation enforces a single timer-sound format yet, but the initial shipped timer sounds use `.wav` and the current custom-play media catalog uses `.mp3`.
+No runtime validation enforces a single timer-sound format yet, but the current shipped timer sounds use `.mp3` and the current custom-play media catalog also uses `.mp3`.
 
 ### Example: add a new custom play media file end to end
 
@@ -1132,11 +822,10 @@ npm run media:add:custom-play -- \
   --duration-minutes 25
 ```
 
-2. Start or restart the app:
+2. Rebuild and reinstall the production app:
 
 ```bash
-npm run dev:backend
-npm run dev:frontend
+./scripts/prod-release.sh
 ```
 
 3. In the UI, go to `Practice` -> `Show Tools` -> `Custom Plays`.
@@ -1150,11 +839,11 @@ npm run dev:frontend
 
 6. Optional backend media-path check:
 
-Open `http://localhost:8080/media/custom-plays/sahaj-evening-25.mp3` on the developer machine, or `http://<LAN-IP>:8080/media/custom-plays/sahaj-evening-25.mp3` from another device, while `npm run dev:backend` is running.
+Open `http://127.0.0.1:8080/media/custom-plays/sahaj-evening-25.mp3` on the production host, or the same path through the installed app origin if nginx is proxying `/media`.
 
 Current limitation:
 
-- this proves the file path is reachable as a static asset if you created `public/`
+- this proves the file path is reachable as a backend-served media asset
 - it still does not make the timer or playlist play the file automatically
 
 ## Configuration And Extensibility
@@ -1285,9 +974,9 @@ Current reference data is source-controlled directly in TypeScript:
 For the current implementation, validate in this order:
 
 1. Ensure the file exists under `local-data/media/custom-plays/` for backend-backed verification.
-2. If you also want frontend-only fallback checks without backend media serving, mirror the file under `public/media/custom-plays/`.
+2. If you also want the file shipped with the packaged frontend fallback assets, mirror it under `public/media/custom-plays/`.
 3. Ensure the backend media metadata includes the file path you expect.
-4. Start the app with `npm run dev:backend` and `npm run dev:frontend`.
+4. Rebuild and reinstall with `./scripts/prod-release.sh`.
 5. Confirm the item appears in the `Media session (optional)` dropdown.
 6. Save a custom play using it.
 7. Confirm the saved custom play shows the media session label.
@@ -1340,20 +1029,19 @@ There is no separate Playwright or Cypress test suite in this repo today.
 The closest coverage is:
 
 - App-level Vitest flows in `src/App.test.tsx`
-- backend API startup verification with `npm run dev:backend`
-- live frontend startup verification with `npm run dev:frontend`
+- production build verification with `./scripts/prod-build.sh`
+- packaged runtime verification through the production install flow
 
 ### Verify media files and configuration
 
 Current manual verification checklist:
 
-1. Run `npm run dev:backend`
-2. Run `npm run dev:frontend`
-3. Confirm `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3` is reachable when a matching file exists under the backend media root
-4. Open `Practice` -> `Show Tools` -> `Custom Plays`
-5. Confirm expected media entries appear in the dropdown
-6. Save a custom play and confirm the linked media label is rendered
-7. Stop the backend and confirm the UI falls back to built-in sample media with a non-blocking or explicit integration warning, depending on failure type
+1. Run `./scripts/prod-release.sh`
+2. Confirm `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` is reachable on the host when a matching file exists under the backend media root
+3. Open `Practice` -> `Show Tools` -> `Custom Plays`
+4. Confirm expected media entries appear in the dropdown
+5. Save a custom play and confirm the linked media label is rendered
+6. Confirm `Temple Bell` and `Gong` play from the packaged frontend without separate `/media/sounds/...` requests
 
 ### Verify REST APIs are reachable
 
@@ -1382,8 +1070,8 @@ What you can verify today:
   - `src/utils/playlistApi.test.ts`
   - `src/utils/sankalpaApi.test.ts`
   - `src/utils/mediaAssetApi.test.ts`
-- backend media connectivity also works through the frontend dev proxy:
-  - `curl -s http://localhost:5173/api/media/custom-plays`
+- backend media connectivity can be checked directly on the host:
+  - `curl -s http://127.0.0.1:8080/api/media/custom-plays`
 
 ### Verify front-end / back-end connectivity
 
@@ -1391,55 +1079,14 @@ You can verify backend reachability in this workspace now, plus the frontend med
 
 Current verification pattern:
 
-1. Start the backend with `npm run dev:backend`.
-2. Open `http://localhost:8080/api/health`.
-3. Open `http://localhost:8080/api/media/custom-plays`.
-4. Open `http://localhost:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
-5. Open `http://localhost:8080/media/sounds/temple-bell.wav` to confirm the backend sound path resolves.
-5. Start the front end with `npm run dev:frontend`.
-6. Open `http://localhost:5173/api/media/custom-plays` to confirm the dev proxy reaches the backend.
-7. In the app, start a short timer with `Soft Chime`, `Temple Bell`, and interval cues enabled, then confirm sounds fire once at start, each interval milestone, and session end.
-8. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
-9. Stop the backend and confirm the custom-play media picker falls back to built-in sample options with guidance.
-
-### Verified full-stack local workflow
-
-This prompt verified the following local full-stack flow end to end:
-
-1. Run `./scripts/setup-media-root.sh`.
-2. Start an isolated backend:
-
-```bash
-MEDITATION_H2_DB_NAME=meditation-prompt04 MEDITATION_BACKEND_PORT=8081 ./scripts/dev-backend.sh
-```
-
-3. Start the frontend on an already-allowed local dev port and point the proxy at that backend:
-
-```bash
-MEDITATION_FRONTEND_DEV_HOST=127.0.0.1 \
-MEDITATION_FRONTEND_DEV_PORT=5174 \
-VITE_DEV_BACKEND_ORIGIN=http://127.0.0.1:8081 \
-./scripts/dev-frontend.sh
-```
-
-4. Open `http://127.0.0.1:5174/`.
-5. Verify the main flows:
-   - `Settings` save updates backend-backed timer defaults
-   - `History` manual log save appears immediately in recent session log entries
-   - `Practice` -> `Show Tools` -> `Custom Plays` creates and applies a `custom play`
-   - `Practice` -> `Open Playlists` creates a playlist and records an ended-early playlist `session log`
-   - `Sankalpa` saves a goal and `Home` reflects the active sankalpa snapshot plus recent activity
-
-Important distinction:
-
-- Vite dev uses the `/api` proxy
-- Vite preview does not proxy `/api`
-- if you want a production-build preview connected to a backend, rebuild first with an explicit API base URL, for example:
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8081/api ./scripts/build-local.sh
-MEDITATION_FRONTEND_PREVIEW_HOST=127.0.0.1 MEDITATION_FRONTEND_PREVIEW_PORT=4174 ./scripts/preview-local.sh
-```
+1. Run `./scripts/prod-release.sh`.
+2. Open `http://127.0.0.1:8080/api/health`.
+3. Open `http://127.0.0.1:8080/api/media/custom-plays`.
+4. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
+5. Open the installed app through nginx.
+6. In the app, start a short timer with `Temple Bell` and `Gong`, then confirm sounds fire once at start, each interval milestone, and session end without a CORS dependency.
+7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+8. Save a custom play or session log and confirm it persists across a clean service restart.
 
 ## Build And Deployment
 
@@ -1461,7 +1108,7 @@ This means:
 ### Build production artifacts
 
 ```bash
-./scripts/build-local.sh
+./scripts/prod-build.sh
 ```
 
 Build output goes to:
@@ -1473,9 +1120,9 @@ backend/target/
 
 Notes:
 
-- `./scripts/build-local.sh` is the script-first build entry point for this repo
+- `./scripts/prod-build.sh` is the script-first build entry point for this repo
 - it runs the frontend production build and then executes the configured backend build command when a backend is present
-- the frontend artifact meant for deployment is the production build in `dist/`, not the Vite dev server
+- the frontend artifact meant for deployment is the production build in `dist/`
 - if you want a frontend-only build without the helper script, `npm run build` still runs `tsc -b && vite build`
 
 ### Package a production deploy bundle
@@ -1506,8 +1153,7 @@ The repo now produces:
 Important assumptions:
 
 - deploy the contents of `dist/` for the frontend production app, or use `./scripts/package-deploy.sh` and deploy `local-data/deploy/frontend/`
-- do not deploy `./scripts/dev-frontend.sh` or any Vite dev-server workflow as the frontend runtime
-- do not use `vite preview` as the production frontend server
+- do not deploy a separate frontend runtime server
 - configure SPA history fallback so routes like `/practice` and `/history` return `index.html`
 - deploy the backend jar from `backend/target/`, or use the packaged copy at `local-data/deploy/backend/meditation-backend.jar`
 - run Flyway-backed backend startup before considering the API healthy
@@ -1564,14 +1210,7 @@ This repo now includes a macOS production installer that can obtain certificates
 
 Use these steps for a production-only deployment on a Mac Mini.
 
-Do not use any of these for production runtime:
-
-- `npm run dev:*`
-- `npm run preview:*`
-- `vite`
-- `vite preview`
-
-#### LAN-only install
+#### HTTP install
 
 Use this when you do not have a public domain and only want to use the app on your local network over HTTP.
 
@@ -1593,7 +1232,7 @@ Use this when you do not have a public domain and only want to use the app on yo
 ./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
 ```
 
-4. Open the app from devices on your LAN:
+4. Open the app from devices on your network:
 
 ```text
 http://<MAC-MINI-LAN-IP>/

@@ -21,14 +21,28 @@ const validSettings: TimerSettings = {
 
 class MockAudio {
   static playCalls: string[] = [];
+  static primedSources = new Set<string>();
+  static blockedUntilPrimed = new Set<string>();
 
   preload = 'auto';
   currentTime = 0;
+  muted = false;
 
   constructor(readonly src: string) {}
 
+  pause() {}
+
   play() {
+    if (this.muted) {
+      MockAudio.primedSources.add(this.src);
+      return Promise.resolve();
+    }
+
     MockAudio.playCalls.push(this.src);
+    if (MockAudio.blockedUntilPrimed.has(this.src) && !MockAudio.primedSources.has(this.src)) {
+      return Promise.reject(new DOMException('Playback requires user activation.', 'NotAllowedError'));
+    }
+
     return mockAudioPlay(this.src);
   }
 }
@@ -122,6 +136,8 @@ describe('timer sound playback', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-27T15:00:00.000Z'));
     MockAudio.playCalls = [];
+    MockAudio.primedSources = new Set();
+    MockAudio.blockedUntilPrimed = new Set();
     mockAudioPlay.mockReset();
     mockAudioPlay.mockResolvedValue();
     vi.stubGlobal('Audio', MockAudio as unknown as typeof Audio);
@@ -253,6 +269,26 @@ describe('timer sound playback', () => {
 
     expect(screen.getByTestId('active-session')).not.toHaveTextContent('none');
     expect(screen.getByTestId('sound-message')).toHaveTextContent(/browser blocked the start sound "Temple Bell"/i);
+  });
+
+  it('primes later cues so Safari-style delayed playback can still succeed', async () => {
+    MockAudio.blockedUntilPrimed = new Set([gongPath]);
+
+    renderHarness();
+    await flushAsyncWork();
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await flushAsyncWork();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    await flushAsyncWork();
+
+    expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
+    expect(screen.getByTestId('sound-message')).toHaveTextContent('none');
+    expect(MockAudio.playCalls.filter((src) => src === gongPath)).toHaveLength(1);
   });
 
   it('maps legacy labels to the current packaged sounds during playback', async () => {

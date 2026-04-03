@@ -1772,6 +1772,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         }
 
         const nowMs = Date.now();
+        const laterCueLabels = [nextSettings.intervalSound, nextSettings.endSound].filter(
+          (label) => label !== nextSettings.startSound
+        );
+        timerSoundPlayerRef.current.prepare(laterCueLabels);
         recordLastUsedMeditation(setLastUsedMeditation, {
           kind: 'timer',
           settings: nextSettings,

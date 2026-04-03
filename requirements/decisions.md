@@ -27,10 +27,10 @@
 - Keep stale playlist-based last-used shortcuts self-healing by clearing them as soon as playlist state proves the target no longer exists.
 
 ## Operational workflow
-- Keep the managed local app workflow trustworthy:
-  - `npm run start:app` must refuse configured ports already served by unmanaged processes
-  - managed startup must fail fast when a launched process exits early
-  - `npm run db:h2:reset` remains an explicit local-development-only recovery action and requires `--force`
+- Keep the repository on one production-first operational path:
+  - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
+  - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
+  - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep the production-style deployment model centered on:
   - static frontend files served by `nginx`

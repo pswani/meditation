@@ -28,25 +28,52 @@ export type TimerSoundPlaybackResult =
 interface AudioLike {
   preload: string;
   currentTime: number;
+  muted?: boolean;
+  pause?(): void;
   play(): Promise<void>;
 }
 
 type AudioLikeConstructor = new (src: string) => AudioLike;
 
 export interface TimerSoundPlayer {
+  prepare(labels: readonly string[]): void;
   play(label: string, cue: TimerSoundCue): Promise<TimerSoundPlaybackResult>;
 }
 
 class UnsupportedAudio {
   preload = 'auto';
   currentTime = 0;
+  muted = false;
 
   constructor(src: string) {
     void src;
   }
 
+  pause(): void {}
+
   play(): Promise<void> {
     return Promise.reject(new Error('Audio playback is not supported in this environment.'));
+  }
+}
+
+function createAudioInstance(AudioConstructor: AudioLikeConstructor, filePath: string): AudioLike {
+  const audio = new AudioConstructor(filePath);
+  audio.preload = 'auto';
+  audio.currentTime = 0;
+  return audio;
+}
+
+async function unlockPreparedAudio(audio: AudioLike): Promise<void> {
+  try {
+    audio.muted = true;
+    audio.currentTime = 0;
+    await audio.play();
+    audio.pause?.();
+    audio.currentTime = 0;
+  } catch {
+    // Safari-friendly priming is opportunistic. Regular playback still gets a real attempt later.
+  } finally {
+    audio.muted = false;
   }
 }
 
@@ -82,7 +109,39 @@ export function createTimerSoundPlayer(
     ? (window.Audio as AudioLikeConstructor)
     : UnsupportedAudio
 ): TimerSoundPlayer {
+  const audioByLabel = new Map<string, AudioLike>();
+
+  function getPreparedAudio(label: string): AudioLike | null {
+    if (label === SILENT_TIMER_SOUND_LABEL) {
+      return null;
+    }
+
+    const resolvedSound = resolveTimerSound(label);
+    if (!resolvedSound) {
+      return null;
+    }
+
+    const existingAudio = audioByLabel.get(resolvedSound.label);
+    if (existingAudio) {
+      return existingAudio;
+    }
+
+    const audio = createAudioInstance(AudioConstructor, resolvedSound.filePath);
+    audioByLabel.set(resolvedSound.label, audio);
+    return audio;
+  }
+
   return {
+    prepare(labels) {
+      for (const label of labels) {
+        const audio = getPreparedAudio(label);
+        if (!audio) {
+          continue;
+        }
+
+        void unlockPreparedAudio(audio);
+      }
+    },
     async play(label, cue) {
       if (label === SILENT_TIMER_SOUND_LABEL) {
         return {
@@ -104,8 +163,7 @@ export function createTimerSoundPlayer(
       }
 
       try {
-        const audio = new AudioConstructor(resolvedSound.filePath);
-        audio.preload = 'auto';
+        const audio = getPreparedAudio(label) ?? createAudioInstance(AudioConstructor, resolvedSound.filePath);
         audio.currentTime = 0;
         await audio.play();
         return {

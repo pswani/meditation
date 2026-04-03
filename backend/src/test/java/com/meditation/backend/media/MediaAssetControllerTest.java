@@ -3,9 +3,8 @@ package com.meditation.backend.media;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,15 +37,6 @@ class MediaAssetControllerTest {
         .andExpect(jsonPath("$[0].filePath").value("/media/custom-plays/ajapa-breath-15.mp3"))
         .andExpect(jsonPath("$[1].id").value("media-tratak-focus-10"))
         .andExpect(jsonPath("$[2].id").value("media-vipassana-sit-20"));
-  }
-
-  @Test
-  void exposesLanSafeCorsHeadersForApiRoutes() throws Exception {
-    mockMvc.perform(options("/api/media/custom-plays")
-            .header("Origin", "http://192.168.1.25:5173")
-            .header("Access-Control-Request-Method", "GET"))
-        .andExpect(status().isOk())
-        .andExpect(header().string("Access-Control-Allow-Origin", "http://192.168.1.25:5173"));
   }
 
   @Test

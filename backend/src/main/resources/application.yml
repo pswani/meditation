@@ -24,12 +24,6 @@ spring:
 
 meditation:
   backend:
-    cors:
-      allowed-origin-patterns:
-        - http://*:5173
-        - http://*:5174
-        - http://*:4173
-        - http://*:4174
     media:
       root: ${MEDITATION_MEDIA_STORAGE_ROOT:../local-data/media}
       custom-play-subdirectory: custom-plays
