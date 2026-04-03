@@ -1,5 +1,6 @@
 import type { CustomPlay, CustomPlayDraft, CustomPlayValidationResult } from '../types/customPlay';
 import type { TimerSettings } from '../types/timer';
+import type { MediaAssetMetadata } from '../types/mediaAsset';
 import { findCustomPlayMediaAssetById } from './mediaAssetApi';
 import {
   DEFAULT_END_SOUND_LABEL,
@@ -25,7 +26,9 @@ export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValid
     errors.durationMinutes = 'Duration must be greater than 0.';
   }
 
-  if (draft.mediaAssetId && !findCustomPlayMediaAssetById(draft.mediaAssetId)) {
+  if (!draft.mediaAssetId) {
+    errors.mediaAssetId = 'Linked media session is required.';
+  } else if (!findCustomPlayMediaAssetById(draft.mediaAssetId)) {
     errors.mediaAssetId = 'Selected media session is no longer available.';
   }
 
@@ -33,6 +36,23 @@ export function validateCustomPlayDraft(draft: CustomPlayDraft): CustomPlayValid
     isValid: Object.keys(errors).length === 0,
     errors,
   };
+}
+
+export function resolveCustomPlayMediaAsset(mediaAssetId: string): MediaAssetMetadata | null {
+  if (!mediaAssetId) {
+    return null;
+  }
+
+  return findCustomPlayMediaAssetById(mediaAssetId);
+}
+
+export function deriveCustomPlayDurationMinutes(mediaAssetId: string): number | null {
+  const asset = resolveCustomPlayMediaAsset(mediaAssetId);
+  if (!asset) {
+    return null;
+  }
+
+  return Math.max(1, Math.round(asset.durationSeconds / 60));
 }
 
 export function createCustomPlay(draft: CustomPlayDraft, now: Date): CustomPlay {

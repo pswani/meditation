@@ -181,6 +181,12 @@ export default function HistoryPage() {
                         Playlist: {entry.playlistName} · item {entry.playlistItemPosition}/{entry.playlistItemCount}
                       </p>
                     ) : null}
+                    {entry.customPlayName ? (
+                      <p className="section-subtitle">
+                        Custom play: {entry.customPlayName}
+                        {entry.customPlayRecordingLabel ? ` · ${entry.customPlayRecordingLabel}` : ''}
+                      </p>
+                    ) : null}
 
                     <div className="history-meta">
                       <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
@@ -193,6 +199,7 @@ export default function HistoryPage() {
                       <span className={`pill ${entry.status === 'completed' ? 'ok' : 'warn'}`}>{entry.status}</span>
                       <span className={`pill source ${entry.source === 'manual log' ? 'manual' : 'auto'}`}>{entry.source}</span>
                       {entry.timerMode === 'open-ended' ? <span className="pill mode">open-ended</span> : null}
+                      {entry.customPlayName ? <span className="pill playlist">custom play</span> : null}
                       {entry.playlistName ? <span className="pill playlist">playlist</span> : null}
                     </div>
                   </div>

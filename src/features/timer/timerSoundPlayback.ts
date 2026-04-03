@@ -220,16 +220,16 @@ export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number
 
 export function buildTimerSoundPlaybackMessage(result: Extract<TimerSoundPlaybackResult, { status: 'failed' }>): string {
   if (result.reason === 'missing mapping') {
-    return `The ${result.cue} sound "${result.label}" is not mapped to a playable file yet. The timer is still running normally.`;
+    return `The ${result.cue} sound "${result.label}" is not mapped to a playable file yet. Meditation continues normally.`;
   }
 
   if (result.reason === 'audio blocked') {
-    return `The browser blocked the ${result.cue} sound "${result.label}". The timer is still running normally.`;
+    return `The browser blocked the ${result.cue} sound "${result.label}". Meditation continues normally.`;
   }
 
   if (result.reason === 'file unavailable') {
-    return `The ${result.cue} sound "${result.label}" could not be loaded from ${result.filePath ?? 'the configured media path'}. The timer is still running normally.`;
+    return `The ${result.cue} sound "${result.label}" could not be loaded from ${result.filePath ?? 'the configured media path'}. Meditation continues normally.`;
   }
 
-  return `The ${result.cue} sound "${result.label}" could not play. The timer is still running normally.`;
+  return `The ${result.cue} sound "${result.label}" could not play. Meditation continues normally.`;
 }

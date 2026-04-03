@@ -1,5 +1,6 @@
+import type { ActiveCustomPlayRun } from '../types/customPlay';
 import { describe, expect, it } from 'vitest';
-import { areSessionLogsEqual, buildAutoLogEntry, formatDurationLabel } from './sessionLog';
+import { areSessionLogsEqual, buildAutoLogEntry, buildCustomPlayLogEntry, formatDurationLabel } from './sessionLog';
 import type { ActiveSession } from '../types/timer';
 
 const activeSession: ActiveSession = {
@@ -16,6 +17,24 @@ const activeSession: ActiveSession = {
   intervalEnabled: true,
   intervalMinutes: 5,
   intervalSound: 'Soft Chime',
+};
+
+const activeCustomPlayRun: ActiveCustomPlayRun = {
+  runId: 'custom-play-1-1000',
+  customPlayId: 'custom-play-1',
+  customPlayName: 'Morning Focus',
+  meditationType: 'Ajapa',
+  recordingLabel: 'Breath emphasis',
+  mediaAssetId: 'media-ajapa-breath-15',
+  mediaLabel: 'Ajapa Breath Cycle (15 min)',
+  mediaFilePath: '/media/custom-plays/ajapa-breath-15.mp3',
+  durationSeconds: 900,
+  startedAt: '2026-03-23T10:00:00.000Z',
+  startedAtMs: Date.parse('2026-03-23T10:00:00.000Z'),
+  currentPositionSeconds: 420,
+  isPaused: false,
+  startSound: 'Temple Bell',
+  endSound: 'Gong',
 };
 
 describe('buildAutoLogEntry', () => {
@@ -95,6 +114,23 @@ describe('formatDurationLabel', () => {
 
   it('formats non-integer minute durations with one decimal', () => {
     expect(formatDurationLabel(90)).toBe('1.5 min');
+  });
+});
+
+describe('buildCustomPlayLogEntry', () => {
+  it('includes custom play metadata and caps completed duration to the media duration', () => {
+    const log = buildCustomPlayLogEntry({
+      customPlayRun: activeCustomPlayRun,
+      endedAt: new Date('2026-03-23T10:15:00.000Z'),
+      completedDurationSeconds: 1200,
+      status: 'completed',
+    });
+
+    expect(log.customPlayId).toBe('custom-play-1');
+    expect(log.customPlayName).toBe('Morning Focus');
+    expect(log.customPlayRecordingLabel).toBe('Breath emphasis');
+    expect(log.completedDurationSeconds).toBe(900);
+    expect(log.intendedDurationSeconds).toBe(900);
   });
 });
 

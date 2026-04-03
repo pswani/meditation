@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import com.meditation.backend.customplay.CustomPlayRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -27,13 +28,34 @@ class SessionLogControllerTest {
   @Autowired
   private SessionLogRepository sessionLogRepository;
 
+  @Autowired
+  private CustomPlayRepository customPlayRepository;
+
   @BeforeEach
   void clearSessionLogs() {
     sessionLogRepository.deleteAll();
+    customPlayRepository.deleteAll();
   }
 
   @Test
   void savesAndListsSessionLogsThroughTheApi() throws Exception {
+    mockMvc.perform(put("/api/custom-plays/custom-play-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "custom-play-1",
+                  "name": "Morning Focus",
+                  "meditationType": "Vipassana",
+                  "durationMinutes": 20,
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "mediaAssetId": "media-vipassana-sit-20",
+                  "recordingLabel": "Breath emphasis",
+                  "favorite": false
+                }
+                """))
+        .andExpect(status().isOk());
+
     mockMvc.perform(put("/api/session-logs/log-older")
             .contentType(APPLICATION_JSON)
             .content("""
@@ -51,13 +73,17 @@ class SessionLogControllerTest {
                   "endSound": "Temple Bell",
                   "intervalEnabled": false,
                   "intervalMinutes": 0,
-                  "intervalSound": "None"
+                  "intervalSound": "None",
+                  "customPlayId": "custom-play-1",
+                  "customPlayName": "Morning Focus",
+                  "customPlayRecordingLabel": "Breath emphasis"
                 }
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("log-older"))
         .andExpect(jsonPath("$.timerMode").value("fixed"))
-        .andExpect(jsonPath("$.intendedDurationSeconds").value(1200));
+        .andExpect(jsonPath("$.intendedDurationSeconds").value(1200))
+        .andExpect(jsonPath("$.customPlayName").value("Morning Focus"));
 
     mockMvc.perform(put("/api/session-logs/log-newer")
             .contentType(APPLICATION_JSON)
@@ -85,7 +111,8 @@ class SessionLogControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].id").value("log-newer"))
-        .andExpect(jsonPath("$[1].id").value("log-older"));
+        .andExpect(jsonPath("$[1].id").value("log-older"))
+        .andExpect(jsonPath("$[1].customPlayId").value("custom-play-1"));
   }
 
   @Test

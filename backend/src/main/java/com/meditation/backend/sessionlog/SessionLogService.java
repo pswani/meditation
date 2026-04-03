@@ -66,6 +66,9 @@ public class SessionLogService {
         null,
         null,
         null,
+        null,
+        null,
+        null,
         createdAt
     );
 
@@ -114,6 +117,9 @@ public class SessionLogService {
         request.playlistItemCount(),
         normalizeOptionalText(request.playlistRunId()),
         playlistRunStartedAt,
+        normalizeOptionalText(request.customPlayId()),
+        normalizeOptionalText(request.customPlayName()),
+        normalizeOptionalText(request.customPlayRecordingLabel()),
         existingEntity == null ? mutationTimestamp : existingEntity.getCreatedAt()
     );
 
@@ -142,6 +148,9 @@ public class SessionLogService {
         entity.getPlaylistRunStartedAt() == null ? null : entity.getPlaylistRunStartedAt().toString(),
         entity.getPlaylistItemPosition(),
         entity.getPlaylistItemCount(),
+        entity.getCustomPlayId(),
+        entity.getCustomPlayName(),
+        entity.getCustomPlayRecordingLabel(),
         entity.getCreatedAt()
     );
   }
@@ -228,6 +237,14 @@ public class SessionLogService {
     if (request.playlistItemPosition() != null && request.playlistItemCount() != null
         && request.playlistItemPosition() > request.playlistItemCount()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item position cannot exceed item count.");
+    }
+
+    if (request.customPlayId() != null && request.customPlayId().isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom play id cannot be blank.");
+    }
+
+    if (request.customPlayName() != null && request.customPlayName().isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom play name cannot be blank.");
     }
 
     parseTimestamp(request.startedAt(), "Started at must be a valid ISO timestamp.");

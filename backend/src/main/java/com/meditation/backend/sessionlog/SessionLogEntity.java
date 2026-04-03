@@ -71,6 +71,15 @@ public class SessionLogEntity {
   @Column(name = "playlist_run_started_at")
   private Instant playlistRunStartedAt;
 
+  @Column(name = "custom_play_id", length = 64)
+  private String customPlayId;
+
+  @Column(name = "custom_play_name", length = 160)
+  private String customPlayName;
+
+  @Column(name = "custom_play_recording_label", length = 500)
+  private String customPlayRecordingLabel;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -98,6 +107,9 @@ public class SessionLogEntity {
       Integer playlistItemCount,
       String playlistRunId,
       Instant playlistRunStartedAt,
+      String customPlayId,
+      String customPlayName,
+      String customPlayRecordingLabel,
       Instant createdAt
   ) {
     this.id = id;
@@ -120,6 +132,9 @@ public class SessionLogEntity {
     this.playlistItemCount = playlistItemCount;
     this.playlistRunId = playlistRunId;
     this.playlistRunStartedAt = playlistRunStartedAt;
+    this.customPlayId = customPlayId;
+    this.customPlayName = customPlayName;
+    this.customPlayRecordingLabel = customPlayRecordingLabel;
     this.createdAt = createdAt;
   }
 
@@ -201,6 +216,18 @@ public class SessionLogEntity {
 
   public Instant getPlaylistRunStartedAt() {
     return playlistRunStartedAt;
+  }
+
+  public String getCustomPlayId() {
+    return customPlayId;
+  }
+
+  public String getCustomPlayName() {
+    return customPlayName;
+  }
+
+  public String getCustomPlayRecordingLabel() {
+    return customPlayRecordingLabel;
   }
 
   public Instant getCreatedAt() {

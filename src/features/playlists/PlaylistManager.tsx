@@ -109,6 +109,7 @@ export default function PlaylistManager() {
     const reasonToMessage: Record<NonNullable<typeof result.reason>, string> = {
       'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
       'timer session active': 'Finish or end the active timer session before starting a playlist run.',
+      'custom play run active': 'Finish the active custom play before starting a playlist run.',
       'playlist run active': 'A playlist run is already active. Open it to continue before starting another.',
       'playlist not found': 'That playlist is no longer available. Refresh and try again.',
       'playlist has no items': 'Add at least one item before starting this playlist run.',

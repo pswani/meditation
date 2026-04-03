@@ -41,6 +41,11 @@ This README is intentionally grounded in the current repository contents. It exp
   - stale queued deletes for `custom play` and playlist records now return the current backend-backed record so the UI can restore it with explicit warning guidance
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound playback is now wired for session start, interval cues, and session end in the timer flow.
+- `custom play` now supports a dedicated prerecorded-session runtime with:
+  - direct start from Home and Practice
+  - resumeable playback state
+  - pause, resume, completion, and early-end controls
+  - automatic `session log` entries carrying `custom play` context and linked recording metadata
 
 ## Confirmed Full-Stack Gaps
 
@@ -67,6 +72,7 @@ The app supports a focused meditation practice workflow:
 - quick start from Home
 - start the last used meditation from Home
 - timer-based meditation sessions
+- dedicated `custom play` runtime sessions
 - optional start, end, and interval sound selections
 - custom plays
 - playlists
@@ -79,6 +85,7 @@ Implemented primary screens:
 - `/`
 - `/practice`
 - `/practice/active`
+- `/practice/custom-plays/active`
 - `/practice/playlists`
 - `/practice/playlists/active`
 - `/history`
@@ -120,6 +127,7 @@ The front end currently owns all of the following:
 
 - routing and screen composition
 - timer and playlist runtime state
+- `custom play` runtime playback state
 - form validation
 - local persistence for playlists, sankalpas, and offline-friendly fallback caches
 - sync queue persistence for offline-created or deferred backend writes
@@ -132,6 +140,7 @@ The front end currently owns all of the following:
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
 Shared app-level sync visibility now lives alongside that in `src/features/sync/`, keeping connection state and pending-sync summary work out of route components.
 The queue-backed offline behavior now keeps local edits visible immediately and flushes them back through the existing REST boundaries when the backend becomes reachable again.
+The shared shell now also hosts the persistent hidden audio element used to keep active `custom play` media playback and runtime progress aligned across route changes.
 
 ### Back-end responsibilities
 

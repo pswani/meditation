@@ -10,6 +10,7 @@ interface EvaluatePlaylistRunStartParams {
   readonly playlists: readonly Playlist[];
   readonly isPlaylistsLoading: boolean;
   readonly activeTimerSession: boolean;
+  readonly activeCustomPlayRun: boolean;
   readonly activePlaylistRun: ActivePlaylistRun | null;
 }
 
@@ -18,6 +19,7 @@ export function evaluatePlaylistRunStart({
   playlists,
   isPlaylistsLoading,
   activeTimerSession,
+  activeCustomPlayRun,
   activePlaylistRun,
 }: EvaluatePlaylistRunStartParams): PlaylistRunStartResult {
   if (isPlaylistsLoading) {
@@ -26,6 +28,10 @@ export function evaluatePlaylistRunStart({
 
   if (activeTimerSession) {
     return { started: false, reason: 'timer session active' };
+  }
+
+  if (activeCustomPlayRun) {
+    return { started: false, reason: 'custom play run active' };
   }
 
   if (activePlaylistRun) {

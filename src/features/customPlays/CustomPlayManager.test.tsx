@@ -141,12 +141,13 @@ describe('CustomPlayManager UX', () => {
 
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
-    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });
     fireEvent.change(screen.getByLabelText(/custom play start sound \(optional\)/i), { target: { value: 'Temple Bell' } });
     fireEvent.change(screen.getByLabelText(/custom play end sound \(optional\)/i), { target: { value: 'Gong' } });
     expect(screen.getByText(/choose a linked media session to remember which recording this custom play uses/i)).toBeInTheDocument();
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
-    fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-vipassana-sit-20' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
     expect(await screen.findByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
@@ -154,12 +155,12 @@ describe('CustomPlayManager UX', () => {
     expect(screen.getByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
     expect(screen.queryByText(/managed path/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /use custom play/i }));
-    expect(screen.getByText(/custom play "Morning Focus" applied to timer setup/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /apply to timer/i }));
+    expect(screen.getAllByText(/custom play "Morning Focus" applied to timer setup/i).length).toBeGreaterThan(0);
 
     const timerDurationField = screen.getAllByLabelText(/duration \(minutes\)/i)[0] as HTMLInputElement;
     const timerTypeField = screen.getAllByLabelText(/meditation type/i)[0] as HTMLSelectElement;
-    expect(timerDurationField.value).toBe('33');
+    expect(timerDurationField.value).toBe('20');
     expect(timerTypeField.value).toBe('Vipassana');
 
     fireEvent.click(screen.getByRole('button', { name: /show advanced options/i }));
@@ -205,9 +206,10 @@ describe('CustomPlayManager UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Evening Reset' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Sahaj' } });
-    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '22' } });
     await screen.findByRole('option', { name: /ajapa breath cycle \(15 min\)/i });
-    fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-ajapa-breath-15' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-ajapa-breath-15' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
     expect(await screen.findByText(/custom play "Evening Reset" saved\./i)).toBeInTheDocument();
@@ -325,9 +327,10 @@ describe('CustomPlayManager UX', () => {
 
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
-    fireEvent.change(screen.getByLabelText(/custom play duration \(minutes\)/i), { target: { value: '33' } });
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
-    fireEvent.change(screen.getByLabelText(/media session \(optional\)/i), { target: { value: 'media-vipassana-sit-20' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-vipassana-sit-20' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
 
     expect(await screen.findByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();

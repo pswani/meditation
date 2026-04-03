@@ -23,6 +23,9 @@ public record SessionLogResponse(
     String playlistRunStartedAt,
     Integer playlistItemPosition,
     Integer playlistItemCount,
+    String customPlayId,
+    String customPlayName,
+    String customPlayRecordingLabel,
     Instant createdAt
 ) {
 }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { CustomPlay } from '../types/customPlay';
+import type { ActiveCustomPlayRun, CustomPlay } from '../types/customPlay';
 import type { LastUsedMeditation } from '../types/home';
 import type { Playlist } from '../types/playlist';
 import type { SankalpaGoal } from '../types/sankalpa';
@@ -7,6 +7,7 @@ import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
 import {
   loadActivePlaylistRunState,
+  loadActiveCustomPlayRunState,
   loadActiveTimerState,
   loadCustomPlays,
   loadLastUsedMeditation,
@@ -15,6 +16,7 @@ import {
   loadSessionLogs,
   loadTimerSettings,
   saveActivePlaylistRunState,
+  saveActiveCustomPlayRunState,
   saveActiveTimerState,
   saveCustomPlays,
   saveLastUsedMeditation,
@@ -30,6 +32,7 @@ const rawCustomPlaysKey = 'meditation.customPlays.v1';
 const rawPlaylistsKey = 'meditation.playlists.v1';
 const rawSankalpasKey = 'meditation.sankalpas.v1';
 const rawActiveTimerStateKey = 'meditation.activeTimerState.v1';
+const rawActiveCustomPlayRunStateKey = 'meditation.activeCustomPlayRunState.v1';
 const rawActivePlaylistRunStateKey = 'meditation.activePlaylistRunState.v1';
 const rawLastUsedMeditationKey = 'meditation.lastUsedMeditation.v1';
 
@@ -155,6 +158,9 @@ describe('storage session logs', () => {
         intervalEnabled: false,
         intervalMinutes: 0,
         intervalSound: 'None',
+        customPlayId: 'custom-play-1',
+        customPlayName: 'Morning Focus',
+        customPlayRecordingLabel: 'Breath emphasis',
       },
     ];
 
@@ -367,6 +373,62 @@ describe('storage last used meditation', () => {
 
     expect(loadLastUsedMeditation()).toBeNull();
     expect(localStorage.getItem(rawLastUsedMeditationKey)).toBeNull();
+  });
+
+  it('persists and loads a last used custom play meditation context', () => {
+    const lastUsedMeditation: LastUsedMeditation = {
+      kind: 'custom-play',
+      customPlayId: 'custom-play-1',
+      customPlayName: 'Morning Focus',
+      usedAt: '2026-04-02T12:00:00.000Z',
+    };
+
+    saveLastUsedMeditation(lastUsedMeditation);
+
+    expect(loadLastUsedMeditation()).toEqual(lastUsedMeditation);
+  });
+});
+
+describe('storage active custom play run', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads active custom play runtime recovery state', () => {
+    const activeCustomPlayRun: ActiveCustomPlayRun = {
+      runId: 'custom-play-1-1000',
+      customPlayId: 'custom-play-1',
+      customPlayName: 'Morning Focus',
+      meditationType: 'Vipassana',
+      recordingLabel: 'Breath emphasis',
+      mediaAssetId: 'media-vipassana-sit-20',
+      mediaLabel: 'Vipassana Sit (20 min)',
+      mediaFilePath: '/media/custom-plays/vipassana-sit-20.mp3',
+      durationSeconds: 1200,
+      startedAt: '2026-04-02T12:00:00.000Z',
+      startedAtMs: Date.parse('2026-04-02T12:00:00.000Z'),
+      currentPositionSeconds: 315,
+      isPaused: true,
+      startSound: 'Temple Bell',
+      endSound: 'Gong',
+    };
+
+    saveActiveCustomPlayRunState(activeCustomPlayRun);
+
+    expect(loadActiveCustomPlayRunState()).toEqual(activeCustomPlayRun);
+  });
+
+  it('drops malformed active custom play runtime state', () => {
+    localStorage.setItem(
+      rawActiveCustomPlayRunStateKey,
+      JSON.stringify({
+        runId: 'broken',
+        customPlayId: 'custom-play-1',
+        customPlayName: 'Morning Focus',
+      })
+    );
+
+    expect(loadActiveCustomPlayRunState()).toBeNull();
   });
 });
 

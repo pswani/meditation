@@ -182,6 +182,9 @@ class SankalpaControllerTest {
         null,
         null,
         null,
+        null,
+        null,
+        null,
         endedAt.plusSeconds(60)
     );
   }

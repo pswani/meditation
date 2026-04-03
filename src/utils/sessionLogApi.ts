@@ -36,6 +36,9 @@ interface SessionLogApiResponse {
   readonly playlistRunStartedAt?: string;
   readonly playlistItemPosition?: number;
   readonly playlistItemCount?: number;
+  readonly customPlayId?: string;
+  readonly customPlayName?: string;
+  readonly customPlayRecordingLabel?: string;
 }
 
 function isValidIsoDate(value: unknown): value is string {
@@ -74,7 +77,14 @@ function isSessionLogApiResponse(value: unknown): value is SessionLogApiResponse
       candidate.playlistItemPosition === null) &&
     (typeof candidate.playlistItemCount === 'number' ||
       typeof candidate.playlistItemCount === 'undefined' ||
-      candidate.playlistItemCount === null)
+      candidate.playlistItemCount === null) &&
+    (typeof candidate.customPlayId === 'string' || typeof candidate.customPlayId === 'undefined' || candidate.customPlayId === null) &&
+    (typeof candidate.customPlayName === 'string' ||
+      typeof candidate.customPlayName === 'undefined' ||
+      candidate.customPlayName === null) &&
+    (typeof candidate.customPlayRecordingLabel === 'string' ||
+      typeof candidate.customPlayRecordingLabel === 'undefined' ||
+      candidate.customPlayRecordingLabel === null)
   );
 }
 
@@ -104,6 +114,9 @@ function normalizeSessionLogPayload(payload: unknown): SessionLog {
     playlistRunStartedAt: payload.playlistRunStartedAt ?? undefined,
     playlistItemPosition: payload.playlistItemPosition ?? undefined,
     playlistItemCount: payload.playlistItemCount ?? undefined,
+    customPlayId: payload.customPlayId ?? undefined,
+    customPlayName: payload.customPlayName ?? undefined,
+    customPlayRecordingLabel: payload.customPlayRecordingLabel ?? undefined,
   };
 }
 

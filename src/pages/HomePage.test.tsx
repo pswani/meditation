@@ -74,9 +74,13 @@ function stubHomeFetchWithTimerSettings(settings: {
 describe('HomePage UX', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     cleanup();
   });
 
@@ -90,7 +94,7 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/no session log entries yet today/i)).toBeInTheDocument();
     expect(screen.getByText(/no active sankalpa right now/i)).toBeInTheDocument();
     expect(screen.getByText(/no favorites yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/your last started timer or playlist will appear here/i)).toBeInTheDocument();
+    expect(screen.getByText(/your last started timer, custom play, or playlist will appear here/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /next actions/i })).not.toBeInTheDocument();
   });
 
@@ -261,10 +265,12 @@ describe('HomePage UX', () => {
         {
           id: 'play-1',
           name: 'Morning Focus',
-          durationMinutes: 33,
+          durationMinutes: 20,
           meditationType: 'Ajapa',
           startSound: 'Temple Bell',
           endSound: 'Gong',
+          mediaAssetId: 'media-vipassana-sit-20',
+          recordingLabel: 'Breath emphasis',
           favorite: true,
           createdAt: '2026-03-24T08:00:00.000Z',
           updatedAt: '2026-03-24T08:00:00.000Z',
@@ -288,15 +294,13 @@ describe('HomePage UX', () => {
     );
 
     await waitForHomeQuickStartReady();
-    fireEvent.click(screen.getByRole('button', { name: /^use$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
 
-    expect(await screen.findByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
-    expect(screen.getByText(/custom play "Morning Focus" applied to timer setup\./i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/duration \(minutes\)/i)).toHaveValue(33);
-    expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Ajapa');
+    expect(await screen.findByRole('heading', { name: /morning focus/i })).toBeInTheDocument();
+    expect(screen.getByText(/recording: vipassana sit \(20 min\)/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('link', { name: /^home$/i })[0]);
-    await waitForHomeQuickStartReady();
+    expect(await screen.findByRole('button', { name: /resume custom play/i })).toBeEnabled();
     expect(screen.getByText(/default timer: 20 min · vipassana/i)).toBeInTheDocument();
   });
 
@@ -565,7 +569,7 @@ describe('HomePage UX', () => {
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /start last used meditation/i })).not.toBeInTheDocument()
     );
-    expect(screen.getByText(/your last started timer or playlist will appear here/i)).toBeInTheDocument();
+    expect(screen.getByText(/your last started timer, custom play, or playlist will appear here/i)).toBeInTheDocument();
     expect(localStorage.getItem(LAST_USED_MEDITATION_KEY)).toBeNull();
   });
 

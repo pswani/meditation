@@ -12,4 +12,10 @@ export type LastUsedMeditation =
       readonly playlistId: Playlist['id'];
       readonly playlistName: Playlist['name'];
       readonly usedAt: string;
+    }
+  | {
+      readonly kind: 'custom-play';
+      readonly customPlayId: string;
+      readonly customPlayName: string;
+      readonly usedAt: string;
     };

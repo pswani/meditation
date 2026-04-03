@@ -1,4 +1,4 @@
-import type { CustomPlay } from '../types/customPlay';
+import type { ActiveCustomPlayRun, CustomPlay } from '../types/customPlay';
 import type { LastUsedMeditation } from '../types/home';
 import type { ActivePlaylistRun, Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
@@ -20,6 +20,7 @@ const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
+const ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY = 'meditation.activeCustomPlayRunState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
@@ -113,6 +114,15 @@ function isValidPlaylistFields(candidate: Record<string, unknown>): boolean {
   return true;
 }
 
+function isValidCustomPlayFields(candidate: Record<string, unknown>): boolean {
+  const hasValidCustomPlayFields =
+    (typeof candidate.customPlayId === 'string' || typeof candidate.customPlayId === 'undefined') &&
+    (typeof candidate.customPlayName === 'string' || typeof candidate.customPlayName === 'undefined') &&
+    (typeof candidate.customPlayRecordingLabel === 'string' || typeof candidate.customPlayRecordingLabel === 'undefined');
+
+  return hasValidCustomPlayFields;
+}
+
 function isSessionLog(value: unknown): value is SessionLog {
   if (!isObjectRecord(value)) {
     return false;
@@ -154,7 +164,8 @@ function isSessionLog(value: unknown): value is SessionLog {
     typeof candidate.intervalEnabled === 'boolean' &&
     isFiniteNonNegativeNumber(candidate.intervalMinutes) &&
     typeof candidate.intervalSound === 'string' &&
-    isValidPlaylistFields(candidate)
+    isValidPlaylistFields(candidate) &&
+    isValidCustomPlayFields(candidate)
   );
 }
 
@@ -246,6 +257,32 @@ function isActivePlaylistRun(value: unknown): value is ActivePlaylistRun {
   }
 
   return candidate.completedItems <= candidate.items.length;
+}
+
+function isActiveCustomPlayRun(value: unknown): value is ActiveCustomPlayRun {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.runId === 'string' &&
+    typeof candidate.customPlayId === 'string' &&
+    typeof candidate.customPlayName === 'string' &&
+    isMeditationType(candidate.meditationType) &&
+    typeof candidate.recordingLabel === 'string' &&
+    typeof candidate.mediaAssetId === 'string' &&
+    typeof candidate.mediaLabel === 'string' &&
+    typeof candidate.mediaFilePath === 'string' &&
+    isFinitePositiveNumber(candidate.durationSeconds) &&
+    isValidIsoDate(candidate.startedAt) &&
+    isFiniteInteger(candidate.startedAtMs) &&
+    isFiniteNonNegativeNumber(candidate.currentPositionSeconds) &&
+    typeof candidate.isPaused === 'boolean' &&
+    typeof candidate.startSound === 'string' &&
+    typeof candidate.endSound === 'string'
+  );
 }
 
 function normalizeCustomPlay(value: unknown): CustomPlay | null {
@@ -411,6 +448,15 @@ function normalizeLastUsedMeditation(value: unknown): LastUsedMeditation | null 
     };
   }
 
+  if (value.kind === 'custom-play' && typeof value.customPlayId === 'string' && typeof value.customPlayName === 'string') {
+    return {
+      kind: 'custom-play',
+      customPlayId: value.customPlayId,
+      customPlayName: value.customPlayName,
+      usedAt: value.usedAt,
+    };
+  }
+
   return null;
 }
 
@@ -453,6 +499,9 @@ export function loadSessionLogs(): SessionLog[] {
             startSound: normalizeTimerSoundLabel(entry.startSound, DEFAULT_START_SOUND_LABEL),
             endSound: normalizeTimerSoundLabel(entry.endSound, DEFAULT_END_SOUND_LABEL),
             intervalSound: normalizeTimerSoundLabel(entry.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
+            customPlayId: entry.customPlayId ?? undefined,
+            customPlayName: entry.customPlayName ?? undefined,
+            customPlayRecordingLabel: entry.customPlayRecordingLabel ?? undefined,
           }))
       : [];
   } catch {
@@ -647,6 +696,29 @@ export function saveActiveTimerState(activeSession: ActiveSession | null): void 
     ACTIVE_TIMER_STATE_KEY,
     JSON.stringify(normalizePersistedActiveSession(activeSession))
   );
+}
+
+export function loadActiveCustomPlayRunState(): ActiveCustomPlayRun | null {
+  const raw = localStorage.getItem(ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isActiveCustomPlayRun(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveActiveCustomPlayRunState(activeCustomPlayRun: ActiveCustomPlayRun | null): void {
+  if (!activeCustomPlayRun) {
+    localStorage.removeItem(ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY);
+    return;
+  }
+
+  localStorage.setItem(ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY, JSON.stringify(activeCustomPlayRun));
 }
 
 export function loadActivePlaylistRunState(): StoredActivePlaylistRunState | null {

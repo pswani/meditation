@@ -18,6 +18,7 @@ function playlistStartBlockMessage(result: PlaylistRunStartResult): string {
   const reasonToMessage: Record<NonNullable<PlaylistRunStartResult['reason']>, string> = {
     'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
     'timer session active': 'Finish or end the active timer session before starting a playlist run.',
+    'custom play run active': 'Finish the active custom play before starting a playlist run.',
     'playlist run active': 'A playlist run is already active. Open it to continue.',
     'playlist not found': 'That playlist is no longer available.',
     'playlist has no items': 'Add at least one item before starting this playlist run.',
@@ -31,12 +32,29 @@ function describeLastUsedMeditation(lastUsedMeditation: LastUsedMeditation): str
     return `Playlist · ${lastUsedMeditation.playlistName}`;
   }
 
+  if (lastUsedMeditation.kind === 'custom-play') {
+    return `Custom play · ${lastUsedMeditation.customPlayName}`;
+  }
+
   const durationLabel =
     lastUsedMeditation.settings.timerMode === 'open-ended'
       ? 'Open-ended'
       : `${lastUsedMeditation.settings.durationMinutes ?? lastUsedMeditation.settings.lastFixedDurationMinutes} min`;
 
   return `Timer · ${durationLabel} · ${lastUsedMeditation.settings.meditationType}`;
+}
+
+function customPlayStartBlockMessage(reason?: string): string {
+  const reasonToMessage: Record<string, string> = {
+    'custom plays loading': 'Custom plays are still loading from the backend. Wait a moment and try again.',
+    'timer session active': 'Finish or end the active timer session before starting a custom play.',
+    'playlist run active': 'Finish the active playlist run before starting a custom play.',
+    'custom play run active': 'A custom play is already active. Open it to continue.',
+    'custom play not found': 'That custom play is no longer available.',
+    'media unavailable': 'The linked media session is unavailable right now. Reconnect the custom play and try again.',
+  };
+
+  return reason ? reasonToMessage[reason] ?? 'Unable to start that custom play right now.' : 'Unable to start that custom play right now.';
 }
 
 export default function HomePage() {
@@ -48,8 +66,10 @@ export default function HomePage() {
     playlists,
     lastUsedMeditation,
     activeSession,
+    activeCustomPlayRun,
     activePlaylistRun,
     startSession,
+    startCustomPlayRun,
     startPlaylistRun,
     isSettingsLoading,
     isPlaylistsLoading,
@@ -77,6 +97,11 @@ export default function HomePage() {
       return;
     }
 
+    if (activeCustomPlayRun) {
+      navigate('/practice/custom-plays/active');
+      return;
+    }
+
     const started = startSession();
     if (started) {
       navigate('/practice/active');
@@ -93,11 +118,23 @@ export default function HomePage() {
     });
   }
 
-  function applyCustomPlayShortcut(play: CustomPlay) {
+  function startFavoriteCustomPlay(play: CustomPlay) {
     setFeedbackMessage(null);
+
+    if (activeCustomPlayRun?.customPlayId === play.id) {
+      navigate('/practice/custom-plays/active');
+      return;
+    }
+
+    const result = startCustomPlayRun(play.id);
+    if (result.started) {
+      navigate('/practice/custom-plays/active');
+      return;
+    }
+
     navigate('/practice', {
       state: {
-        entryMessage: `Custom play "${play.name}" applied to timer setup.`,
+        entryMessage: customPlayStartBlockMessage(result.reason),
         timerPreset: applyCustomPlayToTimerSettings(settings, play),
       },
     });
@@ -139,6 +176,22 @@ export default function HomePage() {
       }
 
       setFeedbackMessage(playlistStartBlockMessage(result));
+      return;
+    }
+
+    if (lastUsedMeditation.kind === 'custom-play') {
+      if (activeCustomPlayRun?.customPlayId === lastUsedMeditation.customPlayId) {
+        navigate('/practice/custom-plays/active');
+        return;
+      }
+
+      const result = startCustomPlayRun(lastUsedMeditation.customPlayId);
+      if (result.started) {
+        navigate('/practice/custom-plays/active');
+        return;
+      }
+
+      setFeedbackMessage(customPlayStartBlockMessage(result.reason));
       return;
     }
 
@@ -203,7 +256,13 @@ export default function HomePage() {
         </p>
         <div className="timer-actions">
           <button type="button" onClick={quickStart} disabled={isSettingsLoading}>
-            {activeSession ? 'Resume Active Timer' : activePlaylistRun ? 'Resume Playlist Run' : 'Start Timer Now'}
+            {activeSession
+              ? 'Resume Active Timer'
+              : activeCustomPlayRun
+              ? 'Resume Custom Play'
+              : activePlaylistRun
+              ? 'Resume Playlist Run'
+              : 'Start Timer Now'}
           </button>
           <button type="button" className="secondary" onClick={() => navigate('/practice')}>
             Open Practice
@@ -219,7 +278,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <p className="section-subtitle">Your last started timer or playlist will appear here.</p>
+          <p className="section-subtitle">Your last started timer, custom play, or playlist will appear here.</p>
         )}
       </section>
 
@@ -316,6 +375,7 @@ export default function HomePage() {
                 <p className="section-subtitle">
                   {formatDurationLabel(entry.completedDurationSeconds)} · {entry.status} · {entry.source}
                 </p>
+                {entry.customPlayName ? <p className="section-subtitle">Custom play: {entry.customPlayName}</p> : null}
               </li>
             ))}
           </ul>
@@ -342,8 +402,8 @@ export default function HomePage() {
                       <span className="home-shortcut-label">
                         {play.name} · {play.durationMinutes} min
                       </span>
-                      <button type="button" className="secondary" onClick={() => applyCustomPlayShortcut(play)}>
-                        Use
+                      <button type="button" className="secondary" onClick={() => startFavoriteCustomPlay(play)}>
+                        Start
                       </button>
                     </li>
                   ))}

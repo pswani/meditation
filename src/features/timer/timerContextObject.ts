@@ -1,5 +1,12 @@
 import { createContext } from 'react';
-import type { CustomPlay, CustomPlayDraft, CustomPlaySaveResult } from '../../types/customPlay';
+import type {
+  ActiveCustomPlayRun,
+  CustomPlay,
+  CustomPlayDraft,
+  CustomPlayRunOutcome,
+  CustomPlayRunStartResult,
+  CustomPlaySaveResult,
+} from '../../types/customPlay';
 import type { LastUsedMeditation } from '../../types/home';
 import type {
   ActivePlaylistRun,
@@ -25,6 +32,8 @@ export interface TimerContextValue {
   readonly customPlays: readonly CustomPlay[];
   readonly playlists: readonly Playlist[];
   readonly lastUsedMeditation: LastUsedMeditation | null;
+  readonly activeCustomPlayRun: ActiveCustomPlayRun | null;
+  readonly customPlayRunOutcome: CustomPlayRunOutcome | null;
   readonly activePlaylistRun: ActivePlaylistRun | null;
   readonly playlistRunOutcome: PlaylistRunOutcome | null;
   readonly isPaused: boolean;
@@ -43,10 +52,19 @@ export interface TimerContextValue {
   readonly isSettingsSyncing: boolean;
   readonly settingsSyncError: string | null;
   readonly timerSoundPlaybackMessage: string | null;
+  readonly customPlayRuntimeMessage: string | null;
   readonly setSettings: (settings: TimerSettings) => void;
   readonly saveCustomPlay: (draft: CustomPlayDraft, editId?: string) => Promise<CustomPlaySaveResult>;
   readonly deleteCustomPlay: (playId: string) => Promise<boolean>;
   readonly toggleFavoriteCustomPlay: (playId: string) => Promise<boolean>;
+  readonly startCustomPlayRun: (playId: string) => CustomPlayRunStartResult;
+  readonly pauseCustomPlayRun: () => void;
+  readonly resumeCustomPlayRun: () => void;
+  readonly updateCustomPlayRunProgress: (currentPositionSeconds: number) => void;
+  readonly completeCustomPlayRun: (currentPositionSeconds?: number) => void;
+  readonly endCustomPlayRunEarly: (currentPositionSeconds?: number) => void;
+  readonly clearCustomPlayRunOutcome: () => void;
+  readonly reportCustomPlayRuntimeIssue: (message: string | null) => void;
   readonly savePlaylist: (draft: PlaylistDraft, editId?: string) => Promise<PlaylistSaveResult>;
   readonly deletePlaylist: (playlistId: string) => Promise<PlaylistDeleteResult>;
   readonly toggleFavoritePlaylist: (playlistId: string) => Promise<boolean>;
@@ -63,6 +81,7 @@ export interface TimerContextValue {
   readonly endSessionEarly: () => void;
   readonly clearOutcome: () => void;
   readonly clearTimerSoundPlaybackMessage: () => void;
+  readonly clearCustomPlayRuntimeMessage: () => void;
   readonly clearRecoveryMessage: () => void;
 }
 
