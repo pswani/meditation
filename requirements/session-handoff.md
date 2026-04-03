@@ -3,7 +3,10 @@
 This file now tracks the durable current repository state rather than a prompt-by-prompt execution history.
 
 ## Repository status
-- Current branch: `codex/review-and-cleanup`
+- Current branch: `codex/custom-play-runtime-feature-bundle-with-branching`
+- Parent branch for active bundle: `codex/feature-refinement`
+- Active bundle: `custom-play-runtime-feature-bundle-with-branching`
+- Active bundle scope: implement a true runnable `custom play` prerecorded-session flow with runtime playback, end behavior, and trustworthy `session log` integration
 - Latest completed bundle: `codex/intent-remediation-bundle`
 - Merge outcome: merged back into `codex/review-and-cleanup` on 2026-04-01 with history preserved by a normal local merge commit
 - The app is a working full-stack meditation application with:
@@ -54,9 +57,4 @@ This file now tracks the durable current repository state rather than a prompt-b
 - Reduce `TimerContext` size only when doing directly related feature or maintenance work.
 
 ## Recommended next slice
-- First, complete end-to-end verification of the production-only release path on the target Mac host:
-  - run `./scripts/prod-release.sh`
-  - confirm nginx same-origin API behavior, timer sounds, and session-log persistence after reinstall
-- After that, implement the missing runnable `custom play` flow as one bounded vertical slice:
-  - keep scope focused on custom-play runtime behavior, logging, validation, and related UX
-  - exclude playlist runtime expansion, broader media-library management, and unrelated refactors
+- Exact recommended next prompt: `prompts/custom-play-runtime-feature-bundle-with-branching/01-implement-custom-play-runtime.md`
