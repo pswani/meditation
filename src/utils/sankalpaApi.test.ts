@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildSankalpaCollectionUrl,
+  deleteSankalpaFromApi,
   buildSankalpaDetailPath,
   buildSankalpaDetailEndpoint,
   buildSankalpaDetailUrl,
@@ -137,5 +138,85 @@ describe('sankalpa api boundary', () => {
         }),
       })
     );
+  });
+
+  it('deletes sankalpas through the detail api boundary', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      deleteSankalpaFromApi('goal-1', {
+        timeZone: 'America/Chicago',
+        syncQueuedAt: '2026-03-27T10:20:00.000Z',
+      })
+    ).resolves.toEqual({
+      outcome: 'deleted',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/sankalpas/goal-1?timeZone=America%2FChicago',
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({
+          [SYNC_QUEUED_AT_HEADER]: '2026-03-27T10:20:00.000Z',
+        }),
+      })
+    );
+  });
+
+  it('returns the current sankalpa when a stale delete loses reconciliation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          outcome: 'stale',
+          currentSankalpa: {
+            goal: {
+              id: 'goal-1',
+              goalType: 'duration-based',
+              targetValue: 12.5,
+              days: 7,
+              createdAt: '2026-03-24T08:00:00.000Z',
+              archived: true,
+            },
+            status: 'archived',
+            deadlineAt: '2026-03-31T08:00:00.000Z',
+            matchedSessionCount: 0,
+            matchedDurationSeconds: 0,
+            targetSessionCount: 0,
+            targetDurationSeconds: 750,
+            progressRatio: 0,
+          },
+        }),
+      })
+    );
+
+    await expect(deleteSankalpaFromApi('goal-1')).resolves.toEqual({
+      outcome: 'stale',
+      currentSankalpa: {
+        goal: {
+          id: 'goal-1',
+          goalType: 'duration-based',
+          targetValue: 12.5,
+          days: 7,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          archived: true,
+        },
+        status: 'archived',
+        deadlineAt: '2026-03-31T08:00:00.000Z',
+        matchedSessionCount: 0,
+        matchedDurationSeconds: 0,
+        targetSessionCount: 0,
+        targetDurationSeconds: 750,
+        progressRatio: 0,
+      },
+    });
   });
 });

@@ -36,6 +36,12 @@ function createSessionLog(
 
 describe('Sankalpa summary UX', () => {
   afterEach(() => {
+    localStorage.clear();
+    vi.useRealTimers();
+    Object.defineProperty(window.navigator, 'onLine', {
+      configurable: true,
+      value: true,
+    });
     vi.restoreAllMocks();
   });
 
@@ -536,6 +542,109 @@ describe('Sankalpa summary UX', () => {
       id: 'goal-archive',
       archived: true,
     });
+  });
+
+  it('requires confirmation before deleting an archived sankalpa', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async () => {
+        throw new TypeError('Network request failed');
+      })
+    );
+    Object.defineProperty(window.navigator, 'onLine', {
+      configurable: true,
+      value: false,
+    });
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-delete',
+          goalType: 'session-count-based',
+          targetValue: 2,
+          days: 7,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          archived: true,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const archivedSection = screen.getByRole('heading', { name: /archived sankalpas/i }).closest('section');
+    expect(archivedSection).not.toBeNull();
+    if (!archivedSection) {
+      throw new Error('Expected archived sankalpa section to exist');
+    }
+
+    fireEvent.click(within(archivedSection).getByRole('button', { name: /^delete$/i }));
+    expect(screen.getByText(/delete this archived sankalpa permanently/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /keep archived goal/i }));
+    expect(screen.queryByText(/delete this archived sankalpa permanently/i)).not.toBeInTheDocument();
+    expect(within(archivedSection).getByText(/2 session logs in 7 days/i)).toBeInTheDocument();
+
+    fireEvent.click(within(archivedSection).getByRole('button', { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /delete sankalpa/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa deleted locally because the backend could not be reached/i)).toBeInTheDocument());
+    expect(within(archivedSection).queryByText(/2 session logs in 7 days/i)).not.toBeInTheDocument();
+  });
+
+  it('restores archived sankalpas into the correct derived section when unarchived', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async () => {
+        throw new TypeError('Network request failed');
+      })
+    );
+    Object.defineProperty(window.navigator, 'onLine', {
+      configurable: true,
+      value: false,
+    });
+    localStorage.setItem(
+      SANKALPAS_KEY,
+      JSON.stringify([
+        {
+          id: 'goal-restore',
+          goalType: 'session-count-based',
+          targetValue: 2,
+          days: 2,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          archived: true,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const archivedSection = screen.getByRole('heading', { name: /archived sankalpas/i }).closest('section');
+    expect(archivedSection).not.toBeNull();
+    if (!archivedSection) {
+      throw new Error('Expected archived sankalpa section to exist');
+    }
+
+    fireEvent.click(within(archivedSection).getByRole('button', { name: /unarchive/i }));
+
+    await waitFor(() => expect(screen.getByText(/sankalpa restored locally because the backend could not be reached/i)).toBeInTheDocument());
+
+    const expiredSection = screen.getByRole('heading', { name: /expired sankalpas/i }).closest('section');
+    expect(expiredSection).not.toBeNull();
+    if (!expiredSection) {
+      throw new Error('Expected expired sankalpa section to exist');
+    }
+
+    expect(within(archivedSection).queryByText(/2 session logs in 2 days/i)).not.toBeInTheDocument();
+    expect(within(expiredSection).getByText(/2 session logs in 2 days/i)).toBeInTheDocument();
+    expect(within(expiredSection).getByText(/^expired$/i)).toBeInTheDocument();
   });
 
   it('archives completed and expired sankalpas from their current sections', async () => {

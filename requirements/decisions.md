@@ -54,6 +54,10 @@
 - Keep `sankalpa` archival as a first-class persisted goal state:
   - frontend, local cache, and backend contracts all carry the same `archived` flag
   - archived goals stay visible in a dedicated read-only section instead of being deleted from the product surface
+- Keep `sankalpa` restore and delete behavior explicit and trust-preserving:
+  - archived goals can be restored by clearing the persisted `archived` flag and reusing the existing derived `active` / `completed` / `expired` status rules
+  - permanent delete is restricted to already archived goals so destructive actions stay deliberate
+  - queue-backed `sankalpa` deletes use the same stale-mutation protection as other backend-backed collections and restore the current backend state when an older queued delete loses reconciliation
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:
@@ -71,7 +75,6 @@
 
 ## Current intentional limitations
 - Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.
-- `sankalpa` delete and unarchive flows are still unimplemented.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 
 ## Documentation and planning
