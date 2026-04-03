@@ -76,4 +76,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: `ios-lock-screen-end-bell-fix-feature-bundle-with-branching` under `prompts/`, executed through `prompts/run-milestone-bundle.md`.
+- Exact recommended next prompt: `ios-safari-ux-hardening-feature-bundle-with-branching` under `prompts/`, executed through `prompts/run-milestone-bundle.md`.
