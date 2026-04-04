@@ -319,7 +319,7 @@ backend/                Spring Boot + H2 backend foundation
 - npm 10 or newer recommended
 - Java 21
 - Maven 3.9 or newer
-- macOS admin access if you are installing onto the production Mac host
+- macOS admin access if you will run `./scripts/pipeline.sh release` on a production Mac host
 
 ### Install
 
@@ -344,118 +344,46 @@ Optional npm wrapper:
 npm run media:setup
 ```
 
-### Golden path
+### `pipeline.sh` commands
 
-Use one release command for the normal build, package, install, and restart flow:
-
-```bash
-./scripts/prod-release.sh
-```
-
-That command:
-
-1. builds the frontend and backend production artifacts
-2. assembles the deploy bundle under `local-data/deploy/`
-3. installs the app from that bundle through `./scripts/prod-macos-setup.sh install-app --skip-build`
-4. refreshes the nginx and backend service configuration on the production Mac host
-
-Helpful variants:
+Use `./scripts/pipeline.sh` as the top-level build and deployment entrypoint:
 
 ```bash
-./scripts/prod-release.sh --dry-run
-./scripts/prod-release.sh --skip-build
-./scripts/prod-release.sh --domain meditation.example.com --email ops@example.com
+./scripts/pipeline.sh help
 ```
 
-### Step-by-step production flow
+Supported commands:
 
-Use the individual commands only when you want finer control over the same production path:
+| Command | When to use it | What it does |
+| --- | --- | --- |
+| `./scripts/pipeline.sh verify` | Run the repo quality gate | Runs `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`. |
+| `./scripts/pipeline.sh build` | Build production artifacts | Builds the frontend and backend artifacts through the repo's production build flow. |
+| `./scripts/pipeline.sh package` | Assemble a deploy bundle | Builds by default, then prepares `local-data/deploy/`. |
+| `./scripts/pipeline.sh package --skip-build` | Repackage existing artifacts | Reuses current build output and refreshes `local-data/deploy/`. |
+| `./scripts/pipeline.sh release` | Run the normal production release flow | Packages the bundle and installs it on the prepared macOS production host. |
+| `./scripts/pipeline.sh release --skip-build --bundle-dir local-data/deploy --domain meditation.example.com --email ops@example.com` | Reinstall an existing bundle or pass install options | Forwards supported install flags to the release flow. |
+
+### Recommended flow
+
+Use this sequence for the normal repo workflow:
 
 ```bash
-./scripts/prod-build.sh
-./scripts/package-deploy.sh
-./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
+./scripts/setup-media-root.sh
+./scripts/pipeline.sh verify
+./scripts/pipeline.sh release
 ```
 
-What each one does:
+Use `./scripts/pipeline.sh package` instead of `release` when you only need the assembled bundle under `local-data/deploy/`.
 
-- `./scripts/prod-build.sh`
-  - builds the frontend production bundle
-  - runs the backend production build command
-- `./scripts/package-deploy.sh`
-  - assembles `local-data/deploy/frontend`
-  - copies the packaged backend jar into `local-data/deploy/backend`
-  - renders the nginx config into `local-data/deploy/nginx/meditation.conf`
-- `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy`
-  - installs the packaged app into the production Mac layout
-  - refreshes `launchd` and nginx configuration
-  - restarts the installed services
+Build and packaging outputs land in:
 
-### First-time host preparation
-
-Run this once on a new Mac production host:
-
-```bash
-./scripts/prod-macos-setup.sh prepare-host
+```text
+dist/
+backend/target/
+local-data/deploy/
 ```
 
-That installs production prerequisites such as `nginx`, `certbot`, and Java 21, then creates the default production directory layout under `/opt/meditation`.
-
-### Production operations
-
-Once the app is installed, operate it through one control surface:
-
-```bash
-./scripts/prod-macos-control.sh start
-./scripts/prod-macos-control.sh stop
-./scripts/prod-macos-control.sh restart
-./scripts/prod-macos-control.sh status
-./scripts/prod-macos-control.sh logs --lines 120 --no-follow
-```
-
-### npm wrappers
-
-If you prefer npm aliases, the production-only wrappers are:
-
-```bash
-npm run build:prod
-npm run package:prod
-npm run prepare:prod
-npm run install:prod
-npm run release:prod
-npm run start:prod
-npm run stop:prod
-npm run restart:prod
-npm run status:prod
-npm run logs:prod
-```
-
-### Script reference
-
-These are the supported operational entry points in the repo now:
-
-| Script | npm wrapper | When to use it | What it does |
-| --- | --- | --- | --- |
-| `./scripts/setup-media-root.sh` | `npm run media:setup` | Media directory prep | Creates the frontend fallback and backend-served media roots for `custom-plays` and `sounds`. |
-| `./scripts/prod-build.sh` | `npm run build:prod` | Production build verification | Builds the frontend bundle and runs the backend production build command. |
-| `./scripts/package-deploy.sh` | `npm run package:prod` | Build a deployable production bundle | Packages static frontend files, the backend jar, nginx config, and backend env example under `local-data/deploy/`. |
-| `./scripts/prod-release.sh` | `npm run release:prod` | Golden path release | Packages the production bundle and installs it through the macOS production installer. |
-| `./scripts/pipeline.sh verify` | none | Unified quality gate | Runs `typecheck`, `lint`, `test`, and `build` in a single command. |
-| `./scripts/pipeline.sh package` | none | Unified packaging entrypoint | Calls the production packaging flow through one top-level pipeline command. |
-| `./scripts/pipeline.sh release` | none | Unified release entrypoint | Calls the production release/install flow through one top-level pipeline command. |
-| `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate production nginx config | Renders an nginx site config that serves the frontend bundle and proxies `/api` and `/media` to the backend. |
-| `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist` | none | Generate a backend `launchd` plist | Renders a macOS `launchd` plist for the backend service. |
-| `./scripts/prod-backend-start.sh` | none | Start the packaged backend jar | Starts the backend jar in the background using the production runtime directory and health checks. |
-| `./scripts/prod-backend-stop.sh` | none | Stop the packaged backend jar | Stops the backend process started by `./scripts/prod-backend-start.sh`. |
-| `./scripts/prod-backend-restart.sh` | none | Restart the packaged backend jar | Restarts the backend process managed by the production lifecycle scripts. |
-| `./scripts/prod-backend-status.sh` | none | Inspect packaged backend health | Prints the backend PID, jar path, health URL, health state, log path, and database file location. |
-| `./scripts/prod-backend-logs.sh --tail 40` | none | Tail packaged backend logs | Tails the backend log written by the production lifecycle scripts. |
-| `./scripts/prod-macos-setup.sh prepare-host` | `npm run prepare:prod` | Prepare a Mac production host | Installs macOS production prerequisites and creates the default production directory layout. |
-| `./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy` | `npm run install:prod` | Install the production app on macOS | Installs the production bundle, renders nginx plus `launchd` config, starts the backend service, and starts nginx. |
-| `./scripts/prod-macos-control.sh restart` | `npm run restart:prod` | Cleanly restart the Mac production stack | Stops and starts both `nginx` and the backend `launchd` service, then waits for backend health. |
-| `./scripts/prod-macos-control.sh logs --lines 120 --no-follow` | `npm run logs:prod` | Inspect installed production logs | Reads the installed backend production log with bounded output for quick inspection. |
-| `node ./scripts/add-sound-option.mjs --help` | `npm run sound:add -- --help` | Register a shipped timer sound | Updates the sound-option catalog and copies a file into the supported media locations. |
-| `node ./scripts/add-custom-play-media.mjs --help` | `npm run media:add:custom-play -- --help` | Register a custom-play media asset | Adds or mirrors the media file and updates the metadata registration flow used by the app. |
+The `release` command assumes the production Mac host has already been prepared for installation. If you need host setup or post-install operations, use [docs/mac-mini-production-runbook.md](/Users/prashantwani/wrk/meditation/docs/mac-mini-production-runbook.md).
 
 ### Environment and configuration variables
 
@@ -473,7 +401,7 @@ Optional production variables:
 - `MEDITATION_BACKEND_BUILD_CMD`
   - optional override for the backend production build command
 - `MEDITATION_DEPLOY_DIR`
-  - optional deployment bundle output directory for `./scripts/package-deploy.sh`
+  - optional deployment bundle output directory for `./scripts/pipeline.sh package` and `./scripts/pipeline.sh release`
 - `MEDITATION_BACKEND_BIND_HOST`
   - optional backend bind address for the production backend scripts and generated nginx upstream config
 - `MEDITATION_BACKEND_PORT`
@@ -495,9 +423,9 @@ Optional production variables:
 - `MEDITATION_JAVA_BIN`
   - optional absolute Java executable override for production backend scripts
 - `MEDITATION_PROD_APP_ROOT`
-  - optional install root override for `./scripts/prod-macos-setup.sh`
+  - optional install root override used by `./scripts/pipeline.sh release`
 - `MEDITATION_PROD_RUNTIME_DIR`
-  - optional runtime directory override for `./scripts/prod-macos-setup.sh`
+  - optional runtime directory override used by `./scripts/pipeline.sh release`
 
 Current operational meaning:
 
@@ -765,7 +693,7 @@ For the current backend-backed foundation, the registration flow is:
 
 1. Run `npm run media:add:custom-play -- --help` to review the parameters.
 2. Register the asset with `npm run media:add:custom-play -- ...`.
-3. Rebuild and reinstall with `./scripts/prod-release.sh`, or restart the installed backend if you only changed backend-served media metadata.
+3. Rebuild and reinstall with `./scripts/pipeline.sh release`, or restart the installed backend if you only changed backend-served media metadata.
 4. Open `Practice` -> `Show Tools` -> `Custom Plays`.
 5. Select the entry from `Media session (optional)`.
 6. Save a custom play.
@@ -847,7 +775,7 @@ npm run media:add:custom-play -- \
 2. Rebuild and reinstall the production app:
 
 ```bash
-./scripts/prod-release.sh
+./scripts/pipeline.sh release
 ```
 
 3. In the UI, go to `Practice` -> `Show Tools` -> `Custom Plays`.
@@ -998,7 +926,7 @@ For the current implementation, validate in this order:
 1. Ensure the file exists under `local-data/media/custom-plays/` for backend-backed verification.
 2. If you also want the file shipped with the packaged frontend fallback assets, mirror it under `public/media/custom-plays/`.
 3. Ensure the backend media metadata includes the file path you expect.
-4. Rebuild and reinstall with `./scripts/prod-release.sh`.
+4. Rebuild and reinstall with `./scripts/pipeline.sh release`.
 5. Confirm the item appears in the `Media session (optional)` dropdown.
 6. Save a custom play using it.
 7. Confirm the saved custom play shows the media session label.
@@ -1051,14 +979,14 @@ There is no separate Playwright or Cypress test suite in this repo today.
 The closest coverage is:
 
 - App-level Vitest flows in `src/App.test.tsx`
-- production build verification with `./scripts/prod-build.sh`
+- production build verification with `./scripts/pipeline.sh build`
 - packaged runtime verification through the production install flow
 
 ### Verify media files and configuration
 
 Current manual verification checklist:
 
-1. Run `./scripts/prod-release.sh`
+1. Run `./scripts/pipeline.sh release`
 2. Confirm `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` is reachable on the host when a matching file exists under the backend media root
 3. Open `Practice` -> `Show Tools` -> `Custom Plays`
 4. Confirm expected media entries appear in the dropdown
@@ -1101,7 +1029,7 @@ You can verify backend reachability in this workspace now, plus the frontend med
 
 Current verification pattern:
 
-1. Run `./scripts/prod-release.sh`.
+1. Run `./scripts/pipeline.sh release`.
 2. Open `http://127.0.0.1:8080/api/health`.
 3. Open `http://127.0.0.1:8080/api/media/custom-plays`.
 4. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
@@ -1112,220 +1040,16 @@ Current verification pattern:
 
 ## Build And Deployment
 
-### Recommended production topology
-
-Use this production shape for the current repo:
-
-- nginx serves the frontend production build from `dist/`
-- nginx reverse-proxies `/api` and `/media` to the Spring Boot backend
-- the Spring Boot backend runs as the application server on a loopback bind such as `127.0.0.1:8080`
-- H2 and the backend media root live on disk on the application host
-
-This means:
-
-- do not run the frontend with `vite`, `vite preview`, or any npm dev server in production
-- do not use an npm server as the production frontend host
-- use a real static web server or CDN for the frontend, with nginx as the recommended self-managed option in this repo
-
-### Build production artifacts
+Use the pipeline commands from [Production Workflow](#production-workflow) for builds and releases:
 
 ```bash
-./scripts/prod-build.sh
+./scripts/pipeline.sh verify
+./scripts/pipeline.sh build
+./scripts/pipeline.sh package
+./scripts/pipeline.sh release
 ```
 
-Build output goes to:
-
-```text
-dist/
-backend/target/
-```
-
-Notes:
-
-- `./scripts/prod-build.sh` is the script-first build entry point for this repo
-- it runs the frontend production build and then executes the configured backend build command when a backend is present
-- the frontend artifact meant for deployment is the production build in `dist/`
-- if you want a frontend-only build without the helper script, `npm run build` still runs `tsc -b && vite build`
-
-### Package a production deploy bundle
-
-```bash
-./scripts/package-deploy.sh
-```
-
-This produces a deployment bundle under `local-data/deploy/` by default:
-
-```text
-local-data/deploy/
-  frontend/                       Static frontend production files
-  backend/meditation-backend.jar  Packaged Spring Boot jar
-  backend/meditation-backend.env.example
-  nginx/meditation.conf           nginx site config for the bundle
-```
-
-Use `./scripts/package-deploy.sh --skip-build` when the build artifacts already exist and you only want to refresh the assembled deployment bundle.
-
-### Deployment assumptions
-
-The repo now produces:
-
-- a static frontend production build
-- a packaged Spring Boot backend artifact
-
-Important assumptions:
-
-- deploy the contents of `dist/` for the frontend production app, or use `./scripts/package-deploy.sh` and deploy `local-data/deploy/frontend/`
-- do not deploy a separate frontend runtime server
-- configure SPA history fallback so routes like `/practice` and `/history` return `index.html`
-- deploy the backend jar from `backend/target/`, or use the packaged copy at `local-data/deploy/backend/meditation-backend.jar`
-- run Flyway-backed backend startup before considering the API healthy
-
-### Production backend lifecycle
-
-The frontend should be served by nginx, while the backend can be managed with the prod lifecycle scripts in this repo:
-
-```bash
-./scripts/prod-backend-start.sh
-./scripts/prod-backend-status.sh
-./scripts/prod-backend-logs.sh --tail 40
-./scripts/prod-backend-restart.sh
-./scripts/prod-backend-stop.sh
-```
-
-Notes:
-
-- these scripts manage the backend jar only; nginx remains operator-managed
-- the prod backend scripts default to `local-data/runtime-production/` for pid files and logs
-- the prod backend scripts use `local-data/deploy/backend/meditation-backend.jar` when present, otherwise they fall back to the latest built jar under `backend/target/`
-- by default the backend binds to `127.0.0.1` through `MEDITATION_BACKEND_BIND_HOST`, which matches the generated nginx reverse-proxy config
-
-### nginx configuration
-
-Render the nginx site config directly from the repo settings:
-
-```bash
-./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf
-```
-
-You can also render it for an installed production location:
-
-```bash
-./scripts/render-nginx-config.sh \
-  --output /opt/meditation/nginx/meditation.conf \
-  --frontend-root /opt/meditation/app/frontend \
-  --backend-host 127.0.0.1 \
-  --backend-port 8080 \
-  --server-name meditation.example.com \
-  --listen-port 80
-```
-
-The generated config:
-
-- serves the frontend static files from the packaged deploy bundle
-- uses `try_files` so SPA routes fall back to `index.html`
-- proxies `/api/` to the backend
-- proxies `/media/` to the backend
-
-This repo now includes a macOS production installer that can obtain certificates with Certbot after installing nginx and the app bundle. For a full Mac Mini flow, see `docs/mac-mini-production-runbook.md`.
-
-### Mac Mini production steps
-
-Use these steps for a production-only deployment on a Mac Mini.
-
-#### HTTP install
-
-Use this when you do not have a public domain and only want to use the app on your local network over HTTP.
-
-1. Prepare the Mac Mini host:
-
-```bash
-./scripts/prod-macos-setup.sh prepare-host
-```
-
-2. Build and package the production bundle:
-
-```bash
-./scripts/package-deploy.sh
-```
-
-3. Install and start the production app:
-
-```bash
-./scripts/prod-macos-setup.sh install-app --bundle-dir local-data/deploy
-```
-
-4. Open the app from devices on your network:
-
-```text
-http://<MAC-MINI-LAN-IP>/
-http://<MAC-MINI-LOCAL-HOSTNAME>.local/
-```
-
-5. Verify the backend locally on the Mac Mini:
-
-```bash
-./scripts/prod-macos-control.sh status
-```
-
-#### Public-domain install
-
-Use this when you have a public DNS name pointed at the Mac Mini and want Certbot-managed HTTPS.
-
-1. Prepare the Mac Mini host:
-
-```bash
-./scripts/prod-macos-setup.sh prepare-host
-```
-
-2. Build and package the production bundle:
-
-```bash
-./scripts/package-deploy.sh
-```
-
-3. Install and start the production app with TLS:
-
-```bash
-./scripts/prod-macos-setup.sh install-app \
-  --bundle-dir local-data/deploy \
-  --domain meditation.example.com \
-  --email ops@example.com
-```
-
-This production path:
-
-- serves the frontend from Homebrew-managed `nginx`
-- installs the backend jar under `/opt/meditation`
-- runs the backend under macOS `launchd`
-- can request TLS certificates with Certbot when a public domain is available
-- does not use `vite`, `vite preview`, or any npm dev server as the runtime
-
-### Mac Mini service control
-
-Once the app is installed on the Mac Mini, use one control script for day-to-day operations:
-
-```bash
-./scripts/prod-macos-control.sh start
-./scripts/prod-macos-control.sh stop
-./scripts/prod-macos-control.sh restart
-./scripts/prod-macos-control.sh status
-./scripts/prod-macos-control.sh logs
-```
-
-`restart` is the clean “make it healthy again” path:
-
-- stops the backend `launchd` service if it is loaded
-- stops `nginx` if it is running
-- starts `nginx`
-- starts or re-kickstarts the backend service
-- waits for backend health on `http://127.0.0.1:8080/api/health`
-
-`logs` tails the backend production log from `/opt/meditation/runtime-production/logs/backend-production.log`.
-You can also limit output without following:
-
-```bash
-./scripts/prod-macos-control.sh logs --lines 80 --no-follow
-```
+For host-specific setup and post-install operations, see [docs/mac-mini-production-runbook.md](/Users/prashantwani/wrk/meditation/docs/mac-mini-production-runbook.md).
 
 ### Static assets and media in deployment
 
