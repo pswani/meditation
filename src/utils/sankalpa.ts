@@ -119,6 +119,13 @@ export function archiveSankalpaGoal(goal: SankalpaGoal): SankalpaGoal {
   };
 }
 
+export function unarchiveSankalpaGoal(goal: SankalpaGoal): SankalpaGoal {
+  return {
+    ...goal,
+    archived: false,
+  };
+}
+
 export function getTimeOfDayBucket(date: Date): TimeOfDayBucket {
   const hour = date.getHours();
   if (hour >= 5 && hour < 12) {

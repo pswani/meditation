@@ -54,6 +54,8 @@ This README is intentionally grounded in the current repository contents. It exp
 - Sankalpa management now supports:
   - editing existing goals while preserving the original goal window and id
   - archiving active, completed, or expired goals into a dedicated archived section
+  - restoring archived goals back into their derived active, completed, or expired sections
+  - deleting archived goals with explicit confirmation and queue-backed stale-delete recovery
   - backend-backed archived-state persistence with local cache fallback
 
 ## Confirmed Full-Stack Gaps
@@ -186,7 +188,7 @@ Today:
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
 - `src/utils/playlistApi.ts` performs live HTTP requests to `/api/playlists`
 - `src/utils/sankalpaApi.ts` performs live HTTP requests to `/api/sankalpas` and sends the browser time zone when available
-- `src/features/sankalpa/useSankalpaProgress.ts` hydrates backend sankalpa progress while preserving local cache fallback, id-preserving migration, and network-only local-save fallback
+- `src/features/sankalpa/useSankalpaProgress.ts` hydrates backend sankalpa progress while preserving local cache fallback, id-preserving migration, queued delete replay, and network-only local-save fallback
 
 Stable endpoint contracts in the frontend still include:
 
@@ -1366,7 +1368,7 @@ Optional build-time override when pairing the built front end with a separate ba
 
 - playlist item runtime audio now works for linked `custom play` recordings, but timer-style sound cues inside playlist runs remain limited to the linked recording's own start/end sounds or silent timed items
 - custom-play media falls back to built-in sample metadata and is not yet a user-managed library
-- sankalpa delete and unarchive flows are still unimplemented
+- browser-automation coverage for the goals-screen archive/delete confirmation UX is still absent
 
 ## Operator Notes
 

@@ -24,6 +24,7 @@ import {
   partitionSankalpaProgress,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
+  unarchiveSankalpaGoal,
   updateSankalpaGoal,
   validateSankalpaDraft,
 } from '../utils/sankalpa';
@@ -32,7 +33,7 @@ import { getUserTimeZone } from '../utils/timeZone';
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 type SaveMessageTone = 'ok' | 'warn' | 'error';
-type SankalpaSaveAction = 'create' | 'edit' | 'archive';
+type SankalpaSaveAction = 'create' | 'edit' | 'archive' | 'unarchive' | 'delete';
 
 function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'duration-based') {
@@ -135,10 +136,15 @@ interface SankalpaSectionProps {
   readonly emptyText: string;
   readonly items: SankalpaProgress[];
   readonly pendingArchiveGoalId: string | null;
+  readonly pendingDeleteGoalId: string | null;
   readonly onEditGoal?: (goal: SankalpaGoal) => void;
   readonly onStartArchive?: (goalId: string) => void;
   readonly onCancelArchive?: () => void;
   readonly onConfirmArchive?: (goal: SankalpaGoal) => void;
+  readonly onUnarchiveGoal?: (goal: SankalpaGoal) => void;
+  readonly onStartDelete?: (goalId: string) => void;
+  readonly onCancelDelete?: () => void;
+  readonly onConfirmDelete?: (goal: SankalpaGoal) => void;
 }
 
 function SankalpaSection({
@@ -146,10 +152,15 @@ function SankalpaSection({
   emptyText,
   items,
   pendingArchiveGoalId,
+  pendingDeleteGoalId,
   onEditGoal,
   onStartArchive,
   onCancelArchive,
   onConfirmArchive,
+  onUnarchiveGoal,
+  onStartDelete,
+  onCancelDelete,
+  onConfirmDelete,
 }: SankalpaSectionProps) {
   return (
     <section className="sankalpa-section">
@@ -179,7 +190,7 @@ function SankalpaSection({
               <p className="section-subtitle">
                 Progress: {progressDetail(progress)} · {remainingDetail(progress)}
               </p>
-              {onEditGoal || onStartArchive ? (
+              {onEditGoal || onStartArchive || onUnarchiveGoal || onStartDelete ? (
                 <div className="timer-actions">
                   {onEditGoal ? (
                     <button type="button" className="secondary" onClick={() => onEditGoal(progress.goal)}>
@@ -189,6 +200,16 @@ function SankalpaSection({
                   {onStartArchive ? (
                     <button type="button" className="secondary" onClick={() => onStartArchive(progress.goal.id)}>
                       Archive
+                    </button>
+                  ) : null}
+                  {onUnarchiveGoal ? (
+                    <button type="button" className="secondary" onClick={() => onUnarchiveGoal(progress.goal)}>
+                      Unarchive
+                    </button>
+                  ) : null}
+                  {onStartDelete ? (
+                    <button type="button" className="secondary" onClick={() => onStartDelete(progress.goal.id)}>
+                      Delete
                     </button>
                   ) : null}
                 </div>
@@ -202,6 +223,19 @@ function SankalpaSection({
                     </button>
                     <button type="button" onClick={() => onConfirmArchive(progress.goal)}>
                       Archive Sankalpa
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {pendingDeleteGoalId === progress.goal.id && onCancelDelete && onConfirmDelete ? (
+                <div className="confirm-sheet" role="dialog" aria-label={`Delete ${title} confirmation`}>
+                  <p>Delete this archived sankalpa permanently? This cannot be undone.</p>
+                  <div className="timer-actions">
+                    <button type="button" className="secondary" onClick={onCancelDelete}>
+                      Keep Archived Goal
+                    </button>
+                    <button type="button" onClick={() => onConfirmDelete(progress.goal)}>
+                      Delete Sankalpa
                     </button>
                   </div>
                 </div>
@@ -222,7 +256,13 @@ function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageT
     if (action === 'edit') {
       return 'Sankalpa changes saved locally because the backend could not be reached.';
     }
-    return 'Sankalpa archived locally because the backend could not be reached.';
+    if (action === 'archive') {
+      return 'Sankalpa archived locally because the backend could not be reached.';
+    }
+    if (action === 'unarchive') {
+      return 'Sankalpa restored locally because the backend could not be reached.';
+    }
+    return 'Sankalpa deleted locally because the backend could not be reached.';
   }
 
   if (action === 'create') {
@@ -231,7 +271,13 @@ function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageT
   if (action === 'edit') {
     return 'Sankalpa updated.';
   }
-  return 'Sankalpa archived.';
+  if (action === 'archive') {
+    return 'Sankalpa archived.';
+  }
+  if (action === 'unarchive') {
+    return 'Sankalpa restored.';
+  }
+  return 'Sankalpa deleted.';
 }
 
 export default function SankalpaPage() {
@@ -252,6 +298,7 @@ export default function SankalpaPage() {
   const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [pendingArchiveGoalId, setPendingArchiveGoalId] = useState<string | null>(null);
+  const [pendingDeleteGoalId, setPendingDeleteGoalId] = useState<string | null>(null);
   const [summaryRangePreset, setSummaryRangePreset] = useState<SummaryRangePreset>('all-time');
   const [customStartDate, setCustomStartDate] = useState(summaryDateDefaults.last7StartInput);
   const [customEndDate, setCustomEndDate] = useState(summaryDateDefaults.todayDateInput);
@@ -259,7 +306,13 @@ export default function SankalpaPage() {
   const [remoteSummarySnapshot, setRemoteSummarySnapshot] = useState<SummarySnapshotData | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryLoadMessage, setSummaryLoadMessage] = useState<string | null>(null);
-  const { progressEntries: sankalpaProgressEntries, isLoading: isSankalpaLoading, syncMessage: sankalpaSyncMessage, saveSankalpa } =
+  const {
+    progressEntries: sankalpaProgressEntries,
+    isLoading: isSankalpaLoading,
+    syncMessage: sankalpaSyncMessage,
+    saveSankalpa,
+    deleteSankalpa,
+  } =
     useSankalpaProgress(sessionLogs);
 
   const summaryRangeSelection = useMemo(() => {
@@ -429,6 +482,7 @@ export default function SankalpaPage() {
     setSaveMessage(null);
     setEditingGoalId(goal.id);
     setPendingArchiveGoalId(null);
+    setPendingDeleteGoalId(null);
   }
 
   function cancelEdit() {
@@ -440,8 +494,18 @@ export default function SankalpaPage() {
     const result = await saveSankalpa(goal);
     resetDraftState();
     setPendingArchiveGoalId(null);
+    setPendingDeleteGoalId(null);
     setSaveMessageTone(result.tone);
     setSaveMessage(buildSankalpaSaveMessage(action, result.tone));
+  }
+
+  async function removeGoal(goalId: string) {
+    const result = await deleteSankalpa(goalId);
+    resetDraftState();
+    setPendingArchiveGoalId(null);
+    setPendingDeleteGoalId(null);
+    setSaveMessageTone(result.tone);
+    setSaveMessage(buildSankalpaSaveMessage('delete', result.tone));
   }
 
   async function onSubmitSankalpa(event: FormEvent<HTMLFormElement>) {
@@ -467,6 +531,22 @@ export default function SankalpaPage() {
     }
 
     await persistGoal(archiveSankalpaGoal(goal), 'archive');
+  }
+
+  async function unarchiveGoal(goal: SankalpaGoal) {
+    if (editingGoalId === goal.id) {
+      resetDraftState();
+    }
+
+    await persistGoal(unarchiveSankalpaGoal(goal), 'unarchive');
+  }
+
+  async function confirmDelete(goal: SankalpaGoal) {
+    if (editingGoalId === goal.id) {
+      resetDraftState();
+    }
+
+    await removeGoal(goal.id);
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
@@ -773,6 +853,7 @@ export default function SankalpaPage() {
         emptyText="No active sankalpas. Create one above."
         items={progressByStatus.active}
         pendingArchiveGoalId={pendingArchiveGoalId}
+        pendingDeleteGoalId={pendingDeleteGoalId}
         onEditGoal={beginEdit}
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
@@ -783,6 +864,7 @@ export default function SankalpaPage() {
         emptyText="Completed sankalpas will appear here."
         items={progressByStatus.completed}
         pendingArchiveGoalId={pendingArchiveGoalId}
+        pendingDeleteGoalId={pendingDeleteGoalId}
         onEditGoal={beginEdit}
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
@@ -793,6 +875,7 @@ export default function SankalpaPage() {
         emptyText="Expired sankalpas will appear here if deadlines pass before completion."
         items={progressByStatus.expired}
         pendingArchiveGoalId={pendingArchiveGoalId}
+        pendingDeleteGoalId={pendingDeleteGoalId}
         onEditGoal={beginEdit}
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
@@ -803,6 +886,14 @@ export default function SankalpaPage() {
         emptyText="Archived sankalpas will appear here."
         items={progressByStatus.archived}
         pendingArchiveGoalId={pendingArchiveGoalId}
+        pendingDeleteGoalId={pendingDeleteGoalId}
+        onUnarchiveGoal={unarchiveGoal}
+        onStartDelete={(goalId) => {
+          setPendingArchiveGoalId(null);
+          setPendingDeleteGoalId(goalId);
+        }}
+        onCancelDelete={() => setPendingDeleteGoalId(null)}
+        onConfirmDelete={confirmDelete}
       />
     </section>
   );

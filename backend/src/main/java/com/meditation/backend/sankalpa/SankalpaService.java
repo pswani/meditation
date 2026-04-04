@@ -2,6 +2,7 @@ package com.meditation.backend.sankalpa;
 
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.math.BigDecimal;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -43,14 +44,27 @@ public class SankalpaService {
         .toList();
   }
 
-  public SankalpaProgressResponse saveSankalpa(String sankalpaId, SankalpaGoalUpsertRequest request, String timeZoneRaw) {
+  public SankalpaProgressResponse saveSankalpa(
+      String sankalpaId,
+      SankalpaGoalUpsertRequest request,
+      String timeZoneRaw,
+      String syncQueuedAtRaw
+  ) {
     validateRequest(sankalpaId, request);
 
     Instant now = Instant.now();
-    Instant createdAt = parseTimestamp(request.createdAt(), "Created at must be a valid ISO timestamp.");
     ZoneId zoneId = parseZoneId(timeZoneRaw);
-    SankalpaGoalEntity entity = sankalpaGoalRepository.findById(sankalpaId)
-        .orElseGet(() -> new SankalpaGoalEntity(
+    SankalpaGoalEntity existingEntity = sankalpaGoalRepository.findById(sankalpaId).orElse(null);
+    if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
+      List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
+      return toProgressResponse(existingEntity, sessionLogs, now, zoneId);
+    }
+
+    Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, now);
+    Instant createdAt = parseTimestamp(request.createdAt(), "Created at must be a valid ISO timestamp.");
+    SankalpaGoalEntity entity = existingEntity != null
+        ? existingEntity
+        : new SankalpaGoalEntity(
             sankalpaId,
             request.goalType(),
             request.targetValue(),
@@ -58,9 +72,10 @@ public class SankalpaService {
             normalizeOptionalText(request.meditationType()),
             normalizeOptionalText(request.timeOfDayBucket()),
             createdAt,
+            mutationTimestamp,
             null,
             request.archived()
-        ));
+        );
 
     entity.updateFrom(
         new SankalpaGoalUpsertRequest(
@@ -73,7 +88,8 @@ public class SankalpaService {
             request.createdAt(),
             request.archived()
         ),
-        createdAt
+        existingEntity == null ? createdAt : existingEntity.getCreatedAt(),
+        mutationTimestamp
     );
 
     List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
@@ -82,6 +98,28 @@ public class SankalpaService {
 
     SankalpaGoalEntity savedEntity = sankalpaGoalRepository.save(entity);
     return toProgressResponse(savedEntity, sessionLogs, now, zoneId);
+  }
+
+  public SankalpaDeleteResult deleteSankalpa(String sankalpaId, String timeZoneRaw, String syncQueuedAtRaw) {
+    SankalpaGoalEntity existingEntity = sankalpaGoalRepository.findById(sankalpaId).orElse(null);
+    if (existingEntity == null) {
+      return new SankalpaDeleteResult("deleted", null);
+    }
+
+    if (!existingEntity.isArchived()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Only archived sankalpas can be deleted.");
+    }
+
+    Instant now = Instant.now();
+    ZoneId zoneId = parseZoneId(timeZoneRaw);
+    List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
+
+    if (SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
+      return new SankalpaDeleteResult("stale", toProgressResponse(existingEntity, sessionLogs, now, zoneId));
+    }
+
+    sankalpaGoalRepository.deleteById(sankalpaId);
+    return new SankalpaDeleteResult("deleted", null);
   }
 
   private SankalpaProgressResponse toProgressResponse(
@@ -240,6 +278,6 @@ public class SankalpaService {
       return null;
     }
 
-    return value;
+    return value.trim();
   }
 }
