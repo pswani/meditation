@@ -14,6 +14,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - a Spring Boot backend in `backend/`
   - H2 persistence plus Flyway migrations
   - local-first queue-backed behavior for the implemented backend-backed domains
+  - a unified shell pipeline wrapper at `./scripts/pipeline.sh` that provides operator-facing `verify`, `build`, `package`, and `release` stages over the existing production scripts
 - Implemented vertical slices now include:
   - timer setup, active runtime, sounds, and session logging
   - dedicated prerecorded `custom play` runtime with persisted recovery
@@ -102,4 +103,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Define the next bounded prompt bundle only when a new milestone requires it.
+- Exact recommended next prompt: `main-upstream-publish-bundle`
