@@ -5,7 +5,7 @@ import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import type { SyncQueueEntry } from '../../types/sync';
 import { isApiClientError } from '../../utils/apiClient';
 import { deriveSankalpaProgress } from '../../utils/sankalpa';
-import { listSankalpaProgressFromApi, persistSankalpaToApi } from '../../utils/sankalpaApi';
+import { deleteSankalpaFromApi, listSankalpaProgressFromApi, persistSankalpaToApi } from '../../utils/sankalpaApi';
 import {
   enqueueSyncQueueEntry,
   markFailedSyncQueueEntriesPending,
@@ -27,6 +27,7 @@ interface UseSankalpaProgressResult {
   readonly isLoading: boolean;
   readonly syncMessage: string | null;
   readonly saveSankalpa: (goal: SankalpaGoal) => Promise<SankalpaSaveResult>;
+  readonly deleteSankalpa: (goalId: string) => Promise<SankalpaSaveResult>;
 }
 
 type SankalpaReplayEntry = Pick<SyncQueueEntry, 'operation' | 'recordId' | 'payload'>;
@@ -55,6 +56,28 @@ function mergeProgressEntries(
 function deriveLocalProgress(goals: readonly SankalpaGoal[], sessionLogs: readonly SessionLog[]): SankalpaProgress[] {
   const now = new Date();
   return sortProgressEntries(goals.map((goal) => deriveSankalpaProgress(goal, sessionLogs, now)));
+}
+
+export function applySankalpaReplayEntries(
+  progressEntries: readonly SankalpaProgress[],
+  queuedEntries: readonly SankalpaReplayEntry[],
+  sessionLogs: readonly SessionLog[]
+): SankalpaProgress[] {
+  let nextProgressEntries = sortProgressEntries(progressEntries);
+
+  for (const queueEntry of queuedEntries) {
+    if (queueEntry.operation === 'delete') {
+      nextProgressEntries = nextProgressEntries.filter((entry) => entry.goal.id !== queueEntry.recordId);
+      continue;
+    }
+
+    nextProgressEntries = mergeProgressEntries(
+      nextProgressEntries,
+      deriveLocalProgress([queueEntry.payload as SankalpaGoal], sessionLogs)
+    );
+  }
+
+  return nextProgressEntries;
 }
 
 export function selectSankalpaReplayEntries(queue: readonly SyncQueueEntry[]): SankalpaReplayEntry[] {
@@ -127,6 +150,24 @@ function formatSaveErrorMessage(error: unknown): string {
   return 'Unable to save sankalpa right now.';
 }
 
+function formatDeleteErrorMessage(error: unknown): string {
+  if (isApiClientError(error)) {
+    if (error.detail && error.detail.trim().length > 0) {
+      return error.detail.trim();
+    }
+
+    if (error.kind === 'network') {
+      return 'Unable to delete sankalpa right now.';
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message.trim();
+  }
+
+  return 'Unable to delete sankalpa right now.';
+}
+
 export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSankalpaProgressResult {
   const { isOnline, queue, updateQueue } = useSyncStatus();
   const [goals, setGoals] = useState<SankalpaGoal[]>(() => loadSankalpas());
@@ -191,16 +232,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
           mergedProgressEntries = sortProgressEntries(remoteProgressEntriesResponse);
         }
 
-        for (const queueEntry of replayEntries) {
-          if (queueEntry.operation !== 'upsert') {
-            continue;
-          }
-
-          mergedProgressEntries = mergeProgressEntries(
-            mergedProgressEntries,
-            deriveLocalProgress([queueEntry.payload as SankalpaGoal], sessionLogs)
-          );
-        }
+        mergedProgressEntries = applySankalpaReplayEntries(mergedProgressEntries, replayEntries, sessionLogs);
 
         if (controller.signal.aborted) {
           return;
@@ -263,6 +295,37 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     };
   }
 
+  async function deleteSankalpa(goalId: string): Promise<SankalpaSaveResult> {
+    const nextGoals = goalsRef.current.filter((entry) => entry.id !== goalId);
+    setGoals(nextGoals);
+    saveSankalpas(nextGoals);
+    setRemoteProgressEntries(null);
+    updateQueue((currentQueue) =>
+      enqueueSyncQueueEntry(currentQueue, {
+        entityType: 'sankalpa',
+        operation: 'delete',
+        recordId: goalId,
+        payload: null,
+      })
+    );
+
+    if (isOnline) {
+      setSyncMessage(null);
+      return {
+        tone: 'ok',
+        message: 'Sankalpa deleted.',
+      };
+    }
+
+    const message = 'Archived sankalpa deleted locally because the backend could not be reached.';
+    setSyncMessage(message);
+
+    return {
+      tone: 'warn',
+      message,
+    };
+  }
+
   useEffect(() => {
     if (!isOnline) {
       return;
@@ -290,7 +353,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
 
     async function flushQueuedSankalpas() {
       for (const queueEntry of pendingEntries) {
-        if (cancelled || queueEntry.operation !== 'upsert') {
+        if (cancelled) {
           continue;
         }
 
@@ -298,28 +361,57 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
         updateQueue((currentQueue) => markSyncQueueEntryInFlight(currentQueue, queueEntry.id, attemptedAt));
 
         try {
-          const savedProgressEntry = await persistSankalpaToApi(queueEntry.payload as SankalpaGoal, {
-            timeZone,
-            syncQueuedAt: queueEntry.queuedAt,
-          });
-          if (cancelled) {
-            return;
+          if (queueEntry.operation === 'delete') {
+            const deleteResult = await deleteSankalpaFromApi(queueEntry.recordId, {
+              timeZone,
+              syncQueuedAt: queueEntry.queuedAt,
+            });
+            if (cancelled) {
+              return;
+            }
+
+            if (deleteResult.outcome === 'stale') {
+              const nextProgressEntries = mergeProgressEntries(progressEntriesRef.current, [deleteResult.currentSankalpa]);
+              setRemoteProgressEntries(nextProgressEntries);
+              setGoals(nextProgressEntries.map((entry) => entry.goal));
+              syncLocalCache(nextProgressEntries);
+              setSyncMessage('A newer sankalpa version already exists in the backend, so this delete was not applied.');
+            } else {
+              const nextProgressEntries = progressEntriesRef.current.filter((entry) => entry.goal.id !== queueEntry.recordId);
+              setRemoteProgressEntries(nextProgressEntries);
+              setGoals(nextProgressEntries.map((entry) => entry.goal));
+              syncLocalCache(nextProgressEntries);
+              setSyncMessage(null);
+            }
+          } else {
+            const savedProgressEntry = await persistSankalpaToApi(queueEntry.payload as SankalpaGoal, {
+              timeZone,
+              syncQueuedAt: queueEntry.queuedAt,
+            });
+            if (cancelled) {
+              return;
+            }
+
+            const nextProgressEntries = mergeProgressEntries(progressEntriesRef.current, [savedProgressEntry]);
+            setRemoteProgressEntries(nextProgressEntries);
+            setGoals(nextProgressEntries.map((entry) => entry.goal));
+            syncLocalCache(nextProgressEntries);
+            setSyncMessage(null);
           }
 
-          const nextProgressEntries = mergeProgressEntries(progressEntriesRef.current, [savedProgressEntry]);
-          setRemoteProgressEntries(nextProgressEntries);
-          setGoals(nextProgressEntries.map((entry) => entry.goal));
-          syncLocalCache(nextProgressEntries);
-          setSyncMessage(null);
           updateQueue((currentQueue) => removeSyncQueueEntry(currentQueue, queueEntry.id));
         } catch (error) {
           if (cancelled) {
             return;
           }
 
-          const message = formatSaveErrorMessage(error);
+          const message = queueEntry.operation === 'delete' ? formatDeleteErrorMessage(error) : formatSaveErrorMessage(error);
           updateQueue((currentQueue) => markSyncQueueEntryFailed(currentQueue, queueEntry.id, attemptedAt, message));
-          setSyncMessage(`${message} The locally saved sankalpa is still available in this browser.`);
+          setSyncMessage(
+            queueEntry.operation === 'delete'
+              ? `${message} The archived sankalpa is still removed in this browser.`
+              : `${message} The locally saved sankalpa is still available in this browser.`
+          );
 
           if (isApiClientError(error) && error.kind === 'network') {
             break;
@@ -342,5 +434,6 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     isLoading,
     syncMessage,
     saveSankalpa,
+    deleteSankalpa,
   };
 }

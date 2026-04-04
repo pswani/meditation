@@ -1,6 +1,8 @@
 package com.meditation.backend.sankalpa;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
+import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -44,8 +47,8 @@ class SankalpaControllerTest {
   void returnsBackendDerivedProgressAcrossGoalTypes() throws Exception {
     Instant createdAt = localInstant(2026, 3, 20, 6, 0);
     sankalpaGoalRepository.saveAll(List.of(
-        new SankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, "Vipassana", "morning", createdAt, null, false),
-        new SankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, createdAt, null, false)
+        createSankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, "Vipassana", "morning", createdAt, createdAt, null, false),
+        createSankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, createdAt, createdAt, null, false)
     ));
     sessionLogRepository.saveAll(List.of(
         createSessionLog("log-1", "Vipassana", localInstant(2026, 3, 21, 7, 0), 900),
@@ -92,13 +95,14 @@ class SankalpaControllerTest {
   @Test
   void returnsArchivedGoalsWithArchivedStatus() throws Exception {
     sankalpaGoalRepository.save(
-        new SankalpaGoalEntity(
+        createSankalpaGoalEntity(
             "goal-archived",
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
             null,
             null,
+            Instant.parse("2026-03-24T00:00:00Z"),
             Instant.parse("2026-03-24T00:00:00Z"),
             null,
             true
@@ -166,13 +170,14 @@ class SankalpaControllerTest {
   @Test
   void usesTheRequestedTimeZoneWhenApplyingTimeOfDayFilters() throws Exception {
     sankalpaGoalRepository.save(
-        new SankalpaGoalEntity(
+        createSankalpaGoalEntity(
             "goal-zone",
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
             null,
             "morning",
+            Instant.parse("2026-03-24T00:00:00Z"),
             Instant.parse("2026-03-24T00:00:00Z"),
             null,
             false
@@ -186,6 +191,82 @@ class SankalpaControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].matchedSessionCount").value(1))
         .andExpect(jsonPath("$[0].status").value("completed"));
+  }
+
+  @Test
+  void deletesArchivedSankalpas() throws Exception {
+    Instant createdAt = Instant.parse("2026-03-24T00:00:00Z");
+    sankalpaGoalRepository.save(
+        createSankalpaGoalEntity(
+            "goal-delete",
+            "session-count-based",
+            java.math.BigDecimal.ONE,
+            7,
+            null,
+            null,
+            createdAt,
+            createdAt.plusSeconds(120),
+            null,
+            true
+        )
+    );
+
+    mockMvc.perform(delete("/api/sankalpas/goal-delete"))
+        .andExpect(status().isNoContent());
+
+    assertThat(sankalpaGoalRepository.findById("goal-delete")).isEmpty();
+  }
+
+  @Test
+  void rejectsDeletingNonArchivedSankalpas() throws Exception {
+    Instant createdAt = Instant.parse("2026-03-24T00:00:00Z");
+    sankalpaGoalRepository.save(
+        createSankalpaGoalEntity(
+            "goal-active",
+            "session-count-based",
+            java.math.BigDecimal.ONE,
+            7,
+            null,
+            null,
+            createdAt,
+            createdAt.plusSeconds(120),
+            null,
+            false
+        )
+    );
+
+    mockMvc.perform(delete("/api/sankalpas/goal-active"))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void returnsCurrentSankalpaWhenDeleteIsStale() throws Exception {
+    Instant createdAt = Instant.parse("2026-03-24T00:00:00Z");
+    Instant updatedAt = Instant.parse("2026-03-24T12:00:00Z");
+    sankalpaGoalRepository.save(
+        createSankalpaGoalEntity(
+            "goal-stale",
+            "duration-based",
+            java.math.BigDecimal.valueOf(20),
+            7,
+            "Vipassana",
+            "morning",
+            createdAt,
+            updatedAt,
+            null,
+            true
+        )
+    );
+
+    mockMvc.perform(delete("/api/sankalpas/goal-stale")
+            .queryParam("timeZone", "America/Chicago")
+            .header(SyncRequestSupport.SYNC_QUEUED_AT_HEADER, "2026-03-24T11:00:00Z"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentSankalpa.goal.id").value("goal-stale"))
+        .andExpect(jsonPath("$.currentSankalpa.status").value("archived"));
+
+    assertThat(sankalpaGoalRepository.findById("goal-stale")).isPresent();
   }
 
   private SessionLogEntity createSessionLog(String id, String meditationType, Instant endedAt, int completedDurationSeconds) {
@@ -219,5 +300,31 @@ class SankalpaControllerTest {
 
   private Instant localInstant(int year, int month, int dayOfMonth, int hour, int minute) {
     return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, 0, 0, ZoneId.systemDefault()).toInstant();
+  }
+
+  private SankalpaGoalEntity createSankalpaGoalEntity(
+      String id,
+      String goalType,
+      java.math.BigDecimal targetValue,
+      int days,
+      String meditationTypeCode,
+      String timeOfDayBucket,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant completedAt,
+      boolean archived
+  ) {
+    return new SankalpaGoalEntity(
+        id,
+        goalType,
+        targetValue,
+        days,
+        meditationTypeCode,
+        timeOfDayBucket,
+        createdAt,
+        updatedAt,
+        completedAt,
+        archived
+    );
   }
 }
