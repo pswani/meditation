@@ -5,7 +5,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `main`
 - Active bundle: none
-- Latest completed bundle: `sankalpa-delete-unarchive-feature-bundle`
+- Latest completed bundles in `prompts/`: cleaned up on 2026-04-04 after implementation completion
 - Latest merge outcome: merged `feat/sankalpa-delete-unarchive` back into `pending-wrk` on 2026-04-03 with a normal local merge commit
 
 ## Product state
@@ -102,4 +102,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 
 ## Recommended next slice
-- Exact recommended next prompt: `main-upstream-publish-bundle`
+- Define the next bounded prompt bundle only when a new milestone requires it.

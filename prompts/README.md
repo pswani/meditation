@@ -1,42 +1,25 @@
 # Prompt Bundles
 
-This folder contains reusable Codex prompt bundles for the next major product slices in this repository.
+This folder stores reusable Codex prompt bundles when a new bounded milestone needs a structured implementation workflow.
 
-Use these bundles when you want a bounded feature sequence that follows the same local workflow pattern:
+Current status:
 
-1. create a feature branch from the current parent branch
-2. implement one focused feature slice
-3. review the slice without changing code
-4. test the slice and strengthen coverage
-5. fix important findings from review and test
-6. merge the completed feature branch back into the parent branch
+- No active bundle folders are present right now because the previously tracked bundles in this directory have already been implemented and cleaned up.
+- Bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
 
-Current bundles:
-
-- `custom-play-runtime-feature-bundle-with-branching`
-- `playlist-runtime-audio-feature-bundle-with-branching`
-- `sankalpa-edit-archive-feature-bundle-with-branching`
-- `ios-lock-screen-end-bell-fix-feature-bundle-with-branching`
-- `ios-safari-ux-hardening-feature-bundle-with-branching`
-- `sankalpa-delete-unarchive-feature-bundle`
-- `ios-safari-real-device-qa-bundle`
-- `custom-play-media-library-feature-bundle`
-- `main-upstream-publish-bundle`
-
-Reusable runner:
+Reusable runner template:
 
 - `run-milestone-bundle.md`
 
-Typical usage:
+When creating the next bundle:
 
-1. read `prompts/run-milestone-bundle.md`
-2. replace `<MILESTONE_NAME>` with one of the bundle folder names above
-3. execute the bundle prompts in sorted order
-
-The bundle prompts are intended to work with the repository guidance in:
-
-- `AGENTS.md`
-- `PLANS.md`
-- `README.md`
-- `requirements/decisions.md`
-- `requirements/session-handoff.md`
+1. Create a new folder under `prompts/` using a clear milestone-oriented name.
+2. Add a bounded prompt sequence in sorted order.
+3. Include the standard lifecycle steps unless there is a justified deviation:
+   - `00-create-branch.md`
+   - `01-implement-*.md`
+   - `02-review-*.md`
+   - `03-test-*.md`
+   - `04-fix-*.md`
+   - `99-merge-branch.md`
+4. Keep all prompt guidance aligned with `AGENTS.md`, `PLANS.md`, and the durable requirements docs.
