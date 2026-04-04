@@ -898,6 +898,15 @@ button:disabled {
   margin: 0.2rem 0 0;
   color: var(--text);
   font-size: 0.86rem;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: baseline;
+}
+
+.history-time-separator {
+  color: var(--muted);
 }
 
 .history-run-context {
