@@ -62,6 +62,7 @@
 ## Operational workflow
 - Keep the repository on one production-first operational path:
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
+  - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.

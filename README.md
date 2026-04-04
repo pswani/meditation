@@ -440,6 +440,9 @@ These are the supported operational entry points in the repo now:
 | `./scripts/prod-build.sh` | `npm run build:prod` | Production build verification | Builds the frontend bundle and runs the backend production build command. |
 | `./scripts/package-deploy.sh` | `npm run package:prod` | Build a deployable production bundle | Packages static frontend files, the backend jar, nginx config, and backend env example under `local-data/deploy/`. |
 | `./scripts/prod-release.sh` | `npm run release:prod` | Golden path release | Packages the production bundle and installs it through the macOS production installer. |
+| `./scripts/pipeline.sh verify` | none | Unified quality gate | Runs `typecheck`, `lint`, `test`, and `build` in a single command. |
+| `./scripts/pipeline.sh package` | none | Unified packaging entrypoint | Calls the production packaging flow through one top-level pipeline command. |
+| `./scripts/pipeline.sh release` | none | Unified release entrypoint | Calls the production release/install flow through one top-level pipeline command. |
 | `./scripts/render-nginx-config.sh --output local-data/deploy/nginx/meditation.conf` | none | Generate production nginx config | Renders an nginx site config that serves the frontend bundle and proxies `/api` and `/media` to the backend. |
 | `./scripts/render-launchd-plist.sh --output /tmp/com.meditation.backend.plist` | none | Generate a backend `launchd` plist | Renders a macOS `launchd` plist for the backend service. |
 | `./scripts/prod-backend-start.sh` | none | Start the packaged backend jar | Starts the backend jar in the background using the production runtime directory and health checks. |
