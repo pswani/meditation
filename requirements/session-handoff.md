@@ -20,6 +20,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - dedicated prerecorded `custom play` runtime with persisted recovery
   - managed custom-play media library foundations with backend metadata, frontend fallback metadata, and clearer Practice-screen selection states
   - playlist runtime with linked `custom play` audio, optional small gaps, and per-item logging
+  - History rendering that shows calm session time ranges from start to end for manual and auto logs
   - summary views with backend-backed and local fallback behavior
   - sankalpa create, edit, archive, unarchive, and archived-only delete flows with backend-backed archived-state persistence and stale-delete recovery
 - Timer lock-screen mitigation now includes:
