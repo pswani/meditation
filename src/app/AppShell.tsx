@@ -1,17 +1,30 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { precacheUrlsForOffline } from '../features/sync/offlineApp';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useTimer } from '../features/timer/useTimer';
 import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/playlistRuntime';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
-function buildSyncStatusMessage(isOnline: boolean, pendingCount: number, failedCount: number): string | null {
-  if (!isOnline) {
+function buildSyncStatusMessage(
+  connectionMode: 'offline' | 'backend-unreachable' | 'online',
+  pendingCount: number,
+  failedCount: number
+): string | null {
+  if (connectionMode === 'offline') {
     if (pendingCount > 0) {
       return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device and sync when the backend is reachable again.`;
     }
 
     return 'You are offline. Saved data already on this device remains available.';
+  }
+
+  if (connectionMode === 'backend-unreachable') {
+    if (pendingCount > 0) {
+      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device until the backend is reachable again.`;
+    }
+
+    return 'The backend is unavailable right now. Saved data already on this device remains available.';
   }
 
   if (failedCount > 0) {
@@ -35,7 +48,7 @@ function buildCustomPlayMediaMessage(error: unknown): string {
   }
 
   if (error instanceof Error && error.message.toLowerCase().includes('network')) {
-    return 'The linked recording could not be loaded because the media file is unavailable right now.';
+    return 'The linked recording could not be loaded because the media file is unavailable or not cached on this device right now.';
   }
 
   return 'The linked recording could not continue playing right now.';
@@ -51,7 +64,7 @@ function buildPlaylistMediaMessage(error: unknown): string {
   }
 
   if (error instanceof Error && error.message.toLowerCase().includes('network')) {
-    return 'The linked playlist recording could not be loaded because the media file is unavailable right now.';
+    return 'The linked playlist recording could not be loaded because the media file is unavailable or not cached on this device right now.';
   }
 
   return 'The linked playlist recording could not continue playing right now.';
@@ -75,11 +88,11 @@ export default function AppShell() {
     reportPlaylistRuntimeIssue,
   } = useTimer();
   const {
-    isOnline,
+    connectionMode,
     summary: { nextRetryCount, failedCount },
   } = useSyncStatus();
   const activeNavItem = getActiveNavItem(location.pathname);
-  const syncStatusMessage = buildSyncStatusMessage(isOnline, nextRetryCount, failedCount);
+  const syncStatusMessage = buildSyncStatusMessage(connectionMode, nextRetryCount, failedCount);
   const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
   const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
   const activePlaylistItem = getPlaylistRunCurrentItem(activePlaylistRun);
@@ -143,6 +156,14 @@ export default function AppShell() {
   }, [activeCustomPlayRun, reportCustomPlayRuntimeIssue]);
 
   useEffect(() => {
+    if (!activeCustomPlayRun?.mediaFilePath) {
+      return;
+    }
+
+    void precacheUrlsForOffline([activeCustomPlayRun.mediaFilePath]);
+  }, [activeCustomPlayRun?.mediaFilePath]);
+
+  useEffect(() => {
     const audio = playlistAudioRef.current;
     if (!audio) {
       return;
@@ -198,6 +219,14 @@ export default function AppShell() {
         reportPlaylistRuntimeIssue(buildPlaylistMediaMessage(error));
       });
   }, [activePlaylistAudioItem, activePlaylistRun, isPlaylistRunPaused, reportPlaylistRuntimeIssue]);
+
+  useEffect(() => {
+    if (!activePlaylistAudioItem?.mediaFilePath) {
+      return;
+    }
+
+    void precacheUrlsForOffline([activePlaylistAudioItem.mediaFilePath]);
+  }, [activePlaylistAudioItem?.mediaFilePath]);
 
   return (
     <div className="app-shell">
@@ -287,7 +316,7 @@ export default function AppShell() {
             </div>
           ) : null}
           {syncStatusMessage ? (
-            <div className={`status-banner ${!isOnline || failedCount > 0 ? 'warn' : ''}`} role="status" aria-live="polite">
+            <div className={`status-banner ${connectionMode !== 'online' || failedCount > 0 ? 'warn' : ''}`} role="status" aria-live="polite">
               <p>{syncStatusMessage}</p>
             </div>
           ) : null}

@@ -14,6 +14,18 @@
   - custom plays
   - playlists
   - sankalpas
+- Keep offline reopening on a minimal in-repo app-shell path:
+  - manifest metadata plus a service worker
+  - same-origin runtime asset caching after a successful visit
+  - no heavyweight PWA plugin unless the current approach becomes insufficient
+- Keep backend reachability distinct from raw browser online state so the shell can differentiate:
+  - full device offline
+  - backend unavailable while the browser is still online
+  - ordinary pending or failed sync work
+- Keep summary and managed media catalog reads backed by last-successful browser snapshots so reloads during outages can prefer trusted prior backend data before falling back further.
+- Keep recording media caching bounded and on-demand:
+  - cache files the user has already touched
+  - do not pre-cache the full managed media library by default
 - Keep persisted timer defaults separate from the Practice screen's in-progress draft state so Home, Settings, and Practice do not overwrite one another unintentionally.
 - Persist active timer recovery as one canonical active-session snapshot and preserve paused recovery truthfully instead of reconstructing timer state from looser fragments.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
@@ -76,6 +88,7 @@
 
 ## Current intentional limitations
 - Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.
+- Offline reopening depends on a prior successful visit so the app shell and any on-demand media the user expects are already cached on the device.
 - `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
 
 ## Documentation and planning

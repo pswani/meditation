@@ -1,9 +1,11 @@
 import type { ActiveCustomPlayRun, CustomPlay } from '../types/customPlay';
 import type { LastUsedMeditation } from '../types/home';
+import type { MediaAssetMetadata } from '../types/mediaAsset';
 import type { ActivePlaylistRun, Playlist } from '../types/playlist';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
 import type { ActiveSession, TimerSettings } from '../types/timer';
+import type { SummarySnapshotData } from './summary';
 import {
   normalizeTimerSettings,
 } from './timerSettingsNormalization';
@@ -23,8 +25,11 @@ const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 const ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY = 'meditation.activeCustomPlayRunState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
+const MEDIA_ASSET_CATALOG_CACHE_KEY = 'meditation.mediaAssetCatalogCache.v1';
+const SUMMARY_SNAPSHOT_CACHE_KEY = 'meditation.summarySnapshotCache.v1';
 const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
 const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
+const SESSION_LOG_SOURCES = ['auto log', 'manual log'] as const;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -121,6 +126,80 @@ function isValidCustomPlayFields(candidate: Record<string, unknown>): boolean {
     (typeof candidate.customPlayRecordingLabel === 'string' || typeof candidate.customPlayRecordingLabel === 'undefined');
 
   return hasValidCustomPlayFields;
+}
+
+function isMediaAssetMetadata(value: unknown): value is MediaAssetMetadata {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.label === 'string' &&
+    (typeof candidate.meditationType === 'undefined' ||
+      candidate.meditationType === null ||
+      isMeditationType(candidate.meditationType)) &&
+    typeof candidate.filePath === 'string' &&
+    typeof candidate.relativePath === 'string' &&
+    typeof candidate.durationSeconds === 'number' &&
+    typeof candidate.mimeType === 'string' &&
+    typeof candidate.sizeBytes === 'number' &&
+    isValidIsoDate(candidate.updatedAt)
+  );
+}
+
+function isSummarySnapshotData(value: unknown): value is SummarySnapshotData {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const overall = candidate.overallSummary;
+  const byType = candidate.byTypeSummary;
+  const bySource = candidate.bySourceSummary;
+  const byTimeOfDay = candidate.byTimeOfDaySummary;
+
+  return (
+    isObjectRecord(overall) &&
+    typeof overall.totalSessionLogs === 'number' &&
+    typeof overall.completedSessionLogs === 'number' &&
+    typeof overall.endedEarlySessionLogs === 'number' &&
+    typeof overall.totalDurationSeconds === 'number' &&
+    typeof overall.averageDurationSeconds === 'number' &&
+    typeof overall.autoLogs === 'number' &&
+    typeof overall.manualLogs === 'number' &&
+    Array.isArray(byType) &&
+    byType.every(
+      (entry) =>
+        isObjectRecord(entry) &&
+        isMeditationType(entry.meditationType) &&
+        typeof entry.sessionLogs === 'number' &&
+        typeof entry.totalDurationSeconds === 'number'
+    ) &&
+    Array.isArray(bySource) &&
+    bySource.every(
+      (entry) =>
+        isObjectRecord(entry) &&
+        typeof entry.source === 'string' &&
+        SESSION_LOG_SOURCES.includes(entry.source as (typeof SESSION_LOG_SOURCES)[number]) &&
+        typeof entry.sessionLogs === 'number' &&
+        typeof entry.completedSessionLogs === 'number' &&
+        typeof entry.endedEarlySessionLogs === 'number' &&
+        typeof entry.totalDurationSeconds === 'number'
+    ) &&
+    Array.isArray(byTimeOfDay) &&
+    byTimeOfDay.every(
+      (entry) =>
+        isObjectRecord(entry) &&
+        typeof entry.timeOfDayBucket === 'string' &&
+        TIME_OF_DAY_BUCKETS.includes(entry.timeOfDayBucket as (typeof TIME_OF_DAY_BUCKETS)[number]) &&
+        typeof entry.sessionLogs === 'number' &&
+        typeof entry.completedSessionLogs === 'number' &&
+        typeof entry.endedEarlySessionLogs === 'number' &&
+        typeof entry.totalDurationSeconds === 'number'
+    )
+  );
 }
 
 function isSessionLog(value: unknown): value is SessionLog {
@@ -608,6 +687,51 @@ export function loadSankalpas(): SankalpaGoal[] {
 
 export function saveSankalpas(sankalpas: readonly SankalpaGoal[]): void {
   localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
+}
+
+export function loadCachedMediaAssetCatalog(): MediaAssetMetadata[] | null {
+  const raw = localStorage.getItem(MEDIA_ASSET_CATALOG_CACHE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    const assets = parsed.filter(isMediaAssetMetadata);
+    return assets.length > 0 ? assets : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedMediaAssetCatalog(assets: readonly MediaAssetMetadata[]): void {
+  localStorage.setItem(MEDIA_ASSET_CATALOG_CACHE_KEY, JSON.stringify(assets));
+}
+
+function buildSummarySnapshotStorageKey(cacheKey: string): string {
+  return `${SUMMARY_SNAPSHOT_CACHE_KEY}:${cacheKey}`;
+}
+
+export function loadCachedSummarySnapshot(cacheKey: string): SummarySnapshotData | null {
+  const raw = localStorage.getItem(buildSummarySnapshotStorageKey(cacheKey));
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isSummarySnapshotData(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedSummarySnapshot(cacheKey: string, snapshot: SummarySnapshotData): void {
+  localStorage.setItem(buildSummarySnapshotStorageKey(cacheKey), JSON.stringify(snapshot));
 }
 
 export function loadLastUsedMeditation(): LastUsedMeditation | null {

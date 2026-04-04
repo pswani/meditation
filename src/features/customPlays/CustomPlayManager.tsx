@@ -30,6 +30,10 @@ function describeManagedLibrarySource(source: MediaAssetCatalogSource, count: nu
     return `${count} managed media session${count === 1 ? '' : 's'} loaded from the backend library.`;
   }
 
+  if (source === 'cached-backend') {
+    return `${count} managed media session${count === 1 ? '' : 's'} restored from the last available backend library sync.`;
+  }
+
   return `${count} built-in fallback media session${count === 1 ? '' : 's'} shown while the backend library is unavailable.`;
 }
 

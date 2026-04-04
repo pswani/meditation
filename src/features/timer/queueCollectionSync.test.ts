@@ -33,8 +33,8 @@ function mergeTestEntries(primary: readonly TestEntry[], secondary: readonly Tes
 
 describe('queueCollectionSync helpers', () => {
   it('builds a compact queue hydration signature from queue metadata', () => {
-    const pendingSignature = buildQueueHydrationSignature(true, [createQueueEntry({})]);
-    const failedSignature = buildQueueHydrationSignature(true, [createQueueEntry({ state: 'failed', retryCount: 1 })]);
+    const pendingSignature = buildQueueHydrationSignature('online', [createQueueEntry({})]);
+    const failedSignature = buildQueueHydrationSignature('online', [createQueueEntry({ state: 'failed', retryCount: 1 })]);
 
     expect(pendingSignature).not.toBe(failedSignature);
     expect(pendingSignature).toContain('online');

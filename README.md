@@ -29,6 +29,8 @@ This README is intentionally grounded in the current repository contents. It exp
   - browser-persisted sync queue storage
   - app-level online/offline status tracking
   - calm shell messaging for offline and pending-sync states
+  - manifest and service-worker-backed offline app shell reopening after a successful visit
+  - bounded runtime caching for same-origin assets and on-demand recording media
 - local-first offline write behavior for:
   - timer settings
   - session logs, including manual logs
@@ -150,7 +152,9 @@ The front end currently owns all of the following:
 The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
 Shared app-level sync visibility now lives alongside that in `src/features/sync/`, keeping connection state and pending-sync summary work out of route components.
 The queue-backed offline behavior now keeps local edits visible immediately and flushes them back through the existing REST boundaries when the backend becomes reachable again.
-The shared shell now also hosts the persistent hidden audio element used to keep active `custom play` media playback and runtime progress aligned across route changes.
+Backend reachability is now tracked separately from raw browser online state, so the shell can distinguish browser-offline from backend-unavailable conditions.
+Summary views and the managed media catalog now keep last-successful browser snapshots so degraded reloads can stay useful after a successful online visit.
+The shared shell now also hosts the persistent hidden audio element used to keep active `custom play` media playback and runtime progress aligned across route changes, and it requests bounded offline caching for active recording media.
 
 ### Back-end responsibilities
 

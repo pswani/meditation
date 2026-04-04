@@ -1,8 +1,8 @@
 import type { SyncQueueEntry } from '../../types/sync';
 
-export function buildQueueHydrationSignature(isOnline: boolean, queueEntries: readonly SyncQueueEntry[]): string {
+export function buildQueueHydrationSignature(connectivityKey: string, queueEntries: readonly SyncQueueEntry[]): string {
   return [
-    isOnline ? 'online' : 'offline',
+    connectivityKey,
     ...queueEntries.map((entry) =>
       [
         entry.entityType,

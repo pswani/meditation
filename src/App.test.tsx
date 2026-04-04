@@ -205,6 +205,10 @@ function createStatefulBackendFetchMock(options?: {
     const requestUrl = new URL(url, 'http://localhost');
     const method = init?.method ?? 'GET';
 
+    if (requestUrl.pathname === '/api/health' && method === 'GET') {
+      return createJsonResponse(200, { status: 'ok' });
+    }
+
     if (requestUrl.pathname === '/api/settings/timer' && method === 'GET') {
       return createJsonResponse(200, {
         id: 'default',

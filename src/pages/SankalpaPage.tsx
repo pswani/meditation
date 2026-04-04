@@ -5,7 +5,7 @@ import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { meditationTypes } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { SankalpaGoal, SankalpaProgress, SankalpaValidationResult } from '../types/sankalpa';
-import { isApiClientError } from '../utils/apiClient';
+import { isApiClientError, isBackendReachabilityError } from '../utils/apiClient';
 import { formatDurationLabel } from '../utils/sessionLog';
 import {
   deriveDateInputForDayOffset,
@@ -14,7 +14,7 @@ import {
   type SummarySnapshotData,
   type SummaryDateRange,
 } from '../utils/summary';
-import { loadSummaryFromApi } from '../utils/summaryApi';
+import { loadCachedSummarySnapshotData, loadSummaryFromApi } from '../utils/summaryApi';
 import {
   archiveSankalpaGoal,
   createInitialSankalpaDraft,
@@ -129,6 +129,34 @@ function formatSummaryLoadMessage(error: unknown): string {
 
 function formatOfflineSummaryMessage(): string {
   return 'Showing a locally derived summary while you are offline.';
+}
+
+function formatUnavailableSummaryMessage(connectionMode: 'offline' | 'backend-unreachable' | 'online'): string {
+  return connectionMode === 'backend-unreachable'
+    ? 'Showing a locally derived summary because the backend summary service is unavailable right now.'
+    : formatOfflineSummaryMessage();
+}
+
+function formatCachedSummaryFallbackMessage(connectionMode: 'offline' | 'backend-unreachable' | 'online'): string {
+  return connectionMode === 'backend-unreachable'
+    ? 'Showing the last available summary because the backend summary service is unavailable right now.'
+    : 'Showing the last available summary while you are offline.';
+}
+
+function formatCachedSummaryLoadMessage(error: unknown): string {
+  if (isApiClientError(error) && error.kind === 'network') {
+    return 'Showing the last available summary because the backend summary service could not be reached.';
+  }
+
+  if (isApiClientError(error) && error.detail && error.detail.trim().length > 0) {
+    return `Showing the last available summary because the backend summary service returned: ${error.detail.trim()}`;
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return `Showing the last available summary because the backend summary service returned: ${error.message.trim()}`;
+  }
+
+  return 'Showing the last available summary because the backend summary service is unavailable right now.';
 }
 
 interface SankalpaSectionProps {
@@ -282,7 +310,7 @@ function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageT
 
 export default function SankalpaPage() {
   const { sessionLogs } = useTimer();
-  const { isOnline } = useSyncStatus();
+  const { connectionMode, canAttemptBackendSync, reportBackendReachable, reportBackendUnreachable } = useSyncStatus();
   const userTimeZone = useMemo(() => getUserTimeZone(), []);
   const summaryDateDefaults = useMemo(() => {
     const today = new Date();
@@ -392,10 +420,20 @@ export default function SankalpaPage() {
       return;
     }
 
-    if (!isOnline) {
-      setRemoteSummarySnapshot(null);
+    const summaryRequest = {
+      startAt:
+        summaryRangeSelection.range.startAtMs === null ? undefined : new Date(summaryRangeSelection.range.startAtMs).toISOString(),
+      endAt: summaryRangeSelection.range.endAtMs === null ? undefined : new Date(summaryRangeSelection.range.endAtMs).toISOString(),
+      timeZone: userTimeZone,
+    };
+    const cachedSummarySnapshot = loadCachedSummarySnapshotData(summaryRequest);
+
+    if (!canAttemptBackendSync) {
+      setRemoteSummarySnapshot(cachedSummarySnapshot);
       setIsSummaryLoading(false);
-      setSummaryLoadMessage(formatOfflineSummaryMessage());
+      setSummaryLoadMessage(
+        cachedSummarySnapshot ? formatCachedSummaryFallbackMessage(connectionMode) : formatUnavailableSummaryMessage(connectionMode)
+      );
       return;
     }
 
@@ -403,26 +441,24 @@ export default function SankalpaPage() {
     setIsSummaryLoading(true);
     setSummaryLoadMessage(null);
 
-    loadSummaryFromApi(
-      {
-        startAt:
-          summaryRangeSelection.range.startAtMs === null ? undefined : new Date(summaryRangeSelection.range.startAtMs).toISOString(),
-        endAt: summaryRangeSelection.range.endAtMs === null ? undefined : new Date(summaryRangeSelection.range.endAtMs).toISOString(),
-        timeZone: userTimeZone,
-      },
-      undefined,
-      controller.signal
-    )
+    loadSummaryFromApi(summaryRequest, undefined, controller.signal)
       .then((nextSummarySnapshot) => {
         setRemoteSummarySnapshot(nextSummarySnapshot);
+        reportBackendReachable();
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
         }
 
-        setRemoteSummarySnapshot(null);
-        setSummaryLoadMessage(formatSummaryLoadMessage(error));
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
+        }
+
+        setRemoteSummarySnapshot(cachedSummarySnapshot);
+        setSummaryLoadMessage(
+          cachedSummarySnapshot ? formatCachedSummaryLoadMessage(error) : formatSummaryLoadMessage(error)
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) {
@@ -433,7 +469,7 @@ export default function SankalpaPage() {
     return () => {
       controller.abort();
     };
-  }, [isOnline, sessionLogs, summaryRangeSelection.range, userTimeZone]);
+  }, [canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable, sessionLogs, summaryRangeSelection.range, userTimeZone]);
 
   const inactiveSummaryCategoriesCount = useMemo(() => {
     if (!effectiveSummarySnapshot) {

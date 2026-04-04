@@ -1,0 +1,9 @@
+{
+  "name": "Meditation App",
+  "short_name": "Meditation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3efe7",
+  "theme_color": "#3f5a4b",
+  "description": "A calm, minimal meditation practice app that keeps core practice flows available offline."
+}

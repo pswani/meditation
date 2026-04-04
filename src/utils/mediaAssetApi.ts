@@ -4,6 +4,7 @@ import type { MeditationType } from '../types/timer';
 import sampleCustomPlayMediaCatalog from '../data/customPlayMediaCatalog.json';
 import { ApiClientError, isApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { loadCachedMediaAssetCatalog, saveCachedMediaAssetCatalog } from './storage';
 
 export const CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays';
 export const CUSTOM_PLAY_MEDIA_LIST_PATH = '/media/custom-plays';
@@ -25,7 +26,7 @@ export interface MediaAssetApiResponse {
   readonly updatedAt: string;
 }
 
-export type MediaAssetCatalogSource = 'backend' | 'sample-fallback';
+export type MediaAssetCatalogSource = 'backend' | 'cached-backend' | 'sample-fallback';
 export type MediaAssetCatalogIssue = 'unavailable' | 'backend-error' | 'invalid-response';
 
 export interface MediaAssetCatalogResult {
@@ -38,8 +39,10 @@ export interface MediaAssetCatalogResult {
 const sampleMediaAssetCatalog = sampleCustomPlayMediaCatalog as readonly MediaAssetApiResponse[];
 const supportedMeditationTypes = new Set(meditationTypesCatalog as readonly MeditationType[]);
 
-let cachedMediaAssetCatalog: MediaAssetMetadata[] = sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
-let cachedMediaAssetCatalogSource: MediaAssetCatalogSource = 'sample-fallback';
+const persistedMediaAssetCatalog = loadCachedMediaAssetCatalog();
+let cachedMediaAssetCatalog: MediaAssetMetadata[] =
+  persistedMediaAssetCatalog ?? sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
+let cachedMediaAssetCatalogSource: MediaAssetCatalogSource = persistedMediaAssetCatalog ? 'cached-backend' : 'sample-fallback';
 
 function normalizeMeditationType(value: string | null | undefined): MeditationType | null {
   return value && supportedMeditationTypes.has(value as MeditationType) ? (value as MeditationType) : null;
@@ -107,6 +110,25 @@ function normalizeMediaAssetApiPayload(payload: unknown): MediaAssetMetadata[] {
 }
 
 function createFallbackResult(error: unknown): MediaAssetCatalogResult {
+  const cachedAssets = loadCachedMediaAssetCatalog();
+  if (cachedAssets && cachedAssets.length > 0) {
+    cachedMediaAssetCatalog = cloneMediaAssetCatalog(cachedAssets);
+    cachedMediaAssetCatalogSource = 'cached-backend';
+
+    return {
+      assets: cloneMediaAssetCatalog(cachedAssets),
+      source: 'cached-backend',
+      errorMessage: 'Showing the last available managed media library because the backend media API is unavailable.',
+      errorKind: isApiClientError(error) && (error.kind === 'invalid-json' || error.kind === 'invalid-response')
+        ? 'invalid-response'
+        : isApiClientError(error) && error.status === 404
+          ? 'unavailable'
+          : isApiClientError(error) && error.kind === 'network'
+            ? 'unavailable'
+            : 'backend-error',
+    };
+  }
+
   const fallbackAssets = sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
   cachedMediaAssetCatalog = cloneMediaAssetCatalog(fallbackAssets);
   cachedMediaAssetCatalogSource = 'sample-fallback';
@@ -152,6 +174,7 @@ export async function loadCustomPlayMediaAssets(apiBaseUrl?: string): Promise<Me
     const assets = normalizeMediaAssetApiPayload(payload);
     cachedMediaAssetCatalog = cloneMediaAssetCatalog(assets);
     cachedMediaAssetCatalogSource = 'backend';
+    saveCachedMediaAssetCatalog(assets);
 
     return {
       assets,
@@ -170,13 +193,14 @@ export async function listCustomPlayMediaAssets(apiBaseUrl?: string): Promise<Me
 }
 
 export function resetCustomPlayMediaAssetCatalogForTests(): void {
-  cachedMediaAssetCatalog = sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
-  cachedMediaAssetCatalogSource = 'sample-fallback';
+  const cachedAssets = loadCachedMediaAssetCatalog();
+  cachedMediaAssetCatalog = cachedAssets ?? sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
+  cachedMediaAssetCatalogSource = cachedAssets ? 'cached-backend' : 'sample-fallback';
 }
 
 export function findCustomPlayMediaAssetById(assetId: string): MediaAssetMetadata | null {
   const sourceCatalog =
-    cachedMediaAssetCatalogSource === 'backend'
+    cachedMediaAssetCatalogSource === 'backend' || cachedMediaAssetCatalogSource === 'cached-backend'
       ? cachedMediaAssetCatalog
       : sampleMediaAssetCatalog.map(normalizeMediaAssetResponse);
   const match = sourceCatalog.find((entry) => entry.id === assetId);

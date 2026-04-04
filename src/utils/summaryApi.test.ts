@@ -1,7 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildSummariesPath, buildSummariesUrl, loadSummaryFromApi, SUMMARIES_COLLECTION_ENDPOINT } from './summaryApi';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildSummarySnapshotCacheKey,
+  buildSummariesPath,
+  buildSummariesUrl,
+  loadCachedSummarySnapshotData,
+  loadSummaryFromApi,
+  SUMMARIES_COLLECTION_ENDPOINT,
+} from './summaryApi';
 
 describe('summary api boundary', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -9,6 +20,7 @@ describe('summary api boundary', () => {
   it('builds stable summary endpoint paths with optional query parameters', () => {
     expect(SUMMARIES_COLLECTION_ENDPOINT).toBe('/api/summaries');
     expect(buildSummariesPath()).toBe('/summaries');
+    expect(buildSummarySnapshotCacheKey({ timeZone: 'America/Chicago' })).toBe('/summaries?timeZone=America%2FChicago');
     expect(buildSummariesPath({ startAt: '2026-03-20T00:00:00.000Z', endAt: '2026-03-26T23:59:59.999Z' })).toBe(
       '/summaries?startAt=2026-03-20T00%3A00%3A00.000Z&endAt=2026-03-26T23%3A59%3A59.999Z'
     );
@@ -100,6 +112,12 @@ describe('summary api boundary', () => {
     expect(summary.byTypeSummary[0]?.meditationType).toBe('Vipassana');
     expect(summary.bySourceSummary[1]?.source).toBe('manual log');
     expect(summary.byTimeOfDaySummary[2]?.timeOfDayBucket).toBe('evening');
+    expect(
+      loadCachedSummarySnapshotData({
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-26T23:59:59.999Z',
+      })?.overallSummary.totalSessionLogs
+    ).toBe(2);
   });
 
   it('rejects invalid summary responses', async () => {

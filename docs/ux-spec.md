@@ -20,6 +20,15 @@ Primary destinations:
 - Goals
 - Settings
 
+## Connectivity UX rules
+- The shell should distinguish:
+  - browser offline
+  - backend unavailable while the browser is still online
+  - pending or failed sync work
+- Connectivity messaging should stay calm, compact, and non-blocking.
+- When a last-successful summary or media-library snapshot is being shown, the copy should say so explicitly instead of implying the data is live.
+- Recording-backed sessions should explain when a media file is unavailable because it is not cached on the current device.
+
 ## Timer UX rules
 - fixed-duration remains the default mode
 - timer mode choice should clearly separate fixed-duration from open-ended practice

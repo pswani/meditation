@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ActiveCustomPlayRun, CustomPlay } from '../types/customPlay';
 import type { LastUsedMeditation } from '../types/home';
+import type { MediaAssetMetadata } from '../types/mediaAsset';
 import type { Playlist } from '../types/playlist';
 import type { SankalpaGoal } from '../types/sankalpa';
 import type { SessionLog } from '../types/sessionLog';
 import type { TimerSettings } from '../types/timer';
+import type { SummarySnapshotData } from './summary';
 import {
   loadActivePlaylistRunState,
   loadActiveCustomPlayRunState,
   loadActiveTimerState,
+  loadCachedMediaAssetCatalog,
+  loadCachedSummarySnapshot,
   loadCustomPlays,
   loadLastUsedMeditation,
   loadPlaylists,
@@ -18,6 +22,8 @@ import {
   saveActivePlaylistRunState,
   saveActiveCustomPlayRunState,
   saveActiveTimerState,
+  saveCachedMediaAssetCatalog,
+  saveCachedSummarySnapshot,
   saveCustomPlays,
   saveLastUsedMeditation,
   savePlaylists,
@@ -35,6 +41,8 @@ const rawActiveTimerStateKey = 'meditation.activeTimerState.v1';
 const rawActiveCustomPlayRunStateKey = 'meditation.activeCustomPlayRunState.v1';
 const rawActivePlaylistRunStateKey = 'meditation.activePlaylistRunState.v1';
 const rawLastUsedMeditationKey = 'meditation.lastUsedMeditation.v1';
+const rawMediaAssetCatalogCacheKey = 'meditation.mediaAssetCatalogCache.v1';
+const rawSummarySnapshotCacheKey = 'meditation.summarySnapshotCache.v1:/summaries?timeZone=America%2FChicago';
 
 describe('storage timer settings', () => {
   beforeEach(() => {
@@ -132,6 +140,73 @@ describe('storage timer settings', () => {
       startSound: 'Temple Bell',
       endSound: 'Gong',
       intervalSound: 'Gong',
+    });
+  });
+});
+
+describe('storage durable offline snapshots', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists and loads the last successful managed media catalog', () => {
+    const mediaAssets: MediaAssetMetadata[] = [
+      {
+        id: 'media-1',
+        label: 'Cached Session',
+        meditationType: 'Vipassana',
+        filePath: '/media/custom-plays/cached-session.mp3',
+        relativePath: 'custom-plays/cached-session.mp3',
+        durationSeconds: 900,
+        mimeType: 'audio/mpeg',
+        sizeBytes: 1000,
+        updatedAt: '2026-04-04T09:00:00.000Z',
+      },
+    ];
+
+    saveCachedMediaAssetCatalog(mediaAssets);
+
+    expect(loadCachedMediaAssetCatalog()).toEqual(mediaAssets);
+    expect(JSON.parse(localStorage.getItem(rawMediaAssetCatalogCacheKey) ?? '[]')).toHaveLength(1);
+  });
+
+  it('persists and loads cached summary snapshots by request key', () => {
+    const snapshot: SummarySnapshotData = {
+      overallSummary: {
+        totalSessionLogs: 2,
+        completedSessionLogs: 2,
+        endedEarlySessionLogs: 0,
+        totalDurationSeconds: 1800,
+        averageDurationSeconds: 900,
+        autoLogs: 1,
+        manualLogs: 1,
+      },
+      byTypeSummary: [
+        { meditationType: 'Vipassana', sessionLogs: 2, totalDurationSeconds: 1800 },
+        { meditationType: 'Ajapa', sessionLogs: 0, totalDurationSeconds: 0 },
+        { meditationType: 'Tratak', sessionLogs: 0, totalDurationSeconds: 0 },
+        { meditationType: 'Kriya', sessionLogs: 0, totalDurationSeconds: 0 },
+        { meditationType: 'Sahaj', sessionLogs: 0, totalDurationSeconds: 0 },
+      ],
+      bySourceSummary: [
+        { source: 'auto log', sessionLogs: 1, completedSessionLogs: 1, endedEarlySessionLogs: 0, totalDurationSeconds: 900 },
+        { source: 'manual log', sessionLogs: 1, completedSessionLogs: 1, endedEarlySessionLogs: 0, totalDurationSeconds: 900 },
+      ],
+      byTimeOfDaySummary: [
+        { timeOfDayBucket: 'morning', sessionLogs: 1, completedSessionLogs: 1, endedEarlySessionLogs: 0, totalDurationSeconds: 900 },
+        { timeOfDayBucket: 'afternoon', sessionLogs: 0, completedSessionLogs: 0, endedEarlySessionLogs: 0, totalDurationSeconds: 0 },
+        { timeOfDayBucket: 'evening', sessionLogs: 1, completedSessionLogs: 1, endedEarlySessionLogs: 0, totalDurationSeconds: 900 },
+        { timeOfDayBucket: 'night', sessionLogs: 0, completedSessionLogs: 0, endedEarlySessionLogs: 0, totalDurationSeconds: 0 },
+      ],
+    };
+
+    saveCachedSummarySnapshot('/summaries?timeZone=America%2FChicago', snapshot);
+
+    expect(loadCachedSummarySnapshot('/summaries?timeZone=America%2FChicago')).toEqual(snapshot);
+    expect(JSON.parse(localStorage.getItem(rawSummarySnapshotCacheKey) ?? '{}')).toMatchObject({
+      overallSummary: {
+        totalSessionLogs: 2,
+      },
     });
   });
 });
