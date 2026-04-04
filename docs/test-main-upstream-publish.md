@@ -5,15 +5,15 @@ Date: 2026-04-03
 ## Required checks
 - status: pass
   command/check: `git status --short --branch`
-  result: Publication prep branch `chore/main-upstream-publish` was clean before merge and verification work.
+  result: Post-merge `main` is ahead of `origin/main` and only had the expected handoff-doc update left unstaged before the final publication-state commit.
 
 - status: pass
   command/check: `git log --oneline origin/main..main`
-  result: Local `main` was ahead of `origin/main` by `2c02280` only, which is the prompt-bundle commit and confirms `main` still needed the newer `pending-wrk` work merged in before publication.
+  result: Local `main` now contains the full intended publication set: `2c02280`, `cc25337`, `a0abccf`, `9535ecf`, `026bf76`, `66e56c7`, `113bc56`, and the merge commit that brought the publication bundle onto `main`.
 
 - status: pass
   command/check: `git log --oneline origin/main..pending-wrk`
-  result: The ahead-of-origin commits were intentional and understood: prompt bundles, the custom-play media library foundation, and the iPhone Safari real-device QA documentation.
+  result: `pending-wrk` remained a strict subset of the intended publication contents on `main`, confirming the ahead-of-origin work was intentional and understood.
 
 - status: pass
   command/check: `npm run typecheck`

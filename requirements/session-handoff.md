@@ -3,7 +3,7 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `pending-wrk`
+- Current branch: `main`
 - Active bundle: none
 - Latest completed bundle: `sankalpa-delete-unarchive-feature-bundle`
 - Latest merge outcome: merged `feat/sankalpa-delete-unarchive` back into `pending-wrk` on 2026-04-03 with a normal local merge commit
