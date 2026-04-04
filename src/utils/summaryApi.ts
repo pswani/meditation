@@ -1,5 +1,6 @@
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { loadCachedSummarySnapshot, saveCachedSummarySnapshot } from './storage';
 import type { OverallSummary, SummaryBySource, SummaryByTimeOfDay, SummaryByType, SummarySnapshotData } from './summary';
 
 export const SUMMARIES_COLLECTION_PATH = '/summaries';
@@ -121,8 +122,16 @@ export function buildSummariesPath(request: SummaryApiRequest = {}): string {
   return `${SUMMARIES_COLLECTION_PATH}${buildSummaryQueryString(request)}`;
 }
 
+export function buildSummarySnapshotCacheKey(request: SummaryApiRequest = {}): string {
+  return buildSummariesPath(request);
+}
+
 export function buildSummariesUrl(request: SummaryApiRequest = {}, apiBaseUrl?: string): string {
   return buildApiUrl(buildSummariesPath(request), apiBaseUrl);
+}
+
+export function loadCachedSummarySnapshotData(request: SummaryApiRequest = {}): SummarySnapshotData | null {
+  return loadCachedSummarySnapshot(buildSummarySnapshotCacheKey(request));
 }
 
 export async function loadSummaryFromApi(
@@ -131,5 +140,7 @@ export async function loadSummaryFromApi(
   signal?: AbortSignal
 ): Promise<SummarySnapshotData> {
   const payload = await requestJson<unknown>(buildSummariesPath(request), { apiBaseUrl, signal });
-  return normalizeSummaryResponse(payload);
+  const normalizedSummary = normalizeSummaryResponse(payload);
+  saveCachedSummarySnapshot(buildSummarySnapshotCacheKey(request), normalizedSummary);
+  return normalizedSummary;
 }

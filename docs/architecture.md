@@ -9,12 +9,14 @@ Single-page React application with route-based screens and feature-oriented modu
 - default backend runtime with developer-only surfaces disabled
 - `dev` backend profile for local-only conveniences such as the H2 console
 - shared frontend API client and API-base helpers under `src/utils`
+- manifest-backed install metadata plus a minimal in-repo service worker for offline app-shell reopening
 - route-level screens in `src/pages`
 - feature logic in `src/features`
 - shared domain types in `src/types`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
 - browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
+- browser-persisted last-successful snapshots for summary and managed media catalog reads
 - browser-persisted sync queue state for offline-first deferred writes
 - Vite dev `/api` proxy for same-origin frontend/backend local development
 - backend-served `/media/**` paths backed by the configured filesystem media root
@@ -121,9 +123,12 @@ Single-page React application with route-based screens and feature-oriented modu
 
 ## Offline-first foundations
 - `src/features/sync/` owns app-level connectivity status and sync queue visibility.
+- `src/features/sync/offlineApp.ts` owns service-worker registration and bounded URL pre-caching requests.
 - `src/utils/syncQueue.ts` owns queue persistence and queue-reduction helpers.
 - Queue entries are stored in browser storage so deferred writes survive reloads.
 - The shell surfaces offline and pending-sync state as lightweight status banners instead of blocking overlays or dashboard-style widgets.
+- The shell now distinguishes browser-offline from backend-unreachable states, keeping degraded sync explicit without overstating a full device disconnect.
+- The service worker caches the SPA shell and same-origin runtime assets after a successful visit so the app can reopen offline without introducing a second application runtime.
 
 ## Current offline write model
 - Implemented backend-backed writes are local-first for:
@@ -137,6 +142,10 @@ Single-page React application with route-based screens and feature-oriented modu
 - Hydration overlays queued local mutations on top of the latest backend list responses so a stale backend read does not temporarily resurrect deleted records or erase unsynced edits.
 - Failed queue entries can return to a pending state for later retry, while the shell and feature-level copy stay calm and explicit about degraded sync.
 - `Sankalpa` replay now keys off the queued replay payload shape rather than queue state metadata alone, so failed-entry bookkeeping does not repeatedly re-fetch and re-enqueue the same goals.
+- Backend reachability recovery is now probe-driven:
+  - queue replay and collection hydration may proceed while reachability is `unknown`
+  - browser-offline and health-probe failures can mark the backend as unavailable for future retries
+  - successful backend reads or writes mark reachability back to `reachable`
 
 ## Backend reconciliation model
 - The existing REST routes remain the sync boundary; this milestone does not introduce a second `/sync/*` API surface.
@@ -154,6 +163,8 @@ Single-page React application with route-based screens and feature-oriented modu
 - `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
 - Route components continue to consume stable domain state and sync status rather than performing queue mutation logic directly.
 - Manual log creation is treated as local `session log` creation first, then reconciled back through the shared `session log` sync flow instead of a separate offline-only pathway.
+- Summary and managed media catalog reads keep durable last-successful snapshots in browser storage so the UI can prefer a trusted prior backend result before dropping all the way back to sample or locally derived data.
+- Audio-backed recording files are cached only on demand after the user has touched them, preserving a bounded offline-media policy instead of pre-caching the entire managed library.
 
 ## Suggested module layout
 - pages

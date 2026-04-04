@@ -4,8 +4,9 @@ This folder stores reusable Codex prompt bundles when a new bounded milestone ne
 
 Current status:
 
-- No active bundle folders are present right now because the previously tracked bundles in this directory have already been implemented and cleaned up.
-- Bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
+- Bundle folder currently available in-repo:
+  - `offline-app-sync-feature-bundle-with-branching`
+- Older bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
 
 Reusable runner template:
 

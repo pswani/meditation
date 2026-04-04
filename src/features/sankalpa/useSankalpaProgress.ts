@@ -3,7 +3,7 @@ import { useSyncStatus } from '../sync/useSyncStatus';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import type { SyncQueueEntry } from '../../types/sync';
-import { isApiClientError } from '../../utils/apiClient';
+import { isApiClientError, isBackendReachabilityError } from '../../utils/apiClient';
 import { deriveSankalpaProgress } from '../../utils/sankalpa';
 import { deleteSankalpaFromApi, listSankalpaProgressFromApi, persistSankalpaToApi } from '../../utils/sankalpaApi';
 import {
@@ -169,7 +169,14 @@ function formatDeleteErrorMessage(error: unknown): string {
 }
 
 export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSankalpaProgressResult {
-  const { isOnline, queue, updateQueue } = useSyncStatus();
+  const {
+    connectionMode,
+    canAttemptBackendSync,
+    queue,
+    updateQueue,
+    reportBackendReachable,
+    reportBackendUnreachable,
+  } = useSyncStatus();
   const [goals, setGoals] = useState<SankalpaGoal[]>(() => loadSankalpas());
   const [remoteProgressEntries, setRemoteProgressEntries] = useState<SankalpaProgress[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -198,10 +205,16 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
   }, [sankalpaReplayEntries]);
 
   useEffect(() => {
-    if (!isOnline) {
+    if (!canAttemptBackendSync) {
       setIsLoading(false);
       setRemoteProgressEntries(null);
-      setSyncMessage(goalsRef.current.length > 0 ? 'Showing locally saved sankalpa goals while you are offline.' : null);
+      setSyncMessage(
+        goalsRef.current.length > 0
+          ? connectionMode === 'backend-unreachable'
+            ? 'Showing locally saved sankalpa goals because the backend is unavailable right now.'
+            : 'Showing locally saved sankalpa goals while you are offline.'
+          : null
+      );
       return;
     }
 
@@ -242,10 +255,15 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
         setGoals(mergedProgressEntries.map((entry) => entry.goal));
         syncLocalCache(mergedProgressEntries);
         setSyncMessage(null);
+        reportBackendReachable();
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
+        }
+
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
         }
 
         setRemoteProgressEntries(null);
@@ -260,7 +278,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     return () => {
       controller.abort();
     };
-  }, [isOnline, sankalpaReplayKey, sessionLogs, timeZone, updateQueue]);
+  }, [canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable, sankalpaReplayKey, sessionLogs, timeZone, updateQueue]);
 
   async function saveSankalpa(goal: SankalpaGoal): Promise<SankalpaSaveResult> {
     const nextGoals = [...goalsRef.current.filter((entry) => entry.id !== goal.id), goal].sort(
@@ -278,7 +296,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       })
     );
 
-    if (isOnline) {
+    if (canAttemptBackendSync) {
       setSyncMessage(null);
       return {
         tone: 'ok',
@@ -286,7 +304,10 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       };
     }
 
-    const message = 'Saved locally because the backend could not be reached.';
+    const message =
+      connectionMode === 'backend-unreachable'
+        ? 'Saved locally because the backend is unavailable.'
+        : 'Saved locally because the backend could not be reached.';
     setSyncMessage(message);
 
     return {
@@ -309,7 +330,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       })
     );
 
-    if (isOnline) {
+    if (canAttemptBackendSync) {
       setSyncMessage(null);
       return {
         tone: 'ok',
@@ -317,7 +338,10 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
       };
     }
 
-    const message = 'Archived sankalpa deleted locally because the backend could not be reached.';
+    const message =
+      connectionMode === 'backend-unreachable'
+        ? 'Archived sankalpa deleted locally because the backend is unavailable.'
+        : 'Archived sankalpa deleted locally because the backend could not be reached.';
     setSyncMessage(message);
 
     return {
@@ -327,15 +351,15 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
   }
 
   useEffect(() => {
-    if (!isOnline) {
+    if (!canAttemptBackendSync) {
       return;
     }
 
     updateQueue((currentQueue) => markFailedSyncQueueEntriesPending(currentQueue, ['sankalpa']));
-  }, [isOnline, updateQueue]);
+  }, [canAttemptBackendSync, updateQueue]);
 
   useEffect(() => {
-    if (!isOnline || isFlushingQueueRef.current) {
+    if (!canAttemptBackendSync || isFlushingQueueRef.current) {
       return;
     }
 
@@ -370,6 +394,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
               return;
             }
 
+            reportBackendReachable();
             if (deleteResult.outcome === 'stale') {
               const nextProgressEntries = mergeProgressEntries(progressEntriesRef.current, [deleteResult.currentSankalpa]);
               setRemoteProgressEntries(nextProgressEntries);
@@ -392,6 +417,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
               return;
             }
 
+            reportBackendReachable();
             const nextProgressEntries = mergeProgressEntries(progressEntriesRef.current, [savedProgressEntry]);
             setRemoteProgressEntries(nextProgressEntries);
             setGoals(nextProgressEntries.map((entry) => entry.goal));
@@ -407,13 +433,14 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
 
           const message = queueEntry.operation === 'delete' ? formatDeleteErrorMessage(error) : formatSaveErrorMessage(error);
           updateQueue((currentQueue) => markSyncQueueEntryFailed(currentQueue, queueEntry.id, attemptedAt, message));
+
           setSyncMessage(
             queueEntry.operation === 'delete'
               ? `${message} The archived sankalpa is still removed in this browser.`
               : `${message} The locally saved sankalpa is still available in this browser.`
           );
 
-          if (isApiClientError(error) && error.kind === 'network') {
+          if (isBackendReachabilityError(error)) {
             break;
           }
         }
@@ -427,7 +454,7 @@ export function useSankalpaProgress(sessionLogs: readonly SessionLog[]): UseSank
     return () => {
       cancelled = true;
     };
-  }, [isOnline, queue, timeZone, updateQueue]);
+  }, [canAttemptBackendSync, queue, reportBackendReachable, timeZone, updateQueue]);
 
   return {
     progressEntries,

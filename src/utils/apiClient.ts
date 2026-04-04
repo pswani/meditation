@@ -36,6 +36,18 @@ export function isApiClientError(error: unknown): error is ApiClientError {
   return error instanceof ApiClientError;
 }
 
+export function isBackendReachabilityError(error: unknown): boolean {
+  if (!isApiClientError(error)) {
+    return false;
+  }
+
+  if (error.kind === 'network') {
+    return true;
+  }
+
+  return error.status === 502 || error.status === 503 || error.status === 504;
+}
+
 export async function requestJson<TResponse, TBody = unknown>(
   path: string,
   options: ApiRequestJsonOptions<TBody> = {}

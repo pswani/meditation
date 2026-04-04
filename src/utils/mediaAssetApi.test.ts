@@ -11,6 +11,7 @@ import {
 
 describe('media asset api boundary', () => {
   beforeEach(() => {
+    localStorage.clear();
     resetCustomPlayMediaAssetCatalogForTests();
   });
 
@@ -142,6 +143,38 @@ describe('media asset api boundary', () => {
     expect(findCustomPlayMediaAssetById('media-backend-only')?.label).toBe('Backend Only Session');
     expect(findCustomPlayMediaAssetById('media-backend-only')?.relativePath).toBe('custom-plays/backend-only.mp3');
     expect(findCustomPlayMediaAssetById('media-vipassana-sit-20')).toBeNull();
+  });
+
+  it('prefers the last successful backend media catalog when the backend later becomes unavailable', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            id: 'media-cached-backend-only',
+            label: 'Cached Backend Session',
+            meditationType: 'Sahaj',
+            filePath: `${CUSTOM_PLAY_MEDIA_DIRECTORY}/cached-backend-only.mp3`,
+            relativePath: 'custom-plays/cached-backend-only.mp3',
+            durationSeconds: 480,
+            mimeType: 'audio/mpeg',
+            sizeBytes: 1000,
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          },
+        ],
+      })
+      .mockRejectedValueOnce(new Error('network unavailable'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await loadCustomPlayMediaAssets();
+    const result = await loadCustomPlayMediaAssets();
+
+    expect(result.source).toBe('cached-backend');
+    expect(result.errorMessage).toMatch(/last available managed media library/i);
+    expect(result.assets[0]?.id).toBe('media-cached-backend-only');
+    expect(findCustomPlayMediaAssetById('media-cached-backend-only')?.label).toBe('Cached Backend Session');
   });
 
   it('derives a relative path when older backend payloads omit it', async () => {

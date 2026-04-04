@@ -21,7 +21,7 @@ import {
   validateCustomPlayDraft,
 } from '../../utils/customPlay';
 import { deleteCustomPlayFromApi, listCustomPlaysFromApi, persistCustomPlayToApi } from '../../utils/customPlayApi';
-import { isApiClientError } from '../../utils/apiClient';
+import { isApiClientError, isBackendReachabilityError } from '../../utils/apiClient';
 import { buildManualLogEntry, type ManualLogSaveResult, validateManualLogInput } from '../../utils/manualLog';
 import { arePlaylistsEqual, createPlaylist, updatePlaylist, validatePlaylistDraft } from '../../utils/playlist';
 import { deletePlaylistFromApi, listPlaylistsFromApi, persistPlaylistToApi } from '../../utils/playlistApi';
@@ -93,6 +93,7 @@ import {
 import { getActiveSessionElapsedSeconds } from './time';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
+import type { SyncConnectionMode } from '../sync/syncContextObject';
 
 interface TimerHydration {
   readonly activeSession: ActiveSession | null;
@@ -368,22 +369,34 @@ function formatApiErrorMessage(error: unknown, fallbackMessage: string): string 
 const TIMER_CONTEXT_SYNC_ENTITY_TYPES = ['timer-settings', 'session-log', 'custom-play', 'playlist'] as const;
 
 function isNetworkError(error: unknown): boolean {
-  return isApiClientError(error) && error.kind === 'network';
+  return isBackendReachabilityError(error);
 }
 
-function buildOfflineCacheMessage(entityLabel: string, hasLocalData: boolean): string | null {
+function buildOfflineCacheMessage(connectionMode: SyncConnectionMode, entityLabel: string, hasLocalData: boolean): string | null {
   if (!hasLocalData) {
     return null;
+  }
+
+  if (connectionMode === 'backend-unreachable') {
+    return `Showing locally saved ${entityLabel} because the backend is unavailable right now.`;
   }
 
   return `Showing locally saved ${entityLabel} while you are offline.`;
 }
 
-function buildQueuedSaveMessage(entityLabel: string): string {
+function buildQueuedSaveMessage(connectionMode: SyncConnectionMode, entityLabel: string): string {
+  if (connectionMode === 'backend-unreachable') {
+    return `Saved locally because the backend is unavailable. This ${entityLabel} will sync when the backend is reachable.`;
+  }
+
   return `Saved locally while offline. This ${entityLabel} will sync when the backend is reachable.`;
 }
 
-function buildQueuedDeleteMessage(entityLabel: string): string {
+function buildQueuedDeleteMessage(connectionMode: SyncConnectionMode, entityLabel: string): string {
+  if (connectionMode === 'backend-unreachable') {
+    return `Removed locally because the backend is unavailable. This ${entityLabel} change will sync when the backend is reachable.`;
+  }
+
   return `Removed locally while offline. This ${entityLabel} change will sync when the backend is reachable.`;
 }
 
@@ -456,7 +469,14 @@ async function attemptTimerSoundPlayback(
 }
 
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
-  const { isOnline, queue, updateQueue } = useSyncStatus();
+  const {
+    connectionMode,
+    canAttemptBackendSync,
+    queue,
+    updateQueue,
+    reportBackendReachable,
+    reportBackendUnreachable,
+  } = useSyncStatus();
   const [bootstrap] = useState<TimerBootstrap>(() => createTimerBootstrap(Date.now()));
   const [lastUsedMeditation, setLastUsedMeditation] = useState<LastUsedMeditation | null>(() => loadLastUsedMeditation());
   const [state, dispatch] = useReducer(
@@ -723,7 +743,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const queuedCustomPlayEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['custom-play'],
     });
-    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedCustomPlayEntries);
+    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedCustomPlayEntries);
 
     if (
       completedCustomPlayHydrationKeyRef.current === hydrationKey ||
@@ -737,9 +757,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     async function hydrateCustomPlays() {
       setIsCustomPlaysLoading(true);
 
-      if (!isOnline) {
+      if (!canAttemptBackendSync) {
         if (!cancelled) {
-          setCustomPlaySyncError(buildOfflineCacheMessage('custom plays', bootstrap.customPlays.length > 0));
+          setCustomPlaySyncError(buildOfflineCacheMessage(connectionMode, 'custom plays', bootstrap.customPlays.length > 0));
           setIsCustomPlaySyncing(false);
           setIsCustomPlaysLoading(false);
         }
@@ -784,9 +804,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (!queuedCustomPlayEntries.some((entry) => entry.state === 'failed')) {
           setCustomPlaySyncError(null);
         }
+        reportBackendReachable();
       } catch (error) {
         if (cancelled) {
           return;
+        }
+
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
         }
 
         setCustomPlaySyncError(
@@ -812,14 +837,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         inFlightCustomPlayHydrationKeyRef.current = null;
       }
     };
-  }, [bootstrap.customPlays, isOnline, updateQueue]);
+  }, [bootstrap.customPlays, canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable, updateQueue]);
 
   useEffect(() => {
     let cancelled = false;
     const queuedPlaylistEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['playlist'],
     });
-    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedPlaylistEntries);
+    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedPlaylistEntries);
 
     if (completedPlaylistHydrationKeyRef.current === hydrationKey || inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
       return;
@@ -830,9 +855,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     async function hydratePlaylists() {
       setIsPlaylistsLoading(true);
 
-      if (!isOnline) {
+      if (!canAttemptBackendSync) {
         if (!cancelled) {
-          setPlaylistSyncError(buildOfflineCacheMessage('playlists', bootstrap.playlists.length > 0));
+          setPlaylistSyncError(buildOfflineCacheMessage(connectionMode, 'playlists', bootstrap.playlists.length > 0));
           setIsPlaylistSyncing(false);
           setIsPlaylistsLoading(false);
         }
@@ -875,9 +900,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (!queuedPlaylistEntries.some((entry) => entry.state === 'failed')) {
           setPlaylistSyncError(null);
         }
+        reportBackendReachable();
       } catch (error) {
         if (cancelled) {
           return;
+        }
+
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
         }
 
         setPlaylistSyncError(
@@ -903,14 +933,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         inFlightPlaylistHydrationKeyRef.current = null;
       }
     };
-  }, [bootstrap.playlists, isOnline, updateQueue]);
+  }, [bootstrap.playlists, canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable, updateQueue]);
 
   useEffect(() => {
     let cancelled = false;
     const queuedSessionLogEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['session-log'],
     });
-    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedSessionLogEntries);
+    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedSessionLogEntries);
 
     if (
       completedSessionLogHydrationKeyRef.current === hydrationKey ||
@@ -924,10 +954,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     async function hydrateSessionLogs() {
       setIsSessionLogsLoading(true);
 
-      if (!isOnline) {
+      if (!canAttemptBackendSync) {
         if (!cancelled) {
           syncedSessionLogIdsRef.current = new Set();
-          setSessionLogSyncError(buildOfflineCacheMessage('session logs', bootstrap.sessionLogs.length > 0));
+          setSessionLogSyncError(buildOfflineCacheMessage(connectionMode, 'session logs', bootstrap.sessionLogs.length > 0));
           remoteSessionLogsHydratedRef.current = true;
           setIsSessionLogsLoading(false);
         }
@@ -954,9 +984,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (!queuedSessionLogEntries.some((entry) => entry.state === 'failed')) {
           setSessionLogSyncError(null);
         }
+        reportBackendReachable();
       } catch (error) {
         if (cancelled) {
           return;
+        }
+
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
         }
 
         syncedSessionLogIdsRef.current = new Set();
@@ -983,14 +1018,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         inFlightSessionLogHydrationKeyRef.current = null;
       }
     };
-  }, [bootstrap.sessionLogs, isOnline]);
+  }, [bootstrap.sessionLogs, canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable]);
 
   useEffect(() => {
     let cancelled = false;
     const queuedTimerSettingsEntries = selectSyncQueueEntries(latestSyncQueueRef.current, {
       entityTypes: ['timer-settings'],
     });
-    const hydrationKey = buildQueueHydrationSignature(isOnline, queuedTimerSettingsEntries);
+    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedTimerSettingsEntries);
 
     if (
       completedTimerSettingsHydrationKeyRef.current === hydrationKey ||
@@ -1004,10 +1039,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     async function hydrateTimerSettings() {
       setIsSettingsLoading(true);
 
-      if (!isOnline) {
+      if (!canAttemptBackendSync) {
         if (!cancelled) {
           lastPersistedTimerSettingsRef.current = bootstrap.settings;
-          setSettingsSyncError('Using locally saved timer settings while you are offline.');
+          setSettingsSyncError(
+            connectionMode === 'backend-unreachable'
+              ? 'Using locally saved timer settings because the backend is unavailable right now.'
+              : 'Using locally saved timer settings while you are offline.'
+          );
           remoteSettingsHydratedRef.current = true;
           setIsSettingsLoading(false);
         }
@@ -1046,9 +1085,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         if (!queuedTimerSettingsEntries.some((entry) => entry.state === 'failed')) {
           setSettingsSyncError(null);
         }
+        reportBackendReachable();
       } catch (error) {
         if (cancelled) {
           return;
+        }
+
+        if (isBackendReachabilityError(error)) {
+          reportBackendUnreachable(error);
         }
 
         lastPersistedTimerSettingsRef.current = latestTimerSettingsRef.current;
@@ -1075,7 +1119,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         inFlightTimerSettingsHydrationKeyRef.current = null;
       }
     };
-  }, [bootstrap.settings, isOnline, updateQueue]);
+  }, [bootstrap.settings, canAttemptBackendSync, connectionMode, reportBackendReachable, reportBackendUnreachable, updateQueue]);
 
   useEffect(() => {
     if (!remoteSettingsHydratedRef.current) {
@@ -1114,10 +1158,10 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       payload: state.settings,
     });
 
-    if (!isOnline) {
-      setSettingsSyncError(buildQueuedSaveMessage('timer settings'));
+    if (!canAttemptBackendSync) {
+      setSettingsSyncError(buildQueuedSaveMessage(connectionMode, 'timer settings'));
     }
-  }, [isOnline, queue, state.settings, state.validation.isValid, updateQueue]);
+  }, [canAttemptBackendSync, connectionMode, queue, state.settings, state.validation.isValid, updateQueue]);
 
   useEffect(() => {
     if (!remoteSessionLogsHydratedRef.current) {
@@ -1149,21 +1193,21 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       });
     }
 
-    if (!isOnline) {
-      setSessionLogSyncError(buildQueuedSaveMessage('session log'));
+    if (!canAttemptBackendSync) {
+      setSessionLogSyncError(buildQueuedSaveMessage(connectionMode, 'session log'));
     }
-  }, [isOnline, queue, state.sessionLogs, updateQueue]);
+  }, [canAttemptBackendSync, connectionMode, queue, state.sessionLogs, updateQueue]);
 
   useEffect(() => {
-    if (!isOnline) {
+    if (!canAttemptBackendSync) {
       return;
     }
 
     updateQueue((currentQueue) => markFailedSyncQueueEntriesPending(currentQueue, TIMER_CONTEXT_SYNC_ENTITY_TYPES));
-  }, [isOnline, updateQueue]);
+  }, [canAttemptBackendSync, updateQueue]);
 
   useEffect(() => {
-    if (!isOnline || isFlushingSyncQueueRef.current) {
+    if (!canAttemptBackendSync || isFlushingSyncQueueRef.current) {
       return;
     }
 
@@ -1195,6 +1239,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               syncQueuedAt: queueEntry.queuedAt,
             });
             lastPersistedTimerSettingsRef.current = savedSettings;
+            reportBackendReachable();
             setSettingsSyncError(null);
             setIsSettingsSyncing(false);
           }
@@ -1205,6 +1250,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               syncQueuedAt: queueEntry.queuedAt,
             });
             syncedSessionLogIdsRef.current.add(savedEntry.id);
+            reportBackendReachable();
             const nextSessionLogs = mergeSessionLogs([savedEntry], latestSessionLogsRef.current);
             if (!areOrderedCollectionsEqual(nextSessionLogs, latestSessionLogsRef.current, areSessionLogsEqual)) {
               dispatch({ type: 'REPLACE_SESSION_LOGS', payload: nextSessionLogs });
@@ -1219,6 +1265,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               const deleteResult = await deleteCustomPlayFromApi(queueEntry.recordId, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
+              reportBackendReachable();
               if (deleteResult.outcome === 'stale') {
                 syncedCustomPlayIdsRef.current.add(deleteResult.currentCustomPlay.id);
                 deletedCustomPlayIdsRef.current.delete(deleteResult.currentCustomPlay.id);
@@ -1235,6 +1282,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               const savedCustomPlay = await persistCustomPlayToApi(queueEntry.payload as CustomPlay, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
+              reportBackendReachable();
               syncedCustomPlayIdsRef.current.add(savedCustomPlay.id);
               deletedCustomPlayIdsRef.current.delete(savedCustomPlay.id);
               setCustomPlays((current) =>
@@ -1253,6 +1301,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               const deleteResult = await deletePlaylistFromApi(queueEntry.recordId, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
+              reportBackendReachable();
               if (deleteResult.outcome === 'stale') {
                 syncedPlaylistIdsRef.current.add(deleteResult.currentPlaylist.id);
                 deletedPlaylistIdsRef.current.delete(deleteResult.currentPlaylist.id);
@@ -1269,6 +1318,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
               const savedPlaylist = await persistPlaylistToApi(queueEntry.payload as Playlist, {
                 syncQueuedAt: queueEntry.queuedAt,
               });
+              reportBackendReachable();
               syncedPlaylistIdsRef.current.add(savedPlaylist.id);
               deletedPlaylistIdsRef.current.delete(savedPlaylist.id);
               setPlaylists((current) =>
@@ -1324,7 +1374,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         isFlushingSyncQueueRef.current = false;
       }
     });
-  }, [isOnline, queue, updateQueue]);
+  }, [canAttemptBackendSync, queue, reportBackendReachable, updateQueue]);
 
   useEffect(() => {
     function syncTimerClockAndSessionState(source: 'interval' | 'foreground-return'): void {
@@ -1713,8 +1763,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: candidate,
         });
 
-        if (!isOnline) {
-          setCustomPlaySyncError(buildQueuedSaveMessage('custom play'));
+        if (!canAttemptBackendSync) {
+          setCustomPlaySyncError(buildQueuedSaveMessage(connectionMode, 'custom play'));
         } else {
           setCustomPlaySyncError(null);
         }
@@ -1745,8 +1795,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: null,
         });
 
-        if (!isOnline) {
-          setCustomPlaySyncError(buildQueuedDeleteMessage('custom play'));
+        if (!canAttemptBackendSync) {
+          setCustomPlaySyncError(buildQueuedDeleteMessage(connectionMode, 'custom play'));
         } else {
           setCustomPlaySyncError(null);
         }
@@ -1773,8 +1823,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: candidate,
         });
 
-        if (!isOnline) {
-          setCustomPlaySyncError(buildQueuedSaveMessage('custom play'));
+        if (!canAttemptBackendSync) {
+          setCustomPlaySyncError(buildQueuedSaveMessage(connectionMode, 'custom play'));
         } else {
           setCustomPlaySyncError(null);
         }
@@ -1936,8 +1986,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: candidate,
         });
 
-        if (!isOnline) {
-          setPlaylistSyncError(buildQueuedSaveMessage('playlist'));
+        if (!canAttemptBackendSync) {
+          setPlaylistSyncError(buildQueuedSaveMessage(connectionMode, 'playlist'));
         } else {
           setPlaylistSyncError(null);
         }
@@ -1964,8 +2014,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: null,
         });
 
-        if (!isOnline) {
-          setPlaylistSyncError(buildQueuedDeleteMessage('playlist'));
+        if (!canAttemptBackendSync) {
+          setPlaylistSyncError(buildQueuedDeleteMessage(connectionMode, 'playlist'));
         } else {
           setPlaylistSyncError(null);
         }
@@ -1991,8 +2041,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: candidate,
         });
 
-        if (!isOnline) {
-          setPlaylistSyncError(buildQueuedSaveMessage('playlist'));
+        if (!canAttemptBackendSync) {
+          setPlaylistSyncError(buildQueuedSaveMessage(connectionMode, 'playlist'));
         } else {
           setPlaylistSyncError(null);
         }
@@ -2110,8 +2160,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           payload: queuedEntry,
         });
 
-        if (!isOnline) {
-          setSessionLogSyncError(buildQueuedSaveMessage('manual log'));
+        if (!canAttemptBackendSync) {
+          setSessionLogSyncError(buildQueuedSaveMessage(connectionMode, 'manual log'));
         } else {
           setSessionLogSyncError(null);
         }
@@ -2184,13 +2234,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     [
       activeCustomPlayRun,
       activePlaylistRun,
+      canAttemptBackendSync,
+      connectionMode,
       customPlays,
       customPlayRunOutcome,
       customPlayRuntimeMessage,
       customPlaySyncError,
       finalizeCustomPlayRun,
       finalizePlaylistRunSegment,
-      isOnline,
       isPaused,
       isCustomPlaysLoading,
       isCustomPlaySyncing,
