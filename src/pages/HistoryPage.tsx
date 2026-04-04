@@ -7,6 +7,19 @@ import type { SessionLog } from '../types/sessionLog';
 import type { ManualLogInput, ManualLogValidationResult } from '../utils/manualLog';
 import { formatDurationLabel, formatPlannedDurationLabel } from '../utils/sessionLog';
 
+const historyTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+const historyDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
 function getDefaultTimestamp(): string {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
@@ -33,6 +46,41 @@ function getPlaylistRunClusterKey(entry: SessionLog): string | null {
   }
 
   return `${entry.playlistName}-${entry.startedAt}`;
+}
+
+function isSameLocalDay(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function getSessionTimeRangeLabels(entry: Pick<SessionLog, 'startedAt' | 'endedAt'>): {
+  readonly startLabel: string;
+  readonly endLabel: string;
+} {
+  const startedAt = new Date(entry.startedAt);
+  const endedAt = new Date(entry.endedAt);
+
+  if (Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())) {
+    return {
+      startLabel: entry.startedAt,
+      endLabel: entry.endedAt,
+    };
+  }
+
+  if (isSameLocalDay(startedAt, endedAt)) {
+    return {
+      startLabel: historyDateTimeFormatter.format(startedAt),
+      endLabel: historyTimeFormatter.format(endedAt),
+    };
+  }
+
+  return {
+    startLabel: historyDateTimeFormatter.format(startedAt),
+    endLabel: historyDateTimeFormatter.format(endedAt),
+  };
 }
 
 export default function HistoryPage() {
@@ -165,6 +213,7 @@ export default function HistoryPage() {
               const previousRunClusterKey = index > 0 ? getPlaylistRunClusterKey(visibleLogs[index - 1]) : null;
               const showRunContext = Boolean(runClusterKey) && runClusterKey !== previousRunClusterKey;
               const runStartedAt = entry.playlistRunStartedAt ?? entry.startedAt;
+              const sessionTimeRange = getSessionTimeRangeLabels(entry);
 
               return (
                 <li key={entry.id} className="history-item">
@@ -175,7 +224,11 @@ export default function HistoryPage() {
                   ) : null}
                   <div className="history-item-main">
                     <strong>{entry.meditationType}</strong>
-                    <p className="history-time">{new Date(entry.endedAt).toLocaleString()}</p>
+                    <p className="history-time">
+                      <time dateTime={entry.startedAt}>{sessionTimeRange.startLabel}</time>
+                      <span className="history-time-separator">to</span>
+                      <time dateTime={entry.endedAt}>{sessionTimeRange.endLabel}</time>
+                    </p>
                     {entry.playlistName ? (
                       <p className="section-subtitle">
                         Playlist: {entry.playlistName} · item {entry.playlistItemPosition}/{entry.playlistItemCount}

@@ -30,6 +30,7 @@
 
 ## History
 - recent logs
+- session time ranges
 - filters
 - manual vs auto badges
 - open-ended mode badge and planned-duration label handling

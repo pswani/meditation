@@ -6,6 +6,18 @@ import { TimerProvider } from '../features/timer/TimerContext';
 import HistoryPage from './HistoryPage';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+const historyTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+const historyDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
 
 function createJsonResponse(status: number, body: unknown) {
   return {
@@ -13,6 +25,20 @@ function createJsonResponse(status: number, body: unknown) {
     status,
     json: async () => body,
     text: async () => JSON.stringify(body),
+  };
+}
+
+function getExpectedHistoryRange(startedAt: string, endedAt: string) {
+  const startedAtDate = new Date(startedAt);
+  const endedAtDate = new Date(endedAt);
+  const sameDay =
+    startedAtDate.getFullYear() === endedAtDate.getFullYear() &&
+    startedAtDate.getMonth() === endedAtDate.getMonth() &&
+    startedAtDate.getDate() === endedAtDate.getDate();
+
+  return {
+    startLabel: historyDateTimeFormatter.format(startedAtDate),
+    endLabel: sameDay ? historyTimeFormatter.format(endedAtDate) : historyDateTimeFormatter.format(endedAtDate),
   };
 }
 
@@ -259,5 +285,106 @@ describe('HistoryPage UX', () => {
     expect(screen.queryByText(/^auto log$/i)).not.toBeInTheDocument();
     expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
     expect(screen.getByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+  });
+
+  it('shows a calm session time range for auto and manual logs', () => {
+    const autoLog = {
+      id: 'auto-log-1',
+      startedAt: '2026-03-24T10:00:00.000Z',
+      endedAt: '2026-03-24T10:20:00.000Z',
+      meditationType: 'Vipassana',
+      intendedDurationSeconds: 1200,
+      completedDurationSeconds: 1200,
+      status: 'completed',
+      source: 'auto log',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    };
+    const manualLog = {
+      id: 'manual-log-1',
+      startedAt: '2026-03-24T09:30:00.000Z',
+      endedAt: '2026-03-24T09:45:00.000Z',
+      meditationType: 'Ajapa',
+      intendedDurationSeconds: 900,
+      completedDurationSeconds: 900,
+      status: 'completed',
+      source: 'manual log',
+      startSound: 'None',
+      endSound: 'None',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    };
+
+    localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify([autoLog, manualLog]));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    const expectedAutoRange = getExpectedHistoryRange(autoLog.startedAt, autoLog.endedAt);
+    const expectedManualRange = getExpectedHistoryRange(manualLog.startedAt, manualLog.endedAt);
+
+    expect(screen.getByText(expectedAutoRange.startLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(expectedAutoRange.endLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(expectedManualRange.startLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(expectedManualRange.endLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getAllByText(/^to$/i)).toHaveLength(2);
+  });
+
+  it('keeps playlist context readable while showing the item time range', () => {
+    const playlistLog = {
+      id: 'playlist-log-1',
+      startedAt: '2026-03-24T10:00:00.000Z',
+      endedAt: '2026-03-24T10:12:00.000Z',
+      meditationType: 'Vipassana',
+      intendedDurationSeconds: 720,
+      completedDurationSeconds: 720,
+      status: 'completed',
+      source: 'auto log',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+      playlistId: 'playlist-1',
+      playlistName: 'Morning Flow',
+      playlistRunId: 'playlist-run-1',
+      playlistRunStartedAt: '2026-03-24T10:00:00.000Z',
+      playlistItemPosition: 1,
+      playlistItemCount: 2,
+    };
+
+    localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify([playlistLog]));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    const expectedPlaylistRange = getExpectedHistoryRange(playlistLog.startedAt, playlistLog.endedAt);
+
+    expect(screen.getByText(/^playlist run started at/i)).toBeInTheDocument();
+    expect(screen.getByText(/playlist: morning flow · item 1\/2/i)).toBeInTheDocument();
+    expect(screen.getByText(expectedPlaylistRange.startLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(expectedPlaylistRange.endLabel, { selector: 'time' })).toBeInTheDocument();
   });
 });
