@@ -125,7 +125,7 @@ Compatibility redirect:
 
 ### High-level architecture
 
-The app is a single-page React application using `BrowserRouter` and a shared `TimerProvider`.
+The app is a single-page React application using `BrowserRouter`, a shared `TimerProvider`, and route-level lazy loading for the primary screens.
 
 - Route-level screens live in `src/pages`
 - Shared shell/navigation lives in `src/app`
@@ -149,12 +149,13 @@ The front end currently owns all of the following:
 - local sankalpa progress fallback and cache migration support
 - fallback sample media metadata for custom plays when the backend is unavailable
 
-The key orchestration layer is `src/features/timer/TimerContext.tsx`, which hydrates local state, persists it, and coordinates timer, playlist, custom play, and session log behavior.
+The key orchestration layer remains `src/features/timer/TimerContext.tsx`, but the provider now delegates bootstrap and recovery helpers to `src/features/timer/timerProviderHelpers.ts` and sync-side effects to `src/features/timer/useTimerSyncEffects.ts` so the public runtime boundary stays stable while the internal responsibilities are smaller and easier to verify.
 Shared app-level sync visibility now lives alongside that in `src/features/sync/`, keeping connection state and pending-sync summary work out of route components.
 The queue-backed offline behavior now keeps local edits visible immediately and flushes them back through the existing REST boundaries when the backend becomes reachable again.
 Backend reachability is now tracked separately from raw browser online state, so the shell can distinguish browser-offline from backend-unavailable conditions.
 Summary views and the managed media catalog now keep last-successful browser snapshots so degraded reloads can stay useful after a successful online visit.
 The shared shell now also hosts the persistent hidden audio element used to keep active `custom play` media playback and runtime progress aligned across route changes, and it requests bounded offline caching for active recording media.
+Browser storage helpers now live under `src/utils/storage/`, with `src/utils/storage.ts` preserved as a compatibility facade so existing imports and storage keys do not drift during incremental cleanup.
 
 ### Back-end responsibilities
 

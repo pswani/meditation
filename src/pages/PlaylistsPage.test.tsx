@@ -40,8 +40,19 @@ function createJsonResponse(status: number, body: unknown) {
 
 async function flushPlaylistsHydration() {
   await act(async () => {
+    if (vi.isFakeTimers()) {
+      vi.advanceTimersByTime(0);
+    }
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(screen.getByRole('heading', { level: 2, name: 'Playlists' })).toBeInTheDocument();
+}
+
+async function warmPlaylistRoutes() {
+  await act(async () => {
+    await Promise.all([import('./PlaylistsPage'), import('./PlaylistRunPage')]);
   });
 }
 
@@ -57,6 +68,7 @@ describe('PlaylistsPage UX', () => {
   });
 
   it('blocks starting a playlist when an active timer session is already running', async () => {
+    await warmPlaylistRoutes();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
     localStorage.setItem(
       ACTIVE_TIMER_STATE_KEY,
@@ -91,7 +103,8 @@ describe('PlaylistsPage UX', () => {
     expect(screen.getByText(/finish or end the active timer session before starting a playlist run/i)).toBeInTheDocument();
   });
 
-  it('surfaces an active playlist and opens the run screen to continue it', () => {
+  it('surfaces an active playlist and opens the run screen to continue it', async () => {
+    await warmPlaylistRoutes();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
     localStorage.setItem(
       ACTIVE_PLAYLIST_RUN_STATE_KEY,
@@ -121,10 +134,17 @@ describe('PlaylistsPage UX', () => {
       </MemoryRouter>
     );
 
+    await flushPlaylistsHydration();
     expect(screen.getByText(/playlist run active: morning sequence · item 1\/2/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open active run/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /open active run/i }));
+    await act(async () => {
+      vi.advanceTimersByTime(0);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
 
     expect(screen.getByRole('heading', { level: 2, name: 'Morning Sequence' })).toBeInTheDocument();
     expect(screen.getByText(/up next: ajapa \(15 min\)/i)).toBeInTheDocument();
@@ -132,6 +152,7 @@ describe('PlaylistsPage UX', () => {
 
   it('shows truthful delete failure guidance when backend deletion fails', async () => {
     vi.useRealTimers();
+    await warmPlaylistRoutes();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
 
     vi.stubGlobal(
@@ -198,6 +219,7 @@ describe('PlaylistsPage UX', () => {
 
   it('restores the current playlist when a queued delete is stale in the backend', async () => {
     vi.useRealTimers();
+    await warmPlaylistRoutes();
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(storedPlaylists));
 
     vi.stubGlobal(

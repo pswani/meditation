@@ -89,7 +89,8 @@
 ## Current intentional limitations
 - Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.
 - Offline reopening depends on a prior successful visit so the app shell and any on-demand media the user expects are already cached on the device.
-- `TimerContext` remains a dense orchestration boundary and should be split only when that work is directly in scope.
+- `TimerContext` remains the stable runtime provider boundary, but its bootstrap/recovery helpers and sync-side effects now live in smaller modules so future cleanup can continue without changing the public hook contract.
+- Browser storage cleanup should preserve `src/utils/storage.ts` as the compatibility facade until a later, explicitly planned import migration is worth the churn.
 
 ## Documentation and planning
 - Keep the durable repo guidance in:

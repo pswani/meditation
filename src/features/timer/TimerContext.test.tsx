@@ -14,7 +14,9 @@ vi.mock('../../utils/timerCompletionNotice', () => ({
 }));
 
 const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
+const ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY = 'meditation.activeCustomPlayRunState.v1';
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
+const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 
 const validSettings: TimerSettings = {
@@ -40,8 +42,18 @@ async function flushProviderHydration() {
 }
 
 function PersistenceHarness() {
-  const { setSettings, startSession, pauseSession, startPlaylistRun, pausePlaylistRun, activeSession, activePlaylistRun, lastOutcome } =
-    useTimer();
+  const {
+    setSettings,
+    startSession,
+    pauseSession,
+    startCustomPlayRun,
+    updateCustomPlayRunProgress,
+    startPlaylistRun,
+    pausePlaylistRun,
+    activeSession,
+    activePlaylistRun,
+    lastOutcome,
+  } = useTimer();
   const playlistElapsed =
     activePlaylistRun?.currentSegment.phase === 'item' ? activePlaylistRun.currentSegment.elapsedSeconds : 'none';
   const playlistRemaining = activePlaylistRun?.currentSegment.remainingSeconds ?? 'none';
@@ -56,6 +68,18 @@ function PersistenceHarness() {
       </button>
       <button type="button" onClick={() => pauseSession()}>
         Pause Session
+      </button>
+      <button type="button" onClick={() => startCustomPlayRun('custom-play-1')}>
+        Start Custom Play Run
+      </button>
+      <button type="button" onClick={() => updateCustomPlayRunProgress(30.2)}>
+        Set Custom Play Progress Thirty Point Two
+      </button>
+      <button type="button" onClick={() => updateCustomPlayRunProgress(30.45)}>
+        Set Custom Play Progress Thirty Point Four Five
+      </button>
+      <button type="button" onClick={() => updateCustomPlayRunProgress(30.8)}>
+        Set Custom Play Progress Thirty Point Eight
       </button>
       <button type="button" onClick={() => startPlaylistRun('playlist-1')}>
         Start Playlist Run
@@ -172,6 +196,57 @@ describe('TimerProvider persistence behavior', () => {
     const pausedPayload = JSON.parse(String(playlistPersistenceCalls.at(-1)?.[1]));
     expect(pausedPayload.isPaused).toBe(true);
     expect(pausedPayload.activePlaylistRun.currentSegment.remainingSeconds).toBeLessThan(600);
+  });
+
+  it('coalesces active custom play persistence writes until rounded playback progress changes', async () => {
+    localStorage.setItem(
+      CUSTOM_PLAYS_KEY,
+      JSON.stringify([
+        {
+          id: 'custom-play-1',
+          name: 'Morning Focus',
+          meditationType: 'Vipassana',
+          durationMinutes: 20,
+          startSound: 'Temple Bell',
+          endSound: 'Gong',
+          mediaAssetId: 'media-vipassana-sit-20',
+          recordingLabel: 'Session A',
+          favorite: false,
+          createdAt: '2026-03-24T08:00:00.000Z',
+          updatedAt: '2026-03-24T08:00:00.000Z',
+        },
+      ])
+    );
+
+    render(
+      <SyncStatusProvider>
+        <TimerProvider>
+          <PersistenceHarness />
+        </TimerProvider>
+      </SyncStatusProvider>
+    );
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    setItemSpy.mockClear();
+
+    await flushProviderHydration();
+    fireEvent.click(screen.getByRole('button', { name: /start custom play run/i }));
+
+    expect(getSetItemCallsFor(setItemSpy, ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /thirty point two/i }));
+    expect(getSetItemCallsFor(setItemSpy, ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY)).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /thirty point four five/i }));
+    expect(getSetItemCallsFor(setItemSpy, ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY)).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /thirty point eight/i }));
+
+    const customPlayPersistenceCalls = getSetItemCallsFor(setItemSpy, ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY);
+    expect(customPlayPersistenceCalls).toHaveLength(3);
+    expect(JSON.parse(String(customPlayPersistenceCalls.at(-1)?.[1]))).toMatchObject({
+      currentPositionSeconds: 31,
+    });
   });
 
   it('recovers recording-backed playlist items from stored playback progress instead of stale wall-clock time', async () => {

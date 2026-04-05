@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -6,6 +6,10 @@ import type { SessionLog } from '../types/sessionLog';
 
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
+
+async function waitForSankalpaPageReady() {
+  expect(await screen.findByRole('heading', { level: 3, name: 'Summary' })).toBeInTheDocument();
+}
 
 function createSessionLog(
   id: string,
@@ -36,6 +40,7 @@ function createSessionLog(
 
 describe('Sankalpa summary UX', () => {
   afterEach(() => {
+    cleanup();
     localStorage.clear();
     vi.useRealTimers();
     Object.defineProperty(window.navigator, 'onLine', {
@@ -45,7 +50,7 @@ describe('Sankalpa summary UX', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not repersist sankalpas on initial mount when stored data is already current', () => {
+  it('does not repersist sankalpas on initial mount when stored data is already current', async () => {
     localStorage.setItem(
       SESSION_LOGS_KEY,
       JSON.stringify([createSessionLog('log-1', new Date(2026, 2, 24, 7, 30, 0, 0).toISOString(), 'auto log', 'completed', 1200)])
@@ -72,6 +77,7 @@ describe('Sankalpa summary UX', () => {
       </MemoryRouter>
     );
 
+    await waitForSankalpaPageReady();
     expect(screen.getByText(/180 min in 7 days/i)).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /duration goal/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /session-count goal/i })).toBeInTheDocument();
@@ -79,7 +85,7 @@ describe('Sankalpa summary UX', () => {
     expect(setItemSpy).not.toHaveBeenCalledWith(SANKALPAS_KEY, expect.any(String));
   });
 
-  it('does not render summary metrics for an invalid custom date range', () => {
+  it('does not render summary metrics for an invalid custom date range', async () => {
     localStorage.setItem(
       SESSION_LOGS_KEY,
       JSON.stringify([
@@ -94,6 +100,7 @@ describe('Sankalpa summary UX', () => {
       </MemoryRouter>
     );
 
+    await waitForSankalpaPageReady();
     expect(screen.getByText(/total completed duration/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/summary range/i), { target: { value: 'custom' } });
@@ -106,7 +113,7 @@ describe('Sankalpa summary UX', () => {
     expect(screen.queryByText(/by meditation type/i)).not.toBeInTheDocument();
   });
 
-  it('shows by-time-of-day summary and explicit by-source labels', () => {
+  it('shows by-time-of-day summary and explicit by-source labels', async () => {
     localStorage.setItem(
       SESSION_LOGS_KEY,
       JSON.stringify([
@@ -121,6 +128,7 @@ describe('Sankalpa summary UX', () => {
       </MemoryRouter>
     );
 
+    await waitForSankalpaPageReady();
     const timeOfDayHeading = screen.getByRole('heading', { name: /by time of day/i });
     expect(timeOfDayHeading).toBeInTheDocument();
 
@@ -242,6 +250,7 @@ describe('Sankalpa summary UX', () => {
       </MemoryRouter>
     );
 
+    await waitForSankalpaPageReady();
     await waitFor(() => expect(screen.getByText(/completed: 4/i)).toBeInTheDocument());
     expect(screen.getByText(/manual log: 3/i)).toBeInTheDocument();
   });
