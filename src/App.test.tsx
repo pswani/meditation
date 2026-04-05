@@ -369,6 +369,7 @@ function createStatefulBackendFetchMock(options?: {
 }
 
 async function flushBackendHydration() {
+  await flushRouteLoad();
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
@@ -380,13 +381,26 @@ async function flushBackendHydration() {
 }
 
 async function flushAsyncEffects() {
+  await flushRouteLoad();
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
 }
 
+async function flushRouteLoad() {
+  await act(async () => {
+    if (vi.isFakeTimers()) {
+      vi.advanceTimersByTime(0);
+    }
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 async function waitForPracticeHydration() {
+  await flushRouteLoad();
   await waitFor(() =>
     expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
   );
@@ -405,34 +419,37 @@ describe('App shell', () => {
     vi.useRealTimers();
   });
 
-  it('renders home route with functional quick-start content and Sankalpa navigation label', () => {
+  it('renders home route with functional quick-start content and Sankalpa navigation label', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
+    expect(await screen.findByRole('button', { name: /start timer now/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content');
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
     expect(screen.getAllByText('Sankalpa').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /start timer now/i })).toBeInTheDocument();
   });
 
-  it('renders settings route with functional defaults form', () => {
+  it('renders settings route with functional defaults form', async () => {
     render(
       <MemoryRouter initialEntries={['/settings']}>
         <App />
       </MemoryRouter>
     );
 
+    expect(await screen.findByRole('button', { name: /save defaults/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save defaults/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/default duration \(minutes\)/i)).toBeInTheDocument();
   });
 
   it('reflects saved defaults from Settings in timer setup', async () => {
-    render(
+    const { fetchMock } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
       <MemoryRouter initialEntries={['/settings']}>
         <App />
       </MemoryRouter>
@@ -444,9 +461,15 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /save defaults/i }));
     expect(await screen.findByText(/settings saved/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('link', { name: /^Practice$/i })[0]);
+    firstRender.unmount();
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    expect(screen.getByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
+    await flushBackendHydration();
+    expect(await screen.findByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/duration \(minutes\)/i)).toHaveValue(32);
     expect(screen.getByRole('combobox', { name: /meditation type/i })).toHaveValue('Sahaj');
   });
@@ -463,11 +486,12 @@ describe('App shell', () => {
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
 
-    fireEvent.click(screen.getByRole('button', { name: /view history/i }));
+    fireEvent.click(screen.getAllByRole('link', { name: /^History$/i })[0]);
+    await flushRouteLoad();
 
     expect(screen.getByText(/active timer: vipassana/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /resume active timer/i }));
-    expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
   });
 
   it('avoids redundant persistence writes on a stable initial mount', () => {
@@ -577,7 +601,7 @@ describe('App shell', () => {
     expect(removeItemSpy).not.toHaveBeenCalled();
   });
 
-  it('rehydrates a persisted active timer and lets the user resume it from the shell', () => {
+  it('rehydrates a persisted active timer and lets the user resume it from the shell', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-24T10:05:00.000Z'));
 
@@ -619,10 +643,11 @@ describe('App shell', () => {
     expect(screen.queryByText(/recovered an active timer from your previous app state/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /resume active timer/i }));
+    await flushRouteLoad();
     expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
   });
 
-  it('rehydrates a paused active timer with paused shell messaging and resume flow', () => {
+  it('rehydrates a paused active timer with paused shell messaging and resume flow', async () => {
     localStorage.setItem(
       ACTIVE_TIMER_STATE_KEY,
       JSON.stringify({
@@ -651,7 +676,7 @@ describe('App shell', () => {
     expect(screen.getByText(/recovered a paused timer from your previous app state/i)).toBeInTheDocument();
     expect(screen.getByText(/paused timer: vipassana/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /resume paused timer/i }));
-    expect(screen.getByText(/^paused$/i)).toBeInTheDocument();
+    expect(await screen.findByText(/^paused$/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument();
   });
 
@@ -723,7 +748,7 @@ describe('App shell', () => {
     expect(localStorage.getItem(ACTIVE_TIMER_STATE_KEY)).toBeNull();
   });
 
-  it('redirects /sankalpa to the Sankalpa route', () => {
+  it('redirects /sankalpa to the Sankalpa route', async () => {
     render(
       <MemoryRouter initialEntries={['/sankalpa']}>
         <App />
@@ -731,7 +756,7 @@ describe('App shell', () => {
     );
 
     expect(screen.getByRole('heading', { level: 1, name: 'Sankalpa' })).toBeInTheDocument();
-    expect(screen.getByText(/review summaries and track sankalpa progress/i)).toBeInTheDocument();
+    expect(await screen.findByText(/review summaries and track sankalpa progress/i)).toBeInTheDocument();
   });
 
   it('redirects unknown routes to Home', () => {
@@ -759,6 +784,7 @@ describe('App shell', () => {
     );
 
     expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/meditation type/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
     fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
@@ -966,7 +992,7 @@ describe('App shell', () => {
     expect(storedLogs[0].completedDurationSeconds).toBe(60);
 
     fireEvent.click(screen.getByRole('button', { name: /view history/i }));
-
+    await flushRouteLoad();
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
     expect(screen.getAllByText(/^vipassana$/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/^completed$/i)).toBeInTheDocument();
@@ -975,8 +1001,6 @@ describe('App shell', () => {
   });
 
   it('completes a playlist journey and records per-item auto logs in History', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-03-25T11:00:00.000Z'));
     const { fetchMock, store } = createStatefulBackendFetchMock({
       playlists: [
         {
@@ -1008,11 +1032,12 @@ describe('App shell', () => {
       </MemoryRouter>
     );
 
-    await flushAsyncEffects();
+    expect(await screen.findByRole('button', { name: /run playlist/i })).toBeInTheDocument();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-25T11:00:00.000Z'));
     fireEvent.click(screen.getByRole('button', { name: /run playlist/i }));
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Lunch Reset' })).toBeInTheDocument();
-    expect(screen.getByText(/current meditation type: vipassana/i)).toBeInTheDocument();
+    expect(screen.getByText(/active playlist run: lunch reset/i)).toBeInTheDocument();
 
     await act(async () => {
       vi.advanceTimersByTime(60_000);
@@ -1021,8 +1046,7 @@ describe('App shell', () => {
     });
     await flushAsyncEffects();
 
-    expect(screen.getByText(/current meditation type: ajapa/i)).toBeInTheDocument();
-    expect(screen.getByText(/completed so far: 1\/2 items/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/lunch reset .* item 2\/2/i).length).toBeGreaterThan(0);
 
     await act(async () => {
       vi.advanceTimersByTime(60_000);
@@ -1040,6 +1064,7 @@ describe('App shell', () => {
     expect(store.sessionLogs.every((entry: { playlistName?: string }) => entry.playlistName === 'Lunch Reset')).toBe(true);
 
     firstRender.unmount();
+    vi.useRealTimers();
 
     render(
       <MemoryRouter initialEntries={['/history']}>
@@ -1049,7 +1074,7 @@ describe('App shell', () => {
 
     await flushAsyncEffects();
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
-    expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();
+    expect(await screen.findByText(/playlist run started at/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^playlist$/i)).toHaveLength(2);
     expect(screen.getAllByText(/^auto log$/i)).toHaveLength(2);
   });

@@ -159,12 +159,15 @@ Single-page React application with route-based screens and feature-oriented modu
   - archive remains a boolean goal-state mutation on the same record instead of creating a second history entity
 
 ## Frontend reconciliation boundaries
-- `src/features/timer/TimerContext.tsx` owns local-first hydration and queue flushing for timer settings, session logs, custom plays, and playlists.
+- `src/features/timer/TimerContext.tsx` remains the public provider boundary for timer, playlist, custom-play, and session-log runtime state.
+- `src/features/timer/timerProviderHelpers.ts` now owns provider bootstrap, recovery, persistence-shaping, and last-used-meditation helper logic that used to sit directly inside `TimerContext`.
+- `src/features/timer/useTimerSyncEffects.ts` now owns the queue hydration, backend fetch, replay, and optimistic reconciliation side effects that used to sit directly inside `TimerContext`.
 - `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
 - Route components continue to consume stable domain state and sync status rather than performing queue mutation logic directly.
 - Manual log creation is treated as local `session log` creation first, then reconciled back through the shared `session log` sync flow instead of a separate offline-only pathway.
 - Summary and managed media catalog reads keep durable last-successful snapshots in browser storage so the UI can prefer a trusted prior backend result before dropping all the way back to sample or locally derived data.
 - Audio-backed recording files are cached only on demand after the user has touched them, preserving a bounded offline-media policy instead of pre-caching the entire managed library.
+- Browser storage helpers now live under `src/utils/storage/` by domain (`settings`, `sessionLogs`, `collections`, `snapshots`, `runtime`), while `src/utils/storage.ts` stays in place as the stable import facade.
 
 ## Suggested module layout
 - pages
@@ -184,6 +187,8 @@ Current primary routes:
 - /goals
 - /sankalpa (redirects to `/goals` for compatibility)
 - /settings
+
+Primary route screens are lazy-loaded behind route-level Suspense boundaries so the shared shell stays eager while individual screens split into separate chunks.
 
 ## Responsive shell guidance
 - mobile: bottom navigation

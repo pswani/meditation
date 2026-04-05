@@ -6,6 +6,10 @@ import App from '../App';
 const iphoneSafariUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
 
+async function waitForPracticeSetupReady() {
+  await waitFor(() => expect(screen.getAllByLabelText(/meditation type/i).length).toBeGreaterThan(0));
+}
+
 describe('ActiveTimerPage UX', () => {
   const originalUserAgent = window.navigator.userAgent;
 
@@ -30,10 +34,12 @@ describe('ActiveTimerPage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForPracticeSetupReady();
     const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     await waitFor(() => expect(screen.getByRole('button', { name: /start session/i })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    expect(await screen.findByRole('button', { name: /end early/i })).toBeInTheDocument();
     expect(screen.queryByText(/on iphone safari browser tabs/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /end early/i }));
@@ -50,6 +56,7 @@ describe('ActiveTimerPage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForPracticeSetupReady();
     fireEvent.click(screen.getByRole('radio', { name: /open-ended/i }));
 
     const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
@@ -59,7 +66,7 @@ describe('ActiveTimerPage UX', () => {
     await waitFor(() => expect(startButton).toBeEnabled());
     fireEvent.click(startButton);
 
-    expect(screen.getByText(/elapsed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/elapsed/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /end session/i })).toBeInTheDocument();
     expect(screen.getByText('00:00')).toBeInTheDocument();
     expect(
@@ -79,6 +86,7 @@ describe('ActiveTimerPage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForPracticeSetupReady();
     const meditationTypeSelect = screen.getAllByLabelText(/meditation type/i)[0];
     fireEvent.change(meditationTypeSelect, { target: { value: 'Vipassana' } });
     await waitFor(() => expect(screen.getByRole('button', { name: /start session/i })).toBeEnabled());
@@ -99,10 +107,12 @@ describe('ActiveTimerPage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForPracticeSetupReady();
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '1' } });
     fireEvent.change(screen.getAllByLabelText(/meditation type/i)[0], { target: { value: 'Vipassana' } });
     await waitFor(() => expect(screen.getByRole('button', { name: /start session/i })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    expect(await screen.findByRole('button', { name: /end early/i })).toBeInTheDocument();
 
     dateNowSpy.mockReturnValue(Date.parse('2026-04-03T12:01:02.000Z'));
     Object.defineProperty(document, 'visibilityState', {

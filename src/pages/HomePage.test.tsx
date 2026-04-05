@@ -14,6 +14,10 @@ async function waitForHomeQuickStartReady() {
   await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
 }
 
+async function waitForHomePageReady() {
+  expect(await screen.findByRole('button', { name: /start timer now/i })).toBeInTheDocument();
+}
+
 function createJsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
@@ -80,17 +84,18 @@ describe('HomePage UX', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
     cleanup();
+    vi.restoreAllMocks();
   });
 
-  it('renders calm empty states when there is no stored activity', () => {
+  it('renders calm empty states when there is no stored activity', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
+    await waitForHomePageReady();
     expect(screen.getByText(/no session log entries yet today/i)).toBeInTheDocument();
     expect(screen.getByText(/no active sankalpa right now/i)).toBeInTheDocument();
     expect(screen.getByText(/no favorites yet/i)).toBeInTheDocument();
@@ -98,7 +103,7 @@ describe('HomePage UX', () => {
     expect(screen.queryByRole('heading', { name: /next actions/i })).not.toBeInTheDocument();
   });
 
-  it('shows populated today, sankalpa, and favorites content from local storage data', () => {
+  it('shows populated today, sankalpa, and favorites content from local storage data', async () => {
     const now = new Date();
     const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000).toISOString();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -178,6 +183,7 @@ describe('HomePage UX', () => {
       </MemoryRouter>
     );
 
+    await waitForHomePageReady();
     expect(screen.getByRole('heading', { name: /sankalpa snapshot/i })).toBeInTheDocument();
     expect(screen.getByText(/duration goal/i)).toBeInTheDocument();
     expect(screen.getByText(/progress:/i)).toBeInTheDocument();
@@ -195,8 +201,8 @@ describe('HomePage UX', () => {
     await waitForHomeQuickStartReady();
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
 
-    expect(screen.getByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
-    expect(screen.getByText(/quick start needs valid defaults/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /timer setup/i })).toBeInTheDocument();
+    expect(await screen.findByText(/quick start needs valid defaults/i)).toBeInTheDocument();
   });
 
   it('keeps Home quick start aligned to saved defaults after Practice edits', async () => {
@@ -335,7 +341,7 @@ describe('HomePage UX', () => {
 
     await waitForHomeQuickStartReady();
     fireEvent.click(screen.getByRole('button', { name: /start timer now/i }));
-    expect(screen.getByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: /\d{2}:\d{2}/i })).toBeInTheDocument();
     expect(screen.getByText(/stay present/i)).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(LAST_USED_MEDITATION_KEY) ?? 'null')).toMatchObject({
       kind: 'timer',

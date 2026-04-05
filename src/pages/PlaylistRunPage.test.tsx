@@ -1,10 +1,27 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 
 const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+
+async function flushRouteLoad() {
+  await act(async () => {
+    if (vi.isFakeTimers()) {
+      vi.advanceTimersByTime(0);
+    }
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function warmPlaylistRunRoute() {
+  await act(async () => {
+    await Promise.all([import('./PlaylistRunPage'), import('./HistoryPage')]);
+  });
+}
 
 const storedRun = {
   runId: 'playlist-1-1000',
@@ -44,7 +61,8 @@ describe('PlaylistRunPage UX', () => {
     vi.useRealTimers();
   });
 
-  it('ends an active playlist run early, logs progress, and keeps history continuity', () => {
+  it('ends an active playlist run early, logs progress, and keeps history continuity', async () => {
+    await warmPlaylistRunRoute();
     localStorage.setItem(
       ACTIVE_PLAYLIST_RUN_STATE_KEY,
       JSON.stringify({
@@ -59,6 +77,7 @@ describe('PlaylistRunPage UX', () => {
       </MemoryRouter>
     );
 
+    await flushRouteLoad();
     expect(screen.getByText(/current meditation type: vipassana/i)).toBeInTheDocument();
     expect(screen.getByText(/up next: ajapa \(15 min\)/i)).toBeInTheDocument();
 
@@ -85,6 +104,7 @@ describe('PlaylistRunPage UX', () => {
     expect(localStorage.getItem(ACTIVE_PLAYLIST_RUN_STATE_KEY)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /view history/i }));
+    await flushRouteLoad();
 
     expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
     expect(screen.getByText(/playlist run started at/i)).toBeInTheDocument();

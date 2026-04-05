@@ -1,10 +1,27 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 
 const ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY = 'meditation.activeCustomPlayRunState.v1';
 const SESSION_LOGS_KEY = 'meditation.sessionLogs.v1';
+
+async function flushRouteLoad() {
+  await act(async () => {
+    if (vi.isFakeTimers()) {
+      vi.advanceTimersByTime(0);
+    }
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function warmCustomPlayRunRoute() {
+  await act(async () => {
+    await import('./CustomPlayRunPage');
+  });
+}
 
 describe('CustomPlayRunPage UX', () => {
   beforeEach(() => {
@@ -21,7 +38,8 @@ describe('CustomPlayRunPage UX', () => {
     vi.useRealTimers();
   });
 
-  it('ends an active custom play early and saves a custom-play-aware session log', () => {
+  it('ends an active custom play early and saves a custom-play-aware session log', async () => {
+    await warmCustomPlayRunRoute();
     localStorage.setItem(
       ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY,
       JSON.stringify({
@@ -49,6 +67,7 @@ describe('CustomPlayRunPage UX', () => {
       </MemoryRouter>
     );
 
+    await flushRouteLoad();
     expect(screen.getByRole('heading', { level: 2, name: /morning focus/i })).toBeInTheDocument();
     expect(screen.getByText(/recording: vipassana sit \(20 min\)/i)).toBeInTheDocument();
 
