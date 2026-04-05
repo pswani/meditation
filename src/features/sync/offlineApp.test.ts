@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getOfflineAppServiceWorkerPath } from './offlineCacheVersion';
 import { collectOfflineAppCacheUrls, precacheUrlsForOffline, registerOfflineAppServiceWorker } from './offlineApp';
 
 function stubServiceWorkerApi(overrides?: {
@@ -64,7 +65,7 @@ describe('offline app helper', () => {
 
     await registerOfflineAppServiceWorker();
 
-    expect(register).toHaveBeenCalledWith(expect.stringMatching(/^\/offline-sw\.js\?v=/));
+    expect(register).toHaveBeenCalledWith(getOfflineAppServiceWorkerPath());
     expect(controller.postMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'CACHE_URLS',

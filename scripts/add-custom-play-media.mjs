@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   CUSTOM_PLAY_MEDIA_CATALOG_FILE,
-  MEDITATION_TYPES_FILE,
   MIGRATIONS_DIR,
   assertFileExists,
   copyFile,
@@ -13,6 +12,7 @@ import {
   formatSqlTimestampWithTimeZone,
   getConfiguredBackendCustomPlayRoot,
   getConfiguredFrontendCustomPlayRoot,
+  getMeditationTypes,
   hasFlag,
   inferMimeType,
   loadLocalEnv,
@@ -112,8 +112,8 @@ try {
     throw new Error('Pass --filename when --file is not provided.');
   }
 
-  const allowedMeditationTypes = readJsonFile(MEDITATION_TYPES_FILE);
-  if (!Array.isArray(allowedMeditationTypes) || !allowedMeditationTypes.includes(meditationType)) {
+  const allowedMeditationTypes = getMeditationTypes();
+  if (!allowedMeditationTypes.includes(meditationType)) {
     throw new Error(`--meditation-type must be one of: ${allowedMeditationTypes.join(', ')}`);
   }
 

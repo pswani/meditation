@@ -6,11 +6,13 @@ import { normalizeTimerSoundLabel, SILENT_TIMER_SOUND_LABEL } from '../../utils/
 interface TimerSoundCatalogEntryRecord {
   readonly label: string;
   readonly filename: string;
+  readonly source: 'bundled' | 'media';
 }
 
 export interface TimerSoundCatalogEntry {
   readonly label: string;
   readonly filename: string;
+  readonly source: 'bundled' | 'media';
   readonly relativePath: string;
   readonly filePath: string;
 }
@@ -20,10 +22,23 @@ const bundledTimerSoundFilePaths: Readonly<Record<string, string>> = {
   'temple-bell.mp3': templeBellFilePath,
 };
 
+function resolveTimerSoundFilePath(entry: TimerSoundCatalogEntryRecord): string {
+  if (entry.source === 'bundled') {
+    const bundledFilePath = bundledTimerSoundFilePaths[entry.filename];
+    if (!bundledFilePath) {
+      throw new Error(`Bundled timer sound "${entry.label}" is missing an inline asset import for ${entry.filename}.`);
+    }
+
+    return bundledFilePath;
+  }
+
+  return `/media/sounds/${entry.filename}`;
+}
+
 const timerSoundCatalog = (timerSoundCatalogData as readonly TimerSoundCatalogEntryRecord[]).map((entry) => ({
   ...entry,
   relativePath: `sounds/${entry.filename}`,
-  filePath: bundledTimerSoundFilePaths[entry.filename] ?? `/media/sounds/${entry.filename}`,
+  filePath: resolveTimerSoundFilePath(entry),
 })) satisfies readonly TimerSoundCatalogEntry[];
 
 const timerSoundCatalogByLabel = new Map(timerSoundCatalog.map((entry) => [entry.label, entry] as const));
