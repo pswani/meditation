@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/cleanup`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `runtime-boundary-hardening-feature-bundle-with-branching` and `backend-scale-hardening-feature-bundle-with-branching`, both completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/backend-scale-hardening-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-05 with a normal local merge commit
+- Latest completed bundles in `prompts/`: `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, and `production-reference-cleanup-feature-bundle-with-branching`, each completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/production-reference-cleanup-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-05 with a normal local merge commit
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -30,6 +30,9 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - sankalpa create, edit, archive, unarchive, and archived-only delete flows with backend-backed archived-state persistence and stale-delete recovery
   - smaller runtime and persistence internals through `timerProviderHelpers`, `useTimerSyncEffects`, and domain-specific modules under `src/utils/storage/`
   - repository-backed summary and `sankalpa` aggregation hot paths with explicit filtered-summary and filtered-or-paged `session log` contracts
+  - centralized frontend and backend reference-data modules with backend seed-alignment coverage for meditation types
+  - one authoritative `vite.config.ts` local `/api` proxy path plus node-side TypeScript build outputs redirected into ignored local storage
+  - a unified `./scripts/pipeline.sh verify` flow that now covers frontend checks, backend Maven verify, and a temporary backend health smoke check
 - Timer lock-screen mitigation now includes:
   - foreground catch-up sync on `visibilitychange` and `pageshow` so fixed sessions finalize immediately after Safari returns
   - coalesced foreground catch-up so overlapping `visibilitychange` and `pageshow` events do not trigger duplicate completion handling
@@ -47,6 +50,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-offline-app-sync-feature.md`
 - Implementation planning: `docs/execplan-runtime-boundary-hardening-feature.md`
 - Implementation planning: `docs/execplan-backend-scale-hardening-feature.md`
+- Implementation planning: `docs/execplan-production-reference-cleanup-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
@@ -55,6 +59,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-offline-app-sync-feature.md`
 - Review artifact: `docs/review-runtime-boundary-hardening-feature.md`
 - Review artifact: `docs/review-backend-scale-hardening-feature.md`
+- Review artifact: `docs/review-production-reference-cleanup-feature.md`
 - Review artifact: `docs/review-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
@@ -65,6 +70,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-offline-app-sync-feature.md`
 - Verification report: `docs/test-runtime-boundary-hardening-feature.md`
 - Verification report: `docs/test-backend-scale-hardening-feature.md`
+- Verification report: `docs/test-production-reference-cleanup-feature.md`
 - Verification report: `docs/test-sankalpa-delete-unarchive-feature.md`
 - Verification planning: `docs/ios-safari-real-device-qa-checklist.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
@@ -78,8 +84,26 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `npm run test`
 - `npm run build`
 - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/`
+- `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Production reference cleanup implementation verified on 2026-04-05:
+  - `./scripts/pipeline.sh verify`
+  - frontend checks passed through the unified verify flow:
+    - `npm run typecheck`
+    - `npm run lint`
+    - `npm run test` with 46 files and 318 tests
+    - `npm run build`
+  - backend checks passed through the unified verify flow:
+    - `mvn -Dmaven.repo.local=../local-data/m2 verify` with 48 backend tests
+    - temporary backend smoke confirmed `http://127.0.0.1:18080/api/health`
+  - root-level generated files stayed absent after verification:
+    - `vite.config.js`
+    - `vite.config.d.ts`
+    - `tsconfig.node.tsbuildinfo`
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the production reference cleanup slice
+
 - Backend-scale hardening implementation verified on 2026-04-05:
   - `npm run typecheck`
   - `npm run lint`
@@ -147,6 +171,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The frontend production build still emits the pre-existing large-chunk warning.
 - The calmness of the new route-level loading fallback still needs a quick manual look on a real browser session; automated coverage currently proves correctness more than perceived UX.
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
+- Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
 
 ## Recommended next slice
-- Exact recommended next prompt: `Read prompts/run-milestone-bundle.md and execute it for production-reference-cleanup-feature-bundle-with-branching using codex/cleanup as the parent branch.`
+- Exact recommended next prompt: `Read prompts/run-milestone-bundle.md and execute it for media-cache-hygiene-feature-bundle-with-branching using codex/cleanup as the parent branch.`

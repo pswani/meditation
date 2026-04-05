@@ -1,5 +1,6 @@
 package com.meditation.backend.sankalpa;
 
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.math.BigDecimal;
@@ -8,7 +9,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,9 +17,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class SankalpaService {
 
   private static final long DAY_SECONDS = 24L * 60L * 60L;
-  private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
-  private static final Set<String> GOAL_TYPES = Set.of("duration-based", "session-count-based");
-  private static final Set<String> TIME_OF_DAY_BUCKETS = Set.of("morning", "afternoon", "evening", "night");
 
   private final SankalpaGoalRepository sankalpaGoalRepository;
   private final SessionLogRepository sessionLogRepository;
@@ -185,7 +182,7 @@ public class SankalpaService {
     int matchedSessionCount = 0;
     int matchedDurationSeconds = 0;
     for (SessionLogRepository.SessionLogTimeSliceView entry : sessionLogRepository.findTimeSlices(startAt, deadlineAt, meditationType, null)) {
-      if (!goal.getTimeOfDayBucket().equals(getTimeOfDayBucket(entry.getEndedAt(), zoneId))) {
+      if (!goal.getTimeOfDayBucket().equals(ReferenceData.resolveTimeOfDayBucket(entry.getEndedAt(), zoneId))) {
         continue;
       }
       matchedSessionCount += 1;
@@ -193,20 +190,6 @@ public class SankalpaService {
     }
 
     return new SankalpaMatchTotals(matchedSessionCount, matchedDurationSeconds);
-  }
-
-  private String getTimeOfDayBucket(Instant endedAt, ZoneId zoneId) {
-    int hour = endedAt.atZone(zoneId).getHour();
-    if (hour >= 5 && hour < 12) {
-      return "morning";
-    }
-    if (hour >= 12 && hour < 17) {
-      return "afternoon";
-    }
-    if (hour >= 17 && hour < 21) {
-      return "evening";
-    }
-    return "night";
   }
 
   private ZoneId parseZoneId(String value) {
@@ -234,7 +217,7 @@ public class SankalpaService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sankalpa id must match the route id.");
     }
 
-    if (!GOAL_TYPES.contains(request.goalType())) {
+    if (!ReferenceData.isGoalType(request.goalType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sankalpa goal type is invalid.");
     }
 
@@ -253,13 +236,13 @@ public class SankalpaService {
 
     if (request.meditationType() != null
         && !request.meditationType().isBlank()
-        && !MEDITATION_TYPES.contains(request.meditationType())) {
+        && !ReferenceData.isMeditationType(request.meditationType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 
     if (request.timeOfDayBucket() != null
         && !request.timeOfDayBucket().isBlank()
-        && !TIME_OF_DAY_BUCKETS.contains(request.timeOfDayBucket())) {
+        && !ReferenceData.isTimeOfDayBucket(request.timeOfDayBucket())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Time-of-day bucket is invalid.");
     }
 

@@ -1,7 +1,8 @@
 import type { MeditationType } from './timer';
+export type { TimeOfDayBucket } from './referenceData';
+import type { TimeOfDayBucket } from './referenceData';
 
 export type SankalpaGoalType = 'duration-based' | 'session-count-based';
-export type TimeOfDayBucket = 'morning' | 'afternoon' | 'evening' | 'night';
 export type SankalpaStatus = 'active' | 'completed' | 'expired' | 'archived';
 
 export interface SankalpaGoal {

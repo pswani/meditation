@@ -1,10 +1,8 @@
 import type { SessionLog, SessionLogSource } from '../types/sessionLog';
 import type { TimeOfDayBucket } from '../types/sankalpa';
 import type { MeditationType } from '../types/timer';
+import { meditationTypes, sessionLogSources } from '../types/referenceData';
 import { getTimeOfDayBucket, timeOfDayBuckets } from './sankalpa';
-
-const meditationTypeOrder: readonly MeditationType[] = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'];
-const summarySourceOrder: readonly SessionLogSource[] = ['auto log', 'manual log'];
 
 export interface OverallSummary {
   readonly totalSessionLogs: number;
@@ -161,7 +159,7 @@ export function deriveOverallSummary(sessionLogs: readonly SessionLog[]): Overal
 }
 
 export function deriveSummaryByType(sessionLogs: readonly SessionLog[]): SummaryByType[] {
-  return meditationTypeOrder.map((meditationType) => {
+  return meditationTypes.map((meditationType) => {
     const typeLogs = sessionLogs.filter((entry) => entry.meditationType === meditationType);
     return {
       meditationType,
@@ -172,7 +170,7 @@ export function deriveSummaryByType(sessionLogs: readonly SessionLog[]): Summary
 }
 
 export function deriveSummaryBySource(sessionLogs: readonly SessionLog[]): SummaryBySource[] {
-  return summarySourceOrder.map((source) => {
+  return sessionLogSources.map((source) => {
     const sourceLogs = sessionLogs.filter((entry) => entry.source === source);
     const completedSessionLogs = sourceLogs.filter((entry) => entry.status === 'completed').length;
 

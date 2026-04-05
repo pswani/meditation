@@ -1,5 +1,6 @@
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
+import { isMeditationType, isSessionLogSource, isTimeOfDayBucket } from '../types/referenceData';
 import { loadCachedSummarySnapshot, saveCachedSummarySnapshot } from './storage';
 import type { OverallSummary, SummaryBySource, SummaryByTimeOfDay, SummaryByType, SummarySnapshotData } from './summary';
 
@@ -13,10 +14,6 @@ interface SummaryApiRequest {
   readonly meditationType?: string;
   readonly source?: string;
 }
-
-const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
-const sessionLogSources = new Set(['auto log', 'manual log']);
-const timeOfDayBuckets = new Set(['morning', 'afternoon', 'evening', 'night']);
 
 function hasValidSummaryOverall(value: unknown): value is OverallSummary {
   if (!value || typeof value !== 'object') {
@@ -42,7 +39,7 @@ function hasValidSummaryByTypeCollection(value: unknown): value is SummaryByType
       (entry) =>
         entry &&
         typeof entry === 'object' &&
-        meditationTypes.has((entry as Record<string, unknown>).meditationType as string) &&
+        isMeditationType((entry as Record<string, unknown>).meditationType) &&
         typeof (entry as Record<string, unknown>).sessionLogs === 'number' &&
         typeof (entry as Record<string, unknown>).totalDurationSeconds === 'number'
     )
@@ -56,7 +53,7 @@ function hasValidSummaryBySourceCollection(value: unknown): value is SummaryBySo
       (entry) =>
         entry &&
         typeof entry === 'object' &&
-        sessionLogSources.has((entry as Record<string, unknown>).source as string) &&
+        isSessionLogSource((entry as Record<string, unknown>).source) &&
         typeof (entry as Record<string, unknown>).sessionLogs === 'number' &&
         typeof (entry as Record<string, unknown>).completedSessionLogs === 'number' &&
         typeof (entry as Record<string, unknown>).endedEarlySessionLogs === 'number' &&
@@ -72,7 +69,7 @@ function hasValidSummaryByTimeOfDayCollection(value: unknown): value is SummaryB
       (entry) =>
         entry &&
         typeof entry === 'object' &&
-        timeOfDayBuckets.has((entry as Record<string, unknown>).timeOfDayBucket as string) &&
+        isTimeOfDayBucket((entry as Record<string, unknown>).timeOfDayBucket) &&
         typeof (entry as Record<string, unknown>).sessionLogs === 'number' &&
         typeof (entry as Record<string, unknown>).completedSessionLogs === 'number' &&
         typeof (entry as Record<string, unknown>).endedEarlySessionLogs === 'number' &&

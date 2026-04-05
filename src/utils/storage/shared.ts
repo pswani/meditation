@@ -2,6 +2,11 @@ import type { ActiveCustomPlayRun, CustomPlay } from '../../types/customPlay';
 import type { LastUsedMeditation } from '../../types/home';
 import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import type { ActivePlaylistRun, Playlist } from '../../types/playlist';
+import {
+  isMeditationType as isReferenceMeditationType,
+  isSessionLogSource,
+  isTimeOfDayBucket as isReferenceTimeOfDayBucket,
+} from '../../types/referenceData';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaGoal } from '../../types/sankalpa';
 import type { ActiveSession, TimerSettings } from '../../types/timer';
@@ -24,10 +29,6 @@ export const ACTIVE_PLAYLIST_RUN_STATE_KEY = 'meditation.activePlaylistRunState.
 export const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
 export const MEDIA_ASSET_CATALOG_CACHE_KEY = 'meditation.mediaAssetCatalogCache.v1';
 export const SUMMARY_SNAPSHOT_CACHE_KEY = 'meditation.summarySnapshotCache.v1';
-
-const MEDITATION_TYPES = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
-const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
-const SESSION_LOG_SOURCES = ['auto log', 'manual log'] as const;
 
 export function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -55,11 +56,11 @@ export function isFiniteInteger(value: unknown): value is number {
 }
 
 export function isMeditationType(value: unknown): value is CustomPlay['meditationType'] {
-  return typeof value === 'string' && MEDITATION_TYPES.includes(value as (typeof MEDITATION_TYPES)[number]);
+  return isReferenceMeditationType(value);
 }
 
 export function isTimeOfDayBucket(value: unknown): value is SankalpaGoal['timeOfDayBucket'] {
-  return typeof value === 'string' && TIME_OF_DAY_BUCKETS.includes(value as (typeof TIME_OF_DAY_BUCKETS)[number]);
+  return isReferenceTimeOfDayBucket(value);
 }
 
 export function isTimerSettings(value: unknown): value is TimerSettings {
@@ -178,8 +179,7 @@ export function isSummarySnapshotData(value: unknown): value is SummarySnapshotD
     bySource.every(
       (entry) =>
         isObjectRecord(entry) &&
-        typeof entry.source === 'string' &&
-        SESSION_LOG_SOURCES.includes(entry.source as (typeof SESSION_LOG_SOURCES)[number]) &&
+        isSessionLogSource(entry.source) &&
         typeof entry.sessionLogs === 'number' &&
         typeof entry.completedSessionLogs === 'number' &&
         typeof entry.endedEarlySessionLogs === 'number' &&
@@ -189,8 +189,7 @@ export function isSummarySnapshotData(value: unknown): value is SummarySnapshotD
     byTimeOfDay.every(
       (entry) =>
         isObjectRecord(entry) &&
-        typeof entry.timeOfDayBucket === 'string' &&
-        TIME_OF_DAY_BUCKETS.includes(entry.timeOfDayBucket as (typeof TIME_OF_DAY_BUCKETS)[number]) &&
+        isReferenceTimeOfDayBucket(entry.timeOfDayBucket) &&
         typeof entry.sessionLogs === 'number' &&
         typeof entry.completedSessionLogs === 'number' &&
         typeof entry.endedEarlySessionLogs === 'number' &&
@@ -234,7 +233,7 @@ export function isSessionLog(value: unknown): value is SessionLog {
     typeof candidate.id === 'string' &&
     (candidate.timerMode === 'fixed' || candidate.timerMode === 'open-ended' || typeof candidate.timerMode === 'undefined') &&
     (candidate.status === 'completed' || candidate.status === 'ended early') &&
-    (candidate.source === 'auto log' || candidate.source === 'manual log') &&
+    isSessionLogSource(candidate.source) &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&

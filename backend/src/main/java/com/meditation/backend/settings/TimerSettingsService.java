@@ -1,9 +1,9 @@
 package com.meditation.backend.settings;
 
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,8 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class TimerSettingsService {
 
   static final String DEFAULT_SETTINGS_ID = "default";
-  private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
-  private static final Set<String> TIMER_MODES = Set.of("fixed", "open-ended");
 
   private final TimerSettingsRepository timerSettingsRepository;
 
@@ -72,7 +70,7 @@ public class TimerSettingsService {
   }
 
   private void validateRequest(TimerSettingsUpsertRequest request) {
-    if (!TIMER_MODES.contains(request.timerMode())) {
+    if (!ReferenceData.isTimerMode(request.timerMode())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
     }
 
@@ -114,7 +112,7 @@ public class TimerSettingsService {
     }
 
     String meditationType = normalizeMeditationType(request.meditationType());
-    if (meditationType != null && !MEDITATION_TYPES.contains(meditationType)) {
+    if (meditationType != null && !ReferenceData.isMeditationType(meditationType)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
   }

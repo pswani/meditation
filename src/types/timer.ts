@@ -1,4 +1,5 @@
-export type MeditationType = 'Vipassana' | 'Ajapa' | 'Tratak' | 'Kriya' | 'Sahaj';
+export type { MeditationType } from './referenceData';
+import type { MeditationType } from './referenceData';
 export type TimerMode = 'fixed' | 'open-ended';
 
 export type TimerStatus = 'idle' | 'running' | 'paused' | 'completed' | 'ended early';

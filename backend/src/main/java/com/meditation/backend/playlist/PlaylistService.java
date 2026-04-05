@@ -1,6 +1,7 @@
 package com.meditation.backend.playlist;
 
 import com.meditation.backend.customplay.CustomPlayRepository;
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -17,8 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class PlaylistService {
-
-  private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
 
   private final CustomPlayRepository customPlayRepository;
   private final PlaylistRepository playlistRepository;
@@ -180,7 +179,7 @@ public class PlaylistService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item ids must be unique.");
       }
 
-      if (!MEDITATION_TYPES.contains(item.meditationType())) {
+      if (!ReferenceData.isMeditationType(item.meditationType())) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item meditation type is invalid.");
       }
 
