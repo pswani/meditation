@@ -1,4 +1,5 @@
 import type { SessionLog } from '../types/sessionLog';
+import { isSessionLogSource } from '../types/referenceData';
 import type { ManualLogCreateRequest } from './manualLog';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
@@ -87,7 +88,7 @@ function isSessionLogApiResponse(value: unknown): value is SessionLogApiResponse
     (typeof candidate.intendedDurationSeconds === 'number' || candidate.intendedDurationSeconds === null) &&
     typeof candidate.completedDurationSeconds === 'number' &&
     (candidate.status === 'completed' || candidate.status === 'ended early') &&
-    (candidate.source === 'auto log' || candidate.source === 'manual log') &&
+    isSessionLogSource(candidate.source) &&
     typeof candidate.startSound === 'string' &&
     typeof candidate.endSound === 'string' &&
     typeof candidate.intervalEnabled === 'boolean' &&

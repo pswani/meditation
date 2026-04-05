@@ -230,7 +230,7 @@ Important repo facts:
 - `src/utils/mediaAssetApi.ts` fetches `/api/media/custom-plays`
 - `src/utils/summaryApi.ts` fetches `/api/summaries`
 - `src/utils/sankalpaApi.ts` fetches and persists `/api/sankalpas`
-- `vite.config.ts` and `vite.config.js` now proxy `/api` to the local backend when `VITE_API_BASE_URL` is unset
+- `vite.config.ts` is the single Vite config and proxies `/api` to the local backend during local development when `VITE_API_BASE_URL` is unset
 - backend runtime configuration lives in `backend/src/main/resources/application.yml`
 
 Current API-boundary status:
@@ -362,7 +362,7 @@ Supported commands:
 
 | Command | When to use it | What it does |
 | --- | --- | --- |
-| `./scripts/pipeline.sh verify` | Run the repo quality gate | Runs `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`. |
+| `./scripts/pipeline.sh verify` | Run the repo quality gate | Runs frontend typecheck, lint, test, and build, then backend `mvn verify`, then a temporary backend health smoke check. |
 | `./scripts/pipeline.sh build` | Build production artifacts | Builds the frontend and backend artifacts through the repo's production build flow. |
 | `./scripts/pipeline.sh package` | Assemble a deploy bundle | Builds by default, then prepares `local-data/deploy/`. |
 | `./scripts/pipeline.sh package --skip-build` | Repackage existing artifacts | Reuses current build output and refreshes `local-data/deploy/`. |
@@ -409,9 +409,9 @@ Optional production variables:
 - `MEDITATION_DEPLOY_DIR`
   - optional deployment bundle output directory for `./scripts/pipeline.sh package` and `./scripts/pipeline.sh release`
 - `MEDITATION_BACKEND_BIND_HOST`
-  - optional backend bind address for the production backend scripts and generated nginx upstream config
+  - optional backend bind address for the production backend scripts, generated nginx upstream config, and the local Vite `/api` proxy target when `VITE_API_BASE_URL` is unset
 - `MEDITATION_BACKEND_PORT`
-  - optional backend port for the packaged backend service and generated nginx upstream config
+  - optional backend port for the packaged backend service, generated nginx upstream config, and the local Vite `/api` proxy target when `VITE_API_BASE_URL` is unset
 - `MEDITATION_H2_DB_DIR`
   - optional H2 file directory override
 - `MEDITATION_H2_DB_NAME`
@@ -470,11 +470,13 @@ Current production behavior:
 - `mediaAssetApi` performs live fetches and falls back to built-in sample metadata if the backend is unavailable
 - playlist and sankalpa persistence use the backend while local caches remain in place for fallback and migration
 
-This keeps the runtime shape simple:
+This keeps the supported deployed runtime shape simple:
 
-- no frontend dev proxy
+- no separate frontend dev proxy in production
 - no preview server
 - no CORS split between UI and API in the supported deployment
+
+Local development still uses the checked-in Vite `/api` proxy in [vite.config.ts](/Users/prashantwani/wrk/meditation/vite.config.ts) when `VITE_API_BASE_URL` is unset.
 
 ## Current Persistence Model
 
@@ -919,9 +921,11 @@ Backend/H2 work that may still be required in this repo:
 
 The backend now has a Flyway seed layer for meditation types and sample media metadata.
 
-Current reference data is source-controlled directly in TypeScript:
+Current shared reference data is maintained in stable source modules rather than repeated ad hoc arrays:
 
-- meditation types: `src/features/timer/constants.ts` and `src/data/meditationTypes.json`
+- frontend meditation types, `session log` sources, and time-of-day buckets: [src/types/referenceData.ts](/Users/prashantwani/wrk/meditation/src/types/referenceData.ts)
+- backend meditation types, `session log` sources, time-of-day buckets, and validation helpers: [ReferenceData.java](/Users/prashantwani/wrk/meditation/backend/src/main/java/com/meditation/backend/reference/ReferenceData.java)
+- backend meditation-type seed alignment coverage: [ReferenceDataSeedTest.java](/Users/prashantwani/wrk/meditation/backend/src/test/java/com/meditation/backend/reference/ReferenceDataSeedTest.java)
 - sound options: `src/features/timer/constants.ts` and `src/data/soundOptions.json`
 - fallback custom-play media catalog: `src/data/customPlayMediaCatalog.json`
 

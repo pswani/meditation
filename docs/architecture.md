@@ -13,6 +13,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - route-level screens in `src/pages`
 - feature logic in `src/features`
 - shared domain types in `src/types`
+- shared frontend reference values in `src/types/referenceData.ts`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
 - browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
@@ -106,6 +107,7 @@ Single-page React application with route-based screens and feature-oriented modu
     - accepts optional `meditationType` and `source` filters
 - reserved domain packages for:
   - `reference`
+- shared backend reference constants and validation helpers live in `backend/src/main/java/com/meditation/backend/reference/ReferenceData.java`
 
 ## Media storage conventions
 - backend media root is configurable through `MEDITATION_MEDIA_STORAGE_ROOT`
@@ -166,6 +168,10 @@ Single-page React application with route-based screens and feature-oriented modu
 - Time-zone-aware time-of-day bucketing still happens in service code, but only after fetching reduced `endedAt`, `status`, and duration projections for the filtered window.
 - `session log` reads now expose an explicit filtered collection contract and an opt-in paged contract so larger datasets do not require a second ad hoc endpoint later.
 - The frontend shared API client now owns a default request timeout plus explicit timeout and cancellation classification so route and sync code do not need to reinvent that behavior per feature.
+- Shared product vocabularies now stay centralized per runtime:
+  - frontend lists and guards live in `src/types/referenceData.ts`
+  - backend lists, validation helpers, and time-of-day bucketing live in `backend/.../reference/ReferenceData.java`
+  - Flyway-seeded meditation types are kept aligned with backend reference order through a dedicated Spring test
 
 ## Frontend reconciliation boundaries
 - `src/features/timer/TimerContext.tsx` remains the public provider boundary for timer, playlist, custom-play, and session-log runtime state.

@@ -1,4 +1,5 @@
 import type { SankalpaGoal, SankalpaProgress, SankalpaStatus, TimeOfDayBucket } from '../types/sankalpa';
+import { isMeditationType, isTimeOfDayBucket } from '../types/referenceData';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders } from './syncApi';
@@ -49,10 +50,8 @@ export type SankalpaDeleteResult =
       readonly currentSankalpa: SankalpaProgress;
     };
 
-const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
 const goalTypes = new Set(['duration-based', 'session-count-based']);
 const statuses = new Set(['active', 'completed', 'expired', 'archived']);
-const timeOfDayBuckets = new Set(['morning', 'afternoon', 'evening', 'night']);
 
 function isValidIsoDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
@@ -75,10 +74,10 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     candidate.days > 0 &&
     (typeof candidate.meditationType === 'undefined' ||
       candidate.meditationType === null ||
-      meditationTypes.has(candidate.meditationType as string)) &&
+      isMeditationType(candidate.meditationType)) &&
     (typeof candidate.timeOfDayBucket === 'undefined' ||
       candidate.timeOfDayBucket === null ||
-      timeOfDayBuckets.has(candidate.timeOfDayBucket as string)) &&
+      isTimeOfDayBucket(candidate.timeOfDayBucket)) &&
     isValidIsoDate(candidate.createdAt) &&
     (typeof candidate.archived === 'undefined' || typeof candidate.archived === 'boolean')
   );

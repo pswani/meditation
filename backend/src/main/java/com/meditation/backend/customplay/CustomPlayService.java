@@ -1,11 +1,11 @@
 package com.meditation.backend.customplay;
 
 import com.meditation.backend.media.MediaAssetRepository;
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class CustomPlayService {
 
   private static final String CUSTOM_PLAY_ASSET_KIND = "custom-play";
-  private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
 
   private final CustomPlayRepository customPlayRepository;
   private final MediaAssetRepository mediaAssetRepository;
@@ -106,7 +105,7 @@ public class CustomPlayService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom play name is required.");
     }
 
-    if (!MEDITATION_TYPES.contains(request.meditationType())) {
+    if (!ReferenceData.isMeditationType(request.meditationType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 

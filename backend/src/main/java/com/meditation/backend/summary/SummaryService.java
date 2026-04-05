@@ -1,5 +1,6 @@
 package com.meditation.backend.summary;
 
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -8,18 +9,12 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class SummaryService {
-
-  private static final List<String> MEDITATION_TYPES = List.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
-  private static final List<String> SUMMARY_SOURCES = List.of("auto log", "manual log");
-  private static final List<String> TIME_OF_DAY_BUCKETS = List.of("morning", "afternoon", "evening", "night");
-  private static final Set<String> COMPLETED_STATUS = Set.of("completed");
 
   private final SessionLogRepository sessionLogRepository;
 
@@ -78,7 +73,7 @@ public class SummaryService {
       summaryByType.put(aggregate.getMeditationTypeCode(), aggregate);
     }
 
-    return MEDITATION_TYPES.stream()
+    return ReferenceData.MEDITATION_TYPES.stream()
         .map((meditationType) -> {
           SessionLogRepository.SummaryByTypeView aggregate = summaryByType.get(meditationType);
           return new SummaryByTypeResponse(
@@ -101,7 +96,7 @@ public class SummaryService {
       summaryBySource.put(aggregate.getSource(), aggregate);
     }
 
-    return SUMMARY_SOURCES.stream()
+    return ReferenceData.SESSION_LOG_SOURCES.stream()
         .map((source) -> {
           SessionLogRepository.SummaryBySourceView aggregate = summaryBySource.get(source);
           int sessionLogs = toIntCount(aggregate == null ? 0 : aggregate.getSessionLogs());
@@ -120,7 +115,7 @@ public class SummaryService {
 
   private List<SummaryByTimeOfDayResponse> deriveSummaryByTimeOfDay(SummaryFilters filters) {
     Map<String, BucketTotals> totalsByBucket = new HashMap<>();
-    for (String bucket : TIME_OF_DAY_BUCKETS) {
+    for (String bucket : ReferenceData.TIME_OF_DAY_BUCKETS) {
       totalsByBucket.put(bucket, new BucketTotals(0, 0, 0));
     }
 
@@ -130,7 +125,7 @@ public class SummaryService {
         filters.meditationType(),
         filters.source()
     )) {
-      String bucket = getTimeOfDayBucket(entry.getEndedAt(), filters.zoneId());
+      String bucket = ReferenceData.resolveTimeOfDayBucket(entry.getEndedAt(), filters.zoneId());
       BucketTotals current = totalsByBucket.get(bucket);
       totalsByBucket.put(
           bucket,
@@ -142,7 +137,7 @@ public class SummaryService {
       );
     }
 
-    return TIME_OF_DAY_BUCKETS.stream()
+    return ReferenceData.TIME_OF_DAY_BUCKETS.stream()
         .map((bucket) -> {
           BucketTotals totals = totalsByBucket.get(bucket);
           return new SummaryByTimeOfDayResponse(
@@ -157,21 +152,7 @@ public class SummaryService {
   }
 
   private boolean isCompletedLog(String status) {
-    return COMPLETED_STATUS.contains(status);
-  }
-
-  private String getTimeOfDayBucket(Instant endedAt, ZoneId zoneId) {
-    int hour = endedAt.atZone(zoneId).getHour();
-    if (hour >= 5 && hour < 12) {
-      return "morning";
-    }
-    if (hour >= 12 && hour < 17) {
-      return "afternoon";
-    }
-    if (hour >= 17 && hour < 21) {
-      return "evening";
-    }
-    return "night";
+    return ReferenceData.isCompletedSessionLogStatus(status);
   }
 
   private SummaryFilters parseFilters(
@@ -191,11 +172,11 @@ public class SummaryService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
     }
 
-    if (meditationType != null && !MEDITATION_TYPES.contains(meditationType)) {
+    if (meditationType != null && !ReferenceData.isMeditationType(meditationType)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 
-    if (source != null && !SUMMARY_SOURCES.contains(source)) {
+    if (source != null && !ReferenceData.isSessionLogSource(source)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
     }
 

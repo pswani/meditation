@@ -1,6 +1,6 @@
-import meditationTypesCatalog from '../data/meditationTypes.json';
 import type { MediaAssetMetadata } from '../types/mediaAsset';
 import type { MeditationType } from '../types/timer';
+import { isMeditationType } from '../types/referenceData';
 import sampleCustomPlayMediaCatalog from '../data/customPlayMediaCatalog.json';
 import { ApiClientError, isApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
@@ -37,7 +37,6 @@ export interface MediaAssetCatalogResult {
 }
 
 const sampleMediaAssetCatalog = sampleCustomPlayMediaCatalog as readonly MediaAssetApiResponse[];
-const supportedMeditationTypes = new Set(meditationTypesCatalog as readonly MeditationType[]);
 
 const persistedMediaAssetCatalog = loadCachedMediaAssetCatalog();
 let cachedMediaAssetCatalog: MediaAssetMetadata[] =
@@ -45,7 +44,7 @@ let cachedMediaAssetCatalog: MediaAssetMetadata[] =
 let cachedMediaAssetCatalogSource: MediaAssetCatalogSource = persistedMediaAssetCatalog ? 'cached-backend' : 'sample-fallback';
 
 function normalizeMeditationType(value: string | null | undefined): MeditationType | null {
-  return value && supportedMeditationTypes.has(value as MeditationType) ? (value as MeditationType) : null;
+  return isMeditationType(value) ? value : null;
 }
 
 function normalizeMediaAssetResponse(entry: MediaAssetApiResponse): MediaAssetMetadata {

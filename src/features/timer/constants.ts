@@ -1,5 +1,4 @@
-import type { MeditationType } from '../../types/timer';
-import meditationTypesCatalog from '../../data/meditationTypes.json';
+export { meditationTypes } from '../../types/referenceData';
 import soundOptionsCatalog from '../../data/soundOptions.json';
 import {
   DEFAULT_END_SOUND_LABEL,
@@ -7,7 +6,6 @@ import {
   DEFAULT_START_SOUND_LABEL,
 } from '../../utils/timerSound';
 
-export const meditationTypes = meditationTypesCatalog as readonly MeditationType[];
 export const soundOptions = soundOptionsCatalog as readonly string[];
 
 export const defaultTimerSettings = {

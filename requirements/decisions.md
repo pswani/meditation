@@ -6,6 +6,10 @@
 - Keep media files on disk under the configured media root and store stable metadata plus relative paths in the database.
 - Keep the route and module structure centered on `src/pages`, `src/components`, `src/features`, `src/types`, and `src/utils`.
 - Keep the REST boundary explicit through the existing API helper modules instead of coupling route components directly to fetch logic.
+- Keep shared product vocabularies centralized per runtime layer:
+  - frontend meditation types, `session log` sources, and time-of-day buckets live in `src/types/referenceData.ts`
+  - backend validation/order helpers for the same values live in `backend/src/main/java/com/meditation/backend/reference/ReferenceData.java`
+  - backend meditation-type seed order stays aligned through an automated Spring test rather than manual spot checks
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:
@@ -84,8 +88,11 @@
 - Keep the repository on one production-first operational path:
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface
+  - `./scripts/pipeline.sh verify` should remain the single repeatable quality gate covering frontend checks, backend `mvn verify`, and a temporary backend health smoke check
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
+- Keep `vite.config.ts` as the only Vite config file and reserve its `/api` proxy for local development only.
+- Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep iPhone Safari browser-tab timer release confidence grounded in a reusable manual checklist until the product has a stronger platform-level completion guarantee than browser-tab background execution can provide.

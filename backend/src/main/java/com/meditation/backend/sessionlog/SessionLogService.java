@@ -1,10 +1,10 @@
 package com.meditation.backend.sessionlog;
 
+import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,10 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class SessionLogService {
 
-  private static final Set<String> MEDITATION_TYPES = Set.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
-  private static final Set<String> SESSION_LOG_STATUSES = Set.of("completed", "ended early");
-  private static final Set<String> SESSION_LOG_SOURCES = Set.of("auto log", "manual log");
-  private static final Set<String> TIMER_MODES = Set.of("fixed", "open-ended");
   private static final int MAX_PAGE_SIZE = 200;
 
   private final SessionLogRepository sessionLogRepository;
@@ -206,7 +202,7 @@ public class SessionLogService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
     }
 
-    if (!MEDITATION_TYPES.contains(request.meditationType())) {
+    if (!ReferenceData.isMeditationType(request.meditationType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 
@@ -222,19 +218,19 @@ public class SessionLogService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log id must match the route id.");
     }
 
-    if (!MEDITATION_TYPES.contains(request.meditationType())) {
+    if (!ReferenceData.isMeditationType(request.meditationType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 
-    if (!SESSION_LOG_STATUSES.contains(request.status())) {
+    if (!ReferenceData.isSessionLogStatus(request.status())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log status is invalid.");
     }
 
-    if (!SESSION_LOG_SOURCES.contains(request.source())) {
+    if (!ReferenceData.isSessionLogSource(request.source())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
     }
 
-    if (!TIMER_MODES.contains(request.timerMode())) {
+    if (!ReferenceData.isTimerMode(request.timerMode())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
     }
 
@@ -341,11 +337,11 @@ public class SessionLogService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
     }
 
-    if (meditationType != null && !MEDITATION_TYPES.contains(meditationType)) {
+    if (meditationType != null && !ReferenceData.isMeditationType(meditationType)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
 
-    if (source != null && !SESSION_LOG_SOURCES.contains(source)) {
+    if (source != null && !ReferenceData.isSessionLogSource(source)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
     }
 

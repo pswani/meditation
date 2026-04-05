@@ -9,9 +9,9 @@ import type {
   TimeOfDayBucket,
 } from '../types/sankalpa';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export { timeOfDayBuckets } from '../types/referenceData';
 
-export const timeOfDayBuckets: readonly TimeOfDayBucket[] = ['morning', 'afternoon', 'evening', 'night'];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const timeOfDayBucketLabels: Record<TimeOfDayBucket, string> = {
   morning: 'Morning (5:00-11:59)',
