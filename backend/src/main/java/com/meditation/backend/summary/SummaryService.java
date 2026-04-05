@@ -1,12 +1,13 @@
 package com.meditation.backend.summary;
 
-import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,120 +27,141 @@ public class SummaryService {
     this.sessionLogRepository = sessionLogRepository;
   }
 
-  public SummaryResponse getSummary(String startAtRaw, String endAtRaw, String timeZoneRaw) {
-    Instant startAt = parseOptionalInstant(startAtRaw, "Start at must be a valid ISO timestamp.");
-    Instant endAt = parseOptionalInstant(endAtRaw, "End at must be a valid ISO timestamp.");
-    ZoneId zoneId = parseZoneId(timeZoneRaw);
+  public SummaryResponse getSummary(
+      String startAtRaw,
+      String endAtRaw,
+      String timeZoneRaw,
+      String meditationTypeRaw,
+      String sourceRaw
+  ) {
+    SummaryFilters filters = parseFilters(startAtRaw, endAtRaw, timeZoneRaw, meditationTypeRaw, sourceRaw);
 
-    if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
-    }
-
-    List<SessionLogEntity> sessionLogs = loadSessionLogs(startAt, endAt);
     return new SummaryResponse(
-        deriveOverallSummary(sessionLogs),
-        deriveSummaryByType(sessionLogs),
-        deriveSummaryBySource(sessionLogs),
-        deriveSummaryByTimeOfDay(sessionLogs, zoneId)
+        deriveOverallSummary(filters),
+        deriveSummaryByType(filters),
+        deriveSummaryBySource(filters),
+        deriveSummaryByTimeOfDay(filters)
     );
   }
 
-  private List<SessionLogEntity> loadSessionLogs(Instant startAt, Instant endAt) {
-    if (startAt != null && endAt != null) {
-      return sessionLogRepository.findAllByEndedAtBetweenOrderByEndedAtDescCreatedAtDesc(startAt, endAt);
-    }
-
-    if (startAt != null) {
-      return sessionLogRepository.findAllByEndedAtGreaterThanEqualOrderByEndedAtDescCreatedAtDesc(startAt);
-    }
-
-    if (endAt != null) {
-      return sessionLogRepository.findAllByEndedAtLessThanEqualOrderByEndedAtDescCreatedAtDesc(endAt);
-    }
-
-    return sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
-  }
-
-  private SummaryOverallResponse deriveOverallSummary(List<SessionLogEntity> sessionLogs) {
-    if (sessionLogs.isEmpty()) {
-      return new SummaryOverallResponse(0, 0, 0, 0, 0, 0, 0);
-    }
-
-    int completedSessionLogs = (int) sessionLogs.stream().filter(this::isCompletedLog).count();
-    int totalDurationSeconds = sessionLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum();
-    int autoLogs = (int) sessionLogs.stream().filter((entry) -> "auto log".equals(entry.getSource())).count();
+  private SummaryOverallResponse deriveOverallSummary(SummaryFilters filters) {
+    SessionLogRepository.SummaryOverallView summary = sessionLogRepository.summarizeOverall(
+        filters.startAt(),
+        filters.endAt(),
+        filters.meditationType(),
+        filters.source()
+    );
+    int totalSessionLogs = toIntCount(summary.getTotalSessionLogs());
+    int completedSessionLogs = toIntCount(summary.getCompletedSessionLogs());
+    int totalDurationSeconds = toIntCount(summary.getTotalDurationSeconds());
+    int autoLogs = toIntCount(summary.getAutoLogs());
 
     return new SummaryOverallResponse(
-        sessionLogs.size(),
+        totalSessionLogs,
         completedSessionLogs,
-        sessionLogs.size() - completedSessionLogs,
+        totalSessionLogs - completedSessionLogs,
         totalDurationSeconds,
-        Math.round((float) totalDurationSeconds / sessionLogs.size()),
+        totalSessionLogs == 0 ? 0 : Math.round((float) totalDurationSeconds / totalSessionLogs),
         autoLogs,
-        sessionLogs.size() - autoLogs
+        totalSessionLogs - autoLogs
     );
   }
 
-  private List<SummaryByTypeResponse> deriveSummaryByType(List<SessionLogEntity> sessionLogs) {
+  private List<SummaryByTypeResponse> deriveSummaryByType(SummaryFilters filters) {
+    Map<String, SessionLogRepository.SummaryByTypeView> summaryByType = new HashMap<>();
+    for (SessionLogRepository.SummaryByTypeView aggregate : sessionLogRepository.summarizeByMeditationType(
+        filters.startAt(),
+        filters.endAt(),
+        filters.meditationType(),
+        filters.source()
+    )) {
+      summaryByType.put(aggregate.getMeditationTypeCode(), aggregate);
+    }
+
     return MEDITATION_TYPES.stream()
         .map((meditationType) -> {
-          List<SessionLogEntity> matchingLogs = sessionLogs.stream()
-              .filter((entry) -> meditationType.equals(entry.getMeditationTypeCode()))
-              .toList();
-
+          SessionLogRepository.SummaryByTypeView aggregate = summaryByType.get(meditationType);
           return new SummaryByTypeResponse(
               meditationType,
-              matchingLogs.size(),
-              matchingLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum()
+              toIntCount(aggregate == null ? 0 : aggregate.getSessionLogs()),
+              toIntCount(aggregate == null ? 0 : aggregate.getTotalDurationSeconds())
           );
         })
         .toList();
   }
 
-  private List<SummaryBySourceResponse> deriveSummaryBySource(List<SessionLogEntity> sessionLogs) {
+  private List<SummaryBySourceResponse> deriveSummaryBySource(SummaryFilters filters) {
+    Map<String, SessionLogRepository.SummaryBySourceView> summaryBySource = new HashMap<>();
+    for (SessionLogRepository.SummaryBySourceView aggregate : sessionLogRepository.summarizeBySource(
+        filters.startAt(),
+        filters.endAt(),
+        filters.meditationType(),
+        filters.source()
+    )) {
+      summaryBySource.put(aggregate.getSource(), aggregate);
+    }
+
     return SUMMARY_SOURCES.stream()
         .map((source) -> {
-          List<SessionLogEntity> matchingLogs = sessionLogs.stream()
-              .filter((entry) -> source.equals(entry.getSource()))
-              .toList();
-          int completedSessionLogs = (int) matchingLogs.stream().filter(this::isCompletedLog).count();
+          SessionLogRepository.SummaryBySourceView aggregate = summaryBySource.get(source);
+          int sessionLogs = toIntCount(aggregate == null ? 0 : aggregate.getSessionLogs());
+          int completedSessionLogs = toIntCount(aggregate == null ? 0 : aggregate.getCompletedSessionLogs());
 
           return new SummaryBySourceResponse(
               source,
-              matchingLogs.size(),
+              sessionLogs,
               completedSessionLogs,
-              matchingLogs.size() - completedSessionLogs,
-              matchingLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum()
+              sessionLogs - completedSessionLogs,
+              toIntCount(aggregate == null ? 0 : aggregate.getTotalDurationSeconds())
           );
         })
         .toList();
   }
 
-  private List<SummaryByTimeOfDayResponse> deriveSummaryByTimeOfDay(List<SessionLogEntity> sessionLogs, ZoneId zoneId) {
+  private List<SummaryByTimeOfDayResponse> deriveSummaryByTimeOfDay(SummaryFilters filters) {
+    Map<String, BucketTotals> totalsByBucket = new HashMap<>();
+    for (String bucket : TIME_OF_DAY_BUCKETS) {
+      totalsByBucket.put(bucket, new BucketTotals(0, 0, 0));
+    }
+
+    for (SessionLogRepository.SessionLogTimeSliceView entry : sessionLogRepository.findTimeSlices(
+        filters.startAt(),
+        filters.endAt(),
+        filters.meditationType(),
+        filters.source()
+    )) {
+      String bucket = getTimeOfDayBucket(entry.getEndedAt(), filters.zoneId());
+      BucketTotals current = totalsByBucket.get(bucket);
+      totalsByBucket.put(
+          bucket,
+          new BucketTotals(
+              current.sessionLogs() + 1,
+              current.completedSessionLogs() + (isCompletedLog(entry.getStatus()) ? 1 : 0),
+              current.totalDurationSeconds() + entry.getCompletedDurationSeconds()
+          )
+      );
+    }
+
     return TIME_OF_DAY_BUCKETS.stream()
         .map((bucket) -> {
-          List<SessionLogEntity> matchingLogs = sessionLogs.stream()
-              .filter((entry) -> bucket.equals(getTimeOfDayBucket(entry, zoneId)))
-              .toList();
-          int completedSessionLogs = (int) matchingLogs.stream().filter(this::isCompletedLog).count();
-
+          BucketTotals totals = totalsByBucket.get(bucket);
           return new SummaryByTimeOfDayResponse(
               bucket,
-              matchingLogs.size(),
-              completedSessionLogs,
-              matchingLogs.size() - completedSessionLogs,
-              matchingLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum()
+              totals.sessionLogs(),
+              totals.completedSessionLogs(),
+              totals.sessionLogs() - totals.completedSessionLogs(),
+              totals.totalDurationSeconds()
           );
         })
         .toList();
   }
 
-  private boolean isCompletedLog(SessionLogEntity sessionLog) {
-    return COMPLETED_STATUS.contains(sessionLog.getStatus());
+  private boolean isCompletedLog(String status) {
+    return COMPLETED_STATUS.contains(status);
   }
 
-  private String getTimeOfDayBucket(SessionLogEntity sessionLog, ZoneId zoneId) {
-    int hour = sessionLog.getEndedAt().atZone(zoneId).getHour();
+  private String getTimeOfDayBucket(Instant endedAt, ZoneId zoneId) {
+    int hour = endedAt.atZone(zoneId).getHour();
     if (hour >= 5 && hour < 12) {
       return "morning";
     }
@@ -150,6 +172,34 @@ public class SummaryService {
       return "evening";
     }
     return "night";
+  }
+
+  private SummaryFilters parseFilters(
+      String startAtRaw,
+      String endAtRaw,
+      String timeZoneRaw,
+      String meditationTypeRaw,
+      String sourceRaw
+  ) {
+    Instant startAt = parseOptionalInstant(startAtRaw, "Start at must be a valid ISO timestamp.");
+    Instant endAt = parseOptionalInstant(endAtRaw, "End at must be a valid ISO timestamp.");
+    ZoneId zoneId = parseZoneId(timeZoneRaw);
+    String meditationType = normalizeOptionalText(meditationTypeRaw);
+    String source = normalizeOptionalText(sourceRaw);
+
+    if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
+    }
+
+    if (meditationType != null && !MEDITATION_TYPES.contains(meditationType)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
+    }
+
+    if (source != null && !SUMMARY_SOURCES.contains(source)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
+    }
+
+    return new SummaryFilters(startAt, endAt, zoneId, meditationType, source);
   }
 
   private ZoneId parseZoneId(String value) {
@@ -174,5 +224,29 @@ public class SummaryService {
     } catch (DateTimeParseException exception) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
     }
+  }
+
+  private String normalizeOptionalText(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    return value.trim();
+  }
+
+  private int toIntCount(long value) {
+    return Math.toIntExact(value);
+  }
+
+  private record SummaryFilters(
+      Instant startAt,
+      Instant endAt,
+      ZoneId zoneId,
+      String meditationType,
+      String source
+  ) {
+  }
+
+  private record BucketTotals(int sessionLogs, int completedSessionLogs, int totalDurationSeconds) {
   }
 }

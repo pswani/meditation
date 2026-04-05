@@ -25,6 +25,9 @@ describe('summary api boundary', () => {
       '/summaries?startAt=2026-03-20T00%3A00%3A00.000Z&endAt=2026-03-26T23%3A59%3A59.999Z'
     );
     expect(buildSummariesPath({ timeZone: 'America/Chicago' })).toBe('/summaries?timeZone=America%2FChicago');
+    expect(buildSummariesPath({ meditationType: 'Vipassana', source: 'auto log' })).toBe(
+      '/summaries?meditationType=Vipassana&source=auto+log'
+    );
     expect(buildSummariesUrl({ startAt: '2026-03-20T00:00:00.000Z' }, 'http://127.0.0.1:8080/api')).toBe(
       'http://127.0.0.1:8080/api/summaries?startAt=2026-03-20T00%3A00%3A00.000Z'
     );
@@ -106,6 +109,8 @@ describe('summary api boundary', () => {
     const summary = await loadSummaryFromApi({
       startAt: '2026-03-20T00:00:00.000Z',
       endAt: '2026-03-26T23:59:59.999Z',
+      meditationType: 'Vipassana',
+      source: 'auto log',
     });
 
     expect(summary.overallSummary.totalSessionLogs).toBe(2);
@@ -116,6 +121,8 @@ describe('summary api boundary', () => {
       loadCachedSummarySnapshotData({
         startAt: '2026-03-20T00:00:00.000Z',
         endAt: '2026-03-26T23:59:59.999Z',
+        meditationType: 'Vipassana',
+        source: 'auto log',
       })?.overallSummary.totalSessionLogs
     ).toBe(2);
   });

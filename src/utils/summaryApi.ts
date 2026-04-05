@@ -10,6 +10,8 @@ interface SummaryApiRequest {
   readonly startAt?: string;
   readonly endAt?: string;
   readonly timeZone?: string;
+  readonly meditationType?: string;
+  readonly source?: string;
 }
 
 const meditationTypes = new Set(['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj']);
@@ -112,6 +114,12 @@ function buildSummaryQueryString(request: SummaryApiRequest = {}): string {
   }
   if (request.timeZone) {
     query.set('timeZone', request.timeZone);
+  }
+  if (request.meditationType) {
+    query.set('meditationType', request.meditationType);
+  }
+  if (request.source) {
+    query.set('source', request.source);
   }
 
   const queryString = query.toString();

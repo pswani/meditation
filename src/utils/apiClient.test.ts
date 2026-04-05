@@ -3,6 +3,7 @@ import { ApiClientError, requestJson } from './apiClient';
 
 describe('api client', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -107,5 +108,48 @@ describe('api client', () => {
         }),
       })
     );
+  });
+
+  it('classifies request timeouts explicitly', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, options?: RequestInit) => new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+      }))
+    );
+
+    const pendingRequest = requestJson('/health', { timeoutMs: 25 });
+    const expectation = expect(pendingRequest).rejects.toMatchObject<ApiClientError>({
+      name: 'ApiClientError',
+      kind: 'timeout',
+      status: null,
+    });
+
+    await vi.advanceTimersByTimeAsync(25);
+    await expectation;
+  });
+
+  it('classifies external cancellation separately from timeouts', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, options?: RequestInit) => new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+      }))
+    );
+
+    const pendingRequest = requestJson('/health', {
+      signal: controller.signal,
+      timeoutMs: 1000,
+    });
+    const expectation = expect(pendingRequest).rejects.toMatchObject<ApiClientError>({
+      name: 'ApiClientError',
+      kind: 'aborted',
+      status: null,
+    });
+    controller.abort();
+
+    await expectation;
   });
 });

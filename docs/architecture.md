@@ -97,10 +97,13 @@ Single-page React application with route-based screens and feature-oriented modu
     - accepts optional `timeZone` query input for time-of-day filter evaluation
 - current session-log REST surfaces include:
   - `/api/session-logs`
+    - accepts optional `startAt`, `endAt`, `meditationType`, and `source` filters
+    - accepts optional `page` plus `size` inputs and returns an envelope with `items`, `page`, `size`, `totalItems`, and `hasNextPage`
   - `/api/session-logs/manual`
 - current summary REST surfaces include:
   - `/api/summaries`
     - accepts optional `timeZone` query input for time-of-day aggregation
+    - accepts optional `meditationType` and `source` filters
 - reserved domain packages for:
   - `reference`
 
@@ -157,6 +160,12 @@ Single-page React application with route-based screens and feature-oriented modu
 - `Sankalpa` replay stays id-stable across create, edit, and archive writes:
   - edits preserve the original goal id and `createdAt` so deadline windows stay trustworthy
   - archive remains a boolean goal-state mutation on the same record instead of creating a second history entity
+
+## Query and API-boundary strategy
+- Summary overall totals, by-type totals, by-source totals, and `sankalpa` goal-window matching now prefer repository aggregates or reduced projections over loading full `session log` entities into service memory.
+- Time-zone-aware time-of-day bucketing still happens in service code, but only after fetching reduced `endedAt`, `status`, and duration projections for the filtered window.
+- `session log` reads now expose an explicit filtered collection contract and an opt-in paged contract so larger datasets do not require a second ad hoc endpoint later.
+- The frontend shared API client now owns a default request timeout plus explicit timeout and cancellation classification so route and sync code do not need to reinvent that behavior per feature.
 
 ## Frontend reconciliation boundaries
 - `src/features/timer/TimerContext.tsx` remains the public provider boundary for timer, playlist, custom-play, and session-log runtime state.

@@ -3,6 +3,9 @@ package com.meditation.backend.playlist;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,9 +13,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.meditation.backend.customplay.CustomPlayEntity;
+import com.meditation.backend.customplay.CustomPlayRepository;
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import java.time.Instant;
+import java.util.Set;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -39,11 +46,15 @@ class PlaylistControllerTest {
   @Autowired
   private SessionLogRepository sessionLogRepository;
 
+  @SpyBean
+  private CustomPlayRepository customPlayRepository;
+
   @BeforeEach
   void clearPlaylists() {
     sessionLogRepository.deleteAll();
     playlistItemRepository.deleteAll();
     playlistRepository.deleteAll();
+    customPlayRepository.deleteAll();
   }
 
   @Test
@@ -131,6 +142,70 @@ class PlaylistControllerTest {
                 }
                 """))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void batchesLinkedCustomPlayValidationAcrossPlaylistItems() throws Exception {
+    Instant createdAt = Instant.parse("2026-03-26T05:00:00Z");
+    customPlayRepository.saveAll(List.of(
+        new CustomPlayEntity(
+            "custom-play-1",
+            "Morning Focus",
+            "Vipassana",
+            20,
+            "None",
+            "Temple Bell",
+            null,
+            false,
+            null,
+            createdAt,
+            createdAt
+        ),
+        new CustomPlayEntity(
+            "custom-play-2",
+            "Ajapa Pulse",
+            "Ajapa",
+            15,
+            "None",
+            "Temple Bell",
+            null,
+            false,
+            null,
+            createdAt,
+            createdAt
+        )
+    ));
+    clearInvocations(customPlayRepository);
+
+    mockMvc.perform(put("/api/playlists/playlist-linked")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "playlist-linked",
+                  "name": "Linked Sequence",
+                  "favorite": false,
+                  "items": [
+                    {
+                      "id": "item-1",
+                      "title": "Morning Focus",
+                      "meditationType": "Vipassana",
+                      "durationMinutes": 20,
+                      "customPlayId": "custom-play-1"
+                    },
+                    {
+                      "id": "item-2",
+                      "title": "Ajapa Pulse",
+                      "meditationType": "Ajapa",
+                      "durationMinutes": 15,
+                      "customPlayId": "custom-play-2"
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items", hasSize(2)));
+
+    verify(customPlayRepository, times(1)).findExistingIdsByIdIn(Set.of("custom-play-1", "custom-play-2"));
   }
 
   @Test

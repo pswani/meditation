@@ -187,9 +187,9 @@ Today:
 
 - `src/utils/customPlayApi.ts` performs live HTTP requests to `/api/custom-plays`
 - `src/utils/mediaAssetApi.ts` performs live HTTP requests to `/api/media/custom-plays` through a shared API client
-- `src/utils/summaryApi.ts` performs live HTTP requests to `/api/summaries` and sends the browser time zone when available
+- `src/utils/summaryApi.ts` performs live HTTP requests to `/api/summaries`, sends the browser time zone when available, and supports optional `meditationType` plus `source` filters
 - `src/utils/sessionLogApi.ts` creates manual logs through `/api/session-logs/manual`
-- `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs`
+- `src/utils/sessionLogApi.ts` performs live HTTP requests to `/api/session-logs` and now supports optional date-range, meditation-type, source, and page-size query inputs
 - `src/utils/timerSettingsApi.ts` performs live HTTP requests to `/api/settings/timer`
 - `src/utils/playlistApi.ts` performs live HTTP requests to `/api/playlists`
 - `src/utils/sankalpaApi.ts` performs live HTTP requests to `/api/sankalpas` and sends the browser time zone when available
@@ -241,8 +241,8 @@ Current API-boundary status:
 | `src/utils/playlistApi.ts` | `/api/playlists` | fetches and persists backend playlist records |
 | `src/utils/sankalpaApi.ts` | `/api/sankalpas` | fetches backend `sankalpa` progress and persists `sankalpa` goals |
 | `src/utils/mediaAssetApi.ts` | `/api/media/custom-plays` | fetches backend media metadata with built-in sample fallback |
-| `src/utils/summaryApi.ts` | `/api/summaries` | fetches backend-derived summary aggregates with local derived fallback in the UI |
-| `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation |
+| `src/utils/summaryApi.ts` | `/api/summaries` | fetches backend-derived summary aggregates with optional `meditationType` and `source` filters plus local derived fallback in the UI |
+| `src/utils/sessionLogApi.ts` | `/api/session-logs`, `/api/session-logs/manual` | fetches and persists backend session logs, including dedicated manual-log creation plus optional filtered or paged list requests |
 | `src/utils/timerSettingsApi.ts` | `/api/settings/timer` | fetches and persists backend timer settings |
 
 This means:
@@ -258,6 +258,7 @@ This means:
 - media loading still preserves today’s UX when the backend is unavailable
 - `custom play`, playlist, `session log`, and timer-settings hydration still preserve a local cache for smoother migration and failure fallback
 - the app now has a shared sync queue foundation for deferred writes when live backend connectivity is not available
+- `src/utils/apiClient.ts` now applies an explicit default timeout and separate timeout-versus-abort error classification so backend outages do not look like user cancellations
 - implemented write flows now stay usable offline by updating local state first and queueing backend reconciliation for:
   - timer settings
   - session logs

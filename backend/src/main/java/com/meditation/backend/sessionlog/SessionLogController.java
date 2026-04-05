@@ -1,7 +1,6 @@
 package com.meditation.backend.sessionlog;
 
 import com.meditation.backend.sync.SyncRequestSupport;
-import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +8,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,8 +22,15 @@ public class SessionLogController {
   }
 
   @GetMapping
-  public List<SessionLogResponse> listSessionLogs() {
-    return sessionLogService.listSessionLogs();
+  public SessionLogListResponse listSessionLogs(
+      @RequestParam(required = false) String startAt,
+      @RequestParam(required = false) String endAt,
+      @RequestParam(required = false) String meditationType,
+      @RequestParam(required = false) String source,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size
+  ) {
+    return sessionLogService.listSessionLogs(startAt, endAt, meditationType, source, page, size);
   }
 
   @PostMapping("/manual")

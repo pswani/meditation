@@ -60,6 +60,15 @@
   - linked-recording items fail fast before launch if their referenced `custom play` or media asset can no longer be resolved
   - playlist item completion and early-end logging stays per item rather than inventing a second aggregate-only history model
 - Keep backend playlist saves referentially safe for linked recordings by rejecting a `customPlayId` that does not currently resolve to a saved `custom play`.
+- Keep linked-playlist `custom play` validation batched at the repository boundary so playlist saves do not perform one existence query per linked item.
+- Keep summary and `sankalpa` hot paths repository-driven where the access pattern is predictable:
+  - use aggregate queries for counts and summed durations
+  - use reduced time-slice projections for time-zone-aware bucketing instead of loading full `session log` entities
+- Keep `session log` collection reads on one stable route:
+  - support optional filters for date range, meditation type, and source
+  - support optional paged reads with explicit envelope metadata
+  - preserve an unpaged compatibility path while existing consumers migrate
+- Keep the shared frontend API client responsible for explicit timeout and cancellation behavior rather than scattering ad hoc abort logic across features.
 - Keep `sankalpa` edits id-stable:
   - preserve `id` and `createdAt` when editing goal fields so progress and deadline windows stay anchored to the original goal
   - recalculate progress from the updated goal fields without inventing a second versioned goal history model

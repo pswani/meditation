@@ -1,6 +1,5 @@
 package com.meditation.backend.sankalpa;
 
-import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.math.BigDecimal;
@@ -34,13 +33,12 @@ public class SankalpaService {
   }
 
   public List<SankalpaProgressResponse> listSankalpas(String timeZoneRaw) {
-    List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
     Instant now = Instant.now();
     ZoneId zoneId = parseZoneId(timeZoneRaw);
 
     return sankalpaGoalRepository.findAllByOrderByCreatedAtDesc()
         .stream()
-        .map((goal) -> toProgressResponse(goal, sessionLogs, now, zoneId))
+        .map((goal) -> toProgressResponse(goal, now, zoneId))
         .toList();
   }
 
@@ -56,8 +54,7 @@ public class SankalpaService {
     ZoneId zoneId = parseZoneId(timeZoneRaw);
     SankalpaGoalEntity existingEntity = sankalpaGoalRepository.findById(sankalpaId).orElse(null);
     if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
-      List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
-      return toProgressResponse(existingEntity, sessionLogs, now, zoneId);
+      return toProgressResponse(existingEntity, now, zoneId);
     }
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, now);
@@ -92,12 +89,11 @@ public class SankalpaService {
         mutationTimestamp
     );
 
-    List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
-    SankalpaProgressResponse progress = toProgressResponse(entity, sessionLogs, now, zoneId);
+    SankalpaProgressResponse progress = toProgressResponse(entity, now, zoneId);
     entity.setCompletedAt("completed".equals(progress.status()) ? now : null);
 
     SankalpaGoalEntity savedEntity = sankalpaGoalRepository.save(entity);
-    return toProgressResponse(savedEntity, sessionLogs, now, zoneId);
+    return toProgressResponse(savedEntity, now, zoneId);
   }
 
   public SankalpaDeleteResult deleteSankalpa(String sankalpaId, String timeZoneRaw, String syncQueuedAtRaw) {
@@ -112,10 +108,9 @@ public class SankalpaService {
 
     Instant now = Instant.now();
     ZoneId zoneId = parseZoneId(timeZoneRaw);
-    List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
 
     if (SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
-      return new SankalpaDeleteResult("stale", toProgressResponse(existingEntity, sessionLogs, now, zoneId));
+      return new SankalpaDeleteResult("stale", toProgressResponse(existingEntity, now, zoneId));
     }
 
     sankalpaGoalRepository.deleteById(sankalpaId);
@@ -124,15 +119,12 @@ public class SankalpaService {
 
   private SankalpaProgressResponse toProgressResponse(
       SankalpaGoalEntity goal,
-      List<SessionLogEntity> sessionLogs,
       Instant now,
       ZoneId zoneId
   ) {
-    List<SessionLogEntity> matchingSessionLogs = sessionLogs.stream()
-        .filter((sessionLog) -> sessionLogInGoalWindow(sessionLog, goal) && sessionLogMatchesFilters(sessionLog, goal, zoneId))
-        .toList();
-    int matchedSessionCount = matchingSessionLogs.size();
-    int matchedDurationSeconds = matchingSessionLogs.stream().mapToInt(SessionLogEntity::getCompletedDurationSeconds).sum();
+    SankalpaMatchTotals matchTotals = loadMatchTotals(goal, zoneId);
+    int matchedSessionCount = matchTotals.matchedSessionCount();
+    int matchedDurationSeconds = matchTotals.matchedDurationSeconds();
     int targetDurationSeconds = "duration-based".equals(goal.getGoalType())
         ? goal.getTargetValue().multiply(BigDecimal.valueOf(60)).setScale(0, java.math.RoundingMode.HALF_UP).intValueExact()
         : 0;
@@ -177,21 +169,34 @@ public class SankalpaService {
     );
   }
 
-  private boolean sessionLogInGoalWindow(SessionLogEntity sessionLog, SankalpaGoalEntity goal) {
+  private SankalpaMatchTotals loadMatchTotals(SankalpaGoalEntity goal, ZoneId zoneId) {
+    Instant startAt = goal.getCreatedAt();
     Instant deadlineAt = goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
-    return !sessionLog.getEndedAt().isBefore(goal.getCreatedAt()) && !sessionLog.getEndedAt().isAfter(deadlineAt);
-  }
+    String meditationType = goal.getMeditationTypeCode();
 
-  private boolean sessionLogMatchesFilters(SessionLogEntity sessionLog, SankalpaGoalEntity goal, ZoneId zoneId) {
-    if (goal.getMeditationTypeCode() != null && !goal.getMeditationTypeCode().equals(sessionLog.getMeditationTypeCode())) {
-      return false;
+    if (goal.getTimeOfDayBucket() == null) {
+      SessionLogRepository.SessionLogAggregateView aggregate = sessionLogRepository.summarizeForGoalWindow(startAt, deadlineAt, meditationType);
+      return new SankalpaMatchTotals(
+          Math.toIntExact(aggregate.getSessionLogCount()),
+          Math.toIntExact(aggregate.getTotalDurationSeconds())
+      );
     }
 
-    return goal.getTimeOfDayBucket() == null || goal.getTimeOfDayBucket().equals(getTimeOfDayBucket(sessionLog, zoneId));
+    int matchedSessionCount = 0;
+    int matchedDurationSeconds = 0;
+    for (SessionLogRepository.SessionLogTimeSliceView entry : sessionLogRepository.findTimeSlices(startAt, deadlineAt, meditationType, null)) {
+      if (!goal.getTimeOfDayBucket().equals(getTimeOfDayBucket(entry.getEndedAt(), zoneId))) {
+        continue;
+      }
+      matchedSessionCount += 1;
+      matchedDurationSeconds += entry.getCompletedDurationSeconds();
+    }
+
+    return new SankalpaMatchTotals(matchedSessionCount, matchedDurationSeconds);
   }
 
-  private String getTimeOfDayBucket(SessionLogEntity sessionLog, ZoneId zoneId) {
-    int hour = sessionLog.getEndedAt().atZone(zoneId).getHour();
+  private String getTimeOfDayBucket(Instant endedAt, ZoneId zoneId) {
+    int hour = endedAt.atZone(zoneId).getHour();
     if (hour >= 5 && hour < 12) {
       return "morning";
     }
@@ -279,5 +284,8 @@ public class SankalpaService {
     }
 
     return value.trim();
+  }
+
+  private record SankalpaMatchTotals(int matchedSessionCount, int matchedDurationSeconds) {
   }
 }

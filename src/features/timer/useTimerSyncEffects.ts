@@ -375,7 +375,7 @@ export function useTimerSyncEffects({
       }
 
       try {
-        const remoteSessionLogs = await listSessionLogsFromApi();
+        const remoteSessionLogs = (await listSessionLogsFromApi()).items;
         if (cancelled) {
           return;
         }
