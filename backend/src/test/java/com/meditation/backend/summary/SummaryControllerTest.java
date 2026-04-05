@@ -92,6 +92,30 @@ class SummaryControllerTest {
   }
 
   @Test
+  void filtersSummaryByMeditationTypeAndSource() throws Exception {
+    sessionLogRepository.saveAll(List.of(
+        createSessionLog("log-1", "Vipassana", "auto log", "completed", Instant.parse("2026-03-26T06:00:00Z"), 900),
+        createSessionLog("log-2", "Vipassana", "manual log", "ended early", Instant.parse("2026-03-26T07:00:00Z"), 300),
+        createSessionLog("log-3", "Ajapa", "auto log", "completed", Instant.parse("2026-03-26T08:00:00Z"), 600)
+    ));
+
+    mockMvc.perform(get("/api/summaries")
+            .queryParam("meditationType", "Vipassana")
+            .queryParam("source", "auto log")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.overallSummary.totalSessionLogs").value(1))
+        .andExpect(jsonPath("$.overallSummary.completedSessionLogs").value(1))
+        .andExpect(jsonPath("$.overallSummary.totalDurationSeconds").value(900))
+        .andExpect(jsonPath("$.overallSummary.autoLogs").value(1))
+        .andExpect(jsonPath("$.overallSummary.manualLogs").value(0))
+        .andExpect(jsonPath("$.byTypeSummary[0].sessionLogs").value(1))
+        .andExpect(jsonPath("$.byTypeSummary[1].sessionLogs").value(0))
+        .andExpect(jsonPath("$.bySourceSummary[0].sessionLogs").value(1))
+        .andExpect(jsonPath("$.bySourceSummary[1].sessionLogs").value(0));
+  }
+
+  @Test
   void rejectsInvalidSummaryRangeParameters() throws Exception {
     mockMvc.perform(get("/api/summaries")
             .queryParam("startAt", "invalid")
@@ -106,6 +130,16 @@ class SummaryControllerTest {
 
     mockMvc.perform(get("/api/summaries")
             .queryParam("timeZone", "Mars/Olympus")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/summaries")
+            .queryParam("meditationType", "Breathwork")
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/summaries")
+            .queryParam("source", "queued log")
             .accept(APPLICATION_JSON))
         .andExpect(status().isBadRequest());
   }

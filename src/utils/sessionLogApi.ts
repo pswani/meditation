@@ -15,6 +15,17 @@ export const SESSION_LOGS_COLLECTION_ENDPOINT = buildApiPath(SESSION_LOGS_COLLEC
 export const MANUAL_SESSION_LOGS_CREATE_PATH = '/session-logs/manual';
 export const MANUAL_SESSION_LOGS_CREATE_ENDPOINT = buildApiPath(MANUAL_SESSION_LOGS_CREATE_PATH);
 
+interface SessionLogListRequest {
+  readonly startAt?: string;
+  readonly endAt?: string;
+  readonly meditationType?: SessionLog['meditationType'];
+  readonly source?: SessionLog['source'];
+  readonly page?: number;
+  readonly size?: number;
+  readonly apiBaseUrl?: string;
+  readonly signal?: AbortSignal;
+}
+
 interface SessionLogApiResponse {
   readonly id: string;
   readonly startedAt: string;
@@ -39,6 +50,22 @@ interface SessionLogApiResponse {
   readonly customPlayId?: string;
   readonly customPlayName?: string;
   readonly customPlayRecordingLabel?: string;
+}
+
+interface SessionLogListApiResponse {
+  readonly items: unknown;
+  readonly page: number;
+  readonly size: number;
+  readonly totalItems: number;
+  readonly hasNextPage: boolean;
+}
+
+export interface SessionLogListResult {
+  readonly items: SessionLog[];
+  readonly page: number;
+  readonly size: number;
+  readonly totalItems: number;
+  readonly hasNextPage: boolean;
 }
 
 function isValidIsoDate(value: unknown): value is string {
@@ -130,12 +157,82 @@ function normalizeSessionLogCollection(payload: unknown): SessionLog[] {
     .sort((left, right) => Date.parse(right.endedAt) - Date.parse(left.endedAt));
 }
 
+function normalizeSessionLogListPayload(payload: unknown): SessionLogListResult {
+  if (Array.isArray(payload)) {
+    const items = normalizeSessionLogCollection(payload);
+    return {
+      items,
+      page: 0,
+      size: items.length,
+      totalItems: items.length,
+      hasNextPage: false,
+    };
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Session log collection response is invalid.');
+  }
+
+  const candidate = payload as SessionLogListApiResponse;
+  if (
+    !('items' in candidate) ||
+    typeof candidate.page !== 'number' ||
+    typeof candidate.size !== 'number' ||
+    typeof candidate.totalItems !== 'number' ||
+    typeof candidate.hasNextPage !== 'boolean'
+  ) {
+    throw new Error('Session log collection response is invalid.');
+  }
+
+  return {
+    items: normalizeSessionLogCollection(candidate.items),
+    page: candidate.page,
+    size: candidate.size,
+    totalItems: candidate.totalItems,
+    hasNextPage: candidate.hasNextPage,
+  };
+}
+
+function buildSessionLogQueryString(request: Omit<SessionLogListRequest, 'apiBaseUrl' | 'signal'> = {}): string {
+  const query = new URLSearchParams();
+  if (request.startAt) {
+    query.set('startAt', request.startAt);
+  }
+  if (request.endAt) {
+    query.set('endAt', request.endAt);
+  }
+  if (request.meditationType) {
+    query.set('meditationType', request.meditationType);
+  }
+  if (request.source) {
+    query.set('source', request.source);
+  }
+  if (typeof request.page === 'number') {
+    query.set('page', String(request.page));
+  }
+  if (typeof request.size === 'number') {
+    query.set('size', String(request.size));
+  }
+
+  const queryString = query.toString();
+  return queryString.length > 0 ? `?${queryString}` : '';
+}
+
+export function buildSessionLogsCollectionPath(
+  request: Omit<SessionLogListRequest, 'apiBaseUrl' | 'signal'> = {}
+): string {
+  return `${SESSION_LOGS_COLLECTION_PATH}${buildSessionLogQueryString(request)}`;
+}
+
 export function buildSessionLogDetailPath(sessionLogId: string): string {
   return `${SESSION_LOGS_COLLECTION_PATH}/${sessionLogId}`;
 }
 
-export function buildSessionLogsCollectionUrl(apiBaseUrl?: string): string {
-  return buildApiUrl(SESSION_LOGS_COLLECTION_PATH, apiBaseUrl);
+export function buildSessionLogsCollectionUrl(
+  request: Omit<SessionLogListRequest, 'apiBaseUrl' | 'signal'> = {},
+  apiBaseUrl?: string
+): string {
+  return buildApiUrl(buildSessionLogsCollectionPath(request), apiBaseUrl);
 }
 
 export function buildManualSessionLogCreateUrl(apiBaseUrl?: string): string {
@@ -146,9 +243,12 @@ export function buildSessionLogDetailUrl(sessionLogId: string, apiBaseUrl?: stri
   return buildApiUrl(buildSessionLogDetailPath(sessionLogId), apiBaseUrl);
 }
 
-export async function listSessionLogsFromApi(apiBaseUrl?: string): Promise<SessionLog[]> {
-  const payload = await requestJson<unknown>(SESSION_LOGS_COLLECTION_PATH, { apiBaseUrl });
-  return normalizeSessionLogCollection(payload);
+export async function listSessionLogsFromApi(request: SessionLogListRequest = {}): Promise<SessionLogListResult> {
+  const payload = await requestJson<unknown>(buildSessionLogsCollectionPath(request), {
+    apiBaseUrl: request.apiBaseUrl,
+    signal: request.signal,
+  });
+  return normalizeSessionLogListPayload(payload);
 }
 
 export async function persistSessionLogToApi(

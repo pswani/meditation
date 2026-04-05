@@ -19,8 +19,10 @@ public class SummaryController {
   public SummaryResponse getSummary(
       @RequestParam(required = false) String startAt,
       @RequestParam(required = false) String endAt,
-      @RequestParam(required = false) String timeZone
+      @RequestParam(required = false) String timeZone,
+      @RequestParam(required = false) String meditationType,
+      @RequestParam(required = false) String source
   ) {
-    return summaryService.getSummary(startAt, endAt, timeZone);
+    return summaryService.getSummary(startAt, endAt, timeZone, meditationType, source);
   }
 }

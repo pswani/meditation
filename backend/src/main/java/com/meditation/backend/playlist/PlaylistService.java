@@ -169,6 +169,7 @@ public class PlaylistService {
     }
 
     Set<String> seenItemIds = new HashSet<>();
+    Set<String> linkedCustomPlayIds = new HashSet<>();
     for (PlaylistItemUpsertRequest item : request.items()) {
       if (item.id() == null || item.id().isBlank()) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item id is required.");
@@ -194,8 +195,15 @@ public class PlaylistService {
       if (item.customPlayId() != null && item.customPlayId().isBlank()) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id cannot be blank.");
       }
+      String normalizedCustomPlayId = normalizeOptionalId(item.customPlayId());
+      if (normalizedCustomPlayId != null) {
+        linkedCustomPlayIds.add(normalizedCustomPlayId);
+      }
+    }
 
-      if (item.customPlayId() != null && !item.customPlayId().isBlank() && !customPlayRepository.existsById(item.customPlayId().trim())) {
+    if (!linkedCustomPlayIds.isEmpty()) {
+      Set<String> existingCustomPlayIds = customPlayRepository.findExistingIdsByIdIn(linkedCustomPlayIds);
+      if (existingCustomPlayIds.size() != linkedCustomPlayIds.size()) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist item custom play id is invalid.");
       }
     }

@@ -6,6 +6,9 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,6 +20,7 @@ public class SessionLogService {
   private static final Set<String> SESSION_LOG_STATUSES = Set.of("completed", "ended early");
   private static final Set<String> SESSION_LOG_SOURCES = Set.of("auto log", "manual log");
   private static final Set<String> TIMER_MODES = Set.of("fixed", "open-ended");
+  private static final int MAX_PAGE_SIZE = 200;
 
   private final SessionLogRepository sessionLogRepository;
 
@@ -24,11 +28,49 @@ public class SessionLogService {
     this.sessionLogRepository = sessionLogRepository;
   }
 
-  public List<SessionLogResponse> listSessionLogs() {
-    return sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc()
-        .stream()
-        .map(this::toResponse)
-        .toList();
+  public SessionLogListResponse listSessionLogs(
+      String startAtRaw,
+      String endAtRaw,
+      String meditationTypeRaw,
+      String sourceRaw,
+      Integer pageRaw,
+      Integer sizeRaw
+  ) {
+    SessionLogFilters filters = parseFilters(startAtRaw, endAtRaw, meditationTypeRaw, sourceRaw);
+    SessionLogPageRequest pageRequest = parsePageRequest(pageRaw, sizeRaw);
+
+    if (pageRequest == null) {
+      List<SessionLogResponse> items = sessionLogRepository.findAllMatching(
+              filters.startAt(),
+              filters.endAt(),
+              filters.meditationType(),
+              filters.source()
+          )
+          .stream()
+          .map(this::toResponse)
+          .toList();
+      return new SessionLogListResponse(items, 0, items.size(), items.size(), false);
+    }
+
+    Page<SessionLogEntity> page = sessionLogRepository.findPageMatching(
+        filters.startAt(),
+        filters.endAt(),
+        filters.meditationType(),
+        filters.source(),
+        PageRequest.of(
+            pageRequest.page(),
+            pageRequest.size(),
+            Sort.by(Sort.Order.desc("endedAt"), Sort.Order.desc("createdAt"))
+        )
+    );
+
+    return new SessionLogListResponse(
+        page.getContent().stream().map(this::toResponse).toList(),
+        page.getNumber(),
+        page.getSize(),
+        page.getTotalElements(),
+        page.hasNext()
+    );
   }
 
   public SessionLogResponse createManualSessionLog(ManualSessionLogCreateRequest request) {
@@ -281,6 +323,58 @@ public class SessionLogService {
       return null;
     }
 
-    return value;
+    return value.trim();
+  }
+
+  private SessionLogFilters parseFilters(
+      String startAtRaw,
+      String endAtRaw,
+      String meditationTypeRaw,
+      String sourceRaw
+  ) {
+    Instant startAt = parseOptionalTimestamp(startAtRaw, "Start at must be a valid ISO timestamp.");
+    Instant endAt = parseOptionalTimestamp(endAtRaw, "End at must be a valid ISO timestamp.");
+    String meditationType = normalizeOptionalText(meditationTypeRaw);
+    String source = normalizeOptionalText(sourceRaw);
+
+    if (startAt != null && endAt != null && startAt.isAfter(endAt)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start at must be on or before end at.");
+    }
+
+    if (meditationType != null && !MEDITATION_TYPES.contains(meditationType)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
+    }
+
+    if (source != null && !SESSION_LOG_SOURCES.contains(source)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Session log source is invalid.");
+    }
+
+    return new SessionLogFilters(startAt, endAt, meditationType, source);
+  }
+
+  private SessionLogPageRequest parsePageRequest(Integer pageRaw, Integer sizeRaw) {
+    if (pageRaw == null && sizeRaw == null) {
+      return null;
+    }
+
+    if (pageRaw == null || sizeRaw == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page and size must be provided together.");
+    }
+
+    if (pageRaw < 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page must be 0 or greater.");
+    }
+
+    if (sizeRaw <= 0 || sizeRaw > MAX_PAGE_SIZE) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Size must be between 1 and 200.");
+    }
+
+    return new SessionLogPageRequest(pageRaw, sizeRaw);
+  }
+
+  private record SessionLogFilters(Instant startAt, Instant endAt, String meditationType, String source) {
+  }
+
+  private record SessionLogPageRequest(int page, int size) {
   }
 }

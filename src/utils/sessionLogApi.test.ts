@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildManualSessionLogCreateUrl,
   buildSessionLogDetailUrl,
+  buildSessionLogsCollectionPath,
   buildSessionLogsCollectionUrl,
   createManualSessionLogInApi,
   listSessionLogsFromApi,
@@ -22,38 +23,44 @@ describe('session log api boundary', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => [
-          {
-            id: 'log-older',
-            startedAt: '2026-03-26T10:00:00.000Z',
-            endedAt: '2026-03-26T10:10:00.000Z',
-            meditationType: 'Vipassana',
-            intendedDurationSeconds: 600,
-            completedDurationSeconds: 600,
-            status: 'completed',
-            source: 'auto log',
-            startSound: 'None',
-            endSound: 'Temple Bell',
-            intervalEnabled: false,
-            intervalMinutes: 0,
-            intervalSound: 'None',
-          },
-          {
-            id: 'log-newer',
-            startedAt: '2026-03-26T11:00:00.000Z',
-            endedAt: '2026-03-26T11:20:00.000Z',
-            meditationType: 'Ajapa',
-            intendedDurationSeconds: 1200,
-            completedDurationSeconds: 900,
-            status: 'ended early',
-            source: 'manual log',
-            startSound: 'None',
-            endSound: 'None',
-            intervalEnabled: false,
-            intervalMinutes: 0,
-            intervalSound: 'None',
-          },
-        ],
+        json: async () => ({
+          items: [
+            {
+              id: 'log-older',
+              startedAt: '2026-03-26T10:00:00.000Z',
+              endedAt: '2026-03-26T10:10:00.000Z',
+              meditationType: 'Vipassana',
+              intendedDurationSeconds: 600,
+              completedDurationSeconds: 600,
+              status: 'completed',
+              source: 'auto log',
+              startSound: 'None',
+              endSound: 'Temple Bell',
+              intervalEnabled: false,
+              intervalMinutes: 0,
+              intervalSound: 'None',
+            },
+            {
+              id: 'log-newer',
+              startedAt: '2026-03-26T11:00:00.000Z',
+              endedAt: '2026-03-26T11:20:00.000Z',
+              meditationType: 'Ajapa',
+              intendedDurationSeconds: 1200,
+              completedDurationSeconds: 900,
+              status: 'ended early',
+              source: 'manual log',
+              startSound: 'None',
+              endSound: 'None',
+              intervalEnabled: false,
+              intervalMinutes: 0,
+              intervalSound: 'None',
+            },
+          ],
+          page: 0,
+          size: 2,
+          totalItems: 2,
+          hasNextPage: false,
+        }),
       })
     );
 
@@ -62,7 +69,23 @@ describe('session log api boundary', () => {
     expect(SESSION_LOGS_COLLECTION_ENDPOINT).toBe('/api/session-logs');
     expect(buildSessionLogsCollectionUrl()).toBe('/api/session-logs');
     expect(buildSessionLogDetailUrl('log-1', 'http://192.168.1.25:8080/api')).toBe('http://192.168.1.25:8080/api/session-logs/log-1');
-    expect(sessionLogs.map((entry) => entry.id)).toEqual(['log-newer', 'log-older']);
+    expect(sessionLogs.items.map((entry) => entry.id)).toEqual(['log-newer', 'log-older']);
+    expect(sessionLogs.totalItems).toBe(2);
+  });
+
+  it('builds filtered session log collection paths', () => {
+    expect(
+      buildSessionLogsCollectionPath({
+        startAt: '2026-03-26T08:30:00.000Z',
+        endAt: '2026-03-26T10:00:00.000Z',
+        meditationType: 'Vipassana',
+        source: 'auto log',
+        page: 0,
+        size: 25,
+      })
+    ).toBe(
+      '/session-logs?startAt=2026-03-26T08%3A30%3A00.000Z&endAt=2026-03-26T10%3A00%3A00.000Z&meditationType=Vipassana&source=auto+log&page=0&size=25'
+    );
   });
 
   it('persists a session log through the detail endpoint', async () => {

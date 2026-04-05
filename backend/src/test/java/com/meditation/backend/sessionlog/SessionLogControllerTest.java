@@ -109,10 +109,14 @@ class SessionLogControllerTest {
 
     mockMvc.perform(get("/api/session-logs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(2)))
-        .andExpect(jsonPath("$[0].id").value("log-newer"))
-        .andExpect(jsonPath("$[1].id").value("log-older"))
-        .andExpect(jsonPath("$[1].customPlayId").value("custom-play-1"));
+        .andExpect(jsonPath("$.items", hasSize(2)))
+        .andExpect(jsonPath("$.page").value(0))
+        .andExpect(jsonPath("$.size").value(2))
+        .andExpect(jsonPath("$.totalItems").value(2))
+        .andExpect(jsonPath("$.hasNextPage").value(false))
+        .andExpect(jsonPath("$.items[0].id").value("log-newer"))
+        .andExpect(jsonPath("$.items[1].id").value("log-older"))
+        .andExpect(jsonPath("$.items[1].customPlayId").value("custom-play-1"));
   }
 
   @Test
@@ -137,8 +141,8 @@ class SessionLogControllerTest {
 
     mockMvc.perform(get("/api/session-logs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].source").value("manual log"));
+        .andExpect(jsonPath("$.items", hasSize(1)))
+        .andExpect(jsonPath("$.items[0].source").value("manual log"));
   }
 
   @Test
@@ -172,9 +176,105 @@ class SessionLogControllerTest {
 
     mockMvc.perform(get("/api/session-logs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].timerMode").value("open-ended"))
-        .andExpect(jsonPath("$[0].intendedDurationSeconds").isEmpty());
+        .andExpect(jsonPath("$.items", hasSize(1)))
+        .andExpect(jsonPath("$.items[0].timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.items[0].intendedDurationSeconds").isEmpty());
+  }
+
+  @Test
+  void filtersAndPaginatesSessionLogsThroughTheApi() throws Exception {
+    mockMvc.perform(put("/api/session-logs/log-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "log-1",
+                  "startedAt": "2026-03-26T08:00:00Z",
+                  "endedAt": "2026-03-26T08:20:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/session-logs/log-2")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "log-2",
+                  "startedAt": "2026-03-26T09:00:00Z",
+                  "endedAt": "2026-03-26T09:10:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 600,
+                  "completedDurationSeconds": 600,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/session-logs/log-3")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "log-3",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:15:00Z",
+                  "meditationType": "Ajapa",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 900,
+                  "completedDurationSeconds": 900,
+                  "status": "completed",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/session-logs")
+            .queryParam("startAt", "2026-03-26T08:30:00Z")
+            .queryParam("endAt", "2026-03-26T10:00:00Z")
+            .queryParam("meditationType", "Vipassana")
+            .queryParam("source", "auto log")
+            .queryParam("page", "0")
+            .queryParam("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items", hasSize(1)))
+        .andExpect(jsonPath("$.items[0].id").value("log-2"))
+        .andExpect(jsonPath("$.page").value(0))
+        .andExpect(jsonPath("$.size").value(1))
+        .andExpect(jsonPath("$.totalItems").value(1))
+        .andExpect(jsonPath("$.hasNextPage").value(false));
+  }
+
+  @Test
+  void rejectsInvalidSessionLogListQueryParameters() throws Exception {
+    mockMvc.perform(get("/api/session-logs")
+            .queryParam("page", "-1")
+            .queryParam("size", "50"))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/session-logs")
+            .queryParam("source", "queued log"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
