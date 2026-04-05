@@ -1,12 +1,12 @@
 export { meditationTypes } from '../../types/referenceData';
-import soundOptionsCatalog from '../../data/soundOptions.json';
 import {
   DEFAULT_END_SOUND_LABEL,
   DEFAULT_INTERVAL_SOUND_LABEL,
   DEFAULT_START_SOUND_LABEL,
+  listSelectableTimerSoundLabels,
 } from '../../utils/timerSound';
 
-export const soundOptions = soundOptionsCatalog as readonly string[];
+export const soundOptions = listSelectableTimerSoundLabels();
 
 export const defaultTimerSettings = {
   timerMode: 'fixed',

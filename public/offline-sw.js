@@ -1,4 +1,14 @@
-const CACHE_VERSION = '2026-04-04-offline-app-sync-v1';
+function resolveCacheVersion() {
+  try {
+    const serviceWorkerUrl = new URL(self.location.href);
+    const version = serviceWorkerUrl.searchParams.get('v');
+    return version && version.trim().length > 0 ? version.trim() : 'dev';
+  } catch {
+    return 'dev';
+  }
+}
+
+const CACHE_VERSION = resolveCacheVersion();
 const APP_SHELL_CACHE = `meditation-app-shell-${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `meditation-static-assets-${CACHE_VERSION}`;
 const MEDIA_ASSET_CACHE = `meditation-media-assets-${CACHE_VERSION}`;

@@ -5,7 +5,7 @@ Use these helpers when you want to add:
 - a new prerecorded `custom play` meditation asset
 
 They are intentionally honest about the current product state:
-- timer sound playback now uses a label -> `/media/sounds/<filename>` mapping
+- shipped timer sounds now resolve from inline bundled assets, while script-added timer sounds use `/media/sounds/<filename>`
 - prerecorded meditations are currently used as linked media metadata for `custom play`
 
 ## Commands
@@ -53,8 +53,7 @@ Parameters:
 
 What it changes:
 
-- updates [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
-- updates [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json) when `--file` or `--filename` is provided
+- updates [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
 - optionally copies the file to:
   - `local-data/media/sounds/`
   - `public/media/sounds/`
@@ -63,8 +62,8 @@ How playback wiring works:
 
 - timer setup, saved timer settings, active timer runtime, and `custom play` -> timer apply all keep using the stored label
 - the runtime resolves that label through `src/data/timerSoundCatalog.json`
-- shipped timer sounds resolve to inline frontend-bundled asset data so playback does not depend on the backend media route or a second static-file request
-- repo-local copies under `public/media/sounds/` and `local-data/media/sounds/` can still be kept for development parity and operational convenience
+- shipped timer sounds resolve to inline frontend-bundled asset data from `src/assets/sounds/`, so playback does not depend on the backend media route or a second static-file request
+- script-managed timer sounds resolve through `/media/sounds/<filename>` and may be mirrored under `public/media/sounds/` plus `local-data/media/sounds/`
 - the current shipped selectable sounds are `None`, `Temple Bell`, and `Gong`
 - legacy saved labels still load safely:
   - `Soft Chime` -> `Temple Bell`
@@ -72,7 +71,6 @@ How playback wiring works:
 
 Current limitations:
 
-- if you add only a label and omit both `--file` and `--filename`, the timer will fail safely because the label has no playback mapping yet
 - browser autoplay policies can still block playback
 - playlist runtime playback is still not implemented
 
@@ -176,7 +174,6 @@ Why it creates a new migration:
 
 These files are now the editable catalogs used by the scripts:
 
-- [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
 - [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
 - [`src/data/customPlayMediaCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/customPlayMediaCatalog.json)
 

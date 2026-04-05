@@ -33,6 +33,10 @@
 - Keep persisted timer defaults separate from the Practice screen's in-progress draft state so Home, Settings, and Practice do not overwrite one another unintentionally.
 - Persist active timer recovery as one canonical active-session snapshot and preserve paused recovery truthfully instead of reconstructing timer state from looser fragments.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
+- Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:
+  - `None` stays runtime-derived rather than a second catalog entry
+  - shipped sounds declare `bundled` ownership and resolve from `src/assets/sounds/`
+  - script-added sounds declare `media` ownership and resolve from `/media/sounds/<filename>`
 - Keep timer sound hydration backward compatible by remapping retired labels:
   - `Soft Chime` -> `Temple Bell`
   - `Wood Block` -> `Gong`
@@ -95,6 +99,10 @@
 - Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
+- Keep offline app cache versioning build-derived:
+  - compute one frontend asset version in `vite.config.ts`
+  - register the service worker with that version on the query string
+  - let `public/offline-sw.js` derive its cache namespace from the registration URL instead of a hand-maintained string literal
 - Keep iPhone Safari browser-tab timer release confidence grounded in a reusable manual checklist until the product has a stronger platform-level completion guarantee than browser-tab background execution can provide.
 - Keep the production-style deployment model centered on:
   - static frontend files served by `nginx`

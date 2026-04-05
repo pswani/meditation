@@ -113,9 +113,12 @@ Single-page React application with route-based screens and feature-oriented modu
 - backend media root is configurable through `MEDITATION_MEDIA_STORAGE_ROOT`
 - current default media root resolves to `local-data/media`
 - custom-play media lives under the `custom-plays/` subdirectory
+- script-managed timer sounds live under the sibling `sounds/` subdirectory when they are not shipped bundled assets
 - H2 stores relative paths such as `custom-plays/vipassana-sit-20.mp3`
 - API responses expose a web-facing path such as `/media/custom-plays/vipassana-sit-20.mp3`
 - backend resource handling serves `/media/**` from the configured media root
+- shipped timer sounds stay in `src/assets/sounds/` and are declared in `src/data/timerSoundCatalog.json` with explicit `bundled` ownership
+- script-added timer sounds are declared in that same catalog with explicit `media` ownership and resolve through `/media/sounds/<filename>`
 
 ## Principles
 - mobile-first
@@ -129,11 +132,13 @@ Single-page React application with route-based screens and feature-oriented modu
 ## Offline-first foundations
 - `src/features/sync/` owns app-level connectivity status and sync queue visibility.
 - `src/features/sync/offlineApp.ts` owns service-worker registration and bounded URL pre-caching requests.
+- `src/features/sync/offlineCacheVersion.ts` owns the shared app-asset version used to register the offline service worker.
 - `src/utils/syncQueue.ts` owns queue persistence and queue-reduction helpers.
 - Queue entries are stored in browser storage so deferred writes survive reloads.
 - The shell surfaces offline and pending-sync state as lightweight status banners instead of blocking overlays or dashboard-style widgets.
 - The shell now distinguishes browser-offline from backend-unreachable states, keeping degraded sync explicit without overstating a full device disconnect.
 - The service worker caches the SPA shell and same-origin runtime assets after a successful visit so the app can reopen offline without introducing a second application runtime.
+- The service worker cache namespace derives from the computed frontend asset version carried on the registration URL, so deploys invalidate stale caches without hand-editing version strings in two files.
 
 ## Current offline write model
 - Implemented backend-backed writes are local-first for:

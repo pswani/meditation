@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/cleanup`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, and `production-reference-cleanup-feature-bundle-with-branching`, each completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/production-reference-cleanup-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-05 with a normal local merge commit
+- Latest completed bundles in `prompts/`: `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, each completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/media-cache-hygiene-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-05 with a normal local merge commit
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -32,6 +32,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - repository-backed summary and `sankalpa` aggregation hot paths with explicit filtered-summary and filtered-or-paged `session log` contracts
   - centralized frontend and backend reference-data modules with backend seed-alignment coverage for meditation types
   - one authoritative `vite.config.ts` local `/api` proxy path plus node-side TypeScript build outputs redirected into ignored local storage
+  - one canonical timer-sound catalog with explicit bundled-versus-media ownership plus removal of redundant tracked public copies for shipped sounds
+  - build-derived offline service-worker cache versioning carried on the registration URL instead of hand-edited literals
   - a unified `./scripts/pipeline.sh verify` flow that now covers frontend checks, backend Maven verify, and a temporary backend health smoke check
 - Timer lock-screen mitigation now includes:
   - foreground catch-up sync on `visibilitychange` and `pageshow` so fixed sessions finalize immediately after Safari returns
@@ -51,6 +53,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-runtime-boundary-hardening-feature.md`
 - Implementation planning: `docs/execplan-backend-scale-hardening-feature.md`
 - Implementation planning: `docs/execplan-production-reference-cleanup-feature.md`
+- Implementation planning: `docs/execplan-media-cache-hygiene-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
@@ -60,6 +63,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-runtime-boundary-hardening-feature.md`
 - Review artifact: `docs/review-backend-scale-hardening-feature.md`
 - Review artifact: `docs/review-production-reference-cleanup-feature.md`
+- Review artifact: `docs/review-media-cache-hygiene-feature.md`
 - Review artifact: `docs/review-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
@@ -71,6 +75,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-runtime-boundary-hardening-feature.md`
 - Verification report: `docs/test-backend-scale-hardening-feature.md`
 - Verification report: `docs/test-production-reference-cleanup-feature.md`
+- Verification report: `docs/test-media-cache-hygiene-feature.md`
 - Verification report: `docs/test-sankalpa-delete-unarchive-feature.md`
 - Verification planning: `docs/ios-safari-real-device-qa-checklist.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
@@ -87,6 +92,19 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Media-cache hygiene implementation verified on 2026-04-05:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 47 files and 320 tests
+  - `npm run build`
+  - `npm run sound:add -- --label "Crystal Bowl" --filename crystal-bowl.wav --dry-run`
+  - `npm run media:add:custom-play -- --id media-sahaj-evening-25 --label "Sahaj Evening Sit (25 min)" --meditation-type Sahaj --filename sahaj-evening-25.mp3 --duration-seconds 1500 --size-bytes 11000000 --dry-run`
+  - built-artifact inspection confirmed:
+    - the old `2026-04-04-offline-app-sync-v1` literal is absent
+    - the app bundle now carries one computed asset version token for service-worker registration
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the media-cache hygiene slice
+
 - Production reference cleanup implementation verified on 2026-04-05:
   - `./scripts/pipeline.sh verify`
   - frontend checks passed through the unified verify flow:
@@ -168,10 +186,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Offline reopening still depends on the device having completed at least one successful online visit so the app shell and any needed recording media are already cached.
 - Real-device execution of the new iPhone Safari QA checklist is still pending on actual hardware.
 - Browser-automation coverage for goals-screen responsive archive/delete confirmation behavior is still absent; current confidence comes from unit, component, and backend tests.
-- The frontend production build still emits the pre-existing large-chunk warning.
 - The calmness of the new route-level loading fallback still needs a quick manual look on a real browser session; automated coverage currently proves correctness more than perceived UX.
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
 - Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
+- A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
 
 ## Recommended next slice
-- Exact recommended next prompt: `Read prompts/run-milestone-bundle.md and execute it for media-cache-hygiene-feature-bundle-with-branching using codex/cleanup as the parent branch.`
+- Exact recommended next prompt: `Read prompts/run-milestone-bundle.md and execute it for screen-decomposition-hardening-feature-bundle-with-branching using codex/cleanup as the parent branch.`

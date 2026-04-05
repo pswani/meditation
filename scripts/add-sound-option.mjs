@@ -2,7 +2,6 @@
 
 import path from 'node:path';
 import {
-  SOUND_OPTIONS_FILE,
   TIMER_SOUND_CATALOG_FILE,
   assertFileExists,
   copyFile,
@@ -34,8 +33,8 @@ Parameters:
   --dry-run     Optional. Print the planned changes without writing files.
 
 Notes:
-  - When --filename or --file is provided, the script also registers the label -> file mapping used for timer playback.
-  - If you omit both --file and --filename, the sound remains selectable but playback will fail safely until a file mapping is added later.
+  - A production sound option must always register a playable file mapping.
+  - New script-managed sounds resolve through /media/sounds/<filename>; shipped sounds stay bundled in src/assets/sounds/.
 `);
 }
 
@@ -52,61 +51,45 @@ try {
   const dryRun = hasFlag(options, 'dry-run');
   const skipCopy = hasFlag(options, 'skip-copy');
   const label = requireStringOption(options, 'label');
-  const soundOptions = readJsonFile(SOUND_OPTIONS_FILE);
   const timerSoundCatalog = readJsonFile(TIMER_SOUND_CATALOG_FILE);
-
-  if (!Array.isArray(soundOptions)) {
-    throw new Error('src/data/soundOptions.json must contain an array.');
-  }
 
   if (!Array.isArray(timerSoundCatalog)) {
     throw new Error('src/data/timerSoundCatalog.json must contain an array.');
   }
 
-  if (soundOptions.includes(label)) {
+  if (timerSoundCatalog.some((entry) => entry?.label === label)) {
     throw new Error(`Sound option "${label}" already exists.`);
   }
 
-  const updatedSoundOptions = [...soundOptions, label];
   const sourceFile = optionalStringOption(options, 'file');
+  const explicitFilename = optionalStringOption(options, 'filename');
+  if (!sourceFile && !explicitFilename) {
+    throw new Error('Pass --file or --filename so the new sound remains selectable and playable.');
+  }
+
   const filename =
-    optionalStringOption(options, 'filename') ??
+    explicitFilename ??
     (sourceFile ? path.basename(sourceFile) : `${slugify(label)}.wav`);
-  const shouldRegisterPlayback = Boolean(sourceFile || optionalStringOption(options, 'filename'));
-
-  if (shouldRegisterPlayback) {
-    if (timerSoundCatalog.some((entry) => entry?.label === label)) {
-      throw new Error(`Playback mapping for "${label}" already exists.`);
-    }
-    if (timerSoundCatalog.some((entry) => entry?.filename === filename)) {
-      throw new Error(`Playback filename "${filename}" is already registered.`);
-    }
+  if (timerSoundCatalog.some((entry) => entry?.filename === filename)) {
+    throw new Error(`Playback filename "${filename}" is already registered.`);
   }
 
-  const updatedTimerSoundCatalog = shouldRegisterPlayback
-    ? [
-        ...timerSoundCatalog,
-        {
-          label,
-          filename,
-        },
-      ]
-    : timerSoundCatalog;
+  const updatedTimerSoundCatalog = [
+    ...timerSoundCatalog,
+    {
+      label,
+      filename,
+      source: 'media',
+    },
+  ];
 
-  printPlannedChange('Catalog file', SOUND_OPTIONS_FILE);
   printPlannedChange('Sound label', label);
-  if (shouldRegisterPlayback) {
-    printPlannedChange('Playback mapping file', TIMER_SOUND_CATALOG_FILE);
-    printPlannedChange('Playback path', `/media/sounds/${filename}`);
-  }
+  printPlannedChange('Playback mapping file', TIMER_SOUND_CATALOG_FILE);
+  printPlannedChange('Playback path', `/media/sounds/${filename}`);
 
   if (sourceFile && !skipCopy) {
     const resolvedSourceFile = resolveProjectPath(sourceFile);
     assertFileExists(resolvedSourceFile, 'file');
-
-    if (!filename) {
-      throw new Error('Could not determine a target filename for the sound file.');
-    }
 
     printPlannedChange('Backend sound copy', path.join(getConfiguredBackendSoundRoot(), filename));
     printPlannedChange('Frontend fallback sound copy', path.join(getConfiguredFrontendSoundRoot(), filename));
@@ -117,10 +100,7 @@ try {
     process.exit(0);
   }
 
-  writeJsonFile(SOUND_OPTIONS_FILE, updatedSoundOptions);
-  if (shouldRegisterPlayback) {
-    writeJsonFile(TIMER_SOUND_CATALOG_FILE, updatedTimerSoundCatalog);
-  }
+  writeJsonFile(TIMER_SOUND_CATALOG_FILE, updatedTimerSoundCatalog);
 
   if (sourceFile && !skipCopy) {
     const resolvedSourceFile = resolveProjectPath(sourceFile);
@@ -130,11 +110,7 @@ try {
   }
 
   process.stdout.write(`Added sound option "${label}".\n`);
-  if (shouldRegisterPlayback) {
-    process.stdout.write(`Registered timer playback mapping at /media/sounds/${filename}.\n`);
-  } else {
-    process.stdout.write('No playback mapping was added. The sound is selectable, but playback will fail safely until you add one.\n');
-  }
+  process.stdout.write(`Registered timer playback mapping at /media/sounds/${filename}.\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);

@@ -551,8 +551,8 @@ The backend now seeds:
 
 Current reference or sample data also still exists in TypeScript modules:
 
-- meditation types: `src/types/timer.ts`, `src/features/timer/constants.ts`, and `src/data/meditationTypes.json`
-- sound options: `src/features/timer/constants.ts` and `src/data/soundOptions.json`
+- meditation types: `src/types/referenceData.ts` and `src/features/timer/constants.ts`
+- timer sound labels and playback ownership: `src/data/timerSoundCatalog.json`, `src/utils/timerSound.ts`, and `src/features/timer/timerSoundCatalog.ts`
 - fallback custom-play media metadata used only when the backend is unavailable: `src/data/customPlayMediaCatalog.json`
 
 ### How the app stores media metadata today
@@ -612,14 +612,14 @@ Important current limitations:
 
 - browser autoplay policies can still block timer sounds until the user starts a session with an allowed interaction
 - browser autoplay policies can still block linked playlist or `custom play` recordings until the user resumes playback from an allowed interaction
-- labels added without a playback mapping fail safely and keep the timer usable
 
 The concrete media-path conventions currently used in code are:
 
 - `src/utils/mediaAssetApi.ts` defines `CUSTOM_PLAY_MEDIA_DIRECTORY = '/media/custom-plays'`
 - backend media metadata responses use that same public path prefix
-- timer sounds ship from inline-bundled frontend assets
-- backend media storage still serves `/media/**` for custom-play files and any fallback static sound copies
+- shipped timer sounds resolve from inline-bundled frontend assets under `src/assets/sounds/`
+- script-managed timer sounds resolve from `/media/sounds/<filename>` and are mirrored under the backend and optional public media roots
+- backend media storage still serves `/media/**` for custom-play files and script-managed sound files
 
 ### Exact directory structure to use for custom play media
 
@@ -636,7 +636,7 @@ local-data/
       tratak-focus-10.mp3
 ```
 
-Tracked fallback copies may also exist under `public/` so packaged frontend builds include known static assets:
+Tracked fallback copies may also exist under `public/` so packaged frontend builds include backend-unavailable custom-play checks and any script-managed timer sounds:
 
 ```text
 public/
@@ -646,15 +646,15 @@ public/
       ajapa-breath-15.mp3
       tratak-focus-10.mp3
     sounds/
-      temple-bell.mp3
-      gong.mp3
+      crystal-bowl.wav
 ```
 
 Why there are two useful locations:
 
 - the backend now serves `/media/**` from `local-data/media` by default
-- the packaged frontend build includes `public/` assets as static files
-- `npm run media:setup` mirrors tracked sound files into `local-data/media/sounds/` for backend-served fallback parity
+- the packaged frontend build includes `public/` assets as static files when an operator wants the same repo-local fallback path
+- `npm run media:setup` mirrors any tracked `public/media/sounds/` files into `local-data/media/sounds/` for backend-served parity
+- the built-in shipped timer sounds stay bundled from `src/assets/sounds/` and no longer rely on tracked `public/media/sounds/` copies
 
 ### How media file paths are referenced in H2
 
@@ -684,10 +684,10 @@ That is a root-relative URL path, not an absolute filesystem path.
 Current answer:
 
 - the backend now serves `/media/**` from the configured media root
-- the packaged frontend includes matching `public/` files as static assets
+- the packaged frontend may include matching `public/` files as static assets for fallback custom-play files or script-managed timer sounds
 - timer playback uses inline-bundled shipped sounds for `Temple Bell` and `Gong`
 
-The app still does not play custom-play media files yet. Today that path remains metadata plus linking, not playback.
+The app now plays managed custom-play media files in the dedicated `custom play` runtime and through linked playlist recording items. This registration flow still concerns metadata, linking, and file placement rather than browser upload/import.
 
 ### Does the DB store file paths, relative paths, or URLs
 
@@ -719,7 +719,7 @@ What "use it" means today:
 
 What it does not mean yet:
 
-- the app does not play the media file
+- the registration flow itself does not preview or upload the media file
 - the app does not validate the file contents
 - the app does not upload or import media
 
@@ -728,8 +728,9 @@ What it does not mean yet:
 There are two separate concepts in the current code:
 
 1. Timer sound options
-   - defined in `src/data/soundOptions.json` and exposed through `src/features/timer/constants.ts`
-   - playable timer sound files are mapped in `src/data/timerSoundCatalog.json`
+   - defined by `src/data/timerSoundCatalog.json` and exposed through `src/features/timer/constants.ts`
+   - the silent `None` option is derived at runtime and never maps to a file
+   - each catalog entry explicitly declares whether the file is `bundled` or `media` backed
    - values:
      - `None`
      - `Temple Bell`
@@ -858,14 +859,12 @@ The UI will automatically expose the new option in:
 - Settings
 - Custom Plays
 
-The timer playback mapping will update automatically when you pass `--file` or `--filename`, using:
+The timer playback mapping will update automatically, using:
 
-- [`src/data/soundOptions.json`](/Users/prashantwani/wrk/meditation/src/data/soundOptions.json)
 - [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
 
 Current limitations:
 
-- if you omit both `--file` and `--filename`, the label is selectable but not playable yet
 - browser autoplay rules can still block playback until the session is started through an allowed user interaction
 - playlist runs reuse these sound labels only through linked `custom play` recordings, not as standalone timer-style cues for timed playlist items
 
@@ -883,7 +882,7 @@ What happens immediately:
 
 - `Crystal Bowl` appears in the relevant selects
 - saved timer settings, session logs, and custom plays can store that string
-- `src/data/timerSoundCatalog.json` maps it to `/media/sounds/crystal-bowl.wav`
+- `src/data/timerSoundCatalog.json` maps it to `/media/sounds/crystal-bowl.wav` with explicit `media` ownership
 - the file is copied to:
   - `public/media/sounds/crystal-bowl.wav`
   - `local-data/media/sounds/crystal-bowl.wav`
@@ -926,7 +925,7 @@ Current shared reference data is maintained in stable source modules rather than
 - frontend meditation types, `session log` sources, and time-of-day buckets: [src/types/referenceData.ts](/Users/prashantwani/wrk/meditation/src/types/referenceData.ts)
 - backend meditation types, `session log` sources, time-of-day buckets, and validation helpers: [ReferenceData.java](/Users/prashantwani/wrk/meditation/backend/src/main/java/com/meditation/backend/reference/ReferenceData.java)
 - backend meditation-type seed alignment coverage: [ReferenceDataSeedTest.java](/Users/prashantwani/wrk/meditation/backend/src/test/java/com/meditation/backend/reference/ReferenceDataSeedTest.java)
-- sound options: `src/features/timer/constants.ts` and `src/data/soundOptions.json`
+- timer sound catalog and selectable labels: [src/data/timerSoundCatalog.json](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json), [src/utils/timerSound.ts](/Users/prashantwani/wrk/meditation/src/utils/timerSound.ts), and [src/features/timer/timerSoundCatalog.ts](/Users/prashantwani/wrk/meditation/src/features/timer/timerSoundCatalog.ts)
 - fallback custom-play media catalog: `src/data/customPlayMediaCatalog.json`
 
 ### Validate that a new media file is visible and usable

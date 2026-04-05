@@ -1,5 +1,6 @@
-const OFFLINE_APP_CACHE_VERSION = '2026-04-04-offline-app-sync-v1';
-const OFFLINE_APP_SERVICE_WORKER_PATH = `/offline-sw.js?v=${OFFLINE_APP_CACHE_VERSION}`;
+import { getOfflineAppServiceWorkerPath } from './offlineCacheVersion';
+
+const OFFLINE_APP_SERVICE_WORKER_PATH = getOfflineAppServiceWorkerPath();
 const CACHE_URLS_MESSAGE_TYPE = 'CACHE_URLS';
 
 function normalizeOfflineCacheUrl(url: string, locationLike: Pick<Location, 'origin'>): string | null {

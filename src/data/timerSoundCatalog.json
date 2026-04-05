@@ -1,10 +1,12 @@
 [
   {
     "label": "Temple Bell",
-    "filename": "temple-bell.mp3"
+    "filename": "temple-bell.mp3",
+    "source": "bundled"
   },
   {
     "label": "Gong",
-    "filename": "gong.mp3"
+    "filename": "gong.mp3",
+    "source": "bundled"
   }
 ]

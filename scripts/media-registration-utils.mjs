@@ -6,11 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const ROOT_DIR = path.resolve(__dirname, '..');
-export const SOUND_OPTIONS_FILE = path.join(ROOT_DIR, 'src/data/soundOptions.json');
 export const TIMER_SOUND_CATALOG_FILE = path.join(ROOT_DIR, 'src/data/timerSoundCatalog.json');
-export const MEDITATION_TYPES_FILE = path.join(ROOT_DIR, 'src/data/meditationTypes.json');
 export const CUSTOM_PLAY_MEDIA_CATALOG_FILE = path.join(ROOT_DIR, 'src/data/customPlayMediaCatalog.json');
 export const MIGRATIONS_DIR = path.join(ROOT_DIR, 'backend/src/main/resources/db/migration');
+export const FRONTEND_REFERENCE_DATA_FILE = path.join(ROOT_DIR, 'src/types/referenceData.ts');
 
 const MIME_TYPE_BY_EXTENSION = new Map([
   ['.mp3', 'audio/mpeg'],
@@ -142,6 +141,26 @@ export function hasFlag(options, key) {
 
 export function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+export function readStringArrayExportFromTypeScript(filePath, exportName) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const match = new RegExp(`export const ${exportName} = \\[([\\s\\S]*?)\\] as const;`).exec(source);
+
+  if (!match) {
+    throw new Error(`Could not find exported string array "${exportName}" in ${filePath}.`);
+  }
+
+  const values = [...match[1].matchAll(/'([^']+)'|"([^"]+)"/g)].map((valueMatch) => valueMatch[1] ?? valueMatch[2]);
+  if (values.length === 0) {
+    throw new Error(`Exported string array "${exportName}" in ${filePath} did not contain any values.`);
+  }
+
+  return values;
+}
+
+export function getMeditationTypes() {
+  return readStringArrayExportFromTypeScript(FRONTEND_REFERENCE_DATA_FILE, 'meditationTypes');
 }
 
 export function writeJsonFile(filePath, value) {

@@ -7,11 +7,13 @@ describe('timer sound catalog', () => {
       {
         label: 'Temple Bell',
         filename: 'temple-bell.mp3',
+        source: 'bundled',
         relativePath: 'sounds/temple-bell.mp3',
       },
       {
         label: 'Gong',
         filename: 'gong.mp3',
+        source: 'bundled',
         relativePath: 'sounds/gong.mp3',
       },
     ]);
