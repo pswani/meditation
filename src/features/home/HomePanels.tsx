@@ -9,6 +9,7 @@ import { describeLastUsedMeditation } from './homePageHelpers';
 
 interface QuickStartPanelProps {
   readonly isSettingsLoading: boolean;
+  readonly isActionButtonDisabled: boolean;
   readonly defaultTimerLabel: string;
   readonly actionButtonLabel: string;
   readonly lastUsedMeditation: LastUsedMeditation | null;
@@ -19,6 +20,7 @@ interface QuickStartPanelProps {
 
 export function HomeQuickStartPanel({
   isSettingsLoading,
+  isActionButtonDisabled,
   defaultTimerLabel,
   actionButtonLabel,
   lastUsedMeditation,
@@ -33,7 +35,7 @@ export function HomeQuickStartPanel({
         {isSettingsLoading ? 'Loading timer defaults...' : `Default timer: ${defaultTimerLabel}`}
       </p>
       <div className="timer-actions">
-        <button type="button" onClick={onQuickStart} disabled={isSettingsLoading}>
+        <button type="button" onClick={onQuickStart} disabled={isActionButtonDisabled}>
           {actionButtonLabel}
         </button>
         <button type="button" className="secondary" onClick={onOpenPractice}>

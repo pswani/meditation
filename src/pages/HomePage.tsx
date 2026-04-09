@@ -45,6 +45,7 @@ export default function HomePage() {
   const favoriteCustomPlays = useMemo(() => selectFavoriteCustomPlays(customPlays), [customPlays]);
   const favoritePlaylists = useMemo(() => playlists.filter((entry) => entry.favorite).slice(0, 3), [playlists]);
   const fixedDurationMinutes = settings.durationMinutes ?? settings.lastFixedDurationMinutes;
+  const quickStartActionDisabled = isSettingsLoading && !activeSession && !activeCustomPlayRun && !activePlaylistRun;
 
   function quickStart() {
     if (activeSession) {
@@ -207,6 +208,7 @@ export default function HomePage() {
 
       <HomeQuickStartPanel
         isSettingsLoading={isSettingsLoading}
+        isActionButtonDisabled={quickStartActionDisabled}
         defaultTimerLabel={`${
           settings.timerMode === 'open-ended' ? 'Open-ended' : `${fixedDurationMinutes} min`
         } · ${settings.meditationType || 'select meditation type'}`}

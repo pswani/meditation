@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -9,6 +9,7 @@ const CUSTOM_PLAYS_KEY = 'meditation.customPlays.v1';
 const PLAYLISTS_KEY = 'meditation.playlists.v1';
 const SANKALPAS_KEY = 'meditation.sankalpas.v1';
 const LAST_USED_MEDITATION_KEY = 'meditation.lastUsedMeditation.v1';
+const ACTIVE_TIMER_STATE_KEY = 'meditation.activeTimerState.v1';
 
 async function waitForHomeQuickStartReady() {
   await waitFor(() => expect(screen.getByRole('button', { name: /start timer now/i })).toBeEnabled());
@@ -350,6 +351,78 @@ describe('HomePage UX', () => {
         meditationType: 'Vipassana',
       },
     });
+  });
+
+  it('keeps the Home resume-active-timer action enabled while timer settings are still hydrating', async () => {
+    localStorage.setItem(
+      ACTIVE_TIMER_STATE_KEY,
+      JSON.stringify({
+        startedAt: '2026-04-09T12:00:00.000Z',
+        startedAtMs: Date.parse('2026-04-09T12:00:00.000Z'),
+        timerMode: 'fixed',
+        intendedDurationSeconds: 1200,
+        elapsedSeconds: 300,
+        isPaused: true,
+        lastResumedAtMs: null,
+        meditationType: 'Vipassana',
+        startSound: 'None',
+        endSound: 'Temple Bell',
+        intervalEnabled: false,
+        intervalMinutes: 0,
+        intervalSound: 'None',
+      })
+    );
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return new Promise(() => {});
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/sankalpas') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.includes('/api/sankalpas?') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const quickStartHeading = await screen.findByRole('heading', { name: /quick start/i });
+    const quickStartPanel = quickStartHeading.closest('section');
+    expect(quickStartPanel).not.toBeNull();
+
+    const resumeButton = within(quickStartPanel as HTMLElement).getByRole('button', { name: /resume active timer/i });
+    expect(resumeButton).toBeEnabled();
+
+    fireEvent.click(resumeButton);
+
+    expect(await screen.findByText(/stay present/i)).toBeInTheDocument();
   });
 
   it('starts the last used timer shortcut from Home without relying on saved defaults', async () => {
