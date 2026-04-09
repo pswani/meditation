@@ -19,6 +19,8 @@ public enum SampleData {
                 startedAt: Date(timeIntervalSince1970: 1_712_560_800),
                 endedAt: Date(timeIntervalSince1970: 1_712_562_300),
                 completedDurationSeconds: 1_500,
+                plannedDurationSeconds: 1_500,
+                timerMode: .fixedDuration,
                 notes: "Sample local session log"
             ),
             SessionLog(

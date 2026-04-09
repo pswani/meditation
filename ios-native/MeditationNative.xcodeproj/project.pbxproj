@@ -22,6 +22,9 @@
 		A1000001000000000000000D /* AppSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000D /* AppSnapshot.swift */; };
 		A1000001000000000000000E /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000E /* SampleData.swift */; };
 		A1000001000000000000000F /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000F /* JSONFileStore.swift */; };
+		A10000010000000000000014 /* TimerFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000017 /* TimerFeature.swift */; };
+		A10000010000000000000015 /* SystemSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000018 /* SystemSupport.swift */; };
+		A10000010000000000000016 /* TimerDraftForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000019 /* TimerDraftForm.swift */; };
 		A10000010000000000000010 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000010 /* DomainModelTests.swift */; };
 		A10000010000000000000011 /* SampleDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* SampleDataTests.swift */; };
 		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
@@ -68,6 +71,9 @@
 		B10000010000000000000014 /* MeditationNative.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeditationNative.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000015 /* MeditationNativeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000016 /* MeditationNativeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000010000000000000017 /* TimerFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerFeature.swift; sourceTree = "<group>"; };
+		B10000010000000000000018 /* SystemSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSupport.swift; sourceTree = "<group>"; };
+		B10000010000000000000019 /* TimerDraftForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDraftForm.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +166,7 @@
 				B10000010000000000000001 /* MeditationNativeApp.swift */,
 				B10000010000000000000002 /* ShellViewModel.swift */,
 				B10000010000000000000003 /* ShellRootView.swift */,
+				B10000010000000000000018 /* SystemSupport.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -168,6 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000010000000000000004 /* SectionCard.swift */,
+				B10000010000000000000019 /* TimerDraftForm.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -189,6 +197,7 @@
 			children = (
 				B1000001000000000000000A /* ReferenceData.swift */,
 				B1000001000000000000000B /* Models.swift */,
+				B10000010000000000000017 /* TimerFeature.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -394,6 +403,9 @@
 				A1000001000000000000000D /* AppSnapshot.swift in Sources */,
 				A1000001000000000000000E /* SampleData.swift in Sources */,
 				A1000001000000000000000F /* JSONFileStore.swift in Sources */,
+				A10000010000000000000014 /* TimerFeature.swift in Sources */,
+				A10000010000000000000015 /* SystemSupport.swift in Sources */,
+				A10000010000000000000016 /* TimerDraftForm.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

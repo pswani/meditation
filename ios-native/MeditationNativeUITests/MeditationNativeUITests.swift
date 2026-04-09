@@ -11,4 +11,42 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Goals"].exists)
         XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
     }
+
+    func testPracticeCanStartPauseResumeAndEndFixedTimer() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        let startButton = app.buttons["Start session"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+        startButton.tap()
+
+        let pauseButton = app.buttons["Pause"]
+        XCTAssertTrue(pauseButton.waitForExistence(timeout: 2))
+        pauseButton.tap()
+
+        let resumeButton = app.buttons["Resume"]
+        XCTAssertTrue(resumeButton.waitForExistence(timeout: 2))
+        resumeButton.tap()
+
+        let endEarlyButton = app.buttons["End early"]
+        XCTAssertTrue(endEarlyButton.waitForExistence(timeout: 2))
+        endEarlyButton.tap()
+
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+    }
+
+    func testHistoryAndSettingsExposeMilestoneControls() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(app.buttons["Manual log"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Vipassana"].exists)
+
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.staticTexts["Timer defaults"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Notifications"].exists)
+    }
 }
