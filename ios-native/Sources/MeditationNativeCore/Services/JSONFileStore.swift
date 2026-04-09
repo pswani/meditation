@@ -44,7 +44,7 @@ public struct JSONFileStore<Value: Codable & Equatable & Sendable>: FileStore {
     }
 }
 
-public struct LocalAppSnapshotRepository: Sendable {
+public struct LocalAppSnapshotRepository {
     private let store: JSONFileStore<AppSnapshot>
     public let environment: AppEnvironment
 

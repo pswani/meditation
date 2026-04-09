@@ -2,12 +2,19 @@
 
 This README is for the native iPhone app track in this repository.
 
-The milestone-1 foundation now exists under `ios-native/` as:
+The milestone-1 foundation and milestone-2 timer-history journey now exist under `ios-native/` as:
 - `MeditationNative.xcodeproj` for the app, unit-test, and UI-test targets
 - `Sources/MeditationNativeCore/` for shared native domain, data, and persistence foundations
 - `MeditationNative/` for the SwiftUI app shell and destination screens
-- `Tests/MeditationNativeCoreTests/` for focused core tests
-- `MeditationNativeUITests/` for a light launch and tab smoke test
+- `Tests/MeditationNativeCoreTests/` for focused core timer, validation, and logging tests
+- `MeditationNativeUITests/` for launch, timer, History, and Settings smoke coverage
+
+Implemented native milestone-2 surfaces now include:
+- Practice timer setup for fixed-duration and open-ended sessions
+- active timer runtime with pause, resume, and end controls
+- automatic local `session log` creation from timer outcomes
+- History filters plus manual log entry
+- Settings support for timer defaults and notification permission messaging
 
 ## Goal
 
@@ -69,8 +76,9 @@ Project and scheme:
 2. Build and run the app with `Product` -> `Run`.
 3. If the app uses local persistence, delete the app from the simulator between major data-model iterations when a migration is not yet implemented.
 4. Use Xcode's console and debugger first when the milestone prompts mention launch, storage, or notification issues.
-5. The foundation milestone persists one local JSON snapshot under Application Support:
+5. The native app persists one local JSON snapshot under Application Support:
    - `MeditationNative/foundation-snapshot.json`
+   This now stores timer defaults plus local `session log` history for the native timer journey.
    Delete the app from simulator if you want to reseed the sample foundation data cleanly.
 
 ## Running On Your iPhone
@@ -106,6 +114,11 @@ swift test --package-path ios-native
 ```
 
 This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
+
+For the current timer-history milestone, physical iPhone verification is still recommended for:
+- notification permission prompts
+- fixed-duration completion notifications
+- background or foreground transitions around timer completion
 
 ## Backend Connectivity Notes
 

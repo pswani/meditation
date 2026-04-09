@@ -8,7 +8,7 @@ public struct TimerSettingsDraft: Codable, Equatable, Sendable {
 
     public var mode: Mode
     public var durationMinutes: Int
-    public var meditationType: MeditationType
+    public var meditationType: MeditationType?
     public var startSoundName: String?
     public var endSoundName: String?
     public var intervalSoundName: String?
@@ -17,7 +17,7 @@ public struct TimerSettingsDraft: Codable, Equatable, Sendable {
     public init(
         mode: Mode,
         durationMinutes: Int,
-        meditationType: MeditationType,
+        meditationType: MeditationType?,
         startSoundName: String? = nil,
         endSoundName: String? = nil,
         intervalSoundName: String? = nil,
@@ -41,6 +41,8 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
     public var startedAt: Date
     public var endedAt: Date
     public var completedDurationSeconds: Int
+    public var plannedDurationSeconds: Int?
+    public var timerMode: TimerSettingsDraft.Mode?
     public var notes: String?
 
     public init(
@@ -51,6 +53,8 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
         startedAt: Date,
         endedAt: Date,
         completedDurationSeconds: Int,
+        plannedDurationSeconds: Int? = nil,
+        timerMode: TimerSettingsDraft.Mode? = nil,
         notes: String? = nil
     ) {
         self.id = id
@@ -60,6 +64,27 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.completedDurationSeconds = completedDurationSeconds
+        self.plannedDurationSeconds = plannedDurationSeconds
+        self.timerMode = timerMode
+        self.notes = notes
+    }
+}
+
+public struct ManualLogDraft: Codable, Equatable, Sendable {
+    public var meditationType: MeditationType?
+    public var durationMinutes: Int
+    public var endedAt: Date
+    public var notes: String
+
+    public init(
+        meditationType: MeditationType? = nil,
+        durationMinutes: Int = 20,
+        endedAt: Date = Date(),
+        notes: String = ""
+    ) {
+        self.meditationType = meditationType
+        self.durationMinutes = durationMinutes
+        self.endedAt = endedAt
         self.notes = notes
     }
 }

@@ -8,6 +8,12 @@ public enum MeditationType: String, CaseIterable, Codable, Sendable {
     case sahaj = "Sahaj"
 }
 
+public enum TimerSoundOption: String, CaseIterable, Codable, Sendable {
+    case templeBell = "Temple Bell"
+    case gong = "Gong"
+    case woodBlock = "Wood Block"
+}
+
 public enum SessionSource: String, CaseIterable, Codable, Sendable {
     case timer = "timer"
     case manual = "manual"
@@ -45,6 +51,7 @@ public enum AppDestination: String, CaseIterable, Codable, Sendable {
 public enum ReferenceData {
     public static let primaryDestinations = AppDestination.allCases
     public static let meditationTypes = MeditationType.allCases
+    public static let timerSoundOptions = TimerSoundOption.allCases
     public static let sessionSources = SessionSource.allCases
     public static let sankalpaKinds = SankalpaKind.allCases
     public static let timeOfDayBuckets = TimeOfDayBucket.allCases

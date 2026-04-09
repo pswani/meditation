@@ -22,6 +22,12 @@
   - keep the milestone-1 persistence boundary simple and local-first with a Foundation-backed snapshot store before introducing richer native persistence or backend sync
   - keep the future sync seam explicit through environment configuration, using optional `MEDITATION_IOS_PROFILE` and `MEDITATION_IOS_API_BASE_URL` inputs instead of hard-coding backend addresses into the app shell
   - keep milestone-1 shell content visibly sample-backed so previews and first-launch data do not masquerade as live synced state
+  - keep the milestone-2 native timer and History slice local-first on top of that same JSON snapshot store:
+    - persist timer defaults and `session log` history
+    - keep the active timer runtime in memory until a later milestone intentionally adds native recovery
+  - keep native timer correctness wall-clock based, with pause bookkeeping derived from timestamps instead of decrement-only counters
+  - keep native fixed-duration completion notifications best-effort through `UserNotifications`, while treating the on-screen timer state as the source of truth whenever the app is foregrounded
+  - keep native History filters limited to meditation type and source on iPhone so the screen stays calm and readable in the early local-first milestones
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:

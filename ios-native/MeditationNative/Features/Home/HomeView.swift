@@ -8,27 +8,59 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Home")
                     .font(.largeTitle.weight(.semibold))
-                Text("A calm local foundation for the native iPhone app.")
+                Text("A calm local-first companion for timer practice on iPhone.")
                     .foregroundStyle(.secondary)
 
                 if viewModel.isSeedData {
-                    Text("Showing sample local data for milestone 1. Later milestones add real flows and sync.")
+                    Text("Showing the seeded local snapshot until you start or log your own sessions.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 SectionCard(
                     title: "Quick start",
-                    caption: "Foundation preview of the timer setup shape"
+                    caption: "Current timer defaults"
                 ) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("\(viewModel.snapshot.timerDraft.durationMinutes) minute \(viewModel.snapshot.timerDraft.meditationType.rawValue)")
-                        Text("Mode: \(viewModel.snapshot.timerDraft.mode.rawValue)")
-                            .foregroundStyle(.secondary)
+                        Text(viewModel.snapshot.timerDraft.meditationType?.rawValue ?? "Choose a meditation type")
+
+                        if viewModel.snapshot.timerDraft.mode == .fixedDuration {
+                            Text("\(viewModel.snapshot.timerDraft.durationMinutes) minute fixed-duration session")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Open-ended session")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let startSoundName = viewModel.snapshot.timerDraft.startSoundName {
+                            Text("Start sound: \(startSoundName)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
-                SectionCard(title: "Today's progress", caption: "Seed summary rows") {
+                if let latestLog = viewModel.recentSessionLogs.first {
+                    SectionCard(title: "Most recent session", caption: "Latest local session log") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(latestLog.meditationType.rawValue)
+                            Text("\(latestLog.source.rawValue) • \(latestLog.completedDurationSeconds / 60) min")
+                                .foregroundStyle(.secondary)
+                            Text(latestLog.endedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if let persistenceMessage = viewModel.persistenceMessage {
+                    Text(persistenceMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                }
+
+                SectionCard(title: "Today's progress", caption: "Sample summary rows stay until later milestones") {
                     ForEach(viewModel.snapshot.summary.overallRows) { row in
                         HStack {
                             Text(row.label)
@@ -39,12 +71,11 @@ struct HomeView: View {
                     }
                 }
 
-                SectionCard(title: "Favorites", caption: "Sample custom plays and playlists") {
-                    ForEach(viewModel.snapshot.customPlays.filter { $0.isFavorite }) { play in
-                        Text(play.name)
-                    }
-                    ForEach(viewModel.snapshot.playlists.filter { $0.isFavorite }) { playlist in
-                        Text(playlist.name)
+                SectionCard(title: "Later milestones", caption: "Still intentionally out of scope for this slice") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Custom plays and playlists arrive in the next native bundle.")
+                        Text("Summary and sankalpa stay sample-backed until milestone 4.")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/ios-native-foundation-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Latest completed bundles in `prompts/`: `ios-native-timer-history-feature-bundle-with-branching` and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/ios-native-timer-history-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
@@ -18,8 +18,11 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/ios-native/README.md`
   - `ios-native/MeditationNative.xcodeproj`
   - `docs/execplan-ios-native-foundation-feature.md`
+  - `docs/execplan-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
+  - `docs/review-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
+  - `docs/test-ios-native-timer-history-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -74,6 +77,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - a hand-authored `MeditationNative.xcodeproj` with app, unit-test, and UI-test targets
   - explicit local-only environment configuration seams for future backend sync
   - sample-backed first-launch content that keeps destination navigation visible without implying finished native feature flows
+- Native iOS timer-history now includes:
+  - Practice timer setup for fixed-duration and open-ended sessions
+  - a wall-clock-based active timer runtime with pause, resume, interval cues, and early-end handling
+  - local `session log` creation for timer outcomes plus manual log entry from History
+  - calm iPhone History filtering by meditation type and source
+  - Settings support for timer defaults plus notification permission messaging
+  - focused core and UI XCTest coverage for timer math, manual-log validation, and the main timer-history journey
 
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-custom-play-media-library-feature.md`
@@ -88,6 +98,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
 - Implementation planning: `docs/execplan-observance-sankalpa-feature.md`
 - Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
+- Implementation planning: `docs/execplan-ios-native-timer-history-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -103,6 +114,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Review artifact: `docs/review-ios-native-foundation-feature.md`
+- Review artifact: `docs/review-ios-native-timer-history-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -120,6 +132,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
 - Verification report: `docs/test-ios-native-foundation-feature.md`
+- Verification report: `docs/test-ios-native-timer-history-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -133,6 +146,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS timer-history verified on 2026-04-09:
+  - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/meditation-ios-derived build`
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/meditation-ios-derived test`
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS timer-history slice
+
 - Native iOS foundation verified on 2026-04-09:
   - `plutil -lint ios-native/MeditationNative.xcodeproj/project.pbxproj`
   - `swift test` in `ios-native/` could not complete in this environment because the local Apple command-line toolchain has a Swift/SDK mismatch and a non-writable default module-cache path
@@ -259,8 +279,9 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
 - Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
-- Native iOS foundation still needs real `xcodebuild` build and test confirmation on a machine with full Xcode installed, plus a quick simulator and physical-device manual launch pass after signing is set.
+- Native iOS timer-history still needs physical iPhone validation for notification permission prompts, completion delivery timing, and background or foreground transitions around fixed-duration completion.
+- Native iOS active-session relaunch recovery is still intentionally absent; this milestone keeps the live timer runtime in memory until a later native bundle decides whether durable recovery belongs in scope.
 
 ## Recommended next slice
 - The requested production-grade hardening prompt bundles are now complete.
-- Recommended next step for the native iOS track: run `ios-native-timer-history-feature-bundle-with-branching`.
+- Recommended next step for the native iOS track: run `ios-native-custom-play-playlist-feature-bundle-with-branching`.
