@@ -15,6 +15,13 @@
   - keep the same product vocabulary and destination structure as the existing app
   - start local-first on device before adding backend sync
   - prefer Apple-native foundations first, such as SwiftUI, SwiftData, AVFoundation, and UserNotifications, before adopting large third-party wrappers or state libraries
+  - keep the native foundation organized under:
+    - `ios-native/MeditationNative/` for SwiftUI app-shell code
+    - `ios-native/Sources/MeditationNativeCore/` for shared native models, seed data, and persistence helpers
+    - `ios-native/Tests/MeditationNativeCoreTests/` for focused core tests
+  - keep the milestone-1 persistence boundary simple and local-first with a Foundation-backed snapshot store before introducing richer native persistence or backend sync
+  - keep the future sync seam explicit through environment configuration, using optional `MEDITATION_IOS_PROFILE` and `MEDITATION_IOS_API_BASE_URL` inputs instead of hard-coding backend addresses into the app shell
+  - keep milestone-1 shell content visibly sample-backed so previews and first-launch data do not masquerade as live synced state
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:
