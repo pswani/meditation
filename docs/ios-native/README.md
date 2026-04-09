@@ -1,12 +1,13 @@
 # Native iOS README
 
-This README is for the native iPhone app track planned for this repository.
+This README is for the native iPhone app track in this repository.
 
-The actual Xcode project is expected to be created by the prompt bundle:
-
-- `prompts/ios-native-foundation-feature-bundle-with-branching`
-
-Until that milestone is executed, treat this file as the setup and run guide for the forthcoming `ios-native/` workspace.
+The milestone-1 foundation now exists under `ios-native/` as:
+- `MeditationNative.xcodeproj` for the app, unit-test, and UI-test targets
+- `Sources/MeditationNativeCore/` for shared native domain, data, and persistence foundations
+- `MeditationNative/` for the SwiftUI app shell and destination screens
+- `Tests/MeditationNativeCoreTests/` for focused core tests
+- `MeditationNativeUITests/` for a light launch and tab smoke test
 
 ## Goal
 
@@ -29,21 +30,23 @@ Avoid adding large cross-platform dependencies unless a milestone clearly justif
 
 ## Expected Project Shape
 
-After milestone 1, the repository should contain something close to:
+Current native workspace shape:
 
 ```text
 ios-native/
+  Package.swift
   MeditationNative.xcodeproj
   MeditationNative/
-  MeditationNativeTests/
+  Sources/MeditationNativeCore/
+  Tests/MeditationNativeCoreTests/
   MeditationNativeUITests/
 ```
 
-The exact file names may vary slightly, but the bundle prompts assume:
+Project and scheme:
 - project root: `ios-native/`
+- Xcode project: `ios-native/MeditationNative.xcodeproj`
 - main scheme: `MeditationNative`
-
-If milestone 1 chooses a different scheme or project name, update this README and the bundle docs immediately.
+- minimum intended runtime: iPhone-first on iOS 17+
 
 ## Xcode Setup
 
@@ -66,6 +69,9 @@ If milestone 1 chooses a different scheme or project name, update this README an
 2. Build and run the app with `Product` -> `Run`.
 3. If the app uses local persistence, delete the app from the simulator between major data-model iterations when a migration is not yet implemented.
 4. Use Xcode's console and debugger first when the milestone prompts mention launch, storage, or notification issues.
+5. The foundation milestone persists one local JSON snapshot under Application Support:
+   - `MeditationNative/foundation-snapshot.json`
+   Delete the app from simulator if you want to reseed the sample foundation data cleanly.
 
 ## Running On Your iPhone
 
@@ -93,6 +99,14 @@ If you do not know the exact simulator name, list available destinations in Xcod
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
 ```
 
+For the shared core package, you can also run:
+
+```bash
+swift test --package-path ios-native
+```
+
+This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
+
 ## Backend Connectivity Notes
 
 Milestones 1 through 4 should not depend on backend connectivity.
@@ -103,6 +117,15 @@ When milestone 5 introduces sync:
 2. Use your Mac's LAN IP or a deployed host instead.
 3. Keep the base URL configurable per environment.
 4. Document any required local-network permission or ATS exceptions clearly in the app and repo docs.
+
+## Environment Configuration Seam
+
+The native foundation reads optional process environment values so later milestones can point at a backend without changing launch behavior:
+
+- `MEDITATION_IOS_PROFILE`
+- `MEDITATION_IOS_API_BASE_URL`
+
+If these are absent, the app stays in the default local-only profile and does not require backend connectivity.
 
 ## Suggested Milestone Order
 
@@ -117,4 +140,5 @@ When milestone 5 introduces sync:
 - Keep the native app separate from the web app rather than embedding the SPA in a web view.
 - Prefer local-first persistence until the core experience feels trustworthy on device.
 - Preserve the exact product terms already used elsewhere in the repo.
+- Keep sample content explicitly labeled as local foundation data until real feature flows replace it.
 - Keep milestone docs updated when project names, schemes, signing steps, or base-URL rules change.

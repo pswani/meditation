@@ -3,11 +3,11 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/cleanup`
+- Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07, plus `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/screen-decomposition-hardening-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-08 with a normal local merge commit
-- Native iOS planning artifacts were added on 2026-04-09:
+- Latest completed bundles in `prompts/`: `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/ios-native-foundation-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
   - `prompts/ios-native-foundation-feature-bundle-with-branching/`
@@ -16,6 +16,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `prompts/ios-native-summary-sankalpa-feature-bundle-with-branching/`
   - `prompts/ios-native-sync-polish-feature-bundle-with-branching/`
   - `docs/ios-native/README.md`
+  - `ios-native/MeditationNative.xcodeproj`
+  - `docs/execplan-ios-native-foundation-feature.md`
+  - `docs/review-ios-native-foundation-feature.md`
+  - `docs/test-ios-native-foundation-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -64,6 +68,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Safari real-device release-trust work now includes:
   - a reusable iPhone Safari browser-tab QA checklist under `docs/`
   - a dedicated QA report artifact that can record current manual execution results or explicit environment limitations
+- Native iOS foundation now includes:
+  - a separate SwiftUI app shell under `ios-native/MeditationNative/`
+  - shared native models, sample data, and local JSON snapshot persistence under `ios-native/Sources/MeditationNativeCore/`
+  - a hand-authored `MeditationNative.xcodeproj` with app, unit-test, and UI-test targets
+  - explicit local-only environment configuration seams for future backend sync
+  - sample-backed first-launch content that keeps destination navigation visible without implying finished native feature flows
 
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-custom-play-media-library-feature.md`
@@ -77,6 +87,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
 - Implementation planning: `docs/execplan-observance-sankalpa-feature.md`
+- Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -91,6 +102,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-observance-sankalpa-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
+- Review artifact: `docs/review-ios-native-foundation-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -107,6 +119,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
+- Verification report: `docs/test-ios-native-foundation-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -120,6 +133,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS foundation verified on 2026-04-09:
+  - `plutil -lint ios-native/MeditationNative.xcodeproj/project.pbxproj`
+  - `swift test` in `ios-native/` could not complete in this environment because the local Apple command-line toolchain has a Swift/SDK mismatch and a non-writable default module-cache path
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination '<installed iPhone simulator destination>' build` is still pending on a machine with full Xcode installed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination '<installed iPhone simulator destination>' test` is still pending on a machine with full Xcode installed
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS foundation slice
+
 - Screen decomposition hardening verified on 2026-04-08:
   - `npm run typecheck`
   - `npm run lint`
@@ -238,7 +259,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
 - Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
+- Native iOS foundation still needs real `xcodebuild` build and test confirmation on a machine with full Xcode installed, plus a quick simulator and physical-device manual launch pass after signing is set.
 
 ## Recommended next slice
 - The requested production-grade hardening prompt bundles are now complete.
-- Recommended next step for the native iOS track: start with `ios-native-foundation-feature-bundle-with-branching`.
+- Recommended next step for the native iOS track: run `ios-native-timer-history-feature-bundle-with-branching`.
