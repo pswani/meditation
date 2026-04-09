@@ -2,21 +2,22 @@ Read before merging:
 - `AGENTS.md`
 - `README.md`
 - `requirements/session-handoff.md`
-- `docs/review-screen-decomposition-hardening-feature.md`
-- `docs/test-screen-decomposition-hardening-feature.md`
+- `docs/review-ios-native-foundation-feature.md`
+- `docs/test-ios-native-foundation-feature.md`
 
 Goal:
-- Safely land the completed screen and manager decomposition phase after implementation, review, testing, and any follow-up fixes are finished.
+- Safely land the native iOS foundation milestone after implementation, review, testing, and follow-up fixes are finished.
 
 Pre-merge checklist:
 1. Review the changed files carefully.
 2. Confirm no unrelated edits were introduced.
 3. Confirm required verification has passed on the final branch state.
 4. Confirm all required durable docs and artifacts are included:
-   - `docs/execplan-screen-decomposition-hardening-feature.md`
-   - `docs/review-screen-decomposition-hardening-feature.md`
-   - `docs/test-screen-decomposition-hardening-feature.md`
-   - any updated durable product or architecture docs
+   - `docs/execplan-ios-native-foundation-feature.md`
+   - `docs/review-ios-native-foundation-feature.md`
+   - `docs/test-ios-native-foundation-feature.md`
+   - `docs/ios-native/README.md`
+   - any updated durable repo docs
 5. Create a clear commit if one has not already been created.
 
 Merge instructions:
@@ -26,7 +27,7 @@ Merge instructions:
 - Do not amend unrelated commits.
 
 Suggested final commit message if needed:
-- `refactor(ui): split oversized screen modules`
+- `feat(ios): scaffold native app foundation`
 
 Output requirements:
 - Report the final commit hash used for merge.

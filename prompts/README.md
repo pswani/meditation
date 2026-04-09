@@ -5,22 +5,26 @@ This folder stores reusable Codex prompt bundles when a new bounded milestone ne
 Current status:
 
 - Bundle folder currently available in-repo:
-  - `backend-scale-hardening-feature-bundle-with-branching`
-  - `history-time-gap-rendering-fix-bundle-with-branching`
-  - `media-cache-hygiene-feature-bundle-with-branching`
-  - `offline-app-sync-feature-bundle-with-branching`
-  - `production-reference-cleanup-feature-bundle-with-branching`
-  - `runtime-boundary-hardening-feature-bundle-with-branching`
   - `screen-decomposition-hardening-feature-bundle-with-branching`
+  - `ios-native-foundation-feature-bundle-with-branching`
+  - `ios-native-timer-history-feature-bundle-with-branching`
+  - `ios-native-custom-play-playlist-feature-bundle-with-branching`
+  - `ios-native-summary-sankalpa-feature-bundle-with-branching`
+  - `ios-native-sync-polish-feature-bundle-with-branching`
 - Older bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
 
 Phased planning files currently available in-repo:
 
 - `production-grade-hardening-phased-plan.md`
+- `ios-native-app-phased-plan.md`
 
 Reusable runner template:
 
 - `run-milestone-bundle.md`
+
+Additional usage guide:
+
+- `ios-native-app-step-by-step.md`
 
 When creating the next bundle:
 
