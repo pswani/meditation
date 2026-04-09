@@ -128,6 +128,24 @@ describe('timerReducer', () => {
     expect(completed.lastOutcome?.deferredCompletion).toBe(true);
   });
 
+  it('preserves actual practiced duration when foreground return finalizes a fixed session late', () => {
+    const started = timerReducer(createInitialTimerState(validSettings, []), {
+      type: 'START_SESSION',
+      nowMs: Date.parse('2026-03-23T10:00:00.000Z'),
+    });
+
+    const completed = timerReducer(started, {
+      type: 'SYNC_TICK',
+      nowMs: Date.parse('2026-03-23T10:12:00.000Z'),
+      source: 'foreground-return',
+    });
+
+    expect(completed.lastOutcome?.status).toBe('completed');
+    expect(completed.sessionLogs[0].completedDurationSeconds).toBe(720);
+    expect(completed.sessionLogs[0].intendedDurationSeconds).toBe(600);
+    expect(completed.sessionLogs[0].endedAt).toBe('2026-03-23T10:12:00.000Z');
+  });
+
   it('treats open-ended sessions as completed when manually ended', () => {
     const started = timerReducer(
       createInitialTimerState({ ...validSettings, timerMode: 'open-ended', durationMinutes: 0 }, []),

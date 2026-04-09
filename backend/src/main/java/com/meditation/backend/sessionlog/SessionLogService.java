@@ -239,8 +239,12 @@ public class SessionLogService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Intended duration must be greater than 0.");
       }
 
-      if (request.completedDurationSeconds() < 0 || request.completedDurationSeconds() > request.intendedDurationSeconds()) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed duration must be between 0 and intended duration.");
+      if (request.completedDurationSeconds() < 0) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed duration must be 0 or greater.");
+      }
+
+      if ("ended early".equals(request.status()) && request.completedDurationSeconds() > request.intendedDurationSeconds()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ended-early completed duration cannot exceed intended duration.");
       }
     } else if (request.intendedDurationSeconds() != null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Open-ended session logs cannot include an intended duration.");

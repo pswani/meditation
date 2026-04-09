@@ -15,7 +15,9 @@ export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, 
   const safeCompletedDurationSeconds =
     intendedDurationSeconds === null
       ? Math.max(0, normalizedCompletedDurationSeconds)
-      : Math.max(0, Math.min(intendedDurationSeconds, normalizedCompletedDurationSeconds));
+      : status === 'ended early'
+        ? Math.max(0, Math.min(intendedDurationSeconds, normalizedCompletedDurationSeconds))
+        : Math.max(0, normalizedCompletedDurationSeconds);
 
   return {
     id: `${session.startedAtMs}-${session.timerMode}-${status}-${Math.round(safeCompletedDurationSeconds)}`,
@@ -83,12 +85,13 @@ export function formatDurationLabel(totalSeconds: number): string {
   }
 
   const minutes = totalSeconds / 60;
+  const roundedMinutes = Number(minutes.toFixed(1));
 
-  if (Number.isInteger(minutes)) {
-    return `${minutes} min`;
+  if (Number.isInteger(roundedMinutes)) {
+    return `${roundedMinutes} min`;
   }
 
-  return `${minutes.toFixed(1)} min`;
+  return `${roundedMinutes.toFixed(1)} min`;
 }
 
 export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolean {

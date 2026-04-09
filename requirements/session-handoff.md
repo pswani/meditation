@@ -49,6 +49,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - coalesced foreground catch-up so overlapping `visibilitychange` and `pageshow` events do not trigger duplicate completion handling
   - targeted fixed-session guidance that only appears in likely iPhone Safari browser contexts
   - deferred-completion messaging after foreground catch-up finalizes a fixed session
+  - deferred-completion history logs now keep the planned timer target in `intendedDurationSeconds` while preserving the actual practiced duration in `completedDurationSeconds`
   - optional Settings notification UX that shows capability and permission state and provides an explicit permission request action when supported
   - completion notification attempts only when Notification permission is granted and the document is hidden
 - Safari real-device release-trust work now includes:

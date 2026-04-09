@@ -217,7 +217,16 @@ export function isSessionLog(value: unknown): value is SessionLog {
   const intendedDurationSeconds =
     typeof candidate.intendedDurationSeconds === 'number' ? candidate.intendedDurationSeconds : candidate.intendedDurationSeconds === null ? null : undefined;
 
-  if (timerMode === 'fixed' && (!isFinitePositiveNumber(intendedDurationSeconds) || candidate.completedDurationSeconds > intendedDurationSeconds)) {
+  if (timerMode === 'fixed' && !isFinitePositiveNumber(intendedDurationSeconds)) {
+    return false;
+  }
+
+  if (
+    timerMode === 'fixed' &&
+    candidate.status === 'ended early' &&
+    isFinitePositiveNumber(intendedDurationSeconds) &&
+    candidate.completedDurationSeconds > intendedDurationSeconds
+  ) {
     return false;
   }
 

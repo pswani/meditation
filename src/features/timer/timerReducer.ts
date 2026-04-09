@@ -104,15 +104,22 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
       }
 
       const intendedDurationSeconds = state.activeSession.intendedDurationSeconds;
+      const actualElapsedSeconds = getActiveSessionElapsedSeconds(state.activeSession, action.nowMs);
 
       if (
         state.activeSession.timerMode === 'fixed' &&
         intendedDurationSeconds !== null &&
         getActiveSessionElapsedMilliseconds(state.activeSession, action.nowMs) >= intendedDurationSeconds * 1000
       ) {
-        return finalizeSession(state, 'completed', action.nowMs, intendedDurationSeconds, {
+        return finalizeSession(
+          state,
+          'completed',
+          action.nowMs,
+          action.source === 'foreground-return' ? actualElapsedSeconds : intendedDurationSeconds,
+          {
           deferredCompletion: action.source === 'foreground-return',
-        });
+          }
+        );
       }
 
       return state;
@@ -188,7 +195,9 @@ function finalizeSession(
   const normalizedCompletedDurationSeconds =
     state.activeSession.intendedDurationSeconds === null
       ? Math.max(0, completedDurationSeconds)
-      : Math.max(0, Math.min(state.activeSession.intendedDurationSeconds, completedDurationSeconds));
+      : status === 'ended early'
+        ? Math.max(0, Math.min(state.activeSession.intendedDurationSeconds, completedDurationSeconds))
+        : Math.max(0, completedDurationSeconds);
   const logEntry = buildAutoLogEntry({
     session: {
       ...state.activeSession,

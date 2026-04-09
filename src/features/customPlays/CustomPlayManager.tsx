@@ -20,6 +20,7 @@ const initialDraft: CustomPlayDraft = {
 };
 
 const initialErrors: CustomPlayValidationResult['errors'] = {};
+type FeedbackTone = 'ok' | 'warn';
 
 interface CustomPlayManagerProps {
   readonly timerSettings: TimerSettings;
@@ -45,6 +46,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [appliedPlayId, setAppliedPlayId] = useState<string | null>(null);
   const [saveFeedbackMessage, setSaveFeedbackMessage] = useState<string | null>(null);
+  const [feedbackTone, setFeedbackTone] = useState<FeedbackTone>('ok');
   const { mediaAssets, mediaCatalogSource, isMediaCatalogLoading, mediaLoadError, mediaLoadIssueKind } = useCustomPlayMediaCatalog();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -57,6 +59,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
     if (result.isValid && result.persisted) {
       setDraft(initialDraft);
       setEditId(null);
+      setFeedbackTone('ok');
       setSaveFeedbackMessage(feedbackMessage);
     } else {
       setSaveFeedbackMessage(null);
@@ -83,12 +86,14 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
 
     const result = startCustomPlayRun(playId);
     if (!result.started) {
+      setFeedbackTone('warn');
       setSaveFeedbackMessage(customPlayStartBlockMessage(result.reason));
       return;
     }
 
     setPendingDeleteId(null);
     setAppliedPlayId(null);
+    setFeedbackTone('ok');
     setSaveFeedbackMessage(`Custom play "${match.name}" started.`);
     onStartCustomPlay();
   }
@@ -167,7 +172,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
       ) : null}
 
       {saveFeedbackMessage ? (
-        <div className="status-banner ok" role="status">
+        <div className={`status-banner ${feedbackTone === 'ok' ? 'ok' : 'warn'}`} role="status">
           <p>{saveFeedbackMessage}</p>
         </div>
       ) : null}
@@ -217,6 +222,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
           appliedPlayId={appliedPlayId}
           pendingDeleteId={pendingDeleteId}
           controlsDisabled={controlsDisabled}
+          isMediaCatalogLoading={isMediaCatalogLoading}
           onStartCustomPlay={startCustomPlay}
           onApplyCustomPlay={applyCustomPlay}
           onStartEdit={startEdit}

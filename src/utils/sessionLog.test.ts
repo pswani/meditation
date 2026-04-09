@@ -51,6 +51,18 @@ describe('buildAutoLogEntry', () => {
     expect(log.completedDurationSeconds).toBe(1200);
   });
 
+  it('keeps overrun completed duration for fixed sessions when completion is confirmed late', () => {
+    const log = buildAutoLogEntry({
+      session: activeSession,
+      endedAt: new Date('2026-03-23T10:25:00.000Z'),
+      completedDurationSeconds: 1500,
+      status: 'completed',
+    });
+
+    expect(log.completedDurationSeconds).toBe(1500);
+    expect(log.intendedDurationSeconds).toBe(1200);
+  });
+
   it('caps ended-early completed duration in valid range', () => {
     const log = buildAutoLogEntry({
       session: activeSession,

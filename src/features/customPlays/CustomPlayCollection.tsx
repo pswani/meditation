@@ -10,6 +10,7 @@ interface CustomPlayCollectionProps {
   readonly appliedPlayId: string | null;
   readonly pendingDeleteId: string | null;
   readonly controlsDisabled: boolean;
+  readonly isMediaCatalogLoading: boolean;
   readonly onStartCustomPlay: (playId: string) => void;
   readonly onApplyCustomPlay: (playId: string) => void;
   readonly onStartEdit: (playId: string) => void;
@@ -27,6 +28,7 @@ export function CustomPlayCollection({
   appliedPlayId,
   pendingDeleteId,
   controlsDisabled,
+  isMediaCatalogLoading,
   onStartCustomPlay,
   onApplyCustomPlay,
   onStartEdit,
@@ -47,6 +49,12 @@ export function CustomPlayCollection({
         <ul className="custom-play-list">
           {customPlays.map((play) => {
             const linkedAsset = play.mediaAssetId ? mediaAssets.find((asset) => asset.id === play.mediaAssetId) : null;
+            const startDisabled = controlsDisabled || isMediaCatalogLoading || !linkedAsset;
+            const startTitle = isMediaCatalogLoading
+              ? 'Wait for the linked media session list to finish loading.'
+              : !linkedAsset
+              ? 'This custom play cannot start until its linked media session is available again.'
+              : 'Start this custom play';
 
             return (
               <li key={play.id} className="custom-play-item">
@@ -83,7 +91,7 @@ export function CustomPlayCollection({
 
                   <div className="custom-play-side">
                     <div className="custom-play-actions">
-                      <button type="button" disabled={controlsDisabled} onClick={() => onStartCustomPlay(play.id)}>
+                      <button type="button" disabled={startDisabled} title={startTitle} onClick={() => onStartCustomPlay(play.id)}>
                         Start Custom Play
                       </button>
                       <button type="button" className="secondary" disabled={controlsDisabled} onClick={() => onApplyCustomPlay(play.id)}>
@@ -110,6 +118,14 @@ export function CustomPlayCollection({
                     {activeCustomPlayRun?.customPlayId === play.id ? (
                       <p className="section-subtitle" role="status">
                         Custom play running now.
+                      </p>
+                    ) : isMediaCatalogLoading ? (
+                      <p className="section-subtitle" role="status">
+                        Loading linked media session details before this custom play can start.
+                      </p>
+                    ) : !linkedAsset ? (
+                      <p className="section-subtitle" role="status">
+                        Start is unavailable until the linked media session is available again.
                       </p>
                     ) : null}
                     {appliedPlayId === play.id ? (

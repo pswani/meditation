@@ -47,6 +47,7 @@
   - coalesce overlapping foreground events so one foreground return produces one catch-up pass
   - show calm Safari-specific guidance only in likely iPhone Safari browser contexts
   - preserve deferred-completion metadata on fixed timer outcomes so the completion UI can explain foreground catch-up
+  - keep `intendedDurationSeconds` as the planned timer target, but preserve the actual practiced duration in `completedDurationSeconds` when deferred foreground completion means the user sat past the planned finish before the bell could fire
   - attempt completion notifications only when browser permission is granted and the document is hidden
 - Keep timer completion notification UX explicit in Settings:
   - derive capability and permission state from the current browser runtime

@@ -1,8 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetCustomPlayMediaAssetCatalogForTests } from '../../utils/mediaAssetApi';
 import { SyncStatusProvider } from '../sync/SyncStatusProvider';
 import { TimerProvider } from '../timer/TimerContext';
+import CustomPlayRunPage from '../../pages/CustomPlayRunPage';
 import PracticePage from '../../pages/PracticePage';
 
 const TIMER_SETTINGS_KEY = 'meditation.timerSettings.v1';
@@ -26,6 +28,10 @@ async function waitForPracticeToolsReady() {
 describe('CustomPlayManager UX', () => {
   beforeEach(() => {
     localStorage.clear();
+    resetCustomPlayMediaAssetCatalogForTests();
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
     localStorage.setItem(
       TIMER_SETTINGS_KEY,
       JSON.stringify({
@@ -136,6 +142,7 @@ describe('CustomPlayManager UX', () => {
           <TimerProvider>
             <Routes>
               <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
             </Routes>
           </TimerProvider>
         </SyncStatusProvider>
@@ -203,6 +210,7 @@ describe('CustomPlayManager UX', () => {
           <TimerProvider>
             <Routes>
               <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
             </Routes>
           </TimerProvider>
         </SyncStatusProvider>
@@ -243,6 +251,7 @@ describe('CustomPlayManager UX', () => {
           <TimerProvider>
             <Routes>
               <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
             </Routes>
           </TimerProvider>
         </SyncStatusProvider>
@@ -326,6 +335,7 @@ describe('CustomPlayManager UX', () => {
           <TimerProvider>
             <Routes>
               <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
             </Routes>
           </TimerProvider>
         </SyncStatusProvider>
@@ -397,6 +407,7 @@ describe('CustomPlayManager UX', () => {
           <TimerProvider>
             <Routes>
               <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
             </Routes>
           </TimerProvider>
         </SyncStatusProvider>
@@ -410,5 +421,115 @@ describe('CustomPlayManager UX', () => {
     expect(
       screen.getByText(/register a custom-play recording through the repo media workflow, restart the backend, then reload this screen/i)
     ).toBeInTheDocument();
+  });
+
+  it('starts a saved custom play and navigates to the active custom-play screen', async () => {
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeToolsReady();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+    await screen.findByRole('option', { name: /vipassana sit \(20 min\) · vipassana/i });
+
+    fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Morning Focus' } });
+    fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+      target: { value: 'media-vipassana-sit-20' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
+
+    expect(await screen.findByText(/custom play "Morning Focus" saved\./i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start custom play/i }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: /morning focus/i })).toBeInTheDocument();
+    expect(screen.getByText(/recording: vipassana sit \(20 min\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/^playing$/i)).toBeInTheDocument();
+  });
+
+  it('disables starting a custom play when its linked media session is unavailable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, [
+            {
+              id: 'custom-play-1',
+              name: 'Morning Focus',
+              meditationType: 'Vipassana',
+              durationMinutes: 20,
+              startSound: 'None',
+              endSound: 'Temple Bell',
+              mediaAssetId: 'media-backend-only',
+              recordingLabel: '',
+              favorite: false,
+              createdAt: '2026-03-24T08:00:00.000Z',
+              updatedAt: '2026-03-24T08:00:00.000Z',
+            },
+          ]);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ unexpected: true }),
+          };
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/practice" element={<PracticePage />} />
+              <Route path="/practice/custom-plays/active" element={<CustomPlayRunPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    await waitForPracticeToolsReady();
+    fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
+
+    expect(await screen.findByText(/linked media session unavailable right now/i)).toBeInTheDocument();
+    expect(screen.getByText(/start is unavailable until the linked media session is available again/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start custom play/i })).toBeDisabled();
   });
 });
