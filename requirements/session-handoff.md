@@ -7,6 +7,15 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Active bundle: none
 - Latest completed bundles in `prompts/`: `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07, plus `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
 - Latest merge outcome: merged `codex/screen-decomposition-hardening-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-08 with a normal local merge commit
+- Native iOS planning artifacts were added on 2026-04-09:
+  - `prompts/ios-native-app-phased-plan.md`
+  - `prompts/ios-native-app-step-by-step.md`
+  - `prompts/ios-native-foundation-feature-bundle-with-branching/`
+  - `prompts/ios-native-timer-history-feature-bundle-with-branching/`
+  - `prompts/ios-native-custom-play-playlist-feature-bundle-with-branching/`
+  - `prompts/ios-native-summary-sankalpa-feature-bundle-with-branching/`
+  - `prompts/ios-native-sync-polish-feature-bundle-with-branching/`
+  - `docs/ios-native/README.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -98,6 +107,9 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
+- Native iOS planning: `prompts/ios-native-app-phased-plan.md`
+- Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
+- Native iOS setup guide: `docs/ios-native/README.md`
 
 ## Verification baseline
 - `npm run typecheck`
@@ -229,4 +241,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Recommended next slice
 - The requested production-grade hardening prompt bundles are now complete.
-- Recommended next step: choose the next bounded milestone rather than reopening one of the completed bundles.
+- Recommended next step for the native iOS track: start with `ios-native-foundation-feature-bundle-with-branching`.

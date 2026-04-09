@@ -2,6 +2,7 @@
 
 ## Product and architecture
 - Keep the app as a React + TypeScript + Vite SPA backed by one Spring Boot service in `backend/`.
+- If a native iOS client is pursued, keep it as a separate SwiftUI app under `ios-native/` rather than replacing or embedding the existing web app.
 - Keep H2 as the repository's default local and early-production datastore, with Flyway managing schema changes.
 - Keep media files on disk under the configured media root and store stable metadata plus relative paths in the database.
 - Keep the route and module structure centered on `src/pages`, `src/components`, `src/features`, `src/types`, and `src/utils`.
@@ -10,6 +11,10 @@
   - frontend meditation types, `session log` sources, and time-of-day buckets live in `src/types/referenceData.ts`
   - backend validation/order helpers for the same values live in `backend/src/main/java/com/meditation/backend/reference/ReferenceData.java`
   - backend meditation-type seed order stays aligned through an automated Spring test rather than manual spot checks
+- If the native iOS client is built:
+  - keep the same product vocabulary and destination structure as the existing app
+  - start local-first on device before adding backend sync
+  - prefer Apple-native foundations first, such as SwiftUI, SwiftData, AVFoundation, and UserNotifications, before adopting large third-party wrappers or state libraries
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:
