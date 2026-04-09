@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios-native-custom-play-playlist-feature-bundle-with-branching`
-- Active bundle: `ios-native-custom-play-playlist-feature-bundle-with-branching`
-- Latest completed bundles in `prompts/`: `ios-native-timer-history-feature-bundle-with-branching` and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/ios-native-timer-history-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Current branch: `codex/ios`
+- Active bundle: none
+- Latest completed bundles in `prompts/`: `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/ios-native-custom-play-playlist-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
