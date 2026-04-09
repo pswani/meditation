@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { SessionLog } from '../types/sessionLog';
 import type { SankalpaGoal } from '../types/sankalpa';
 import {
+  createSankalpaGoal,
   deriveSankalpaProgress,
   getTimeOfDayBucket,
   partitionSankalpaProgress,
+  setSankalpaObservanceStatus,
   unarchiveSankalpaGoal,
   validateSankalpaDraft,
 } from './sankalpa';
@@ -65,6 +67,39 @@ describe('sankalpa helpers', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.targetValue).toMatch(/whole number/i);
     expect(result.errors.days).toMatch(/whole number/i);
+  });
+
+  it('requires an observance label for observance-based sankalpas', () => {
+    const result = validateSankalpaDraft({
+      goalType: 'observance-based',
+      targetValue: 7,
+      days: 7,
+      meditationType: '',
+      timeOfDayBucket: '',
+      observanceLabel: '',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.observanceLabel).toMatch(/required/i);
+  });
+
+  it('creates observance-based sankalpas with a target equal to the scheduled days', () => {
+    const goal = createSankalpaGoal(
+      {
+        goalType: 'observance-based',
+        targetValue: 99,
+        days: 5,
+        meditationType: '',
+        timeOfDayBucket: '',
+        observanceLabel: 'Brahmacharya',
+      },
+      new Date(localIso(2026, 3, 5, 8, 0))
+    );
+
+    expect(goal.goalType).toBe('observance-based');
+    expect(goal.targetValue).toBe(5);
+    expect(goal.observanceLabel).toBe('Brahmacharya');
+    expect(goal.observanceRecords).toEqual([]);
   });
 
   it('counts matching session logs for session-count-based sankalpa with optional filters', () => {
@@ -269,6 +304,51 @@ describe('sankalpa helpers', () => {
 
     expect(progress.matchedSessionCount).toBe(2);
     expect(progress.status).toBe('archived');
+  });
+
+  it('derives observance progress from manual per-date records', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-observance',
+      goalType: 'observance-based',
+      targetValue: 3,
+      days: 3,
+      observanceLabel: 'Meal before 7 PM',
+      observanceRecords: [
+        { date: '2026-04-05', status: 'observed' },
+        { date: '2026-04-06', status: 'missed' },
+      ],
+      createdAt: localIso(2026, 3, 5, 8, 0),
+    };
+
+    const progress = deriveSankalpaProgress(goal, [], new Date(localIso(2026, 3, 7, 10, 0)));
+
+    expect(progress.matchedObservanceCount).toBe(1);
+    expect(progress.missedObservanceCount).toBe(1);
+    expect(progress.pendingObservanceCount).toBe(1);
+    expect(progress.targetObservanceCount).toBe(3);
+    expect(progress.observanceDays).toEqual([
+      { date: '2026-04-05', status: 'observed', isFuture: false },
+      { date: '2026-04-06', status: 'missed', isFuture: false },
+      { date: '2026-04-07', status: 'pending', isFuture: false },
+    ]);
+  });
+
+  it('updates and clears observance records through the helper', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-observance-helper',
+      goalType: 'observance-based',
+      targetValue: 2,
+      days: 2,
+      observanceLabel: 'Brahmacharya',
+      observanceRecords: [{ date: '2026-04-05', status: 'missed' }],
+      createdAt: localIso(2026, 3, 5, 8, 0),
+    };
+
+    const markedObserved = setSankalpaObservanceStatus(goal, '2026-04-05', 'observed');
+    expect(markedObserved.observanceRecords).toEqual([{ date: '2026-04-05', status: 'observed' }]);
+
+    const cleared = setSankalpaObservanceStatus(markedObserved, '2026-04-05', 'pending');
+    expect(cleared.observanceRecords).toEqual([]);
   });
 
   it('restores archived goals into their derived non-archived status when unarchived', () => {

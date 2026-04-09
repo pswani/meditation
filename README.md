@@ -58,6 +58,8 @@ This README is intentionally grounded in the current repository contents. It exp
   - archiving active, completed, or expired goals into a dedicated archived section
   - restoring archived goals back into their derived active, completed, or expired sections
   - deleting archived goals with explicit confirmation and queue-backed stale-delete recovery
+  - manual `observance-based` goals for disciplines the app cannot infer from meditation data
+  - per-date observance check-ins with observed, missed, and pending states
   - backend-backed archived-state persistence with local cache fallback
 
 ## Confirmed Full-Stack Gaps
@@ -91,6 +93,8 @@ The app supports a focused meditation practice workflow:
 - automatic and manual session logging
 - summaries
 - sankalpa goal tracking
+  - meditation-derived goals from `session log` history
+  - manual observance goals such as brahmacharya or meal cutoffs
 
 Implemented primary screens:
 

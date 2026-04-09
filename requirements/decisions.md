@@ -87,6 +87,12 @@
   - archived goals can be restored by clearing the persisted `archived` flag and reusing the existing derived `active` / `completed` / `expired` status rules
   - permanent delete is restricted to already archived goals so destructive actions stay deliberate
   - queue-backed `sankalpa` deletes use the same stale-mutation protection as other backend-backed collections and restore the current backend state when an older queued delete loses reconciliation
+- Keep non-meditation discipline tracking inside `sankalpa` rather than creating a second habit system:
+  - add an `observance-based` goal type
+  - require an observance label
+  - persist explicit per-date observance records with `observed` or `missed` status
+  - derive `pending` in the UI from missing records instead of storing a third persisted state
+  - disable future-date check-ins until their date arrives so manual observance tracking stays trustworthy
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:

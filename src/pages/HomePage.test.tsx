@@ -740,4 +740,83 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/60 min \/ 120 min/i)).toBeInTheDocument();
     expect(screen.queryByText(/no active sankalpa right now/i)).not.toBeInTheDocument();
   });
+
+  it('shows an observance-based sankalpa snapshot when that is the top active goal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/api/settings/timer') && method === 'GET') {
+          return createJsonResponse(200, {
+            id: 'default',
+            durationMinutes: 20,
+            meditationType: 'Vipassana',
+            startSound: 'None',
+            endSound: 'Temple Bell',
+            intervalEnabled: false,
+            intervalMinutes: 5,
+            intervalSound: 'Temple Bell',
+            updatedAt: '2026-03-26T12:00:00.000Z',
+          });
+        }
+
+        if (url.endsWith('/api/session-logs') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/media/custom-plays') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.endsWith('/api/playlists') && method === 'GET') {
+          return createJsonResponse(200, []);
+        }
+
+        if (url.includes('/api/sankalpas') && method === 'GET') {
+          return createJsonResponse(200, [
+            {
+              goal: {
+                id: 'goal-observance',
+                goalType: 'observance-based',
+                targetValue: 3,
+                days: 3,
+                observanceLabel: 'Meal before 7 PM',
+                observanceRecords: [{ date: '2026-04-05', status: 'observed' }],
+                createdAt: '2026-04-05T08:00:00.000Z',
+              },
+              status: 'active',
+              deadlineAt: '2026-04-07T23:59:59.999Z',
+              matchedSessionCount: 0,
+              matchedDurationSeconds: 0,
+              targetSessionCount: 0,
+              targetDurationSeconds: 0,
+              matchedObservanceCount: 1,
+              missedObservanceCount: 0,
+              pendingObservanceCount: 2,
+              targetObservanceCount: 3,
+              observanceDays: [
+                { date: '2026-04-05', status: 'observed', isFuture: false },
+                { date: '2026-04-06', status: 'pending', isFuture: false },
+                { date: '2026-04-07', status: 'pending', isFuture: false },
+              ],
+              progressRatio: 1 / 3,
+            },
+          ]);
+        }
+
+        return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText(/meal before 7 pm/i)).toBeInTheDocument());
+    expect(screen.getByText(/1 \/ 3 observed dates/i)).toBeInTheDocument();
+  });
 });

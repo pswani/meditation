@@ -12,6 +12,7 @@ import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -37,8 +38,12 @@ class SankalpaControllerTest {
   @Autowired
   private SessionLogRepository sessionLogRepository;
 
+  @Autowired
+  private SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository;
+
   @BeforeEach
   void clearData() {
+    sankalpaObservanceEntryRepository.deleteAll();
     sankalpaGoalRepository.deleteAll();
     sessionLogRepository.deleteAll();
   }
@@ -47,8 +52,8 @@ class SankalpaControllerTest {
   void returnsBackendDerivedProgressAcrossGoalTypes() throws Exception {
     Instant createdAt = localInstant(2026, 3, 20, 6, 0);
     sankalpaGoalRepository.saveAll(List.of(
-        createSankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, "Vipassana", "morning", createdAt, createdAt, null, false),
-        createSankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, createdAt, createdAt, null, false)
+        createSankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, "Vipassana", "morning", null, createdAt, createdAt, null, false),
+        createSankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, null, createdAt, createdAt, null, false)
     ));
     sessionLogRepository.saveAll(List.of(
         createSessionLog("log-1", "Vipassana", localInstant(2026, 3, 21, 7, 0), 900),
@@ -100,6 +105,7 @@ class SankalpaControllerTest {
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
+            null,
             null,
             null,
             Instant.parse("2026-03-24T00:00:00Z"),
@@ -177,6 +183,7 @@ class SankalpaControllerTest {
             7,
             null,
             "morning",
+            null,
             Instant.parse("2026-03-24T00:00:00Z"),
             Instant.parse("2026-03-24T00:00:00Z"),
             null,
@@ -204,6 +211,7 @@ class SankalpaControllerTest {
             7,
             null,
             null,
+            null,
             createdAt,
             createdAt.plusSeconds(120),
             null,
@@ -226,6 +234,7 @@ class SankalpaControllerTest {
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
+            null,
             null,
             null,
             createdAt,
@@ -251,6 +260,7 @@ class SankalpaControllerTest {
             7,
             "Vipassana",
             "morning",
+            null,
             createdAt,
             updatedAt,
             null,
@@ -267,6 +277,63 @@ class SankalpaControllerTest {
         .andExpect(jsonPath("$.currentSankalpa.status").value("archived"));
 
     assertThat(sankalpaGoalRepository.findById("goal-stale")).isPresent();
+  }
+
+  @Test
+  void upsertsAndListsObservanceGoals() throws Exception {
+    mockMvc.perform(put("/api/sankalpas/goal-observance")
+            .queryParam("timeZone", "America/Chicago")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-observance",
+                  "goalType": "observance-based",
+                  "targetValue": 3,
+                  "days": 3,
+                  "observanceLabel": "Meal before 7 PM",
+                  "observanceRecords": [
+                    { "date": "2026-04-05", "status": "observed" },
+                    { "date": "2026-04-06", "status": "missed" }
+                  ],
+                  "createdAt": "2026-04-05T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.goal.goalType").value("observance-based"))
+        .andExpect(jsonPath("$.goal.observanceLabel").value("Meal before 7 PM"))
+        .andExpect(jsonPath("$.goal.observanceRecords[0].date").value("2026-04-05"))
+        .andExpect(jsonPath("$.matchedObservanceCount").value(1))
+        .andExpect(jsonPath("$.missedObservanceCount").value(1))
+        .andExpect(jsonPath("$.pendingObservanceCount").value(1))
+        .andExpect(jsonPath("$.targetObservanceCount").value(3))
+        .andExpect(jsonPath("$.observanceDays[2].date").value("2026-04-07"));
+
+    assertThat(sankalpaObservanceEntryRepository.findAllBySankalpaIdInOrderByObservanceDateAsc(List.of("goal-observance")))
+        .extracting(SankalpaObservanceEntryEntity::getObservanceDate)
+        .containsExactly(LocalDate.parse("2026-04-05"), LocalDate.parse("2026-04-06"));
+  }
+
+  @Test
+  void rejectsObservanceGoalsWithDatesOutsideTheGoalWindow() throws Exception {
+    mockMvc.perform(put("/api/sankalpas/goal-observance")
+            .queryParam("timeZone", "America/Chicago")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-observance",
+                  "goalType": "observance-based",
+                  "targetValue": 3,
+                  "days": 3,
+                  "observanceLabel": "Meal before 7 PM",
+                  "observanceRecords": [
+                    { "date": "2026-04-09", "status": "observed" }
+                  ],
+                  "createdAt": "2026-04-05T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isBadRequest());
   }
 
   private SessionLogEntity createSessionLog(String id, String meditationType, Instant endedAt, int completedDurationSeconds) {
@@ -309,6 +376,7 @@ class SankalpaControllerTest {
       int days,
       String meditationTypeCode,
       String timeOfDayBucket,
+      String observanceLabel,
       Instant createdAt,
       Instant updatedAt,
       Instant completedAt,
@@ -321,6 +389,7 @@ class SankalpaControllerTest {
         days,
         meditationTypeCode,
         timeOfDayBucket,
+        observanceLabel,
         createdAt,
         updatedAt,
         completedAt,

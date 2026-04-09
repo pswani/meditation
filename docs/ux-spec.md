@@ -51,6 +51,10 @@ Primary destinations:
 - iPhone Safari notification copy should explain that browser support and permission still do not guarantee lock-screen reliability in browser-tab mode
 
 ## Sankalpa UX rules
+- `observance-based` sankalpas should feel like disciplined manual check-ins, not like a separate habit-dashboard product.
+- Observance goals require a clear label describing what is being observed.
+- Observance progress should show explicit per-date `Pending`, `Observed`, and `Missed` states so users can audit the result.
+- Future observance dates should stay visible but non-editable until that date arrives.
 - Archived sankalpas should surface explicit `Unarchive` and `Delete` actions in the archived section without reintroducing clutter into active goal lists
 - Only archived sankalpas should expose permanent delete, and delete should require calm confirmation copy before the action proceeds
 - Unarchiving should return the goal to its derived status:

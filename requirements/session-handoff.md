@@ -5,7 +5,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/cleanup`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, each completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest completed bundles in `prompts/`: `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07, plus `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
 - Latest merge outcome: merged `codex/media-cache-hygiene-feature-bundle-with-branching` back into `codex/cleanup` on 2026-04-05 with a normal local merge commit
 
 ## Product state
@@ -28,6 +28,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - summary views with backend-backed and local fallback behavior
   - offline app-shell reopening with bounded runtime caching for same-origin assets and on-demand recording media
   - sankalpa create, edit, archive, unarchive, and archived-only delete flows with backend-backed archived-state persistence and stale-delete recovery
+  - `observance-based` sankalpas with manual per-date observed or missed check-ins for disciplines the app cannot infer from meditation data
   - smaller runtime and persistence internals through `timerProviderHelpers`, `useTimerSyncEffects`, and domain-specific modules under `src/utils/storage/`
   - repository-backed summary and `sankalpa` aggregation hot paths with explicit filtered-summary and filtered-or-paged `session log` contracts
   - centralized frontend and backend reference-data modules with backend seed-alignment coverage for meditation types
@@ -56,6 +57,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-media-cache-hygiene-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
+- Implementation planning: `docs/execplan-observance-sankalpa-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -66,6 +68,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-media-cache-hygiene-feature.md`
 - Review artifact: `docs/review-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
+- Review artifact: `docs/review-observance-sankalpa-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Verification report: `docs/test-custom-play-media-library.md`
@@ -77,6 +80,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-production-reference-cleanup-feature.md`
 - Verification report: `docs/test-media-cache-hygiene-feature.md`
 - Verification report: `docs/test-sankalpa-delete-unarchive-feature.md`
+- Verification report: `docs/test-observance-sankalpa-feature.md`
 - Verification planning: `docs/ios-safari-real-device-qa-checklist.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
@@ -92,6 +96,15 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Observance sankalpa implementation verified on 2026-04-07:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` with 47 files and 327 tests
+  - `npm run build`
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` with 50 backend tests
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the observance sankalpa slice
+
 - Media-cache hygiene implementation verified on 2026-04-05:
   - `npm run typecheck`
   - `npm run lint`
@@ -186,6 +199,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Offline reopening still depends on the device having completed at least one successful online visit so the app shell and any needed recording media are already cached.
 - Real-device execution of the new iPhone Safari QA checklist is still pending on actual hardware.
 - Browser-automation coverage for goals-screen responsive archive/delete confirmation behavior is still absent; current confidence comes from unit, component, and backend tests.
+- Browser-automation coverage for observance date check-ins is still absent; current confidence comes from unit, component, and backend tests.
 - The calmness of the new route-level loading fallback still needs a quick manual look on a real browser session; automated coverage currently proves correctness more than perceived UX.
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
 - Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.

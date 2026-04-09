@@ -323,13 +323,20 @@ export default function HomePage() {
           {topActiveSankalpa ? (
             <>
               <div className="history-row">
-                <strong>{getSankalpaGoalTypeLabel(topActiveSankalpa.goal.goalType)}</strong>
+                <strong>
+                  {topActiveSankalpa.goal.goalType === 'observance-based'
+                    ? topActiveSankalpa.goal.observanceLabel
+                    : getSankalpaGoalTypeLabel(topActiveSankalpa.goal.goalType)}
+                </strong>
                 <span className="pill active">{topActiveSankalpa.status}</span>
               </div>
               <p className="section-subtitle">
                 Deadline: {new Date(topActiveSankalpa.deadlineAt).toLocaleDateString()} · Target:{' '}
-                {topActiveSankalpa.goal.targetValue}{' '}
-                {topActiveSankalpa.goal.goalType === 'duration-based' ? 'min' : 'session logs'}
+                {topActiveSankalpa.goal.goalType === 'observance-based'
+                  ? `${topActiveSankalpa.targetObservanceCount} observed dates`
+                  : `${topActiveSankalpa.goal.targetValue} ${
+                      topActiveSankalpa.goal.goalType === 'duration-based' ? 'min' : 'session logs'
+                    }`}
               </p>
               <div className="sankalpa-progress-track" aria-hidden="true">
                 <span
@@ -339,7 +346,9 @@ export default function HomePage() {
               </div>
               <p className="section-subtitle">
                 Progress:{' '}
-                {topActiveSankalpa.goal.goalType === 'duration-based'
+                {topActiveSankalpa.goal.goalType === 'observance-based'
+                  ? `${topActiveSankalpa.matchedObservanceCount} / ${topActiveSankalpa.targetObservanceCount} observed dates`
+                  : topActiveSankalpa.goal.goalType === 'duration-based'
                   ? `${formatDurationLabel(topActiveSankalpa.matchedDurationSeconds)} / ${formatDurationLabel(
                       topActiveSankalpa.targetDurationSeconds
                     )}`

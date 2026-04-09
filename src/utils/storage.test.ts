@@ -781,6 +781,19 @@ describe('storage sankalpas', () => {
         createdAt: '2026-03-24T08:30:00.000Z',
         archived: false,
       },
+      {
+        id: 'goal-3',
+        goalType: 'observance-based',
+        targetValue: 3,
+        days: 3,
+        observanceLabel: 'Meal before 7 PM',
+        observanceRecords: [
+          { date: '2026-04-05', status: 'observed' },
+          { date: '2026-04-06', status: 'missed' },
+        ],
+        createdAt: '2026-04-05T08:30:00.000Z',
+        archived: false,
+      },
     ];
 
     saveSankalpas(sankalpas);
@@ -821,6 +834,14 @@ describe('storage sankalpas', () => {
           targetValue: 60,
           days: 7,
           createdAt: 'not-a-date',
+        },
+        {
+          id: 'goal-invalid-observance',
+          goalType: 'observance-based',
+          targetValue: 3,
+          days: 3,
+          observanceLabel: '',
+          createdAt: '2026-04-05T08:00:00.000Z',
         },
       ])
     );

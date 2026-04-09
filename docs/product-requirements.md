@@ -84,8 +84,10 @@ The app must work well on:
 ### Sankalpa
 - duration goal in Y days
 - session-count goal in Y days
+- observance goal in Y days for disciplines the app cannot infer automatically
 - optional filter by meditation type
 - optional filter by time of day
+- observance goals use manual per-date marking with observed or missed status
 
 ## Multi-device UX requirements
 - mobile-first implementation

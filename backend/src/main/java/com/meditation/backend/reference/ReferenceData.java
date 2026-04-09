@@ -14,7 +14,8 @@ public final class ReferenceData {
   private static final Set<String> MEDITATION_TYPE_SET = Set.copyOf(MEDITATION_TYPES);
   private static final Set<String> SESSION_LOG_SOURCE_SET = Set.copyOf(SESSION_LOG_SOURCES);
   private static final Set<String> TIME_OF_DAY_BUCKET_SET = Set.copyOf(TIME_OF_DAY_BUCKETS);
-  private static final Set<String> GOAL_TYPE_SET = Set.of("duration-based", "session-count-based");
+  private static final Set<String> GOAL_TYPE_SET = Set.of("duration-based", "session-count-based", "observance-based");
+  private static final Set<String> OBSERVANCE_STATUS_SET = Set.of("observed", "missed");
   private static final Set<String> TIMER_MODE_SET = Set.of("fixed", "open-ended");
   private static final Set<String> SESSION_LOG_STATUS_SET = Set.of("completed", "ended early");
   private static final Set<String> COMPLETED_SESSION_LOG_STATUS_SET = Set.of("completed");
@@ -36,6 +37,10 @@ public final class ReferenceData {
 
   public static boolean isGoalType(String value) {
     return value != null && GOAL_TYPE_SET.contains(value);
+  }
+
+  public static boolean isObservanceStatus(String value) {
+    return value != null && OBSERVANCE_STATUS_SET.contains(value);
   }
 
   public static boolean isTimerMode(String value) {

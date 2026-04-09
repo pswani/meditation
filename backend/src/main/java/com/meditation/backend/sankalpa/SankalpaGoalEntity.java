@@ -30,6 +30,9 @@ public class SankalpaGoalEntity {
   @Column(name = "time_of_day_bucket", length = 32)
   private String timeOfDayBucket;
 
+  @Column(name = "observance_label", length = 120)
+  private String observanceLabel;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -52,6 +55,7 @@ public class SankalpaGoalEntity {
       int days,
       String meditationTypeCode,
       String timeOfDayBucket,
+      String observanceLabel,
       Instant createdAt,
       Instant updatedAt,
       Instant completedAt,
@@ -63,6 +67,7 @@ public class SankalpaGoalEntity {
     this.days = days;
     this.meditationTypeCode = meditationTypeCode;
     this.timeOfDayBucket = timeOfDayBucket;
+    this.observanceLabel = observanceLabel;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.completedAt = completedAt;
@@ -93,6 +98,10 @@ public class SankalpaGoalEntity {
     return timeOfDayBucket;
   }
 
+  public String getObservanceLabel() {
+    return observanceLabel;
+  }
+
   public Instant getCreatedAt() {
     return createdAt;
   }
@@ -115,6 +124,7 @@ public class SankalpaGoalEntity {
     this.days = request.days();
     this.meditationTypeCode = request.meditationType();
     this.timeOfDayBucket = request.timeOfDayBucket();
+    this.observanceLabel = request.observanceLabel();
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.completedAt = null;

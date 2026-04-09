@@ -1,4 +1,11 @@
-import type { SankalpaGoal, SankalpaProgress, SankalpaStatus, TimeOfDayBucket } from '../types/sankalpa';
+import type {
+  SankalpaGoal,
+  SankalpaObservanceDay,
+  SankalpaObservanceRecord,
+  SankalpaProgress,
+  SankalpaStatus,
+  TimeOfDayBucket,
+} from '../types/sankalpa';
 import { isMeditationType, isTimeOfDayBucket } from '../types/referenceData';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
@@ -14,8 +21,21 @@ interface SankalpaGoalApiResponse {
   readonly days: number;
   readonly meditationType?: SankalpaGoal['meditationType'] | null;
   readonly timeOfDayBucket?: TimeOfDayBucket | null;
+  readonly observanceLabel?: string | null;
+  readonly observanceRecords?: SankalpaObservanceRecordApiResponse[] | null;
   readonly createdAt: string;
   readonly archived?: boolean;
+}
+
+interface SankalpaObservanceRecordApiResponse {
+  readonly date: string;
+  readonly status: SankalpaObservanceRecord['status'];
+}
+
+interface SankalpaObservanceDayApiResponse {
+  readonly date: string;
+  readonly status: SankalpaObservanceDay['status'];
+  readonly isFuture: boolean;
 }
 
 interface SankalpaProgressApiResponse {
@@ -26,6 +46,11 @@ interface SankalpaProgressApiResponse {
   readonly matchedDurationSeconds: number;
   readonly targetSessionCount: number;
   readonly targetDurationSeconds: number;
+  readonly matchedObservanceCount?: number;
+  readonly missedObservanceCount?: number;
+  readonly pendingObservanceCount?: number;
+  readonly targetObservanceCount?: number;
+  readonly observanceDays?: SankalpaObservanceDayApiResponse[] | null;
   readonly progressRatio: number;
 }
 
@@ -50,11 +75,37 @@ export type SankalpaDeleteResult =
       readonly currentSankalpa: SankalpaProgress;
     };
 
-const goalTypes = new Set(['duration-based', 'session-count-based']);
+const goalTypes = new Set(['duration-based', 'session-count-based', 'observance-based']);
 const statuses = new Set(['active', 'completed', 'expired', 'archived']);
 
 function isValidIsoDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+}
+
+function isValidObservanceDate(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isValidObservanceRecordPayload(value: unknown): value is SankalpaObservanceRecordApiResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return isValidObservanceDate(candidate.date) && (candidate.status === 'observed' || candidate.status === 'missed');
+}
+
+function isValidObservanceDayPayload(value: unknown): value is SankalpaObservanceDayApiResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    isValidObservanceDate(candidate.date) &&
+    (candidate.status === 'pending' || candidate.status === 'observed' || candidate.status === 'missed') &&
+    typeof candidate.isFuture === 'boolean'
+  );
 }
 
 function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
@@ -78,6 +129,12 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     (typeof candidate.timeOfDayBucket === 'undefined' ||
       candidate.timeOfDayBucket === null ||
       isTimeOfDayBucket(candidate.timeOfDayBucket)) &&
+    (typeof candidate.observanceLabel === 'undefined' ||
+      candidate.observanceLabel === null ||
+      typeof candidate.observanceLabel === 'string') &&
+    (typeof candidate.observanceRecords === 'undefined' ||
+      candidate.observanceRecords === null ||
+      (Array.isArray(candidate.observanceRecords) && candidate.observanceRecords.every(isValidObservanceRecordPayload))) &&
     isValidIsoDate(candidate.createdAt) &&
     (typeof candidate.archived === 'undefined' || typeof candidate.archived === 'boolean')
   );
@@ -97,6 +154,13 @@ function isValidProgressPayload(value: unknown): value is SankalpaProgressApiRes
     typeof candidate.matchedDurationSeconds === 'number' &&
     typeof candidate.targetSessionCount === 'number' &&
     typeof candidate.targetDurationSeconds === 'number' &&
+    (typeof candidate.matchedObservanceCount === 'undefined' || typeof candidate.matchedObservanceCount === 'number') &&
+    (typeof candidate.missedObservanceCount === 'undefined' || typeof candidate.missedObservanceCount === 'number') &&
+    (typeof candidate.pendingObservanceCount === 'undefined' || typeof candidate.pendingObservanceCount === 'number') &&
+    (typeof candidate.targetObservanceCount === 'undefined' || typeof candidate.targetObservanceCount === 'number') &&
+    (typeof candidate.observanceDays === 'undefined' ||
+      candidate.observanceDays === null ||
+      (Array.isArray(candidate.observanceDays) && candidate.observanceDays.every(isValidObservanceDayPayload))) &&
     typeof candidate.progressRatio === 'number'
   );
 }
@@ -109,6 +173,12 @@ function normalizeGoalPayload(payload: SankalpaGoalApiResponse): SankalpaGoal {
     days: payload.days,
     meditationType: payload.meditationType ?? undefined,
     timeOfDayBucket: payload.timeOfDayBucket ?? undefined,
+    observanceLabel: payload.observanceLabel?.trim() || undefined,
+    observanceRecords:
+      payload.observanceRecords?.map((record) => ({
+        date: record.date,
+        status: record.status,
+      })) ?? undefined,
     createdAt: payload.createdAt,
     archived: payload.archived ?? false,
   };
@@ -127,6 +197,16 @@ function normalizeProgressPayload(payload: unknown): SankalpaProgress {
     matchedDurationSeconds: payload.matchedDurationSeconds,
     targetSessionCount: payload.targetSessionCount,
     targetDurationSeconds: payload.targetDurationSeconds,
+    matchedObservanceCount: payload.matchedObservanceCount ?? 0,
+    missedObservanceCount: payload.missedObservanceCount ?? 0,
+    pendingObservanceCount: payload.pendingObservanceCount ?? 0,
+    targetObservanceCount: payload.targetObservanceCount ?? 0,
+    observanceDays:
+      payload.observanceDays?.map((entry) => ({
+        date: entry.date,
+        status: entry.status,
+        isFuture: entry.isFuture,
+      })) ?? [],
     progressRatio: payload.progressRatio,
   };
 }

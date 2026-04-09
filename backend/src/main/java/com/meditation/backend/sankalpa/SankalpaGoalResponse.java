@@ -1,5 +1,7 @@
 package com.meditation.backend.sankalpa;
 
+import java.util.List;
+
 public record SankalpaGoalResponse(
     String id,
     String goalType,
@@ -7,6 +9,8 @@ public record SankalpaGoalResponse(
     int days,
     String meditationType,
     String timeOfDayBucket,
+    String observanceLabel,
+    List<SankalpaObservanceRecordPayload> observanceRecords,
     String createdAt,
     boolean archived
 ) {

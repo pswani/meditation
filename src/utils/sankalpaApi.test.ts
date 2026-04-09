@@ -67,6 +67,8 @@ describe('sankalpa api boundary', () => {
           days: 10,
           meditationType: 'Vipassana',
           timeOfDayBucket: 'morning',
+          observanceLabel: undefined,
+          observanceRecords: undefined,
           createdAt: '2026-03-24T08:00:00.000Z',
           archived: false,
         },
@@ -76,6 +78,11 @@ describe('sankalpa api boundary', () => {
         matchedDurationSeconds: 1800,
         targetSessionCount: 5,
         targetDurationSeconds: 0,
+        matchedObservanceCount: 0,
+        missedObservanceCount: 0,
+        pendingObservanceCount: 0,
+        targetObservanceCount: 0,
+        observanceDays: [],
         progressRatio: 0.4,
       },
     ]);
@@ -206,6 +213,10 @@ describe('sankalpa api boundary', () => {
           goalType: 'duration-based',
           targetValue: 12.5,
           days: 7,
+          meditationType: undefined,
+          timeOfDayBucket: undefined,
+          observanceLabel: undefined,
+          observanceRecords: undefined,
           createdAt: '2026-03-24T08:00:00.000Z',
           archived: true,
         },
@@ -215,8 +226,92 @@ describe('sankalpa api boundary', () => {
         matchedDurationSeconds: 0,
         targetSessionCount: 0,
         targetDurationSeconds: 750,
+        matchedObservanceCount: 0,
+        missedObservanceCount: 0,
+        pendingObservanceCount: 0,
+        targetObservanceCount: 0,
+        observanceDays: [],
         progressRatio: 0,
       },
     });
+  });
+
+  it('normalizes observance-based sankalpas from the api', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            goal: {
+              id: 'goal-observance',
+              goalType: 'observance-based',
+              targetValue: 3,
+              days: 3,
+              observanceLabel: 'Meal before 7 PM',
+              observanceRecords: [
+                { date: '2026-04-05', status: 'observed' },
+                { date: '2026-04-06', status: 'missed' },
+              ],
+              createdAt: '2026-04-05T12:00:00.000Z',
+              archived: false,
+            },
+            status: 'active',
+            deadlineAt: '2026-04-07T23:59:59.999Z',
+            matchedSessionCount: 0,
+            matchedDurationSeconds: 0,
+            targetSessionCount: 0,
+            targetDurationSeconds: 0,
+            matchedObservanceCount: 1,
+            missedObservanceCount: 1,
+            pendingObservanceCount: 1,
+            targetObservanceCount: 3,
+            observanceDays: [
+              { date: '2026-04-05', status: 'observed', isFuture: false },
+              { date: '2026-04-06', status: 'missed', isFuture: false },
+              { date: '2026-04-07', status: 'pending', isFuture: false },
+            ],
+            progressRatio: 1 / 3,
+          },
+        ],
+      })
+    );
+
+    await expect(listSankalpaProgressFromApi()).resolves.toEqual([
+      {
+        goal: {
+          id: 'goal-observance',
+          goalType: 'observance-based',
+          targetValue: 3,
+          days: 3,
+          meditationType: undefined,
+          timeOfDayBucket: undefined,
+          observanceLabel: 'Meal before 7 PM',
+          observanceRecords: [
+            { date: '2026-04-05', status: 'observed' },
+            { date: '2026-04-06', status: 'missed' },
+          ],
+          createdAt: '2026-04-05T12:00:00.000Z',
+          archived: false,
+        },
+        status: 'active',
+        deadlineAt: '2026-04-07T23:59:59.999Z',
+        matchedSessionCount: 0,
+        matchedDurationSeconds: 0,
+        targetSessionCount: 0,
+        targetDurationSeconds: 0,
+        matchedObservanceCount: 1,
+        missedObservanceCount: 1,
+        pendingObservanceCount: 1,
+        targetObservanceCount: 3,
+        observanceDays: [
+          { date: '2026-04-05', status: 'observed', isFuture: false },
+          { date: '2026-04-06', status: 'missed', isFuture: false },
+          { date: '2026-04-07', status: 'pending', isFuture: false },
+        ],
+        progressRatio: 1 / 3,
+      },
+    ]);
   });
 });

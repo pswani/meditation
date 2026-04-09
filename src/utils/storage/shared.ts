@@ -474,9 +474,27 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
   }
 
   const candidate = value as Record<string, unknown>;
+  const observanceRecords =
+    Array.isArray(candidate.observanceRecords)
+      ? candidate.observanceRecords
+          .filter((entry): entry is Record<string, unknown> => isObjectRecord(entry))
+          .filter(
+            (entry) =>
+              typeof entry.date === 'string' &&
+              /^\d{4}-\d{2}-\d{2}$/.test(entry.date) &&
+              (entry.status === 'observed' || entry.status === 'missed')
+          )
+          .map((entry) => ({
+            date: entry.date as string,
+            status: entry.status as 'observed' | 'missed',
+          }))
+      : [];
+
   if (
     typeof candidate.id !== 'string' ||
-    (candidate.goalType !== 'duration-based' && candidate.goalType !== 'session-count-based') ||
+    (candidate.goalType !== 'duration-based' &&
+      candidate.goalType !== 'session-count-based' &&
+      candidate.goalType !== 'observance-based') ||
     typeof candidate.targetValue !== 'number' ||
     !Number.isFinite(candidate.targetValue) ||
     candidate.targetValue <= 0 ||
@@ -484,6 +502,7 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     !Number.isInteger(candidate.days) ||
     candidate.days <= 0 ||
     !isValidIsoDate(candidate.createdAt) ||
+    (typeof candidate.observanceLabel !== 'undefined' && typeof candidate.observanceLabel !== 'string') ||
     (typeof candidate.archived !== 'undefined' && typeof candidate.archived !== 'boolean')
   ) {
     return null;
@@ -505,8 +524,21 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     return null;
   }
 
-  if (candidate.goalType === 'session-count-based' && !Number.isInteger(candidate.targetValue)) {
+  if (
+    (candidate.goalType === 'session-count-based' || candidate.goalType === 'observance-based') &&
+    !Number.isInteger(candidate.targetValue)
+  ) {
     return null;
+  }
+
+  if (candidate.goalType === 'observance-based') {
+    if (
+      typeof candidate.observanceLabel !== 'string' ||
+      candidate.observanceLabel.trim().length === 0 ||
+      candidate.targetValue !== candidate.days
+    ) {
+      return null;
+    }
   }
 
   return {
@@ -518,6 +550,11 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
       typeof candidate.meditationType === 'string' && candidate.meditationType !== '' ? candidate.meditationType : undefined,
     timeOfDayBucket:
       typeof candidate.timeOfDayBucket === 'string' && candidate.timeOfDayBucket !== '' ? candidate.timeOfDayBucket : undefined,
+    observanceLabel:
+      typeof candidate.observanceLabel === 'string' && candidate.observanceLabel.trim().length > 0
+        ? candidate.observanceLabel.trim()
+        : undefined,
+    observanceRecords: candidate.goalType === 'observance-based' ? observanceRecords : undefined,
     createdAt: candidate.createdAt,
     archived: candidate.archived === true,
   };

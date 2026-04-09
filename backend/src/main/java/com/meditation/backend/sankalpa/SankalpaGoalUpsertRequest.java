@@ -1,5 +1,6 @@
 package com.meditation.backend.sankalpa;
 
+import java.util.List;
 import java.math.BigDecimal;
 
 public record SankalpaGoalUpsertRequest(
@@ -9,6 +10,8 @@ public record SankalpaGoalUpsertRequest(
     int days,
     String meditationType,
     String timeOfDayBucket,
+    String observanceLabel,
+    List<SankalpaObservanceRecordPayload> observanceRecords,
     String createdAt,
     boolean archived
 ) {

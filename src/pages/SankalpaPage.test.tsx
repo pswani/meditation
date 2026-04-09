@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -882,5 +882,39 @@ describe('Sankalpa summary UX', () => {
       ).toHaveLength(1)
     );
     expect(screen.queryByText(/sankalpa goal type is invalid/i)).not.toBeInTheDocument();
+  });
+
+  it('creates an observance sankalpa with per-date tracking and disables future dates', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-07T12:00:00.000Z'));
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Summary' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/goal type/i), { target: { value: 'observance-based' } });
+    fireEvent.change(screen.getByLabelText(/observance/i), { target: { value: 'Meal before 7 PM' } });
+    fireEvent.change(screen.getByLabelText(/^days$/i), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
+
+    expect(screen.getByText(/meal before 7 pm for 3 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 \/ 3 observed dates/i)).toBeInTheDocument();
+
+    const todaySelect = screen.getByLabelText('Observance status for 2026-04-07');
+    const futureSelect = screen.getByLabelText('Observance status for 2026-04-08');
+
+    expect(futureSelect).toBeDisabled();
+
+    fireEvent.change(todaySelect, { target: { value: 'observed' } });
+
+    expect(screen.getByText(/1 \/ 3 observed dates/i)).toBeInTheDocument();
   });
 });

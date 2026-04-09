@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { ObservanceTracker } from '../features/sankalpa/ObservanceTracker';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
 import { meditationTypes } from '../features/timer/constants';
@@ -21,7 +22,9 @@ import {
   createSankalpaDraftFromGoal,
   createSankalpaGoal,
   getSankalpaGoalTypeLabel,
+  isObservanceGoalType,
   partitionSankalpaProgress,
+  setSankalpaObservanceStatus,
   timeOfDayBuckets,
   timeOfDayBucketLabels,
   unarchiveSankalpaGoal,
@@ -33,9 +36,13 @@ import { getUserTimeZone } from '../utils/timeZone';
 const initialErrors: SankalpaValidationResult['errors'] = {};
 type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 type SaveMessageTone = 'ok' | 'warn' | 'error';
-type SankalpaSaveAction = 'create' | 'edit' | 'archive' | 'unarchive' | 'delete';
+type SankalpaSaveAction = 'create' | 'edit' | 'archive' | 'unarchive' | 'delete' | 'mark-observance';
 
 function describeSankalpa(goal: SankalpaGoal): string {
+  if (goal.goalType === 'observance-based') {
+    return `${goal.observanceLabel} for ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+  }
+
   if (goal.goalType === 'duration-based') {
     return `${goal.targetValue} min in ${goal.days} day${goal.days === 1 ? '' : 's'}`;
   }
@@ -46,6 +53,10 @@ function describeSankalpa(goal: SankalpaGoal): string {
 }
 
 function progressDetail(progress: SankalpaProgress): string {
+  if (progress.goal.goalType === 'observance-based') {
+    return `${progress.matchedObservanceCount} / ${progress.targetObservanceCount} observed dates`;
+  }
+
   if (progress.goal.goalType === 'duration-based') {
     return `${formatDurationLabel(progress.matchedDurationSeconds)} / ${formatDurationLabel(progress.targetDurationSeconds)}`;
   }
@@ -54,6 +65,10 @@ function progressDetail(progress: SankalpaProgress): string {
 }
 
 function remainingDetail(progress: SankalpaProgress): string {
+  if (progress.goal.goalType === 'observance-based') {
+    return `${progress.pendingObservanceCount} pending · ${progress.missedObservanceCount} missed`;
+  }
+
   if (progress.goal.goalType === 'duration-based') {
     const remainingSeconds = Math.max(0, progress.targetDurationSeconds - progress.matchedDurationSeconds);
     return `${formatDurationLabel(remainingSeconds)} remaining`;
@@ -64,6 +79,10 @@ function remainingDetail(progress: SankalpaProgress): string {
 }
 
 function filterDetail(goal: SankalpaGoal): string {
+  if (goal.goalType === 'observance-based') {
+    return 'Manual observance tracking';
+  }
+
   const filters: string[] = [];
   if (goal.meditationType) {
     filters.push(`meditation type: ${goal.meditationType}`);
@@ -173,6 +192,7 @@ interface SankalpaSectionProps {
   readonly onStartDelete?: (goalId: string) => void;
   readonly onCancelDelete?: () => void;
   readonly onConfirmDelete?: (goal: SankalpaGoal) => void;
+  readonly onUpdateObservanceStatus?: (goal: SankalpaGoal, date: string, status: 'pending' | 'observed' | 'missed') => void;
 }
 
 function SankalpaSection({
@@ -189,6 +209,7 @@ function SankalpaSection({
   onStartDelete,
   onCancelDelete,
   onConfirmDelete,
+  onUpdateObservanceStatus,
 }: SankalpaSectionProps) {
   return (
     <section className="sankalpa-section">
@@ -218,6 +239,19 @@ function SankalpaSection({
               <p className="section-subtitle">
                 Progress: {progressDetail(progress)} · {remainingDetail(progress)}
               </p>
+              {progress.goal.goalType === 'observance-based' ? (
+                <ObservanceTracker
+                  progress={progress}
+                  readOnly={progress.status === 'archived'}
+                  onChangeStatus={
+                    onUpdateObservanceStatus
+                      ? (date, status) => {
+                          onUpdateObservanceStatus(progress.goal, date, status);
+                        }
+                      : undefined
+                  }
+                />
+              ) : null}
               {onEditGoal || onStartArchive || onUnarchiveGoal || onStartDelete ? (
                 <div className="timer-actions">
                   {onEditGoal ? (
@@ -290,6 +324,9 @@ function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageT
     if (action === 'unarchive') {
       return 'Sankalpa restored locally because the backend could not be reached.';
     }
+    if (action === 'mark-observance') {
+      return 'Observance check-in saved locally because the backend could not be reached.';
+    }
     return 'Sankalpa deleted locally because the backend could not be reached.';
   }
 
@@ -304,6 +341,9 @@ function buildSankalpaSaveMessage(action: SankalpaSaveAction, tone: SaveMessageT
   }
   if (action === 'unarchive') {
     return 'Sankalpa restored.';
+  }
+  if (action === 'mark-observance') {
+    return 'Observance check-in saved.';
   }
   return 'Sankalpa deleted.';
 }
@@ -528,7 +568,9 @@ export default function SankalpaPage() {
 
   async function persistGoal(goal: SankalpaGoal, action: SankalpaSaveAction) {
     const result = await saveSankalpa(goal);
-    resetDraftState();
+    if (action !== 'mark-observance') {
+      resetDraftState();
+    }
     setPendingArchiveGoalId(null);
     setPendingDeleteGoalId(null);
     setSaveMessageTone(result.tone);
@@ -583,6 +625,10 @@ export default function SankalpaPage() {
     }
 
     await removeGoal(goal.id);
+  }
+
+  async function updateObservanceStatus(goal: SankalpaGoal, date: string, status: 'pending' | 'observed' | 'missed') {
+    await persistGoal(setSankalpaObservanceStatus(goal, date, status), 'mark-observance');
   }
 
   const hasAnySessionLogs = sessionLogs.length > 0;
@@ -758,14 +804,7 @@ export default function SankalpaPage() {
         <p className="section-subtitle">
           {editingGoalId
             ? 'Editing keeps this sankalpa in its existing goal window, so progress and deadline stay anchored to the original creation date.'
-            : 'Counting rules: both '}
-          {!editingGoalId ? (
-            <>
-              <code>auto log</code> and <code>manual log</code> entries count. Session-count sankalpa goals count matching session
-              log entries. Duration-based goals sum matching completed duration, including ended-early entries. Matching also
-              respects optional filters and the goal window from creation time through deadline.
-            </>
-          ) : null}
+            : 'Meditation-based goals count matching session logs. Observance goals use manual per-date check-ins for observances the app cannot infer automatically.'}
         </p>
 
         {saveMessage ? (
@@ -783,35 +822,59 @@ export default function SankalpaPage() {
               value={draft.goalType}
               onChange={(event) => {
                 setSaveMessage(null);
+                const nextGoalType = event.target.value as typeof draft.goalType;
                 setDraft((current) => ({
                   ...current,
-                  goalType: event.target.value as typeof current.goalType,
+                  goalType: nextGoalType,
+                  targetValue: nextGoalType === 'observance-based' ? current.days : current.targetValue,
+                  meditationType: nextGoalType === 'observance-based' ? '' : current.meditationType,
+                  timeOfDayBucket: nextGoalType === 'observance-based' ? '' : current.timeOfDayBucket,
                 }));
               }}
             >
               <option value="duration-based">{getSankalpaGoalTypeLabel('duration-based')}</option>
               <option value="session-count-based">{getSankalpaGoalTypeLabel('session-count-based')}</option>
+              <option value="observance-based">{getSankalpaGoalTypeLabel('observance-based')}</option>
             </select>
             {errors.goalType ? <small className="error-text">{errors.goalType}</small> : null}
           </label>
 
-          <label>
-            <span>{draft.goalType === 'duration-based' ? 'Target duration (minutes)' : 'Target session logs'}</span>
-            <input
-              type="number"
-              min={1}
-              step={draft.goalType === 'session-count-based' ? 1 : 0.5}
-              value={draft.targetValue}
-              onChange={(event) => {
-                setSaveMessage(null);
-                setDraft((current) => ({
-                  ...current,
-                  targetValue: Number(event.target.value),
-                }));
-              }}
-            />
-            {errors.targetValue ? <small className="error-text">{errors.targetValue}</small> : null}
-          </label>
+          {draft.goalType === 'observance-based' ? (
+            <label>
+              <span>Observance</span>
+              <input
+                type="text"
+                value={draft.observanceLabel}
+                placeholder="Brahmacharya"
+                onChange={(event) => {
+                  setSaveMessage(null);
+                  setDraft((current) => ({
+                    ...current,
+                    observanceLabel: event.target.value,
+                  }));
+                }}
+              />
+              {errors.observanceLabel ? <small className="error-text">{errors.observanceLabel}</small> : null}
+            </label>
+          ) : (
+            <label>
+              <span>{draft.goalType === 'duration-based' ? 'Target duration (minutes)' : 'Target session logs'}</span>
+              <input
+                type="number"
+                min={1}
+                step={draft.goalType === 'session-count-based' ? 1 : 0.5}
+                value={draft.targetValue}
+                onChange={(event) => {
+                  setSaveMessage(null);
+                  setDraft((current) => ({
+                    ...current,
+                    targetValue: Number(event.target.value),
+                  }));
+                }}
+              />
+              {errors.targetValue ? <small className="error-text">{errors.targetValue}</small> : null}
+            </label>
+          )}
 
           <label>
             <span>Days</span>
@@ -825,53 +888,63 @@ export default function SankalpaPage() {
                 setDraft((current) => ({
                   ...current,
                   days: Number(event.target.value),
+                  targetValue: isObservanceGoalType(current.goalType) ? Number(event.target.value) : current.targetValue,
                 }));
               }}
             />
             {errors.days ? <small className="error-text">{errors.days}</small> : null}
           </label>
 
-          <label>
-            <span>Meditation type filter (optional)</span>
-            <select
-              value={draft.meditationType}
-              onChange={(event) => {
-                setSaveMessage(null);
-                setDraft((current) => ({
-                  ...current,
-                  meditationType: event.target.value as typeof current.meditationType,
-                }));
-              }}
-            >
-              <option value="">Any meditation type</option>
-              {meditationTypes.map((meditationType) => (
-                <option key={meditationType} value={meditationType}>
-                  {meditationType}
-                </option>
-              ))}
-            </select>
-          </label>
+          {draft.goalType === 'observance-based' ? (
+            <div className="empty-state">
+              <p>Each date in this window will appear in the sankalpa card for manual check-ins.</p>
+              <p>The goal completes when every scheduled date is marked as observed.</p>
+            </div>
+          ) : (
+            <>
+              <label>
+                <span>Meditation type filter (optional)</span>
+                <select
+                  value={draft.meditationType}
+                  onChange={(event) => {
+                    setSaveMessage(null);
+                    setDraft((current) => ({
+                      ...current,
+                      meditationType: event.target.value as typeof current.meditationType,
+                    }));
+                  }}
+                >
+                  <option value="">Any meditation type</option>
+                  {meditationTypes.map((meditationType) => (
+                    <option key={meditationType} value={meditationType}>
+                      {meditationType}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label>
-            <span>Time-of-day filter (optional)</span>
-            <select
-              value={draft.timeOfDayBucket}
-              onChange={(event) => {
-                setSaveMessage(null);
-                setDraft((current) => ({
-                  ...current,
-                  timeOfDayBucket: event.target.value as typeof current.timeOfDayBucket,
-                }));
-              }}
-            >
-              <option value="">Any time of day</option>
-              {timeOfDayBuckets.map((bucket) => (
-                <option key={bucket} value={bucket}>
-                  {timeOfDayBucketLabels[bucket]}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label>
+                <span>Time-of-day filter (optional)</span>
+                <select
+                  value={draft.timeOfDayBucket}
+                  onChange={(event) => {
+                    setSaveMessage(null);
+                    setDraft((current) => ({
+                      ...current,
+                      timeOfDayBucket: event.target.value as typeof current.timeOfDayBucket,
+                    }));
+                  }}
+                >
+                  <option value="">Any time of day</option>
+                  {timeOfDayBuckets.map((bucket) => (
+                    <option key={bucket} value={bucket}>
+                      {timeOfDayBucketLabels[bucket]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
 
           <div className="timer-actions">
             <button type="submit">{editingGoalId ? 'Save Changes' : 'Create Sankalpa'}</button>
@@ -894,6 +967,7 @@ export default function SankalpaPage() {
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
         onConfirmArchive={confirmArchive}
+        onUpdateObservanceStatus={updateObservanceStatus}
       />
       <SankalpaSection
         title="Completed Sankalpas"
@@ -905,6 +979,7 @@ export default function SankalpaPage() {
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
         onConfirmArchive={confirmArchive}
+        onUpdateObservanceStatus={updateObservanceStatus}
       />
       <SankalpaSection
         title="Expired Sankalpas"
@@ -916,6 +991,7 @@ export default function SankalpaPage() {
         onStartArchive={setPendingArchiveGoalId}
         onCancelArchive={() => setPendingArchiveGoalId(null)}
         onConfirmArchive={confirmArchive}
+        onUpdateObservanceStatus={updateObservanceStatus}
       />
       <SankalpaSection
         title="Archived Sankalpas"
@@ -930,6 +1006,7 @@ export default function SankalpaPage() {
         }}
         onCancelDelete={() => setPendingDeleteGoalId(null)}
         onConfirmDelete={confirmDelete}
+        onUpdateObservanceStatus={updateObservanceStatus}
       />
     </section>
   );

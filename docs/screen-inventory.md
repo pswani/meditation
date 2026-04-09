@@ -41,6 +41,7 @@
 - expired
 - archived
 - create and edit sankalpa form
+- observance date tracker for `observance-based` goals
 - archive confirmation
 
 ## Settings
