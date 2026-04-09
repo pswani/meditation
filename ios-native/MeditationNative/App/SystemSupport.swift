@@ -1,6 +1,7 @@
+import AVFoundation
 import AudioToolbox
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 enum NotificationPermissionState: Equatable {
     case checking
@@ -142,5 +143,78 @@ struct SystemSoundPlayer: TimerSoundPlaying {
         }
 
         AudioServicesPlaySystemSound(soundID)
+    }
+}
+
+enum LocalAudioPlaybackError: Error {
+    case bundledAssetMissing
+    case audioSetupFailed
+
+    var message: String {
+        switch self {
+        case .bundledAssetMissing:
+            return "The bundled placeholder audio is unavailable right now."
+        case .audioSetupFailed:
+            return "The app could not start local audio playback right now."
+        }
+    }
+}
+
+protocol CustomPlayAudioControlling: AnyObject {
+    func startLoopingPlayback(for media: CustomPlayMedia) throws
+    func pausePlayback()
+    func resumePlayback() throws
+    func stopPlayback()
+}
+
+final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling, AVAudioPlayerDelegate {
+    private var audioPlayer: AVAudioPlayer?
+
+    func startLoopingPlayback(for media: CustomPlayMedia) throws {
+        stopPlayback()
+
+        guard let url = Bundle.main.url(
+            forResource: media.asset.bundledResourceName,
+            withExtension: media.asset.bundledResourceExtension
+        ) else {
+            throw LocalAudioPlaybackError.bundledAssetMissing
+        }
+
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.numberOfLoops = -1
+            player.delegate = self
+            player.prepareToPlay()
+            guard player.play() else {
+                throw LocalAudioPlaybackError.audioSetupFailed
+            }
+            audioPlayer = player
+        } catch let playbackError as LocalAudioPlaybackError {
+            throw playbackError
+        } catch {
+            throw LocalAudioPlaybackError.audioSetupFailed
+        }
+    }
+
+    func pausePlayback() {
+        audioPlayer?.pause()
+    }
+
+    func resumePlayback() throws {
+        guard let audioPlayer else {
+            throw LocalAudioPlaybackError.audioSetupFailed
+        }
+
+        guard audioPlayer.play() else {
+            throw LocalAudioPlaybackError.audioSetupFailed
+        }
+    }
+
+    func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
     }
 }

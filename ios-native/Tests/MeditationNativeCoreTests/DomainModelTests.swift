@@ -16,9 +16,9 @@ import Testing
     let playlist = Playlist(
         name: "Morning",
         items: [
-            PlaylistItem(title: "Sit", kind: .timer, durationSeconds: 600),
-            PlaylistItem(title: "Rest", kind: .customPlay, durationSeconds: 300),
-            PlaylistItem(title: "Close", kind: .timer, durationSeconds: 120),
+            PlaylistItem(title: "Sit", kind: .timer, durationSeconds: 600, meditationType: .vipassana),
+            PlaylistItem(title: "Rest", kind: .customPlay, durationSeconds: 300, meditationType: .ajapa),
+            PlaylistItem(title: "Close", kind: .timer, durationSeconds: 120, meditationType: .sahaj),
         ],
         gapSeconds: 30
     )
@@ -51,6 +51,22 @@ import Testing
     #expect(errors.contains(.intervalMustBeGreaterThanZero))
 }
 
+@Test func customPlayDraftRequiresNameTypeDurationAndMedia() throws {
+    let draft = CustomPlayDraft(
+        name: "",
+        meditationType: nil,
+        durationMinutes: 0,
+        mediaAsset: nil
+    )
+
+    let errors = CustomPlayFeature.validateCustomPlayDraft(draft)
+
+    #expect(errors.contains(.nameRequired))
+    #expect(errors.contains(.meditationTypeRequired))
+    #expect(errors.contains(.durationMustBeGreaterThanZero))
+    #expect(errors.contains(.mediaRequired))
+}
+
 @Test func activeTimerPauseAndResumePreserveRemainingTime() throws {
     let startDate = Date(timeIntervalSince1970: 1_700_000_000)
     let draft = TimerSettingsDraft(
@@ -71,6 +87,26 @@ import Testing
 
     session.resume(at: startDate.addingTimeInterval(420))
     #expect(session.remainingSeconds(at: startDate.addingTimeInterval(720)) == 600)
+}
+
+@Test func activeCustomPlayPauseAndResumePreserveRemainingTime() throws {
+    let startDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let customPlay = CustomPlay(
+        name: "Ajapa Evening Sit",
+        meditationType: .ajapa,
+        durationSeconds: 900,
+        media: CustomPlayMedia(asset: .gongLoop)
+    )
+
+    var session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
+
+    #expect(session.remainingSeconds(at: startDate.addingTimeInterval(300)) == 600)
+
+    session.pause(at: startDate.addingTimeInterval(300))
+    #expect(session.elapsedSeconds(at: startDate.addingTimeInterval(360)) == 300)
+
+    session.resume(at: startDate.addingTimeInterval(420))
+    #expect(session.remainingSeconds(at: startDate.addingTimeInterval(720)) == 300)
 }
 
 @Test func fixedTimerIntervalsTriggerOnlyWhenCrossed() throws {
@@ -110,6 +146,27 @@ import Testing
     #expect(log.completedDurationSeconds == 420)
     #expect(log.plannedDurationSeconds == 1_200)
     #expect(log.timerMode == .fixedDuration)
+}
+
+@Test func customPlaySessionLogUsesCustomPlaySourceAndNotes() throws {
+    let startDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let customPlay = CustomPlay(
+        name: "Vipassana Sit 20",
+        meditationType: .vipassana,
+        durationSeconds: 1_200,
+        media: CustomPlayMedia(asset: .templeBellLoop)
+    )
+
+    let session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
+    let log = session.makeSessionLog(
+        status: .completed,
+        endedAt: startDate.addingTimeInterval(1_200)
+    )
+
+    #expect(log.source == .customPlay)
+    #expect(log.status == .completed)
+    #expect(log.plannedDurationSeconds == 1_200)
+    #expect(log.notes == "Vipassana Sit 20")
 }
 
 @Test func openEndedTimerSessionLogUsesActualElapsedDuration() throws {
@@ -161,6 +218,93 @@ import Testing
 
     #expect(errors.contains(.meditationTypeRequired))
     #expect(errors.contains(.durationMustBeGreaterThanZero))
+}
+
+@Test func playlistDraftRequiresItemsAndValidLinkedCustomPlay() throws {
+    let customPlay = CustomPlay(
+        id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
+        name: "Ajapa Evening Sit",
+        meditationType: .ajapa,
+        durationSeconds: 900,
+        media: nil
+    )
+    let draft = PlaylistDraft(
+        name: "Evening Flow",
+        items: [
+            PlaylistDraftItem(kind: .customPlay, customPlayID: customPlay.id),
+        ]
+    )
+
+    let errors = PlaylistFeature.validatePlaylistDraft(draft, availableCustomPlays: [customPlay])
+
+    #expect(errors.contains(.customPlayNeedsMedia))
+}
+
+@Test func playlistRuntimePreservesOrderAndLogsEachCompletedItemOnce() throws {
+    let startDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let customPlay = CustomPlay(
+        id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
+        name: "Ajapa Evening Sit",
+        meditationType: .ajapa,
+        durationSeconds: 300,
+        media: CustomPlayMedia(asset: .gongLoop)
+    )
+    let playlist = try PlaylistFeature.makePlaylist(
+        from: PlaylistDraft(
+            name: "Morning Discipline",
+            items: [
+                PlaylistDraftItem(
+                    title: "Vipassana Warmup",
+                    kind: .timer,
+                    durationMinutes: 10,
+                    meditationType: .vipassana
+                ),
+                PlaylistDraftItem(
+                    kind: .customPlay,
+                    customPlayID: customPlay.id
+                ),
+            ],
+            gapSeconds: 30
+        ),
+        availableCustomPlays: [customPlay]
+    )
+
+    var session = ActivePlaylistSession(playlist: playlist, phaseStartedAt: startDate)
+
+    let firstAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(600))
+    #expect(firstAdvance.logs.count == 1)
+    #expect(firstAdvance.logs.first?.notes == "Playlist: Morning Discipline • Item: Vipassana Warmup")
+    #expect(session.phase == .gap(afterItemIndex: 0))
+
+    let duplicateCheck = session.advanceIfNeeded(at: startDate.addingTimeInterval(601))
+    #expect(duplicateCheck.logs.isEmpty)
+
+    let secondAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(630))
+    #expect(secondAdvance.logs.isEmpty)
+    #expect(session.phase == .item(index: 1))
+
+    let finalAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(930))
+    #expect(finalAdvance.logs.count == 1)
+    #expect(finalAdvance.logs.first?.notes == "Playlist: Morning Discipline • Item: Ajapa Evening Sit")
+    #expect(finalAdvance.finishedRun)
+}
+
+@Test func playlistEarlyStopOnlyLogsCurrentItemAndSkipsGapLogs() throws {
+    let startDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let playlist = Playlist(
+        name: "Closing Flow",
+        items: [
+            PlaylistItem(title: "Sit", kind: .timer, durationSeconds: 600, meditationType: .vipassana),
+            PlaylistItem(title: "Close", kind: .timer, durationSeconds: 300, meditationType: .sahaj),
+        ],
+        gapSeconds: 30
+    )
+
+    var session = ActivePlaylistSession(playlist: playlist, phaseStartedAt: startDate)
+    let firstAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(600))
+    #expect(firstAdvance.logs.count == 1)
+    #expect(session.phase == .gap(afterItemIndex: 0))
+    #expect(session.makeCurrentItemEarlyStopLog(at: startDate.addingTimeInterval(610)) == nil)
 }
 
 @Test func sessionLogFiltersRespectMeditationTypeAndSource() throws {

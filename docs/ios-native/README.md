@@ -2,16 +2,20 @@
 
 This README is for the native iPhone app track in this repository.
 
-The milestone-1 foundation and milestone-2 timer-history journey now exist under `ios-native/` as:
+The milestone-1 foundation, milestone-2 timer-history journey, and milestone-3 `custom play` plus playlist slice now exist under `ios-native/` as:
 - `MeditationNative.xcodeproj` for the app, unit-test, and UI-test targets
 - `Sources/MeditationNativeCore/` for shared native domain, data, and persistence foundations
 - `MeditationNative/` for the SwiftUI app shell and destination screens
-- `Tests/MeditationNativeCoreTests/` for focused core timer, validation, and logging tests
-- `MeditationNativeUITests/` for launch, timer, History, and Settings smoke coverage
+- `Tests/MeditationNativeCoreTests/` for focused core timer, playback, playlist, validation, and logging tests
+- `MeditationNativeUITests/` for launch plus timer, `custom play`, playlist, History, and Settings smoke coverage
 
-Implemented native milestone-2 surfaces now include:
+Implemented native surfaces through milestone 3 now include:
 - Practice timer setup for fixed-duration and open-ended sessions
 - active timer runtime with pause, resume, and end controls
+- `custom play` creation, editing, deletion, favorite handling, and local playback
+- playlist creation, editing, reordering, favorite handling, and ordered runtime
+- bundled placeholder audio for local `custom play` playback without backend sync or file import
+- explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
 - History filters plus manual log entry
 - Settings support for timer defaults and notification permission messaging
@@ -78,7 +82,7 @@ Project and scheme:
 4. Use Xcode's console and debugger first when the milestone prompts mention launch, storage, or notification issues.
 5. The native app persists one local JSON snapshot under Application Support:
    - `MeditationNative/foundation-snapshot.json`
-   This now stores timer defaults plus local `session log` history for the native timer journey.
+   This now stores timer defaults, local `session log` history, saved `custom play` entries, and playlists for the native milestone-3 journey.
    Delete the app from simulator if you want to reseed the sample foundation data cleanly.
 
 ## Running On Your iPhone
@@ -110,15 +114,19 @@ xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNati
 For the shared core package, you can also run:
 
 ```bash
+SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache \
+CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache \
 swift test --package-path ios-native
 ```
 
 This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
 
-For the current timer-history milestone, physical iPhone verification is still recommended for:
+For the current milestone-3 state, physical iPhone verification is still recommended for:
 - notification permission prompts
 - fixed-duration completion notifications
 - background or foreground transitions around timer completion
+- bundled placeholder audio output for `custom play` and playlist-linked recording items
+- pause or resume behavior when audio playback is interrupted by the system
 
 ## Backend Connectivity Notes
 
@@ -154,4 +162,6 @@ If these are absent, the app stays in the default local-only profile and does no
 - Prefer local-first persistence until the core experience feels trustworthy on device.
 - Preserve the exact product terms already used elsewhere in the repo.
 - Keep sample content explicitly labeled as local foundation data until real feature flows replace it.
+- Milestone 3 intentionally uses bundled placeholder audio for native `custom play` playback instead of widening into file import or backend media sync.
+- Saved playlist items snapshot the current title, meditation type, and duration from linked `custom play` entries while still retaining a lightweight link for runtime validation.
 - Keep milestone docs updated when project names, schemes, signing steps, or base-URL rules change.

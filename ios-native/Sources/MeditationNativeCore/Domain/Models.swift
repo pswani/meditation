@@ -94,6 +94,7 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
     public var name: String
     public var meditationType: MeditationType
     public var durationSeconds: Int
+    public var media: CustomPlayMedia?
     public var isFavorite: Bool
 
     public init(
@@ -101,12 +102,65 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
         name: String,
         meditationType: MeditationType,
         durationSeconds: Int,
+        media: CustomPlayMedia? = nil,
         isFavorite: Bool = false
     ) {
         self.id = id
         self.name = name
         self.meditationType = meditationType
         self.durationSeconds = durationSeconds
+        self.media = media
+        self.isFavorite = isFavorite
+    }
+}
+
+public enum CustomPlayMediaAsset: String, CaseIterable, Codable, Sendable {
+    case templeBellLoop = "Temple Bell loop"
+    case gongLoop = "Gong loop"
+
+    public var bundledResourceName: String {
+        switch self {
+        case .templeBellLoop:
+            return "temple-bell"
+        case .gongLoop:
+            return "gong"
+        }
+    }
+
+    public var bundledResourceExtension: String {
+        "mp3"
+    }
+}
+
+public struct CustomPlayMedia: Codable, Equatable, Sendable {
+    public var asset: CustomPlayMediaAsset
+
+    public init(asset: CustomPlayMediaAsset) {
+        self.asset = asset
+    }
+}
+
+public struct CustomPlayDraft: Codable, Equatable, Sendable {
+    public var id: UUID?
+    public var name: String
+    public var meditationType: MeditationType?
+    public var durationMinutes: Int
+    public var mediaAsset: CustomPlayMediaAsset?
+    public var isFavorite: Bool
+
+    public init(
+        id: UUID? = nil,
+        name: String = "",
+        meditationType: MeditationType? = nil,
+        durationMinutes: Int = 20,
+        mediaAsset: CustomPlayMediaAsset? = .templeBellLoop,
+        isFavorite: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.meditationType = meditationType
+        self.durationMinutes = durationMinutes
+        self.mediaAsset = mediaAsset
         self.isFavorite = isFavorite
     }
 }
@@ -121,17 +175,23 @@ public struct PlaylistItem: Identifiable, Codable, Equatable, Sendable {
     public var title: String
     public var kind: Kind
     public var durationSeconds: Int
+    public var meditationType: MeditationType
+    public var customPlayID: UUID?
 
     public init(
         id: UUID = UUID(),
         title: String,
         kind: Kind,
-        durationSeconds: Int
+        durationSeconds: Int,
+        meditationType: MeditationType,
+        customPlayID: UUID? = nil
     ) {
         self.id = id
         self.title = title
         self.kind = kind
         self.durationSeconds = durationSeconds
+        self.meditationType = meditationType
+        self.customPlayID = customPlayID
     }
 }
 
@@ -160,6 +220,53 @@ public struct Playlist: Identifiable, Codable, Equatable, Sendable {
         let itemDuration = items.reduce(0) { $0 + $1.durationSeconds }
         let totalGapDuration = max(0, items.count - 1) * gapSeconds
         return itemDuration + totalGapDuration
+    }
+}
+
+public struct PlaylistDraftItem: Identifiable, Codable, Equatable, Sendable {
+    public var id: UUID
+    public var title: String
+    public var kind: PlaylistItem.Kind
+    public var durationMinutes: Int
+    public var meditationType: MeditationType?
+    public var customPlayID: UUID?
+
+    public init(
+        id: UUID = UUID(),
+        title: String = "",
+        kind: PlaylistItem.Kind = .timer,
+        durationMinutes: Int = 10,
+        meditationType: MeditationType? = nil,
+        customPlayID: UUID? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.kind = kind
+        self.durationMinutes = durationMinutes
+        self.meditationType = meditationType
+        self.customPlayID = customPlayID
+    }
+}
+
+public struct PlaylistDraft: Codable, Equatable, Sendable {
+    public var id: UUID?
+    public var name: String
+    public var items: [PlaylistDraftItem]
+    public var gapSeconds: Int
+    public var isFavorite: Bool
+
+    public init(
+        id: UUID? = nil,
+        name: String = "",
+        items: [PlaylistDraftItem] = [],
+        gapSeconds: Int = 0,
+        isFavorite: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.items = items
+        self.gapSeconds = gapSeconds
+        self.isFavorite = isFavorite
     }
 }
 

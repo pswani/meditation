@@ -55,4 +55,5 @@ public enum ReferenceData {
     public static let sessionSources = SessionSource.allCases
     public static let sankalpaKinds = SankalpaKind.allCases
     public static let timeOfDayBuckets = TimeOfDayBucket.allCases
+    public static let customPlayMediaAssets = CustomPlayMediaAsset.allCases
 }
