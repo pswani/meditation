@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `ios-native-timer-history-feature-bundle-with-branching` and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/ios-native-timer-history-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Latest completed bundles in `prompts/`: `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/ios-native-custom-play-playlist-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
@@ -19,10 +19,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `ios-native/MeditationNative.xcodeproj`
   - `docs/execplan-ios-native-foundation-feature.md`
   - `docs/execplan-ios-native-timer-history-feature.md`
+  - `docs/execplan-ios-native-custom-play-playlist-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
+  - `docs/review-ios-native-custom-play-playlist-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
+  - `docs/test-ios-native-custom-play-playlist-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -84,6 +87,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - calm iPhone History filtering by meditation type and source
   - Settings support for timer defaults plus notification permission messaging
   - focused core and UI XCTest coverage for timer math, manual-log validation, and the main timer-history journey
+- Native iOS `custom play` and playlist milestone now adds:
+  - `custom play` creation, editing, deletion, and favorite handling in a dedicated library flow under Practice
+  - bundled placeholder audio playback for local-first `custom play` sessions
+  - pause, resume, completion, and early-end handling for active `custom play` playback
+  - playlist creation, editing, reordering, favorite handling, and optional small gaps between items
+  - playlist runtime with explicit current-item state plus per-item `session log` creation
+  - calm missing-media and invalid-reference guidance when a linked `custom play` can no longer run
+  - focused core coverage for playback math, playlist ordering, and logging behavior
 
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-custom-play-media-library-feature.md`
@@ -99,6 +110,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-observance-sankalpa-feature.md`
 - Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
 - Implementation planning: `docs/execplan-ios-native-timer-history-feature.md`
+- Implementation planning: `docs/execplan-ios-native-custom-play-playlist-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -115,6 +127,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Review artifact: `docs/review-ios-native-foundation-feature.md`
 - Review artifact: `docs/review-ios-native-timer-history-feature.md`
+- Review artifact: `docs/review-ios-native-custom-play-playlist-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -133,6 +146,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
 - Verification report: `docs/test-ios-native-foundation-feature.md`
 - Verification report: `docs/test-ios-native-timer-history-feature.md`
+- Verification report: `docs/test-ios-native-custom-play-playlist-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -146,6 +160,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS `custom play` and playlist milestone verified on 2026-04-09:
+  - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-playlist CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-playlist CODE_SIGNING_ALLOWED=NO test` could not run in this environment because CoreSimulator was unavailable and Xcode test targets require a concrete simulator device
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS `custom play` and playlist slice
+
 - Native iOS timer-history verified on 2026-04-09:
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/meditation-ios-derived build`
@@ -284,4 +305,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Recommended next slice
 - The requested production-grade hardening prompt bundles are now complete.
-- Recommended next step for the native iOS track: run `ios-native-custom-play-playlist-feature-bundle-with-branching`.
+- Recommended next step for the native iOS track: run `ios-native-summary-sankalpa-feature-bundle-with-branching`.

@@ -50,7 +50,3 @@ struct ShellRootView: View {
         }
     }
 }
-
-#Preview {
-    ShellRootView(viewModel: ShellViewModel())
-}

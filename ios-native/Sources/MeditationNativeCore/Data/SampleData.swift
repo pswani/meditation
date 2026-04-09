@@ -35,15 +35,19 @@ public enum SampleData {
         ],
         customPlays: [
             CustomPlay(
+                id: UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeee1")!,
                 name: "Vipassana Sit 20",
                 meditationType: .vipassana,
                 durationSeconds: 1_200,
+                media: CustomPlayMedia(asset: .templeBellLoop),
                 isFavorite: true
             ),
             CustomPlay(
+                id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
                 name: "Ajapa Evening Sit",
                 meditationType: .ajapa,
                 durationSeconds: 900,
+                media: CustomPlayMedia(asset: .gongLoop),
                 isFavorite: false
             ),
         ],
@@ -51,8 +55,19 @@ public enum SampleData {
             Playlist(
                 name: "Morning Discipline",
                 items: [
-                    PlaylistItem(title: "Vipassana Warmup", kind: .timer, durationSeconds: 600),
-                    PlaylistItem(title: "Ajapa Evening Sit", kind: .customPlay, durationSeconds: 900),
+                    PlaylistItem(
+                        title: "Vipassana Warmup",
+                        kind: .timer,
+                        durationSeconds: 600,
+                        meditationType: .vipassana
+                    ),
+                    PlaylistItem(
+                        title: "Ajapa Evening Sit",
+                        kind: .customPlay,
+                        durationSeconds: 900,
+                        meditationType: .ajapa,
+                        customPlayID: UUID(uuidString: "11111111-2222-3333-4444-555555555555")
+                    ),
                 ],
                 gapSeconds: 60,
                 isFavorite: true

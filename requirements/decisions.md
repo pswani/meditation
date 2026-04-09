@@ -28,6 +28,13 @@
   - keep native timer correctness wall-clock based, with pause bookkeeping derived from timestamps instead of decrement-only counters
   - keep native fixed-duration completion notifications best-effort through `UserNotifications`, while treating the on-screen timer state as the source of truth whenever the app is foregrounded
   - keep native History filters limited to meditation type and source on iPhone so the screen stays calm and readable in the early local-first milestones
+  - keep native milestone-3 `custom play` media local and intentionally bounded:
+    - use bundled placeholder audio instead of widening into file import or backend media sync yet
+    - keep saved `custom play` media metadata optional so pre-media local snapshots still decode and surface calm “needs media” guidance
+  - keep native playlist items snapshot-based but still link-aware:
+    - store the resolved title, meditation type, and duration on the playlist item itself
+    - retain an optional `custom play` id so launch-time validation can fail calmly when the linked play or its local media is no longer available
+  - keep native playlist logging explicit per item, while small gaps remain silent runtime phases with no separate `session log`
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:

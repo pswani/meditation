@@ -37,6 +37,53 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(startButton.waitForExistence(timeout: 2))
     }
 
+    func testPracticeCanRunPauseResumeAndEndFeaturedCustomPlay() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        let startButton = app.buttons["Start featured custom play"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+        startButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Active custom play"].waitForExistence(timeout: 2))
+
+        let pauseButton = app.buttons["Pause"]
+        XCTAssertTrue(pauseButton.waitForExistence(timeout: 2))
+        pauseButton.tap()
+
+        let resumeButton = app.buttons["Resume"]
+        XCTAssertTrue(resumeButton.waitForExistence(timeout: 2))
+        resumeButton.tap()
+
+        let endButton = app.buttons["End session"]
+        XCTAssertTrue(endButton.waitForExistence(timeout: 2))
+        endButton.tap()
+
+        XCTAssertTrue(app.buttons["Start featured custom play"].waitForExistence(timeout: 2))
+    }
+
+    func testPracticeCanStartAndEndFeaturedPlaylist() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        let startButton = app.buttons["Start featured playlist"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+        startButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Active playlist"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Item 1 of 2: Vipassana Warmup"].waitForExistence(timeout: 2))
+
+        let endButton = app.buttons["End playlist"]
+        XCTAssertTrue(endButton.waitForExistence(timeout: 2))
+        endButton.tap()
+
+        XCTAssertTrue(app.buttons["Start featured playlist"].waitForExistence(timeout: 2))
+    }
+
     func testHistoryAndSettingsExposeMilestoneControls() throws {
         let app = XCUIApplication()
         app.launch()

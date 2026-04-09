@@ -25,6 +25,8 @@
 		A10000010000000000000014 /* TimerFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000017 /* TimerFeature.swift */; };
 		A10000010000000000000015 /* SystemSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000018 /* SystemSupport.swift */; };
 		A10000010000000000000016 /* TimerDraftForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000019 /* TimerDraftForm.swift */; };
+		A10000010000000000000017 /* temple-bell.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000001A /* temple-bell.mp3 */; };
+		A10000010000000000000018 /* gong.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000001B /* gong.mp3 */; };
 		A10000010000000000000010 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000010 /* DomainModelTests.swift */; };
 		A10000010000000000000011 /* SampleDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* SampleDataTests.swift */; };
 		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
@@ -74,6 +76,8 @@
 		B10000010000000000000017 /* TimerFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerFeature.swift; sourceTree = "<group>"; };
 		B10000010000000000000018 /* SystemSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSupport.swift; sourceTree = "<group>"; };
 		B10000010000000000000019 /* TimerDraftForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDraftForm.swift; sourceTree = "<group>"; };
+		B1000001000000000000001A /* temple-bell.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "temple-bell.mp3"; path = ../src/assets/sounds/temple-bell.mp3; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000001B /* gong.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "gong.mp3"; path = ../src/assets/sounds/gong.mp3; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +121,7 @@
 			children = (
 				F10000010000000000000007 /* App */,
 				F10000010000000000000008 /* Components */,
+				F10000010000000000000012 /* Resources */,
 				F10000010000000000000009 /* Features */,
 			);
 			path = MeditationNative;
@@ -260,6 +265,15 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		F10000010000000000000012 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1000001000000000000001A /* temple-bell.mp3 */,
+				B1000001000000000000001B /* gong.mp3 */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -364,6 +378,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000010000000000000017 /* temple-bell.mp3 in Resources */,
+				A10000010000000000000018 /* gong.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

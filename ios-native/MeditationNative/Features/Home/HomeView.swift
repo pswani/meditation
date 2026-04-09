@@ -71,9 +71,9 @@ struct HomeView: View {
                     }
                 }
 
-                SectionCard(title: "Later milestones", caption: "Still intentionally out of scope for this slice") {
+                SectionCard(title: "Practice library", caption: "Local custom plays and playlists on this device") {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Custom plays and playlists arrive in the next native bundle.")
+                        Text("\(viewModel.customPlays.count) custom plays • \(viewModel.playlists.count) playlists")
                         Text("Summary and sankalpa stay sample-backed until milestone 4.")
                             .foregroundStyle(.secondary)
                     }

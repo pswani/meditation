@@ -37,10 +37,3 @@ struct SectionCard<Content: View>: View {
         )
     }
 }
-
-#Preview {
-    SectionCard(title: "Preview", caption: "Calm reusable card") {
-        Text("Sample content")
-    }
-    .padding()
-}
