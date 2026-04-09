@@ -1,47 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { meditationTypes, soundOptions, defaultTimerSettings } from '../features/timer/constants';
+import { NotificationSettingsPanel } from '../features/timer/NotificationSettingsPanel';
+import { SettingsDefaultsPanel } from '../features/timer/SettingsDefaultsPanel';
+import { defaultTimerSettings } from '../features/timer/constants';
 import { useTimer } from '../features/timer/useTimer';
 import type { TimerMode, TimerSettings } from '../types/timer';
 import { detectTimerRuntimeEnvironment, requestTimerNotificationPermission } from '../utils/timerRuntime';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
-
-type SavePhase = 'idle' | 'awaiting-sync-start' | 'saving';
-type SaveMessageTone = 'ok' | 'status' | 'warn';
-
-function getNotificationCapabilityCopy(
-  capability: ReturnType<typeof detectTimerRuntimeEnvironment>['notificationCapability']
-): string {
-  return capability === 'available' ? 'Available in this browser context.' : 'Unavailable in this browser context.';
-}
-
-function getNotificationPermissionCopy(
-  permission: ReturnType<typeof detectTimerRuntimeEnvironment>['notificationPermission']
-): string {
-  switch (permission) {
-    case 'granted':
-      return 'Allowed.';
-    case 'denied':
-      return 'Blocked.';
-    case 'default':
-      return 'Not requested yet.';
-    default:
-      return 'Unavailable.';
-  }
-}
-
-function hasTimerSettingsChanges(current: TimerSettings, baseline: TimerSettings): boolean {
-  return (
-    current.timerMode !== baseline.timerMode ||
-    current.durationMinutes !== baseline.durationMinutes ||
-    current.lastFixedDurationMinutes !== baseline.lastFixedDurationMinutes ||
-    current.meditationType !== baseline.meditationType ||
-    current.startSound !== baseline.startSound ||
-    current.endSound !== baseline.endSound ||
-    current.intervalEnabled !== baseline.intervalEnabled ||
-    current.intervalMinutes !== baseline.intervalMinutes ||
-    current.intervalSound !== baseline.intervalSound
-  );
-}
+import { hasTimerSettingsChanges, type SaveMessageTone, type SavePhase } from './settingsPageHelpers';
 
 export default function SettingsPage() {
   const { settings, setSettings, isSettingsLoading, isSettingsSyncing, settingsSyncError } = useTimer();
@@ -57,10 +22,6 @@ export default function SettingsPage() {
   const hasUnsavedChanges = useMemo(() => hasTimerSettingsChanges(draft, settings), [draft, settings]);
   const fixedDurationMinutes = draft.durationMinutes ?? draft.lastFixedDurationMinutes;
   const areSettingsControlsDisabled = isSettingsLoading || isSettingsSyncing;
-  const durationMessageId = errors.durationMinutes ? 'settings-duration-error' : 'settings-duration-hint';
-  const meditationTypeMessageId = errors.meditationType ? 'settings-meditation-type-error' : 'settings-meditation-type-hint';
-  const intervalMessageId = errors.intervalMinutes ? 'settings-interval-error' : 'settings-interval-hint';
-
   useEffect(() => {
     setDraft(settings);
   }, [settings]);
@@ -251,230 +212,30 @@ export default function SettingsPage() {
         {hasUnsavedChanges ? 'You have unsaved changes.' : 'All timer defaults are saved.'}
       </p>
 
-      <section className="settings-panel">
-        <h3 className="section-title">Default Timer Preferences</h3>
-        <form className="form-grid" onSubmit={(event) => event.preventDefault()}>
-          <section className="timer-mode-panel" aria-label="Default timer mode">
-            <label className={`timer-mode-option ${draft.timerMode === 'fixed' ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="default-timer-mode"
-                checked={draft.timerMode === 'fixed'}
-                disabled={areSettingsControlsDisabled}
-                onChange={() => selectTimerMode('fixed')}
-              />
-              <span className="timer-mode-copy">
-                <strong>Fixed Duration</strong>
-                <small>Keep a saved default duration ready for quick start.</small>
-              </span>
-            </label>
+      <SettingsDefaultsPanel
+        draft={draft}
+        errors={errors}
+        fixedDurationMinutes={fixedDurationMinutes}
+        intervalCount={intervalCount}
+        hasUnsavedChanges={hasUnsavedChanges}
+        areSettingsControlsDisabled={areSettingsControlsDisabled}
+        onSelectTimerMode={selectTimerMode}
+        onUpdateDurationMinutes={updateDurationMinutes}
+        onUpdate={update}
+        onSaveDefaults={saveDefaults}
+        onResetDefaults={resetDefaults}
+      />
 
-            <label className={`timer-mode-option ${draft.timerMode === 'open-ended' ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="default-timer-mode"
-                checked={draft.timerMode === 'open-ended'}
-                disabled={areSettingsControlsDisabled}
-                onChange={() => selectTimerMode('open-ended')}
-              />
-              <span className="timer-mode-copy">
-                <strong>Open-Ended</strong>
-                <small>Open timer setup ready to start without a planned finish time.</small>
-              </span>
-            </label>
-          </section>
-
-          {draft.timerMode === 'fixed' ? (
-            <label>
-              <span>Default duration (minutes)</span>
-              <input
-                type="number"
-                min={1}
-                value={fixedDurationMinutes}
-                disabled={areSettingsControlsDisabled}
-                aria-invalid={Boolean(errors.durationMinutes)}
-                aria-describedby={durationMessageId}
-                onChange={(event) => updateDurationMinutes(Number(event.target.value))}
-              />
-              {errors.durationMinutes ? (
-                <small id={durationMessageId} className="error-text">
-                  {errors.durationMinutes}
-                </small>
-              ) : (
-                <small id={durationMessageId} className="hint-text">
-                  Used when opening timer setup.
-                </small>
-              )}
-            </label>
-          ) : (
-            <div className="mode-hint-card">
-              <strong>Open-ended default</strong>
-              <p className="section-subtitle">Quick start and timer setup will open without a scheduled end time.</p>
-            </div>
-          )}
-
-          <label>
-            <span>Default meditation type</span>
-            <select
-              value={draft.meditationType}
-              disabled={areSettingsControlsDisabled}
-              aria-invalid={Boolean(errors.meditationType)}
-              aria-describedby={meditationTypeMessageId}
-              onChange={(event) => update('meditationType', event.target.value as TimerSettings['meditationType'])}
-            >
-              <option value="">Select meditation type</option>
-              {meditationTypes.map((meditationType) => (
-                <option key={meditationType} value={meditationType}>
-                  {meditationType}
-                </option>
-              ))}
-            </select>
-            {errors.meditationType ? (
-              <small id={meditationTypeMessageId} className="error-text">
-                {errors.meditationType}
-              </small>
-            ) : (
-              <small id={meditationTypeMessageId} className="hint-text">
-                Used as the default meditation type in timer setup.
-              </small>
-            )}
-          </label>
-
-          <label>
-            <span>Default start sound</span>
-            <select
-              value={draft.startSound}
-              disabled={areSettingsControlsDisabled}
-              onChange={(event) => update('startSound', event.target.value)}
-            >
-              {soundOptions.map((sound) => (
-                <option key={sound} value={sound}>
-                  {sound}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Default end sound</span>
-            <select
-              value={draft.endSound}
-              disabled={areSettingsControlsDisabled}
-              onChange={(event) => update('endSound', event.target.value)}
-            >
-              {soundOptions.map((sound) => (
-                <option key={sound} value={sound}>
-                  {sound}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="checkbox-row settings-checkbox">
-            <input
-              type="checkbox"
-              checked={draft.intervalEnabled}
-              disabled={areSettingsControlsDisabled}
-              onChange={(event) => update('intervalEnabled', event.target.checked)}
-            />
-            <span>Enable interval bell by default</span>
-          </label>
-
-          {draft.intervalEnabled ? (
-            <>
-              <label>
-                <span>Default interval (minutes)</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={draft.intervalMinutes}
-                  disabled={areSettingsControlsDisabled}
-                  aria-invalid={Boolean(errors.intervalMinutes)}
-                  aria-describedby={intervalMessageId}
-                  onChange={(event) => update('intervalMinutes', Number(event.target.value))}
-                />
-                {errors.intervalMinutes ? (
-                  <small id={intervalMessageId} className="error-text">
-                    {errors.intervalMinutes}
-                  </small>
-                ) : (
-                  <small id={intervalMessageId} className="hint-text">
-                    {draft.timerMode === 'open-ended'
-                      ? `A bell will repeat every ${draft.intervalMinutes} minute${draft.intervalMinutes === 1 ? '' : 's'} until the session is ended.`
-                      : `${intervalCount} interval bell${intervalCount === 1 ? '' : 's'} within the default session.`}
-                  </small>
-                )}
-              </label>
-
-              <label>
-                <span>Default interval sound</span>
-                <select
-                  value={draft.intervalSound}
-                  disabled={areSettingsControlsDisabled}
-                  onChange={(event) => update('intervalSound', event.target.value)}
-                >
-                  {soundOptions.map((sound) => (
-                    <option key={sound} value={sound}>
-                      {sound}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-        </form>
-
-        <div className="timer-actions">
-          <button type="button" onClick={saveDefaults} disabled={!hasUnsavedChanges || areSettingsControlsDisabled}>
-            Save Defaults
-          </button>
-          <button type="button" className="secondary" onClick={resetDefaults} disabled={areSettingsControlsDisabled}>
-            Reset To App Defaults
-          </button>
-        </div>
-      </section>
-
-      <section className="settings-panel">
-        <h3 className="section-title">Completion Notifications</h3>
-        <div className="mode-hint-card">
-          <strong>Optional completion notice</strong>
-          <p className="section-subtitle">
-            If the browser allows it, the app can post a timer completion notice while the app is not visible.
-          </p>
-        </div>
-
-        {notificationMessage ? (
-          <div
-            className={`status-banner ${notificationMessageTone === 'ok' ? 'ok' : notificationMessageTone === 'warn' ? 'warn' : ''}`}
-            role="status"
-          >
-            <p>{notificationMessage}</p>
-          </div>
-        ) : null}
-
-        <p className="section-subtitle">Capability: {getNotificationCapabilityCopy(notificationRuntime.notificationCapability)}</p>
-        <p className="section-subtitle">Permission: {getNotificationPermissionCopy(notificationRuntime.notificationPermission)}</p>
-
-        {notificationRuntime.isLikelyIPhoneSafariBrowser ? (
-          <p className="hint-text">
-            In iPhone Safari browser tabs, timer completion can still wait until Safari returns to the foreground. This
-            setting only helps when browser support and permission are both available.
-          </p>
-        ) : null}
-
-        <div className="timer-actions">
-          <button
-            type="button"
-            className={notificationRuntime.canRequestNotificationPermission ? '' : 'secondary'}
-            disabled={!notificationRuntime.canRequestNotificationPermission || isRequestingNotificationPermission}
-            onClick={() => {
-              void enableCompletionNotifications();
-            }}
-          >
-            {notificationActionLabel}
-          </button>
-        </div>
-      </section>
+      <NotificationSettingsPanel
+        notificationRuntime={notificationRuntime}
+        notificationMessage={notificationMessage}
+        notificationMessageTone={notificationMessageTone}
+        isRequestingNotificationPermission={isRequestingNotificationPermission}
+        notificationActionLabel={notificationActionLabel}
+        onEnableCompletionNotifications={() => {
+          void enableCompletionNotifications();
+        }}
+      />
     </section>
   );
 }

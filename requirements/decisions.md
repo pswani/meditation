@@ -93,6 +93,11 @@
   - persist explicit per-date observance records with `observed` or `missed` status
   - derive `pending` in the UI from missing records instead of storing a third persisted state
   - disable future-date check-ins until their date arrives so manual observance tracking stays trustworthy
+- Keep large route screens and manager modules decomposed with feature-local helpers, hooks, and presentational panels:
+  - route files should stay focused on composition, navigation, and action wiring
+  - derived state and effects should move into narrowly scoped hooks when they are page-local
+  - render-heavy sections should move into nearby feature modules instead of regrowing inside route components
+  - `TimerContext` remains the runtime boundary; screen cleanup should not widen shared provider responsibilities just to reduce page file size
 
 ## Operational workflow
 - Keep the repository on one production-first operational path:
@@ -121,6 +126,7 @@
 - Offline reopening depends on a prior successful visit so the app shell and any on-demand media the user expects are already cached on the device.
 - `TimerContext` remains the stable runtime provider boundary, but its bootstrap/recovery helpers and sync-side effects now live in smaller modules so future cleanup can continue without changing the public hook contract.
 - Browser storage cleanup should preserve `src/utils/storage.ts` as the compatibility facade until a later, explicitly planned import migration is worth the churn.
+- Responsive calmness for the decomposed route panels is still verified mostly through automated behavior tests plus lightweight route smokes rather than dedicated visual regression tooling.
 
 ## Documentation and planning
 - Keep the durable repo guidance in:

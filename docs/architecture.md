@@ -186,6 +186,13 @@ Single-page React application with route-based screens and feature-oriented modu
 - `src/features/timer/useTimerSyncEffects.ts` now owns the queue hydration, backend fetch, replay, and optimistic reconciliation side effects that used to sit directly inside `TimerContext`.
 - `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
 - `src/features/sankalpa/ObservanceTracker.tsx` owns the calm per-date observance check-in UI for `observance-based` goals.
+- Remaining oversized route and manager modules are now decomposed into feature-local helpers, hooks, and presentational modules instead of mixing orchestration with large JSX trees:
+  - `src/features/sankalpa/` now owns the summary hook plus section, summary, and editor subcomponents used by `SankalpaPage`
+  - `src/features/customPlays/` now separates media-catalog loading, form rendering, and collection rendering for `CustomPlayManager`
+  - `src/features/playlists/` now separates playlist editor rendering, collection rendering, and feedback helpers for `PlaylistManager`
+  - `src/features/timer/` now owns page-local Practice and Settings subpanels and setup-state helpers
+  - `src/features/home/` now owns Home panel rendering helpers while `HomePage` stays focused on route composition and navigation decisions
+  - `src/app/` now separates shell banner rendering and hidden-audio synchronization helpers from `AppShell`
 - Route components continue to consume stable domain state and sync status rather than performing queue mutation logic directly.
 - Manual log creation is treated as local `session log` creation first, then reconciled back through the shared `session log` sync flow instead of a separate offline-only pathway.
 - Summary and managed media catalog reads keep durable last-successful snapshots in browser storage so the UI can prefer a trusted prior backend result before dropping all the way back to sample or locally derived data.
