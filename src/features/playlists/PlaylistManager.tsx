@@ -1,28 +1,19 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PlaylistCollection } from './PlaylistCollection';
+import { PlaylistForm } from './PlaylistForm';
+import { playlistRunFeedbackMessage } from './playlistManagerHelpers';
 import type { PlaylistDraft, PlaylistValidationResult } from '../../types/playlist';
 import {
-  computePlaylistGapTotalSeconds,
-  computePlaylistTotalDurationMinutes,
-  computePlaylistTotalDurationSeconds,
   createInitialPlaylistDraft,
   createPlaylistDraftItem,
-  movePlaylistDraftItem,
 } from '../../utils/playlist';
-import { formatDurationLabel } from '../../utils/sessionLog';
-import { meditationTypes } from '../timer/constants';
 import { useTimer } from '../timer/useTimer';
 
 const initialErrors: PlaylistValidationResult['errors'] = {
   itemErrors: {},
 };
-
-const smallGapOptions = [0, 5, 10, 15, 30] as const;
-
-function formatGapLabel(seconds: number): string {
-  return seconds <= 0 ? 'No gap between items' : `${seconds} second gap between items`;
-}
 
 export default function PlaylistManager() {
   const navigate = useNavigate();
@@ -46,10 +37,6 @@ export default function PlaylistManager() {
   const [playlistFeedback, setPlaylistFeedback] = useState<string | null>(null);
 
   const controlsDisabled = isPlaylistsLoading || isPlaylistSyncing;
-  const playlistNameMessageId = errors.name ? 'playlist-name-error' : undefined;
-  const playlistGapMessageId = errors.smallGapSeconds ? 'playlist-gap-error' : undefined;
-  const derivedGapSeconds = computePlaylistGapTotalSeconds(draft.items.length, draft.smallGapSeconds);
-  const derivedTotalSeconds = computePlaylistTotalDurationSeconds(draft.items, draft.smallGapSeconds);
 
   function updateDraft(next: PlaylistDraft) {
     setDraft(next);
@@ -151,19 +138,7 @@ export default function PlaylistManager() {
       return;
     }
 
-    const reasonToMessage: Record<NonNullable<typeof result.reason>, string> = {
-      'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
-      'timer session active': 'Finish or end the active timer session before starting a playlist run.',
-      'custom play run active': 'Finish the active custom play before starting a playlist run.',
-      'playlist run active': 'A playlist run is already active. Open it to continue before starting another.',
-      'playlist not found': 'That playlist is no longer available. Refresh and try again.',
-      'playlist has no items': 'Add at least one item before starting this playlist run.',
-      'playlist item unavailable': 'A linked custom play or recording for this playlist is unavailable. Update the playlist and try again.',
-    };
-
-    if (result.reason) {
-      setPlaylistFeedback(reasonToMessage[result.reason]);
-    }
+    setPlaylistFeedback(playlistRunFeedbackMessage(result));
   }
 
   async function confirmDelete(playlistId: string) {
@@ -224,333 +199,34 @@ export default function PlaylistManager() {
       ) : null}
 
       <div className="playlist-manager-layout">
-        <form className="playlist-form" onSubmit={onSubmit}>
-          <label>
-            <span>Playlist name</span>
-            <input
-              disabled={controlsDisabled}
-              value={draft.name}
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={playlistNameMessageId}
-              onChange={(event) => {
-                setPlaylistFeedback(null);
-                updateDraft({ ...draft, name: event.target.value });
-              }}
-              placeholder="Morning Sequence"
-            />
-            {errors.name ? (
-              <small id={playlistNameMessageId} className="error-text">
-                {errors.name}
-              </small>
-            ) : null}
-          </label>
+        <PlaylistForm
+          draft={draft}
+          errors={errors}
+          editId={editId}
+          controlsDisabled={controlsDisabled}
+          customPlays={customPlays}
+          isCustomPlaysLoading={isCustomPlaysLoading}
+          onSubmit={onSubmit}
+          onCancelEdit={cancelEdit}
+          onUpdateDraft={updateDraft}
+          onUpdateDraftItem={updateDraftItem}
+          onSyncDraftItemFromCustomPlay={syncDraftItemFromCustomPlay}
+          onRemoveDraftItem={removeDraftItem}
+          onClearFeedback={() => setPlaylistFeedback(null)}
+        />
 
-          <label>
-            <span>Small gap between items</span>
-            <select
-              disabled={controlsDisabled}
-              value={draft.smallGapSeconds}
-              aria-invalid={Boolean(errors.smallGapSeconds)}
-              aria-describedby={playlistGapMessageId}
-              onChange={(event) => {
-                setPlaylistFeedback(null);
-                updateDraft({
-                  ...draft,
-                  smallGapSeconds: Number(event.target.value),
-                });
-              }}
-            >
-              {smallGapOptions.map((seconds) => (
-                <option key={seconds} value={seconds}>
-                  {formatGapLabel(seconds)}
-                </option>
-              ))}
-            </select>
-            {errors.smallGapSeconds ? (
-              <small id={playlistGapMessageId} className="error-text">
-                {errors.smallGapSeconds}
-              </small>
-            ) : (
-              <small id={playlistGapMessageId} className="hint-text">
-                Use a brief settling pause when you want a calm transition between items.
-              </small>
-            )}
-          </label>
-
-          <div className="playlist-item-builder">
-            <div className="history-row">
-              <strong>Playlist items</strong>
-              <button
-                type="button"
-                className="secondary"
-                disabled={controlsDisabled}
-                onClick={() =>
-                  updateDraft({
-                    ...draft,
-                    items: [...draft.items, createPlaylistDraftItem()],
-                  })
-                }
-              >
-                Add Item
-              </button>
-            </div>
-
-            {errors.items ? <small className="error-text">{errors.items}</small> : null}
-
-            {draft.items.map((item, index) => {
-              const itemErrors = errors.itemErrors[item.id];
-              const itemMeditationTypeMessageId = itemErrors?.meditationType ? `playlist-item-${item.id}-meditation-type-error` : undefined;
-              const itemDurationMessageId = itemErrors?.durationMinutes ? `playlist-item-${item.id}-duration-error` : undefined;
-              const linkedCustomPlay = item.customPlayId ? customPlays.find((entry) => entry.id === item.customPlayId) : null;
-              const isLinkedCustomPlayItem = Boolean(item.customPlayId);
-
-              return (
-                <div key={item.id} className="playlist-item-row">
-                  <label>
-                    <span>Item {index + 1} linked custom play (optional)</span>
-                    <select
-                      disabled={controlsDisabled || isCustomPlaysLoading}
-                      value={item.customPlayId}
-                      onChange={(event) => {
-                        setPlaylistFeedback(null);
-                        syncDraftItemFromCustomPlay(item.id, event.target.value);
-                      }}
-                    >
-                      <option value="">Use a timed meditation segment</option>
-                      {customPlays.map((customPlay) => (
-                        <option key={customPlay.id} value={customPlay.id}>
-                          {customPlay.name}
-                        </option>
-                      ))}
-                    </select>
-                    <small className="hint-text">
-                      {isCustomPlaysLoading
-                        ? 'Loading available custom plays.'
-                        : isLinkedCustomPlayItem
-                        ? 'This item will use the linked recording, meditation type, and duration.'
-                        : 'Leave this empty to use a quiet timed segment.'}
-                    </small>
-                  </label>
-
-                  <label>
-                    <span>Item {index + 1} meditation type</span>
-                    <select
-                      disabled={controlsDisabled || isLinkedCustomPlayItem}
-                      value={item.meditationType}
-                      aria-invalid={Boolean(itemErrors?.meditationType)}
-                      aria-describedby={itemMeditationTypeMessageId}
-                      onChange={(event) => {
-                        setPlaylistFeedback(null);
-                        updateDraftItem(item.id, (entry) => ({
-                          ...entry,
-                          meditationType: event.target.value as PlaylistDraft['items'][number]['meditationType'],
-                          title: event.target.value || entry.title,
-                        }));
-                      }}
-                    >
-                      <option value="">Select meditation type</option>
-                      {meditationTypes.map((meditationType) => (
-                        <option key={meditationType} value={meditationType}>
-                          {meditationType}
-                        </option>
-                      ))}
-                    </select>
-                    {itemErrors?.meditationType ? (
-                      <small id={itemMeditationTypeMessageId} className="error-text">
-                        {itemErrors.meditationType}
-                      </small>
-                    ) : null}
-                  </label>
-
-                  <label>
-                    <span>Item {index + 1} duration (minutes)</span>
-                    <input
-                      type="number"
-                      min={1}
-                      disabled={controlsDisabled || isLinkedCustomPlayItem}
-                      value={item.durationMinutes}
-                      aria-invalid={Boolean(itemErrors?.durationMinutes)}
-                      aria-describedby={itemDurationMessageId}
-                      onChange={(event) => {
-                        setPlaylistFeedback(null);
-                        updateDraftItem(item.id, (entry) => ({
-                          ...entry,
-                          durationMinutes: Number(event.target.value),
-                        }));
-                      }}
-                    />
-                    {itemErrors?.durationMinutes ? (
-                      <small id={itemDurationMessageId} className="error-text">
-                        {itemErrors.durationMinutes}
-                      </small>
-                    ) : (
-                      <small id={itemDurationMessageId} className="hint-text">
-                        {linkedCustomPlay
-                          ? `Linked recording: ${linkedCustomPlay.recordingLabel || linkedCustomPlay.name}`
-                          : 'Choose how long this meditation segment should run.'}
-                      </small>
-                    )}
-                  </label>
-
-                  <div className="playlist-item-controls">
-                    <button
-                      type="button"
-                      className="secondary compact-control"
-                      onClick={() =>
-                        updateDraft({
-                          ...draft,
-                          items: movePlaylistDraftItem(draft.items, index, -1),
-                        })
-                      }
-                      disabled={controlsDisabled || index === 0}
-                      aria-label={`Move item ${index + 1} up`}
-                      title="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary compact-control"
-                      onClick={() =>
-                        updateDraft({
-                          ...draft,
-                          items: movePlaylistDraftItem(draft.items, index, 1),
-                        })
-                      }
-                      disabled={controlsDisabled || index === draft.items.length - 1}
-                      aria-label={`Move item ${index + 1} down`}
-                      title="Move down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary compact-control"
-                      onClick={() => removeDraftItem(item.id)}
-                      disabled={controlsDisabled}
-                      aria-label={`Remove item ${index + 1}`}
-                      title="Remove item"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="section-subtitle">
-            Derived meditation time: {computePlaylistTotalDurationMinutes(draft.items)} min
-            {derivedGapSeconds > 0 ? ` · gaps: ${derivedGapSeconds} sec` : ''}
-          </p>
-          <p className="section-subtitle">Derived total runtime: {formatDurationLabel(derivedTotalSeconds)}</p>
-
-          <div className="timer-actions">
-            <button type="submit" disabled={controlsDisabled}>
-              {editId ? 'Update Playlist' : 'Create Playlist'}
-            </button>
-            {editId ? (
-              <button type="button" className="secondary" onClick={cancelEdit} disabled={controlsDisabled}>
-                Cancel Edit
-              </button>
-            ) : null}
-          </div>
-        </form>
-
-        <div className="playlist-collection" aria-live="polite">
-          {playlists.length === 0 ? (
-            <div className="empty-state">
-              <p>No playlist entries yet.</p>
-              <p>Create a playlist to run multiple meditation segments or linked recordings in order.</p>
-            </div>
-          ) : (
-            <ul className="playlist-list">
-              {playlists.map((playlist) => {
-                const isActivePlaylist = activePlaylistRun?.playlistId === playlist.id;
-                const totalGapSeconds = computePlaylistGapTotalSeconds(playlist.items.length, playlist.smallGapSeconds);
-
-                return (
-                  <li key={playlist.id} className="playlist-item-card">
-                    <div className="history-row">
-                      <div>
-                        <strong>{playlist.name}</strong>
-                        <p className="history-time">
-                          {playlist.items.length} items · {computePlaylistTotalDurationMinutes(playlist.items)} min meditation
-                          {totalGapSeconds > 0 ? ` · ${totalGapSeconds} sec gaps` : ''}
-                        </p>
-                      </div>
-                      {playlist.favorite ? <span className="pill ok">favorite</span> : null}
-                    </div>
-
-                    <div className="playlist-inline-items">
-                      {playlist.items.map((item, index) => (
-                        <span key={item.id}>
-                          {index + 1}. {item.title} ({item.durationMinutes}m)
-                          {item.customPlayId ? ' · recording' : ''}
-                        </span>
-                      ))}
-                    </div>
-
-                    {isActivePlaylist ? (
-                      <p className="section-subtitle">Active run in progress for this playlist.</p>
-                    ) : null}
-
-                    <div className="timer-actions">
-                      {isActivePlaylist ? (
-                        <button type="button" onClick={() => navigate('/practice/playlists/active')}>
-                          Open Active Run
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => runPlaylist(playlist.id)} disabled={controlsDisabled}>
-                          Run Playlist
-                        </button>
-                      )}
-                      <button type="button" className="secondary" onClick={() => startEdit(playlist.id)} disabled={controlsDisabled}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => void toggleFavoritePlaylist(playlist.id)}
-                        disabled={controlsDisabled}
-                      >
-                        {playlist.favorite ? 'Unfavorite' : 'Favorite'}
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => setPendingDeleteId(playlist.id)}
-                        disabled={controlsDisabled || isActivePlaylist}
-                        title={isActivePlaylist ? 'Cannot delete an actively running playlist' : 'Delete playlist'}
-                      >
-                        Delete
-                      </button>
-                    </div>
-
-                    {pendingDeleteId === playlist.id ? (
-                      <div className="confirm-sheet" role="dialog" aria-label={`Delete playlist ${playlist.name} confirmation`}>
-                        <p>Delete playlist "{playlist.name}"?</p>
-                        <div className="timer-actions">
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => setPendingDeleteId(null)}
-                            disabled={controlsDisabled}
-                          >
-                            Keep Playlist
-                          </button>
-                          <button type="button" onClick={() => void confirmDelete(playlist.id)} disabled={controlsDisabled}>
-                            Delete Playlist
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+        <PlaylistCollection
+          playlists={playlists}
+          activePlaylistRun={activePlaylistRun}
+          pendingDeleteId={pendingDeleteId}
+          controlsDisabled={controlsDisabled}
+          onRunPlaylist={runPlaylist}
+          onStartEdit={startEdit}
+          onToggleFavorite={toggleFavoritePlaylist}
+          onRequestDelete={setPendingDeleteId}
+          onCancelDelete={() => setPendingDeleteId(null)}
+          onConfirmDelete={confirmDelete}
+        />
       </div>
     </section>
   );
