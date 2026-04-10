@@ -16,6 +16,8 @@ final class ShellViewModel: ObservableObject {
     @Published var manualLogValidationMessage: String?
     @Published var customPlayValidationMessage: String?
     @Published var playlistValidationMessage: String?
+    @Published var sankalpaValidationMessage: String?
+    @Published var sankalpaFeedbackMessage: String?
     @Published var practiceRuntimeMessage: String?
     @Published var persistenceMessage: String?
 
@@ -39,11 +41,15 @@ final class ShellViewModel: ObservableObject {
         self.audioPlayer = audioPlayer
 
         do {
-            let loadedSnapshot = try repository.loadOrSeed(seed: SampleData.snapshot)
+            let storedSnapshot = try repository.loadOrSeed(seed: SampleData.snapshot)
+            let loadedSnapshot = Self.normalizedSnapshot(storedSnapshot)
             self.snapshot = loadedSnapshot
             self.isSeedData = loadedSnapshot == SampleData.snapshot
+            if loadedSnapshot != storedSnapshot {
+                try? repository.save(loadedSnapshot)
+            }
         } catch {
-            self.snapshot = SampleData.snapshot
+            self.snapshot = Self.normalizedSnapshot(SampleData.snapshot)
             self.isSeedData = true
         }
 
@@ -76,8 +82,28 @@ final class ShellViewModel: ObservableObject {
         snapshot.playlists.sorted(by: sortPlaylists)
     }
 
+    var todayActivitySummary: TodayActivitySummary {
+        SummaryFeature.deriveTodayActivitySummary(recentSessionLogs, now: now)
+    }
+
+    var sankalpaProgressEntries: [SankalpaProgress] {
+        snapshot.sankalpas.map { SankalpaFeature.deriveProgress(for: $0, sessionLogs: recentSessionLogs, now: now) }
+    }
+
+    var sankalpaProgressGroups: SankalpaProgressGroups {
+        SankalpaFeature.partitionProgress(sankalpaProgressEntries)
+    }
+
+    var topActiveSankalpa: SankalpaProgress? {
+        SankalpaFeature.selectTopActiveProgress(from: sankalpaProgressEntries)
+    }
+
     var hasActivePracticeRuntime: Bool {
         activeSession != nil || activeCustomPlaySession != nil || activePlaylistSession != nil
+    }
+
+    func summarySnapshot(for rangePreset: SummaryRangePreset) -> LocalSummarySnapshot {
+        SummaryFeature.deriveSnapshot(from: recentSessionLogs, rangePreset: rangePreset, now: now)
     }
 
     func startTimer() {
@@ -278,6 +304,56 @@ final class ShellViewModel: ObservableObject {
         updatedPlaylist.isFavorite.toggle()
         snapshot.playlists = upsert(updatedPlaylist, into: snapshot.playlists)
         persistSnapshot()
+    }
+
+    func saveSankalpa(_ draft: SankalpaDraft, editing sankalpa: Sankalpa? = nil) -> Bool {
+        sankalpaValidationMessage = nil
+        sankalpaFeedbackMessage = nil
+
+        do {
+            let savedSankalpa = try SankalpaFeature.makeSankalpa(from: draft, existing: sankalpa, now: now)
+            snapshot.sankalpas = upsert(savedSankalpa, into: snapshot.sankalpas)
+            persistSnapshot()
+            sankalpaFeedbackMessage = sankalpa == nil ? "Sankalpa created." : "Sankalpa updated."
+            return true
+        } catch let error as SankalpaValidationError {
+            sankalpaValidationMessage = error.message
+            return false
+        } catch {
+            sankalpaValidationMessage = "The sankalpa could not be saved."
+            return false
+        }
+    }
+
+    func archiveSankalpa(_ sankalpa: Sankalpa) {
+        sankalpaFeedbackMessage = nil
+        snapshot.sankalpas = upsert(SankalpaFeature.archive(sankalpa), into: snapshot.sankalpas)
+        persistSnapshot()
+        sankalpaFeedbackMessage = "Sankalpa archived."
+    }
+
+    func restoreSankalpa(_ sankalpa: Sankalpa) {
+        sankalpaFeedbackMessage = nil
+        snapshot.sankalpas = upsert(SankalpaFeature.restore(sankalpa), into: snapshot.sankalpas)
+        persistSnapshot()
+        sankalpaFeedbackMessage = "Sankalpa restored."
+    }
+
+    func setObservanceStatus(
+        for sankalpa: Sankalpa,
+        dateKey: String,
+        status: SankalpaObservanceDayStatus
+    ) {
+        sankalpaFeedbackMessage = nil
+        let updatedSankalpa = SankalpaFeature.setObservanceStatus(
+            for: sankalpa,
+            dateKey: dateKey,
+            status: status,
+            now: now
+        )
+        snapshot.sankalpas = upsert(updatedSankalpa, into: snapshot.sankalpas)
+        persistSnapshot()
+        sankalpaFeedbackMessage = "Observance check-in saved."
     }
 
     func startPlaylist(_ playlist: Playlist) {
@@ -567,6 +643,7 @@ final class ShellViewModel: ObservableObject {
 
     private func persistSnapshot() {
         do {
+            snapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: snapshot.recentSessionLogs)
             try repository.save(snapshot)
             isSeedData = snapshot == SampleData.snapshot
         } catch {
@@ -657,5 +734,12 @@ final class ShellViewModel: ObservableObject {
         }
 
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private static func normalizedSnapshot(_ snapshot: AppSnapshot) -> AppSnapshot {
+        var normalizedSnapshot = snapshot
+        normalizedSnapshot.recentSessionLogs = snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
+        normalizedSnapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: normalizedSnapshot.recentSessionLogs)
+        return normalizedSnapshot
     }
 }

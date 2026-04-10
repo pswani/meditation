@@ -96,4 +96,34 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Timer defaults"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["Notifications"].exists)
     }
+
+    func testGoalsExposeSummaryAndSankalpaActions() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Goals"].tap()
+
+        XCTAssertTrue(app.staticTexts["Summary"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["Create sankalpa"].exists)
+        XCTAssertTrue(app.buttons["7d"].exists)
+
+        app.buttons["Create sankalpa"].tap()
+        XCTAssertTrue(app.navigationBars["Create sankalpa"].waitForExistence(timeout: 2))
+        app.buttons["Save"].tap()
+
+        XCTAssertTrue(app.staticTexts["Sankalpa created."].waitForExistence(timeout: 2))
+
+        let archiveButton = app.buttons["Archive"].firstMatch
+        XCTAssertTrue(archiveButton.waitForExistence(timeout: 2))
+        archiveButton.tap()
+
+        XCTAssertTrue(app.alerts["Archive sankalpa?"].waitForExistence(timeout: 2))
+        app.alerts["Archive sankalpa?"].buttons["Archive"].tap()
+        XCTAssertTrue(app.staticTexts["Sankalpa archived."].waitForExistence(timeout: 2))
+
+        let restoreButton = app.buttons["Restore"].firstMatch
+        XCTAssertTrue(restoreButton.waitForExistence(timeout: 2))
+        restoreButton.tap()
+        XCTAssertTrue(app.staticTexts["Sankalpa restored."].waitForExistence(timeout: 2))
+    }
 }

@@ -95,6 +95,23 @@ public enum PlaylistValidationError: String, Error, Equatable, Sendable {
     }
 }
 
+public enum SankalpaValidationError: String, Error, Equatable, Sendable {
+    case daysMustBeGreaterThanZero
+    case targetValueMustBeGreaterThanZero
+    case observanceLabelRequired
+
+    public var message: String {
+        switch self {
+        case .daysMustBeGreaterThanZero:
+            return "Choose more than 0 days."
+        case .targetValueMustBeGreaterThanZero:
+            return "Choose a target greater than 0."
+        case .observanceLabelRequired:
+            return "Enter what you are observing."
+        }
+    }
+}
+
 public struct TimerSessionConfiguration: Equatable, Sendable {
     public var mode: TimerSettingsDraft.Mode
     public var durationSeconds: Int?
@@ -885,6 +902,504 @@ public enum TimerFeature {
             }
             .sorted { $0.endedAt > $1.endedAt }
     }
+}
+
+public enum SummaryFeature {
+    public static func deriveTodayActivitySummary(
+        _ sessionLogs: [SessionLog],
+        now: Date = Date()
+    ) -> TodayActivitySummary {
+        let calendar = Calendar.current
+        let todayLogs = sessionLogs.filter { calendar.isDate($0.endedAt, inSameDayAs: now) }
+        let completedCount = todayLogs.filter { $0.status == .completed }.count
+
+        return TodayActivitySummary(
+            sessionLogCount: todayLogs.count,
+            completedCount: completedCount,
+            endedEarlyCount: todayLogs.count - completedCount,
+            totalDurationSeconds: todayLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+        )
+    }
+
+    public static func deriveSnapshot(
+        from sessionLogs: [SessionLog],
+        rangePreset: SummaryRangePreset = .allTime,
+        now: Date = Date()
+    ) -> LocalSummarySnapshot {
+        let filteredLogs = filterSessionLogs(sessionLogs, rangePreset: rangePreset, now: now)
+        return LocalSummarySnapshot(
+            overall: deriveOverallSummary(filteredLogs),
+            byMeditationType: deriveSummaryByMeditationType(filteredLogs),
+            bySource: deriveSummaryBySource(filteredLogs),
+            sessionLogs: filteredLogs.sorted { $0.endedAt > $1.endedAt }
+        )
+    }
+
+    public static func makeStoredSummarySnapshot(from sessionLogs: [SessionLog]) -> SummarySnapshot {
+        let derived = deriveSnapshot(from: sessionLogs)
+        let completedVersusEndedEarly = "\(derived.overall.completedSessionLogs) / \(derived.overall.endedEarlySessionLogs)"
+
+        return SummarySnapshot(
+            overallRows: [
+                SummarySnapshot.SummaryRow(
+                    label: "Total duration",
+                    value: formatDurationLabel(derived.overall.totalDurationSeconds)
+                ),
+                SummarySnapshot.SummaryRow(
+                    label: "Session logs",
+                    value: "\(derived.overall.totalSessionLogs)"
+                ),
+                SummarySnapshot.SummaryRow(
+                    label: "Completed / ended early",
+                    value: completedVersusEndedEarly
+                ),
+            ],
+            byMeditationTypeRows: derived.byMeditationType.map { row in
+                SummarySnapshot.SummaryRow(
+                    label: row.meditationType.rawValue,
+                    value: formatDurationLabel(row.totalDurationSeconds)
+                )
+            },
+            bySourceRows: derived.bySource.map { row in
+                SummarySnapshot.SummaryRow(
+                    label: row.source.title,
+                    value: formatDurationLabel(row.totalDurationSeconds)
+                )
+            }
+        )
+    }
+
+    public static func filterSessionLogs(
+        _ sessionLogs: [SessionLog],
+        rangePreset: SummaryRangePreset,
+        now: Date = Date()
+    ) -> [SessionLog] {
+        let lowerBound: Date?
+
+        switch rangePreset {
+        case .allTime:
+            lowerBound = nil
+        case .last7Days:
+            lowerBound = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: now))
+        case .last30Days:
+            lowerBound = Calendar.current.date(byAdding: .day, value: -29, to: Calendar.current.startOfDay(for: now))
+        }
+
+        return sessionLogs
+            .filter { log in
+                guard let lowerBound else {
+                    return true
+                }
+
+                return log.endedAt >= lowerBound && log.endedAt <= now
+            }
+            .sorted { $0.endedAt > $1.endedAt }
+    }
+
+    public static func deriveOverallSummary(_ sessionLogs: [SessionLog]) -> OverallSummary {
+        guard sessionLogs.isEmpty == false else {
+            return OverallSummary()
+        }
+
+        let completedSessionLogs = sessionLogs.filter { $0.status == .completed }.count
+        let totalDurationSeconds = sessionLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+        let manualLogs = sessionLogs.filter { $0.source == .manual }.count
+
+        return OverallSummary(
+            totalSessionLogs: sessionLogs.count,
+            completedSessionLogs: completedSessionLogs,
+            endedEarlySessionLogs: sessionLogs.count - completedSessionLogs,
+            totalDurationSeconds: totalDurationSeconds,
+            averageDurationSeconds: Int((Double(totalDurationSeconds) / Double(sessionLogs.count)).rounded()),
+            manualLogs: manualLogs,
+            guidedLogs: sessionLogs.count - manualLogs
+        )
+    }
+
+    public static func deriveSummaryByMeditationType(_ sessionLogs: [SessionLog]) -> [SummaryByMeditationType] {
+        ReferenceData.meditationTypes.map { meditationType in
+            let matchingLogs = sessionLogs.filter { $0.meditationType == meditationType }
+            return SummaryByMeditationType(
+                meditationType: meditationType,
+                sessionLogs: matchingLogs.count,
+                totalDurationSeconds: matchingLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+            )
+        }
+    }
+
+    public static func deriveSummaryBySource(_ sessionLogs: [SessionLog]) -> [SummaryBySource] {
+        ReferenceData.sessionSources.map { source in
+            let sourceLogs = sessionLogs.filter { $0.source == source }
+            let completedSessionLogs = sourceLogs.filter { $0.status == .completed }.count
+
+            return SummaryBySource(
+                source: source,
+                sessionLogs: sourceLogs.count,
+                completedSessionLogs: completedSessionLogs,
+                endedEarlySessionLogs: sourceLogs.count - completedSessionLogs,
+                totalDurationSeconds: sourceLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+            )
+        }
+    }
+}
+
+public enum SankalpaFeature {
+    public static func makeDraft(from sankalpa: Sankalpa? = nil) -> SankalpaDraft {
+        guard let sankalpa else {
+            return SankalpaDraft()
+        }
+
+        return SankalpaDraft(
+            title: sankalpa.title,
+            kind: sankalpa.kind,
+            targetValue: sankalpa.kind == .observanceBased ? sankalpa.days : sankalpa.targetValue,
+            days: sankalpa.days,
+            meditationType: sankalpa.meditationType,
+            timeOfDayBucket: sankalpa.timeOfDayBucket,
+            observanceLabel: sankalpa.observanceLabel ?? ""
+        )
+    }
+
+    public static func validateSankalpaDraft(_ draft: SankalpaDraft) -> [SankalpaValidationError] {
+        var errors: [SankalpaValidationError] = []
+
+        if draft.days <= 0 {
+            errors.append(.daysMustBeGreaterThanZero)
+        }
+
+        if draft.kind == .observanceBased {
+            if draft.observanceLabel.nilIfBlank == nil {
+                errors.append(.observanceLabelRequired)
+            }
+        } else if draft.targetValue <= 0 {
+            errors.append(.targetValueMustBeGreaterThanZero)
+        }
+
+        return errors
+    }
+
+    public static func makeSankalpa(
+        from draft: SankalpaDraft,
+        existing: Sankalpa? = nil,
+        now: Date = Date()
+    ) throws -> Sankalpa {
+        if let firstError = validateSankalpaDraft(draft).first {
+            throw firstError
+        }
+
+        let trimmedObservance = draft.observanceLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        let generatedTitle = makeGeneratedTitle(from: draft)
+
+        return Sankalpa(
+            id: existing?.id ?? UUID(),
+            title: draft.title.nilIfBlank ?? generatedTitle,
+            kind: draft.kind,
+            targetValue: draft.kind == .observanceBased ? draft.days : draft.targetValue,
+            days: draft.days,
+            meditationType: draft.kind == .observanceBased ? nil : draft.meditationType,
+            timeOfDayBucket: draft.kind == .observanceBased ? nil : draft.timeOfDayBucket,
+            observanceLabel: draft.kind == .observanceBased ? trimmedObservance : nil,
+            observanceRecords: draft.kind == .observanceBased ? normalize(existing?.observanceRecords ?? []) : [],
+            createdAt: existing?.createdAt ?? now,
+            archived: existing?.archived ?? false
+        )
+    }
+
+    public static func archive(_ sankalpa: Sankalpa) -> Sankalpa {
+        var updated = sankalpa
+        updated.archived = true
+        return updated
+    }
+
+    public static func restore(_ sankalpa: Sankalpa) -> Sankalpa {
+        var updated = sankalpa
+        updated.archived = false
+        return updated
+    }
+
+    public static func setObservanceStatus(
+        for sankalpa: Sankalpa,
+        dateKey: String,
+        status: SankalpaObservanceDayStatus,
+        now: Date = Date()
+    ) -> Sankalpa {
+        guard sankalpa.kind == .observanceBased else {
+            return sankalpa
+        }
+
+        let todayKey = localDayKey(for: now)
+        guard dateKey <= todayKey else {
+            return sankalpa
+        }
+
+        var updated = sankalpa
+        var records = normalize(sankalpa.observanceRecords)
+
+        if let existingIndex = records.firstIndex(where: { $0.dateKey == dateKey }) {
+            if status == .pending {
+                records.remove(at: existingIndex)
+            } else {
+                records[existingIndex] = SankalpaObservanceRecord(
+                    dateKey: dateKey,
+                    status: status == .observed ? .observed : .missed
+                )
+            }
+        } else if status != .pending {
+            records.append(
+                SankalpaObservanceRecord(
+                    dateKey: dateKey,
+                    status: status == .observed ? .observed : .missed
+                )
+            )
+        }
+
+        updated.observanceRecords = normalize(records)
+        return updated
+    }
+
+    public static func deriveProgress(
+        for sankalpa: Sankalpa,
+        sessionLogs: [SessionLog],
+        now: Date = Date()
+    ) -> SankalpaProgress {
+        let matchingSessionLogs = sankalpa.kind == .observanceBased
+            ? []
+            : sessionLogs.filter { sessionLog in
+                sessionLogInGoalWindow(sessionLog, sankalpa: sankalpa) &&
+                    sessionLogMatchesFilters(sessionLog, sankalpa: sankalpa)
+            }
+
+        let matchedSessionCount = matchingSessionLogs.count
+        let matchedDurationSeconds = matchingSessionLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+
+        let observanceWindow = sankalpa.kind == .observanceBased
+            ? deriveObservanceWindow(for: sankalpa, now: now)
+            : (
+                days: [SankalpaObservanceDay](),
+                matched: 0,
+                missed: 0,
+                pending: 0,
+                target: 0,
+                deadlineAt: sankalpa.createdAt.addingTimeInterval(TimeInterval(sankalpa.days * 24 * 60 * 60))
+            )
+
+        let targetSessionCount = sankalpa.kind == .sessionCount ? sankalpa.targetValue : 0
+        let targetDurationSeconds = sankalpa.kind == .durationBased ? sankalpa.targetValue * 60 : 0
+        let targetValue = sankalpa.kind == .durationBased
+            ? targetDurationSeconds
+            : sankalpa.kind == .sessionCount
+            ? targetSessionCount
+            : observanceWindow.target
+        let progressValue = sankalpa.kind == .durationBased
+            ? matchedDurationSeconds
+            : sankalpa.kind == .sessionCount
+            ? matchedSessionCount
+            : observanceWindow.matched
+
+        let status: SankalpaStatus
+        if sankalpa.archived {
+            status = .archived
+        } else if progressValue >= targetValue {
+            status = .completed
+        } else if now > observanceWindow.deadlineAt {
+            status = .expired
+        } else {
+            status = .active
+        }
+
+        return SankalpaProgress(
+            goal: sankalpa,
+            status: status,
+            deadlineAt: observanceWindow.deadlineAt,
+            matchedSessionCount: matchedSessionCount,
+            matchedDurationSeconds: matchedDurationSeconds,
+            targetSessionCount: targetSessionCount,
+            targetDurationSeconds: targetDurationSeconds,
+            matchedObservanceCount: observanceWindow.matched,
+            missedObservanceCount: observanceWindow.missed,
+            pendingObservanceCount: observanceWindow.pending,
+            targetObservanceCount: observanceWindow.target,
+            observanceDays: observanceWindow.days,
+            progressRatio: targetValue == 0 ? 0 : min(1, Double(progressValue) / Double(targetValue))
+        )
+    }
+
+    public static func partitionProgress(_ progressEntries: [SankalpaProgress]) -> SankalpaProgressGroups {
+        SankalpaProgressGroups(
+            active: sort(progressEntries.filter { $0.status == .active }),
+            completed: sort(progressEntries.filter { $0.status == .completed }),
+            expired: sort(progressEntries.filter { $0.status == .expired }),
+            archived: sort(progressEntries.filter { $0.status == .archived })
+        )
+    }
+
+    public static func selectTopActiveProgress(from progressEntries: [SankalpaProgress]) -> SankalpaProgress? {
+        sort(progressEntries.filter { $0.status == .active }).first
+    }
+
+    private static func sort(_ progressEntries: [SankalpaProgress]) -> [SankalpaProgress] {
+        progressEntries.sorted { left, right in
+            if left.deadlineAt != right.deadlineAt {
+                return left.deadlineAt < right.deadlineAt
+            }
+
+            return left.goal.createdAt > right.goal.createdAt
+        }
+    }
+
+    private static func makeGeneratedTitle(from draft: SankalpaDraft) -> String {
+        if draft.kind == .observanceBased {
+            return draft.observanceLabel.nilIfBlank ?? "Observance sankalpa"
+        }
+
+        let targetText = draft.kind == .durationBased
+            ? "\(draft.targetValue) min"
+            : "\(draft.targetValue) session logs"
+        let filters = [
+            draft.meditationType?.rawValue,
+            draft.timeOfDayBucket?.title,
+        ].compactMap { $0 }
+
+        if filters.isEmpty {
+            return "\(targetText) in \(draft.days) days"
+        }
+
+        return "\(targetText) in \(draft.days) days · \(filters.joined(separator: " · "))"
+    }
+
+    private static func normalize(_ records: [SankalpaObservanceRecord]) -> [SankalpaObservanceRecord] {
+        let validStatuses = Set(SankalpaObservanceRecordStatus.allCases)
+        let deduplicated = Dictionary(
+            records
+                .filter { localDayDate(from: $0.dateKey) != nil && validStatuses.contains($0.status) }
+                .map { ($0.dateKey, $0.status) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+
+        return deduplicated.keys.sorted().map { key in
+            SankalpaObservanceRecord(dateKey: key, status: deduplicated[key] ?? .observed)
+        }
+    }
+
+    private static func deriveObservanceWindow(
+        for sankalpa: Sankalpa,
+        now: Date
+    ) -> (
+        days: [SankalpaObservanceDay],
+        matched: Int,
+        missed: Int,
+        pending: Int,
+        target: Int,
+        deadlineAt: Date
+    ) {
+        let startDate = Calendar.current.startOfDay(for: sankalpa.createdAt)
+        let todayKey = localDayKey(for: now)
+        let recordsByDate = Dictionary(uniqueKeysWithValues: normalize(sankalpa.observanceRecords).map { ($0.dateKey, $0.status) })
+        let lastScheduledDate = Calendar.current.date(byAdding: .day, value: max(0, sankalpa.days - 1), to: startDate) ?? startDate
+        let deadlineAt = endOfLocalDay(lastScheduledDate)
+
+        var matchedObservanceCount = 0
+        var missedObservanceCount = 0
+
+        let days = (0 ..< sankalpa.days).map { offset -> SankalpaObservanceDay in
+            let currentDate = Calendar.current.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+            let dateKey = localDayKey(for: currentDate)
+            let status: SankalpaObservanceDayStatus
+
+            switch recordsByDate[dateKey] {
+            case .observed:
+                matchedObservanceCount += 1
+                status = .observed
+            case .missed:
+                missedObservanceCount += 1
+                status = .missed
+            case nil:
+                status = .pending
+            }
+
+            return SankalpaObservanceDay(
+                dateKey: dateKey,
+                status: status,
+                isFuture: dateKey > todayKey
+            )
+        }
+
+        return (
+            days: days,
+            matched: matchedObservanceCount,
+            missed: missedObservanceCount,
+            pending: days.count - matchedObservanceCount - missedObservanceCount,
+            target: sankalpa.days,
+            deadlineAt: deadlineAt
+        )
+    }
+
+    private static func sessionLogMatchesFilters(_ sessionLog: SessionLog, sankalpa: Sankalpa) -> Bool {
+        if let meditationType = sankalpa.meditationType, sessionLog.meditationType != meditationType {
+            return false
+        }
+
+        if let timeOfDayBucket = sankalpa.timeOfDayBucket,
+           timeOfDayBucketForDate(sessionLog.endedAt) != timeOfDayBucket {
+            return false
+        }
+
+        return true
+    }
+
+    private static func sessionLogInGoalWindow(_ sessionLog: SessionLog, sankalpa: Sankalpa) -> Bool {
+        let deadlineAt = sankalpa.createdAt.addingTimeInterval(TimeInterval(sankalpa.days * 24 * 60 * 60))
+        return sessionLog.endedAt >= sankalpa.createdAt && sessionLog.endedAt <= deadlineAt
+    }
+}
+
+private func formatDurationLabel(_ totalSeconds: Int) -> String {
+    let totalMinutes = max(0, Int((Double(totalSeconds) / 60).rounded(.down)))
+    if totalMinutes >= 60 {
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if minutes == 0 {
+            return "\(hours) hr"
+        }
+        return "\(hours) hr \(minutes) min"
+    }
+
+    return "\(totalMinutes) min"
+}
+
+private func localDayKey(for date: Date) -> String {
+    let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+    let year = components.year ?? 0
+    let month = components.month ?? 1
+    let day = components.day ?? 1
+    return String(format: "%04d-%02d-%02d", year, month, day)
+}
+
+private func localDayDate(from dateKey: String) -> Date? {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.date(from: dateKey)
+}
+
+private func endOfLocalDay(_ date: Date) -> Date {
+    let startOfDay = Calendar.current.startOfDay(for: date)
+    return Calendar.current.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) ?? date
+}
+
+private func timeOfDayBucketForDate(_ date: Date) -> TimeOfDayBucket {
+    let hour = Calendar.current.component(.hour, from: date)
+    if hour >= 5 && hour < 12 {
+        return .morning
+    }
+    if hour >= 12 && hour < 17 {
+        return .afternoon
+    }
+    if hour >= 17 && hour < 21 {
+        return .evening
+    }
+    return .night
 }
 
 private extension String {

@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
-- Latest merge outcome: merged `codex/ios-native-custom-play-playlist-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Latest completed bundles in `prompts/`: `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest merge outcome: merged `codex/ios-native-summary-sankalpa-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
@@ -20,12 +20,15 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-foundation-feature.md`
   - `docs/execplan-ios-native-timer-history-feature.md`
   - `docs/execplan-ios-native-custom-play-playlist-feature.md`
+  - `docs/execplan-ios-native-summary-sankalpa-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
+  - `docs/review-ios-native-summary-sankalpa-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
+  - `docs/test-ios-native-summary-sankalpa-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -95,6 +98,15 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - playlist runtime with explicit current-item state plus per-item `session log` creation
   - calm missing-media and invalid-reference guidance when a linked `custom play` can no longer run
   - focused core coverage for playback math, playlist ordering, and logging behavior
+- Native iOS summary and `sankalpa` milestone now adds:
+  - Home progress context with today totals, recent session signal, and a top active `sankalpa` snapshot
+  - local summary aggregation from native `session log` history with all-time, 7-day, and 30-day range views
+  - Goals summary sections for overall, by meditation type, and by source totals
+  - local-first `sankalpa` creation and editing for duration-based, session-count, and `observance-based` goals
+  - explicit active, completed, expired, and archived `sankalpa` sections
+  - archive and restore flows that preserve goal identity and original goal windows
+  - observance day tracking with explicit `Pending`, `Observed`, and `Missed` states plus future-date locking
+  - focused core coverage for summary derivation, goal validation, progress math, and observance-state trustworthiness
 
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-custom-play-media-library-feature.md`
@@ -111,6 +123,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
 - Implementation planning: `docs/execplan-ios-native-timer-history-feature.md`
 - Implementation planning: `docs/execplan-ios-native-custom-play-playlist-feature.md`
+- Implementation planning: `docs/execplan-ios-native-summary-sankalpa-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -128,6 +141,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-foundation-feature.md`
 - Review artifact: `docs/review-ios-native-timer-history-feature.md`
 - Review artifact: `docs/review-ios-native-custom-play-playlist-feature.md`
+- Review artifact: `docs/review-ios-native-summary-sankalpa-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -147,6 +161,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-foundation-feature.md`
 - Verification report: `docs/test-ios-native-timer-history-feature.md`
 - Verification report: `docs/test-ios-native-custom-play-playlist-feature.md`
+- Verification report: `docs/test-ios-native-summary-sankalpa-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -160,6 +175,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS summary and `sankalpa` milestone verified on 2026-04-09:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed with 27 focused core tests
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-summary-sankalpa CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-summary-sankalpa CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device for the test targets and CoreSimulator was unavailable
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS summary and `sankalpa` slice
+
 - Native iOS `custom play` and playlist milestone verified on 2026-04-09:
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-playlist CODE_SIGNING_ALLOWED=NO build` passed
@@ -305,4 +327,4 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Recommended next slice
 - The requested production-grade hardening prompt bundles are now complete.
-- Recommended next step for the native iOS track: run `ios-native-summary-sankalpa-feature-bundle-with-branching`.
+- Recommended next step for the native iOS track: run `ios-native-sync-polish-feature-bundle-with-branching`.

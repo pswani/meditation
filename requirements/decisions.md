@@ -35,6 +35,15 @@
     - store the resolved title, meditation type, and duration on the playlist item itself
     - retain an optional `custom play` id so launch-time validation can fail calmly when the linked play or its local media is no longer available
   - keep native playlist logging explicit per item, while small gaps remain silent runtime phases with no separate `session log`
+  - keep native milestone-4 summary derived from local `session log` history:
+    - treat local logs as the source of truth instead of persisting a second editable summary model
+    - support calm all-time, 7-day, and 30-day views on iPhone
+    - keep Home limited to concise progress context rather than expanding into a dashboard
+  - keep native milestone-4 `sankalpa` local-first on the same JSON snapshot store:
+    - preserve `id` and `createdAt` when editing so the original goal window remains trustworthy
+    - keep archive as a boolean goal-state mutation rather than inventing a second history entity
+    - keep `observance-based` check-ins derived from explicit per-date records with `Pending`, `Observed`, and `Missed` states
+    - keep future observance dates locked until their day arrives
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:

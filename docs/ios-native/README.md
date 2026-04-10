@@ -2,14 +2,14 @@
 
 This README is for the native iPhone app track in this repository.
 
-The milestone-1 foundation, milestone-2 timer-history journey, and milestone-3 `custom play` plus playlist slice now exist under `ios-native/` as:
+The milestone-1 foundation, milestone-2 timer-history journey, milestone-3 `custom play` plus playlist slice, and milestone-4 summary plus `sankalpa` slice now exist under `ios-native/` as:
 - `MeditationNative.xcodeproj` for the app, unit-test, and UI-test targets
 - `Sources/MeditationNativeCore/` for shared native domain, data, and persistence foundations
 - `MeditationNative/` for the SwiftUI app shell and destination screens
 - `Tests/MeditationNativeCoreTests/` for focused core timer, playback, playlist, validation, and logging tests
 - `MeditationNativeUITests/` for launch plus timer, `custom play`, playlist, History, and Settings smoke coverage
 
-Implemented native surfaces through milestone 3 now include:
+Implemented native surfaces through milestone 4 now include:
 - Practice timer setup for fixed-duration and open-ended sessions
 - active timer runtime with pause, resume, and end controls
 - `custom play` creation, editing, deletion, favorite handling, and local playback
@@ -18,6 +18,10 @@ Implemented native surfaces through milestone 3 now include:
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
 - History filters plus manual log entry
+- Home progress context with today totals, recent session signal, and an active `sankalpa` snapshot
+- summary views derived from local `session log` history with all-time, 7-day, and 30-day range filters
+- local-first `sankalpa` creation, editing, archive, restore, and progress sections
+- `observance-based` `sankalpa` check-ins with explicit `Pending`, `Observed`, and `Missed` states
 - Settings support for timer defaults and notification permission messaging
 
 ## Goal
@@ -82,7 +86,7 @@ Project and scheme:
 4. Use Xcode's console and debugger first when the milestone prompts mention launch, storage, or notification issues.
 5. The native app persists one local JSON snapshot under Application Support:
    - `MeditationNative/foundation-snapshot.json`
-   This now stores timer defaults, local `session log` history, saved `custom play` entries, and playlists for the native milestone-3 journey.
+   This now stores timer defaults, local `session log` history, saved `custom play` entries, playlists, `sankalpas`, and a compatibility summary snapshot for the native milestone-4 journey.
    Delete the app from simulator if you want to reseed the sample foundation data cleanly.
 
 ## Running On Your iPhone
@@ -121,12 +125,14 @@ swift test --package-path ios-native
 
 This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
 
-For the current milestone-3 state, physical iPhone verification is still recommended for:
+For the current milestone-4 state, physical iPhone or concrete simulator verification is still recommended for:
 - notification permission prompts
 - fixed-duration completion notifications
 - background or foreground transitions around timer completion
 - bundled placeholder audio output for `custom play` and playlist-linked recording items
 - pause or resume behavior when audio playback is interrupted by the system
+- Home density and readability on a real iPhone-sized screen
+- `sankalpa` editor ergonomics and observance day-menu interactions on a concrete device
 
 ## Backend Connectivity Notes
 
@@ -163,5 +169,7 @@ If these are absent, the app stays in the default local-only profile and does no
 - Preserve the exact product terms already used elsewhere in the repo.
 - Keep sample content explicitly labeled as local foundation data until real feature flows replace it.
 - Milestone 3 intentionally uses bundled placeholder audio for native `custom play` playback instead of widening into file import or backend media sync.
+- Milestone 4 keeps native summary derived from local `session log` history instead of introducing a second stored summary source of truth.
+- Milestone 4 keeps `sankalpa` status local-first with archive or restore support while leaving backend sync for milestone 5.
 - Saved playlist items snapshot the current title, meditation type, and duration from linked `custom play` entries while still retaining a lightweight link for runtime validation.
 - Keep milestone docs updated when project names, schemes, signing steps, or base-URL rules change.
