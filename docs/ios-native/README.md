@@ -25,6 +25,8 @@ Implemented native surfaces through milestone 5 now include:
 - automatic local `session log` creation from timer outcomes
 - History filters plus manual log entry
 - History status filtering plus explicit playlist-run and `custom play` context
+- persisted active-session recovery for timer, `custom play`, and playlist runtime state when the saved session can still be reconstructed truthfully on relaunch
+- direct numeric entry for timer duration, interval minutes, and manual-log duration alongside quick-adjust controls
 - Goals summary with custom date ranges and by-time-of-day breakdowns
 - Home quick start, last-used meditation, favorite shortcut, and recent-session context on iPhone
 - Home progress context with today totals, recent session signal, and an active `sankalpa` snapshot
@@ -38,6 +40,7 @@ Implemented native surfaces through milestone 5 now include:
 - backend-backed hydration for timer settings, `session log`, `custom play`, playlist, `sankalpa`, and summary data when `MEDITATION_IOS_API_BASE_URL` is configured
 - a persisted native sync queue plus sync-status snapshot under Application Support
 - calm shell and Settings sync messaging for local-only, syncing, pending-sync, offline, backend-unavailable, and last-sync-success states
+- explicit save or reset behavior for Settings timer defaults instead of immediate persistence on every edit
 - stale-delete restore notices when a queued backend delete loses reconciliation against a newer `custom play`, playlist, or `sankalpa`
 
 ## Goal
@@ -148,6 +151,7 @@ For the current milestone-5 state, physical iPhone or concrete simulator verific
 - notification permission prompts
 - fixed-duration completion notifications
 - background or foreground transitions around timer completion
+- active-session relaunch recovery for timer, `custom play`, and playlist
 - bundled timer cue playback for `Temple Bell` and `Gong`
 - bundled-sample and backend-linked recording playback for `custom play` and playlist-linked items
 - pause or resume behavior when audio playback is interrupted by the system
@@ -214,6 +218,7 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
   - synced backend media metadata maps to its real `/media/custom-plays/...` playback path
   - if no playable recording exists on the device, the app shows calm unavailable-media guidance instead of faking playback
 - The native Practice custom-play library includes an explicit `Apply to timer` action that copies the saved `custom play` duration, meditation type, and sounds into the timer defaults.
+- Settings timer defaults now use a screen-local draft with explicit `Save` and `Reset` actions, while Practice still behaves like the next-session setup surface.
 - Milestone 4 keeps native summary derived from local `session log` history instead of introducing a second stored summary source of truth.
 - Milestone 4 keeps `sankalpa` status local-first with archive or restore support while leaving backend sync for milestone 5.
 - Milestone 5 keeps the native sync seam explicit and local-first:

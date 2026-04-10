@@ -6,6 +6,7 @@ enum ShellSnapshotSupport {
         normalizedSnapshot.timerDraft = normalizedTimerDraft(snapshot.timerDraft)
         normalizedSnapshot.customPlays = snapshot.customPlays.map(normalizedCustomPlay)
         normalizedSnapshot.lastUsedPracticeTarget = normalizedLastUsedPracticeTarget(snapshot.lastUsedPracticeTarget)
+        normalizedSnapshot.activeRuntime = normalizedActiveRuntime(snapshot.activeRuntime)
         normalizedSnapshot.recentSessionLogs = snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
         normalizedSnapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: normalizedSnapshot.recentSessionLogs)
         if normalizedSnapshot.lastUsedPracticeTarget == nil {
@@ -181,6 +182,80 @@ enum ShellSnapshotSupport {
 
         target.timerDraft = target.timerDraft.map(normalizedTimerDraft)
         return target
+    }
+
+    private static func normalizedActiveRuntime(_ activeRuntime: ActivePracticeSnapshot?) -> ActivePracticeSnapshot? {
+        guard let activeRuntime else {
+            return nil
+        }
+
+        if let timerSession = activeRuntime.timerSession {
+            return ActivePracticeSnapshot(
+                timerSession: normalizedTimerSession(timerSession)
+            )
+        }
+
+        if let customPlaySession = activeRuntime.customPlaySession {
+            return ActivePracticeSnapshot(
+                customPlaySession: normalizedCustomPlaySession(customPlaySession)
+            )
+        }
+
+        if let playlistSession = normalizedPlaylistSession(activeRuntime.playlistSession) {
+            return ActivePracticeSnapshot(
+                playlistSession: playlistSession
+            )
+        }
+
+        return nil
+    }
+
+    private static func normalizedTimerSession(_ session: ActiveTimerSession) -> ActiveTimerSession {
+        var normalizedSession = session
+        normalizedSession.configuration.startSoundName = TimerSoundCatalog.normalizeSelection(
+            session.configuration.startSoundName
+        )
+        normalizedSession.configuration.endSoundName = TimerSoundCatalog.normalizeSelection(
+            session.configuration.endSoundName
+        )
+        normalizedSession.configuration.intervalSoundName = TimerSoundCatalog.normalizeSelection(
+            session.configuration.intervalSoundName
+        )
+        if normalizedSession.configuration.intervalSoundName == nil {
+            normalizedSession.configuration.intervalMinutes = nil
+        }
+        return normalizedSession
+    }
+
+    private static func normalizedCustomPlaySession(_ session: ActiveCustomPlaySession) -> ActiveCustomPlaySession {
+        var normalizedSession = session
+        normalizedSession.customPlay = normalizedCustomPlay(session.customPlay)
+        return normalizedSession
+    }
+
+    private static func normalizedPlaylistSession(_ session: ActivePlaylistSession?) -> ActivePlaylistSession? {
+        guard let session else {
+            return nil
+        }
+
+        guard session.playlist.items.isEmpty == false else {
+            return nil
+        }
+
+        switch session.phase {
+        case .item(let index):
+            guard session.playlist.items.indices.contains(index) else {
+                return nil
+            }
+        case .gap(let afterItemIndex):
+            guard session.playlist.items.indices.contains(afterItemIndex),
+                  afterItemIndex < session.playlist.items.count - 1
+            else {
+                return nil
+            }
+        }
+
+        return session
     }
 
     private static func trimmedOrNil(_ value: String?) -> String? {

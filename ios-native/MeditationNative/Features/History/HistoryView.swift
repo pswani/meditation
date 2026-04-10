@@ -114,14 +114,13 @@ struct HistoryView: View {
                             }
                         }
 
-                        Stepper(value: $manualLogDraft.durationMinutes, in: 1 ... 360) {
-                            HStack {
-                                Text("Duration")
-                                Spacer()
-                                Text("\(manualLogDraft.durationMinutes) min")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        MinuteValueField(
+                            title: "Duration",
+                            value: $manualLogDraft.durationMinutes,
+                            range: 1 ... 360,
+                            step: 5,
+                            helperText: "Enter minutes directly or use +/- for quick changes."
+                        )
 
                         DatePicker(
                             "Session time",

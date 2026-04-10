@@ -253,6 +253,7 @@ public struct LiveAppSyncClient: AppSyncClient {
         let snapshot = AppSnapshot(
             timerDraft: try timerSettings.toTimerSettingsDraft(),
             lastUsedPracticeTarget: localSnapshot.lastUsedPracticeTarget,
+            activeRuntime: localSnapshot.activeRuntime,
             recentSessionLogs: try sessionLogList.items.map { try $0.toSessionLog() }.sorted { $0.endedAt > $1.endedAt },
             customPlays: remoteCustomPlays,
             playlists: try playlists.map { try $0.toPlaylist() },

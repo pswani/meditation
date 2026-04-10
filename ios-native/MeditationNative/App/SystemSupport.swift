@@ -175,7 +175,7 @@ enum LocalAudioPlaybackError: Error {
 
 @MainActor
 protocol CustomPlayAudioControlling: AnyObject {
-    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval) throws
     func pausePlayback()
     func resumePlayback() throws
     func stopPlayback()
@@ -185,7 +185,7 @@ protocol CustomPlayAudioControlling: AnyObject {
 final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
     private var player: AVPlayer?
 
-    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws {
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval = 0) throws {
         stopPlayback()
         let url = try resolvePlaybackURL(for: media, environment: environment)
 
@@ -195,6 +195,11 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 
             let player = AVPlayer(url: url)
             player.automaticallyWaitsToMinimizeStalling = true
+            let startTime = max(0, offsetSeconds)
+            if startTime > 0 {
+                let seekTime = CMTime(seconds: startTime, preferredTimescale: 600)
+                player.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            }
             player.play()
             self.player = player
         } catch let playbackError as LocalAudioPlaybackError {

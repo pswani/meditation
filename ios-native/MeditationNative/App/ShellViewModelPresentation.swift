@@ -5,9 +5,11 @@ enum ShellViewModelPresentation {
         switch syncState.connectionState {
         case .localOnly:
             if syncState.pendingMutationCount > 0 {
-                return "\(syncState.pendingMutationCount) local changes are waiting for a configured backend."
+                return syncState.pendingMutationCount == 1
+                    ? "This iPhone is in local-only mode. 1 saved change will stay on this device until a backend base URL is configured."
+                    : "This iPhone is in local-only mode. \(syncState.pendingMutationCount) saved changes will stay on this device until a backend base URL is configured."
             }
-            return nil
+            return "This iPhone is running in intentional local-only mode."
         case .syncing:
             return "Syncing with the configured backend."
         case .upToDate:
@@ -40,7 +42,7 @@ enum ShellViewModelPresentation {
     static func syncStatusHeadline(for syncState: AppSyncState) -> String {
         switch syncState.connectionState {
         case .localOnly:
-            return "Local-only profile"
+            return "Local-only mode"
         case .syncing:
             return "Syncing"
         case .upToDate:
@@ -59,9 +61,9 @@ enum ShellViewModelPresentation {
         switch syncState.connectionState {
         case .localOnly:
             if pendingCount > 0 {
-                return "This device kept local changes, but the current profile does not have a backend base URL to replay them."
+                return "This profile is working intentionally on-device only right now. Add `MEDITATION_IOS_API_BASE_URL` when you want saved changes to replay to a backend."
             }
-            return "This native profile stays local-first until `MEDITATION_IOS_API_BASE_URL` is configured."
+            return "This iPhone is working in local-only mode. Add `MEDITATION_IOS_API_BASE_URL` in the run configuration when you want backend sync."
         case .syncing:
             return "The app is refreshing backend-backed timer settings, session logs, custom plays, playlists, sankalpas, and summary data."
         case .upToDate:
