@@ -94,6 +94,10 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
     public var name: String
     public var meditationType: MeditationType
     public var durationSeconds: Int
+    public var startSoundName: String?
+    public var endSoundName: String?
+    public var recordingLabel: String?
+    public var linkedMediaIdentifier: String?
     public var media: CustomPlayMedia?
     public var isFavorite: Bool
 
@@ -102,6 +106,10 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
         name: String,
         meditationType: MeditationType,
         durationSeconds: Int,
+        startSoundName: String? = nil,
+        endSoundName: String? = nil,
+        recordingLabel: String? = nil,
+        linkedMediaIdentifier: String? = nil,
         media: CustomPlayMedia? = nil,
         isFavorite: Bool = false
     ) {
@@ -109,6 +117,10 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
         self.name = name
         self.meditationType = meditationType
         self.durationSeconds = durationSeconds
+        self.startSoundName = startSoundName
+        self.endSoundName = endSoundName
+        self.recordingLabel = recordingLabel
+        self.linkedMediaIdentifier = linkedMediaIdentifier
         self.media = media
         self.isFavorite = isFavorite
     }
@@ -145,6 +157,10 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
     public var name: String
     public var meditationType: MeditationType?
     public var durationMinutes: Int
+    public var startSoundName: String?
+    public var endSoundName: String?
+    public var recordingLabel: String
+    public var linkedMediaIdentifier: String
     public var mediaAsset: CustomPlayMediaAsset?
     public var isFavorite: Bool
 
@@ -153,6 +169,10 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
         name: String = "",
         meditationType: MeditationType? = nil,
         durationMinutes: Int = 20,
+        startSoundName: String? = nil,
+        endSoundName: String? = nil,
+        recordingLabel: String = "",
+        linkedMediaIdentifier: String = "",
         mediaAsset: CustomPlayMediaAsset? = .templeBellLoop,
         isFavorite: Bool = false
     ) {
@@ -160,6 +180,10 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
         self.name = name
         self.meditationType = meditationType
         self.durationMinutes = durationMinutes
+        self.startSoundName = startSoundName
+        self.endSoundName = endSoundName
+        self.recordingLabel = recordingLabel
+        self.linkedMediaIdentifier = linkedMediaIdentifier
         self.mediaAsset = mediaAsset
         self.isFavorite = isFavorite
     }

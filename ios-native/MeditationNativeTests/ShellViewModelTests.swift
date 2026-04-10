@@ -83,6 +83,27 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activePlaylistSession?.playlist.name, playlist.name)
     }
 
+    func testApplyCustomPlayToTimerCopiesTheParityMetadata() throws {
+        let (viewModel, _) = try makeViewModel()
+        let customPlay = CustomPlay(
+            name: "Morning Focus",
+            meditationType: .ajapa,
+            durationSeconds: 900,
+            startSoundName: TimerSoundOption.templeBell.rawValue,
+            endSoundName: TimerSoundOption.gong.rawValue,
+            media: CustomPlayMedia(asset: .gongLoop)
+        )
+
+        viewModel.applyCustomPlayToTimer(customPlay)
+
+        XCTAssertEqual(viewModel.snapshot.timerDraft.mode, .fixedDuration)
+        XCTAssertEqual(viewModel.snapshot.timerDraft.durationMinutes, 15)
+        XCTAssertEqual(viewModel.snapshot.timerDraft.meditationType, .ajapa)
+        XCTAssertEqual(viewModel.snapshot.timerDraft.startSoundName, TimerSoundOption.templeBell.rawValue)
+        XCTAssertEqual(viewModel.snapshot.timerDraft.endSoundName, TimerSoundOption.gong.rawValue)
+        XCTAssertEqual(viewModel.practiceRuntimeMessage, "Custom play \"Morning Focus\" applied to timer setup.")
+    }
+
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
         let (viewModel, notificationScheduler) = try makeViewModel()
 

@@ -31,6 +31,11 @@
   - keep native milestone-3 `custom play` media local and intentionally bounded:
     - use bundled placeholder audio instead of widening into file import or backend media sync yet
     - keep saved `custom play` media metadata optional so pre-media local snapshots still decode and surface calm “needs media” guidance
+  - keep native `custom play` parity metadata local-first and optional where possible:
+    - carry optional start and end sounds directly on the saved `custom play`
+    - carry an optional recording label or session note for calm history/context display
+    - carry an optional link-aware media identifier seam for later sync without replacing bundled placeholder playback yet
+    - keep `Apply To Timer` as an explicit copy action from saved `custom play` values into timer defaults
   - keep native playlist items snapshot-based but still link-aware:
     - store the resolved title, meditation type, and duration on the playlist item itself
     - retain an optional `custom play` id so launch-time validation can fail calmly when the linked play or its local media is no longer available
@@ -104,6 +109,7 @@
   - active playback state is persisted separately from timer sessions
   - linked media metadata is required before save and reused for runtime duration
   - auto-created `session log` entries carry `custom play` name and recording context for History and summaries
+  - optional start and end sounds play with the custom-play runtime so the saved model stays visible in the session itself
 - Keep playlist runs modeled as a runtime snapshot instead of reading mutable playlist records live during playback:
   - each run stores resolved item titles, durations, and any linked `custom play` media metadata at launch time
   - optional small gaps are stored at the playlist level and replayed as explicit runtime segments

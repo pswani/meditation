@@ -13,6 +13,8 @@ Implemented native surfaces through milestone 4 now include:
 - Practice timer setup for fixed-duration and open-ended sessions
 - active timer runtime with pause, resume, and end controls
 - `custom play` creation, editing, deletion, favorite handling, and local playback
+- `custom play` parity metadata including optional start/end sounds, session notes, and a link-aware media identifier seam for later sync
+- `Apply to timer` from the custom-play library so saved playback settings can seed timer defaults
 - playlist creation, editing, reordering, favorite handling, and ordered runtime
 - bundled placeholder audio for local `custom play` playback without backend sync or file import
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
@@ -173,6 +175,8 @@ If these are absent, the app stays in the default local-only profile and does no
 - Preserve the exact product terms already used elsewhere in the repo.
 - Keep sample content explicitly labeled as local foundation data until real feature flows replace it.
 - Milestone 3 intentionally uses bundled placeholder audio for native `custom play` playback instead of widening into file import or backend media sync.
+- Milestone 3 also keeps `custom play` start/end sounds, session notes, and the linked media identifier as optional local-first metadata so the richer model stays readable before sync lands.
+- The native Practice custom-play library includes an explicit `Apply to timer` action that copies the saved `custom play` duration, meditation type, and sounds into the timer defaults.
 - Milestone 4 keeps native summary derived from local `session log` history instead of introducing a second stored summary source of truth.
 - Milestone 4 keeps `sankalpa` status local-first with archive or restore support while leaving backend sync for milestone 5.
 - Saved playlist items snapshot the current title, meditation type, and duration from linked `custom play` entries while still retaining a lightweight link for runtime validation.

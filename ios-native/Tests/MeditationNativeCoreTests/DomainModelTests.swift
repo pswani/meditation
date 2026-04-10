@@ -67,6 +67,34 @@ import Testing
     #expect(errors.contains(.mediaRequired))
 }
 
+@Test func customPlayDraftRoundTripsParityMetadata() throws {
+    let draft = CustomPlayDraft(
+        name: "Morning Focus",
+        meditationType: .vipassana,
+        durationMinutes: 15,
+        startSoundName: TimerSoundOption.templeBell.rawValue,
+        endSoundName: TimerSoundOption.gong.rawValue,
+        recordingLabel: "Breath emphasis",
+        linkedMediaIdentifier: "media-session-123",
+        mediaAsset: .gongLoop,
+        isFavorite: true
+    )
+
+    let customPlay = try CustomPlayFeature.makeCustomPlay(from: draft)
+    let roundTrippedDraft = CustomPlayFeature.makeDraft(from: customPlay)
+
+    #expect(customPlay.startSoundName == TimerSoundOption.templeBell.rawValue)
+    #expect(customPlay.endSoundName == TimerSoundOption.gong.rawValue)
+    #expect(customPlay.recordingLabel == "Breath emphasis")
+    #expect(customPlay.linkedMediaIdentifier == "media-session-123")
+    #expect(roundTrippedDraft.startSoundName == draft.startSoundName)
+    #expect(roundTrippedDraft.endSoundName == draft.endSoundName)
+    #expect(roundTrippedDraft.recordingLabel == draft.recordingLabel)
+    #expect(roundTrippedDraft.linkedMediaIdentifier == draft.linkedMediaIdentifier)
+    #expect(roundTrippedDraft.mediaAsset == draft.mediaAsset)
+    #expect(roundTrippedDraft.isFavorite == draft.isFavorite)
+}
+
 @Test func activeTimerPauseAndResumePreserveRemainingTime() throws {
     let startDate = Date(timeIntervalSince1970: 1_700_000_000)
     let draft = TimerSettingsDraft(
@@ -107,6 +135,38 @@ import Testing
 
     session.resume(at: startDate.addingTimeInterval(420))
     #expect(session.remainingSeconds(at: startDate.addingTimeInterval(720)) == 300)
+}
+
+@Test func applyCustomPlayToTimerDraftCopiesMetadataAndKeepsIntervalSettings() throws {
+    let baseDraft = TimerSettingsDraft(
+        mode: .openEnded,
+        durationMinutes: 45,
+        meditationType: .kriya,
+        startSoundName: nil,
+        endSoundName: nil,
+        intervalSoundName: TimerSoundOption.woodBlock.rawValue,
+        intervalMinutes: 10
+    )
+    let customPlay = CustomPlay(
+        name: "Vipassana Sit 20",
+        meditationType: .vipassana,
+        durationSeconds: 1_200,
+        startSoundName: TimerSoundOption.templeBell.rawValue,
+        endSoundName: TimerSoundOption.gong.rawValue,
+        recordingLabel: "Morning recording",
+        linkedMediaIdentifier: "media-session-456",
+        media: CustomPlayMedia(asset: .templeBellLoop)
+    )
+
+    let updatedDraft = CustomPlayFeature.applyToTimerDraft(baseDraft, from: customPlay)
+
+    #expect(updatedDraft.mode == .fixedDuration)
+    #expect(updatedDraft.durationMinutes == 20)
+    #expect(updatedDraft.meditationType == .vipassana)
+    #expect(updatedDraft.startSoundName == TimerSoundOption.templeBell.rawValue)
+    #expect(updatedDraft.endSoundName == TimerSoundOption.gong.rawValue)
+    #expect(updatedDraft.intervalSoundName == TimerSoundOption.woodBlock.rawValue)
+    #expect(updatedDraft.intervalMinutes == 10)
 }
 
 @Test func fixedTimerIntervalsTriggerOnlyWhenCrossed() throws {
@@ -167,6 +227,25 @@ import Testing
     #expect(log.status == .completed)
     #expect(log.plannedDurationSeconds == 1_200)
     #expect(log.notes == "Vipassana Sit 20")
+}
+
+@Test func customPlaySessionLogIncludesRecordingLabelWhenAvailable() throws {
+    let startDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let customPlay = CustomPlay(
+        name: "Vipassana Sit 20",
+        meditationType: .vipassana,
+        durationSeconds: 1_200,
+        recordingLabel: "Morning recording",
+        media: CustomPlayMedia(asset: .templeBellLoop)
+    )
+
+    let session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
+    let log = session.makeSessionLog(
+        status: .completed,
+        endedAt: startDate.addingTimeInterval(1_200)
+    )
+
+    #expect(log.notes == "Morning recording • Vipassana Sit 20")
 }
 
 @Test func openEndedTimerSessionLogUsesActualElapsedDuration() throws {

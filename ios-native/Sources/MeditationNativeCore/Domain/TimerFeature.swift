@@ -539,6 +539,19 @@ public enum CustomPlayFeature {
         return errors
     }
 
+    public static func applyToTimerDraft(
+        _ draft: TimerSettingsDraft,
+        from customPlay: CustomPlay
+    ) -> TimerSettingsDraft {
+        var updatedDraft = draft
+        updatedDraft.mode = .fixedDuration
+        updatedDraft.durationMinutes = max(1, customPlay.durationSeconds / 60)
+        updatedDraft.meditationType = customPlay.meditationType
+        updatedDraft.startSoundName = customPlay.startSoundName
+        updatedDraft.endSoundName = customPlay.endSoundName
+        return updatedDraft
+    }
+
     public static func makeCustomPlay(
         from draft: CustomPlayDraft,
         existingID: UUID? = nil
@@ -560,6 +573,10 @@ public enum CustomPlayFeature {
             name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
             meditationType: meditationType,
             durationSeconds: draft.durationMinutes * 60,
+            startSoundName: draft.startSoundName.flatMap { $0.nilIfBlank },
+            endSoundName: draft.endSoundName.flatMap { $0.nilIfBlank },
+            recordingLabel: draft.recordingLabel.nilIfBlank,
+            linkedMediaIdentifier: draft.linkedMediaIdentifier.nilIfBlank,
             media: CustomPlayMedia(asset: mediaAsset),
             isFavorite: draft.isFavorite
         )
@@ -571,6 +588,10 @@ public enum CustomPlayFeature {
             name: customPlay.name,
             meditationType: customPlay.meditationType,
             durationMinutes: max(1, customPlay.durationSeconds / 60),
+            startSoundName: customPlay.startSoundName,
+            endSoundName: customPlay.endSoundName,
+            recordingLabel: customPlay.recordingLabel ?? "",
+            linkedMediaIdentifier: customPlay.linkedMediaIdentifier ?? "",
             mediaAsset: customPlay.media?.asset,
             isFavorite: customPlay.isFavorite
         )
@@ -594,7 +615,13 @@ public enum CustomPlayFeature {
             completedDurationSeconds = actualDurationSeconds
         }
 
-        let notePrefix = notesPrefix.map { "\($0): " } ?? ""
+        let noteComponents = [
+            notesPrefix.flatMap { $0.nilIfBlank },
+            customPlay.recordingLabel.flatMap { $0.nilIfBlank },
+        ].compactMap { $0 }
+        let notes = noteComponents.isEmpty
+            ? customPlay.name
+            : noteComponents.joined(separator: " • ") + " • \(customPlay.name)"
 
         return SessionLog(
             meditationType: customPlay.meditationType,
@@ -604,7 +631,7 @@ public enum CustomPlayFeature {
             endedAt: endedAt,
             completedDurationSeconds: completedDurationSeconds,
             plannedDurationSeconds: customPlay.durationSeconds,
-            notes: "\(notePrefix)\(customPlay.name)"
+            notes: notes
         )
     }
 }
