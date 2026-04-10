@@ -45,6 +45,29 @@ struct SettingsView: View {
                             "Backend required",
                             value: viewModel.environment.requiresBackend ? "Yes" : "No"
                         )
+                        Text("Use your Mac's LAN IP for a physical iPhone. `localhost` only works for simulator-adjacent tooling on the same machine.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                SectionCard(title: "Sync", caption: "Backend-backed local-first status") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(viewModel.syncStatusHeadline)
+                            .font(.headline)
+                        Text(viewModel.syncStatusDetail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        if let syncBannerMessage = viewModel.syncBannerMessage {
+                            Text(syncBannerMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let lastErrorMessage = viewModel.syncState.lastErrorMessage {
+                            Text(lastErrorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 

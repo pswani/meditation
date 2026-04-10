@@ -96,6 +96,7 @@ final class ShellViewModel: ObservableObject {
     }
 
     @Published private(set) var snapshot: AppSnapshot
+    @Published private(set) var syncState: AppSyncState
     @Published private(set) var environment: AppEnvironment
     @Published private(set) var isSeedData: Bool
     @Published private(set) var activeSession: ActiveTimerSession?
@@ -114,23 +115,45 @@ final class ShellViewModel: ObservableObject {
     @Published var persistenceMessage: String?
 
     private let repository: LocalAppSnapshotRepository
+    private let syncRepository: LocalAppSyncStateRepository
     private let notificationScheduler: NotificationScheduling
     private let soundPlayer: TimerSoundPlaying
     private let audioPlayer: CustomPlayAudioControlling
     private var clockCancellable: AnyCancellable?
+    private let syncClient: AppSyncClient?
+    private var isRunningSync = false
+    private var needsSyncPass = false
 
     init(
         repository: LocalAppSnapshotRepository = .live(
             environment: AppEnvironment.from()
         ),
+        syncRepository: LocalAppSyncStateRepository = .live(
+            environment: AppEnvironment.from()
+        ),
         notificationScheduler: NotificationScheduling = LiveNotificationScheduler(),
         soundPlayer: TimerSoundPlaying = SystemSoundPlayer(),
-        audioPlayer: CustomPlayAudioControlling = BundledCustomPlayAudioPlayer()
+        audioPlayer: CustomPlayAudioControlling = BundledCustomPlayAudioPlayer(),
+        syncClient: AppSyncClient? = nil
     ) {
         self.repository = repository
+        self.syncRepository = syncRepository
         self.notificationScheduler = notificationScheduler
         self.soundPlayer = soundPlayer
         self.audioPlayer = audioPlayer
+        self.syncClient = syncClient ?? repository.environment.apiBaseURL.map { LiveAppSyncClient(baseURL: $0) }
+
+        do {
+            self.syncState = try syncRepository.load(
+                default: repository.environment.requiresBackend
+                    ? AppSyncState(connectionState: .pendingSync)
+                    : .localOnly
+            )
+        } catch {
+            self.syncState = repository.environment.requiresBackend
+                ? AppSyncState(connectionState: .pendingSync)
+                : .localOnly
+        }
 
         do {
             let storedSnapshot = try repository.loadOrSeed(seed: SampleData.snapshot)
@@ -146,6 +169,12 @@ final class ShellViewModel: ObservableObject {
         }
 
         self.environment = repository.environment
+
+        if environment.requiresBackend {
+            scheduleSync()
+        } else {
+            syncState.connectionState = .localOnly
+        }
     }
 
     deinit {
@@ -157,7 +186,7 @@ final class ShellViewModel: ObservableObject {
             get: { self.snapshot.timerDraft },
             set: { [weak self] newValue in
                 self?.snapshot.timerDraft = newValue
-                self?.persistSnapshot()
+                self?.persistSnapshot(syncMutations: [.timerSettingsUpsert(newValue)])
             }
         )
     }
@@ -168,6 +197,85 @@ final class ShellViewModel: ObservableObject {
 
     var homeRecentSessionLogs: [SessionLog] {
         Array(recentSessionLogs.prefix(3))
+    }
+
+    var syncBannerMessage: String? {
+        switch syncState.connectionState {
+        case .localOnly:
+            if syncState.pendingMutationCount > 0 {
+                return "\(syncState.pendingMutationCount) local changes are waiting for a configured backend."
+            }
+            return nil
+        case .syncing:
+            return "Syncing with the configured backend."
+        case .upToDate:
+            return syncState.lastNoticeMessage
+        case .pendingSync:
+            let count = syncState.pendingMutationCount
+            guard count > 0 else {
+                return nil
+            }
+            return count == 1 ? "1 local change is pending sync." : "\(count) local changes are pending sync."
+        case .offline:
+            let count = syncState.pendingMutationCount
+            if count > 0 {
+                return count == 1
+                    ? "Offline. 1 local change will sync when the connection returns."
+                    : "Offline. \(count) local changes will sync when the connection returns."
+            }
+            return "Offline. Showing the latest saved local state."
+        case .backendUnavailable:
+            let count = syncState.pendingMutationCount
+            if count > 0 {
+                return count == 1
+                    ? "Backend unavailable. 1 local change will sync when the API is reachable."
+                    : "Backend unavailable. \(count) local changes will sync when the API is reachable."
+            }
+            return "Backend unavailable. Showing the latest saved local state."
+        }
+    }
+
+    var syncStatusHeadline: String {
+        switch syncState.connectionState {
+        case .localOnly:
+            return "Local-only profile"
+        case .syncing:
+            return "Syncing"
+        case .upToDate:
+            return "Backend synced"
+        case .pendingSync:
+            return "Pending sync"
+        case .offline:
+            return "Offline"
+        case .backendUnavailable:
+            return "Backend unavailable"
+        }
+    }
+
+    var syncStatusDetail: String {
+        let pendingCount = syncState.pendingMutationCount
+        switch syncState.connectionState {
+        case .localOnly:
+            if pendingCount > 0 {
+                return "This device kept local changes, but the current profile does not have a backend base URL to replay them."
+            }
+            return "This native profile stays local-first until `MEDITATION_IOS_API_BASE_URL` is configured."
+        case .syncing:
+            return "The app is refreshing backend-backed timer settings, session logs, custom plays, playlists, sankalpas, and summary data."
+        case .upToDate:
+            if let lastSuccessfulSyncAt = syncState.lastSuccessfulSyncAt {
+                return "Last successful sync: \(RelativeDateTimeFormatter().localizedString(for: lastSuccessfulSyncAt, relativeTo: now))."
+            }
+            return "Local-first data is aligned with the configured backend."
+        case .pendingSync:
+            return pendingCount == 1
+                ? "1 local change is queued safely on this device and will replay next time the backend is reachable."
+                : "\(pendingCount) local changes are queued safely on this device and will replay next time the backend is reachable."
+        case .offline:
+            return "The device appears offline. Local-first changes stay visible here and will replay when connectivity returns."
+        case .backendUnavailable:
+            return "The device is online, but the configured backend could not be reached. Local-first changes stay visible here in the meantime."
+        }
     }
 
     var customPlays: [CustomPlay] {
@@ -362,7 +470,7 @@ final class ShellViewModel: ObservableObject {
         do {
             let savedCustomPlay = try CustomPlayFeature.makeCustomPlay(from: draft, existingID: draft.id)
             snapshot.customPlays = upsert(savedCustomPlay, into: snapshot.customPlays)
-            persistSnapshot()
+            persistSnapshot(syncMutations: [.customPlayUpsert(savedCustomPlay)])
             return true
         } catch let error as CustomPlayValidationError {
             customPlayValidationMessage = error.message
@@ -382,7 +490,7 @@ final class ShellViewModel: ObservableObject {
         timerValidationMessage = nil
         practiceRuntimeMessage = nil
         snapshot.timerDraft = CustomPlayFeature.applyToTimerDraft(snapshot.timerDraft, from: customPlay)
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.timerSettingsUpsert(snapshot.timerDraft)])
         practiceRuntimeMessage = "Custom play \"\(customPlay.name)\" applied to timer setup."
     }
 
@@ -393,7 +501,7 @@ final class ShellViewModel: ObservableObject {
         }
 
         snapshot.customPlays.removeAll { $0.id == customPlay.id }
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.customPlayDelete(id: customPlay.id)])
     }
 
     func requestDeleteCustomPlayConfirmation(_ customPlay: CustomPlay) {
@@ -404,7 +512,7 @@ final class ShellViewModel: ObservableObject {
         var updatedCustomPlay = customPlay
         updatedCustomPlay.isFavorite.toggle()
         snapshot.customPlays = upsert(updatedCustomPlay, into: snapshot.customPlays)
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.customPlayUpsert(updatedCustomPlay)])
     }
 
     func startCustomPlay(_ customPlay: CustomPlay) {
@@ -490,7 +598,7 @@ final class ShellViewModel: ObservableObject {
                 existingID: draft.id
             )
             snapshot.playlists = upsert(savedPlaylist, into: snapshot.playlists)
-            persistSnapshot()
+            persistSnapshot(syncMutations: [.playlistUpsert(savedPlaylist)])
             return true
         } catch let error as PlaylistValidationError {
             playlistValidationMessage = error.message
@@ -508,7 +616,7 @@ final class ShellViewModel: ObservableObject {
         }
 
         snapshot.playlists.removeAll { $0.id == playlist.id }
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.playlistDelete(id: playlist.id)])
     }
 
     func requestDeletePlaylistConfirmation(_ playlist: Playlist) {
@@ -519,7 +627,7 @@ final class ShellViewModel: ObservableObject {
         var updatedPlaylist = playlist
         updatedPlaylist.isFavorite.toggle()
         snapshot.playlists = upsert(updatedPlaylist, into: snapshot.playlists)
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.playlistUpsert(updatedPlaylist)])
     }
 
     func saveSankalpa(_ draft: SankalpaDraft, editing sankalpa: Sankalpa? = nil) -> Bool {
@@ -529,7 +637,7 @@ final class ShellViewModel: ObservableObject {
         do {
             let savedSankalpa = try SankalpaFeature.makeSankalpa(from: draft, existing: sankalpa, now: now)
             snapshot.sankalpas = upsert(savedSankalpa, into: snapshot.sankalpas)
-            persistSnapshot()
+            persistSnapshot(syncMutations: [.sankalpaUpsert(savedSankalpa)])
             sankalpaFeedbackMessage = sankalpa == nil ? "Sankalpa created." : "Sankalpa updated."
             return true
         } catch let error as SankalpaValidationError {
@@ -543,8 +651,9 @@ final class ShellViewModel: ObservableObject {
 
     func archiveSankalpa(_ sankalpa: Sankalpa) {
         sankalpaFeedbackMessage = nil
-        snapshot.sankalpas = upsert(SankalpaFeature.archive(sankalpa), into: snapshot.sankalpas)
-        persistSnapshot()
+        let archivedSankalpa = SankalpaFeature.archive(sankalpa)
+        snapshot.sankalpas = upsert(archivedSankalpa, into: snapshot.sankalpas)
+        persistSnapshot(syncMutations: [.sankalpaUpsert(archivedSankalpa)])
         sankalpaFeedbackMessage = "Sankalpa archived."
     }
 
@@ -554,8 +663,9 @@ final class ShellViewModel: ObservableObject {
 
     func restoreSankalpa(_ sankalpa: Sankalpa) {
         sankalpaFeedbackMessage = nil
-        snapshot.sankalpas = upsert(SankalpaFeature.restore(sankalpa), into: snapshot.sankalpas)
-        persistSnapshot()
+        let restoredSankalpa = SankalpaFeature.restore(sankalpa)
+        snapshot.sankalpas = upsert(restoredSankalpa, into: snapshot.sankalpas)
+        persistSnapshot(syncMutations: [.sankalpaUpsert(restoredSankalpa)])
         sankalpaFeedbackMessage = "Sankalpa restored."
     }
 
@@ -567,7 +677,7 @@ final class ShellViewModel: ObservableObject {
 
         sankalpaFeedbackMessage = nil
         snapshot.sankalpas.removeAll { $0.id == sankalpa.id }
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.sankalpaDelete(id: sankalpa.id)])
         sankalpaFeedbackMessage = "Archived sankalpa deleted."
     }
 
@@ -593,7 +703,7 @@ final class ShellViewModel: ObservableObject {
             now: now
         )
         snapshot.sankalpas = upsert(updatedSankalpa, into: snapshot.sankalpas)
-        persistSnapshot()
+        persistSnapshot(syncMutations: [.sankalpaUpsert(updatedSankalpa)])
         sankalpaFeedbackMessage = "Observance check-in saved."
     }
 
@@ -739,6 +849,9 @@ final class ShellViewModel: ObservableObject {
             handleClockTick(now)
             Task {
                 await refreshNotificationPermissionState()
+            }
+            if environment.requiresBackend {
+                scheduleSync()
             }
         }
     }
@@ -946,16 +1059,156 @@ final class ShellViewModel: ObservableObject {
 
         snapshot.recentSessionLogs = (snapshot.recentSessionLogs + logs)
             .sorted { $0.endedAt > $1.endedAt }
-        persistSnapshot()
+        persistSnapshot(syncMutations: logs.map { SyncMutation.sessionLogUpsert($0) })
     }
 
-    private func persistSnapshot() {
+    private func persistSnapshot(syncMutations: [SyncMutation] = []) {
         do {
             snapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: snapshot.recentSessionLogs)
             try repository.save(snapshot)
             isSeedData = snapshot == SampleData.snapshot
+            if syncMutations.isEmpty == false {
+                for syncMutation in syncMutations {
+                    syncState = AppSyncFeature.enqueue(syncMutation, into: syncState)
+                }
+                updateConnectionStateAfterLocalChange()
+                saveSyncState()
+                scheduleSync()
+            }
         } catch {
             persistenceMessage = "Local changes could not be saved right now."
+        }
+    }
+
+    private func saveSyncState() {
+        do {
+            try syncRepository.save(syncState)
+        } catch {
+            persistenceMessage = "Local sync state could not be saved right now."
+        }
+    }
+
+    private func updateConnectionStateAfterLocalChange() {
+        if environment.requiresBackend == false {
+            syncState.connectionState = .localOnly
+            return
+        }
+
+        syncState.connectionState = .pendingSync
+        syncState.lastErrorMessage = nil
+        syncState.lastNoticeMessage = nil
+    }
+
+    private func scheduleSync() {
+        guard environment.requiresBackend, syncClient != nil else {
+            syncState.connectionState = .localOnly
+            saveSyncState()
+            return
+        }
+
+        if isRunningSync {
+            needsSyncPass = true
+            return
+        }
+
+        Task { [weak self] in
+            await self?.runSyncPass()
+        }
+    }
+
+    private func runSyncPass() async {
+        guard let syncClient else {
+            return
+        }
+
+        if isRunningSync {
+            needsSyncPass = true
+            return
+        }
+
+        isRunningSync = true
+        defer {
+            isRunningSync = false
+            if needsSyncPass {
+                needsSyncPass = false
+                Task { [weak self] in
+                    await self?.runSyncPass()
+                }
+            }
+        }
+
+        syncState.lastAttemptedSyncAt = Date()
+        syncState.connectionState = .syncing
+        syncState.lastNoticeMessage = nil
+        saveSyncState()
+
+        let timeZoneIdentifier = TimeZone.current.identifier
+
+        do {
+            let remoteState = try await syncClient.fetchRemoteState(
+                localSnapshot: snapshot,
+                timeZoneIdentifier: timeZoneIdentifier
+            )
+            snapshot = Self.normalizedSnapshot(
+                AppSyncFeature.reconcile(
+                    remoteState: remoteState,
+                    localSnapshot: snapshot,
+                    pendingMutations: syncState.pendingMutations
+                )
+            )
+            if let summary = remoteState.summary {
+                syncState.lastRemoteSummary = summary
+            }
+            try repository.save(snapshot)
+
+            while let nextMutation = syncState.pendingMutations.first {
+                let authoritativeState = try await syncClient.applyMutation(
+                    nextMutation,
+                    localSnapshot: snapshot,
+                    timeZoneIdentifier: timeZoneIdentifier
+                )
+                snapshot = Self.normalizedSnapshot(
+                    AppSyncFeature.applyAuthoritativeMutationResult(
+                        mutation: nextMutation,
+                        remoteState: authoritativeState,
+                        to: snapshot
+                    )
+                )
+                syncState.pendingMutations.removeFirst()
+                syncState.lastRemoteSummary = authoritativeState.summary ?? syncState.lastRemoteSummary
+                if let syncNoticeMessage = authoritativeState.syncNoticeMessage {
+                    syncState.lastNoticeMessage = syncNoticeMessage
+                }
+                try repository.save(snapshot)
+                saveSyncState()
+            }
+
+            syncState.lastSuccessfulSyncAt = Date()
+            syncState.lastErrorMessage = nil
+            syncState.connectionState = .upToDate
+            saveSyncState()
+        } catch let error as AppSyncError {
+            switch error {
+            case .offline:
+                syncState.connectionState = .offline
+                syncState.lastErrorMessage = "The device appears offline."
+            case .backendUnavailable:
+                syncState.connectionState = .backendUnavailable
+                syncState.lastErrorMessage = "The configured backend is unavailable."
+            case .invalidResponse(let message):
+                syncState.connectionState = .backendUnavailable
+                syncState.lastErrorMessage = message
+            case .server(_, let message):
+                syncState.connectionState = .backendUnavailable
+                syncState.lastErrorMessage = message
+            }
+            syncState.lastNoticeMessage = nil
+            saveSyncState()
+        } catch {
+            syncState.connectionState = .backendUnavailable
+            syncState.lastErrorMessage = "The backend sync could not finish."
+            syncState.lastNoticeMessage = nil
+            saveSyncState()
         }
     }
 
