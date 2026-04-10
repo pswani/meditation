@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios`
-- Active bundle: none
+- Current branch: `codex/ios-native-custom-play-parity-feature-bundle-with-branching`
+- Active bundle: `ios-native-custom-play-parity-feature-bundle-with-branching`
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, and `ios-native-home-parity-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-home-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
@@ -27,14 +27,17 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-foundation-feature.md`
   - `docs/execplan-ios-native-timer-history-feature.md`
   - `docs/execplan-ios-native-custom-play-playlist-feature.md`
+  - `docs/execplan-ios-native-custom-play-parity-feature.md`
   - `docs/execplan-ios-native-summary-sankalpa-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
+  - `docs/review-ios-native-custom-play-parity-feature.md`
   - `docs/review-ios-native-summary-sankalpa-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
+  - `docs/test-ios-native-custom-play-parity-feature.md`
   - `docs/test-ios-native-summary-sankalpa-feature.md`
 
 ## Product state
@@ -142,6 +145,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
 - Implementation planning: `docs/execplan-ios-native-timer-history-feature.md`
 - Implementation planning: `docs/execplan-ios-native-custom-play-playlist-feature.md`
+- Implementation planning: `docs/execplan-ios-native-custom-play-parity-feature.md`
 - Implementation planning: `docs/execplan-ios-native-summary-sankalpa-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
@@ -160,6 +164,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-foundation-feature.md`
 - Review artifact: `docs/review-ios-native-timer-history-feature.md`
 - Review artifact: `docs/review-ios-native-custom-play-playlist-feature.md`
+- Review artifact: `docs/review-ios-native-custom-play-parity-feature.md`
 - Review artifact: `docs/review-ios-native-summary-sankalpa-feature.md`
 - Review artifact: `docs/review-ios-native-runtime-safety-hardening-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
@@ -181,6 +186,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-foundation-feature.md`
 - Verification report: `docs/test-ios-native-timer-history-feature.md`
 - Verification report: `docs/test-ios-native-custom-play-playlist-feature.md`
+- Verification report: `docs/test-ios-native-custom-play-parity-feature.md`
 - Verification report: `docs/test-ios-native-summary-sankalpa-feature.md`
 - Verification report: `docs/test-ios-native-runtime-safety-hardening-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`

@@ -358,6 +358,19 @@ final class ShellViewModel: ObservableObject {
         }
     }
 
+    func applyCustomPlayToTimer(_ customPlay: CustomPlay) {
+        guard hasActivePracticeRuntime == false else {
+            practiceRuntimeMessage = "Finish the current practice before applying a custom play to the timer."
+            return
+        }
+
+        timerValidationMessage = nil
+        practiceRuntimeMessage = nil
+        snapshot.timerDraft = CustomPlayFeature.applyToTimerDraft(snapshot.timerDraft, from: customPlay)
+        persistSnapshot()
+        practiceRuntimeMessage = "Custom play \"\(customPlay.name)\" applied to timer setup."
+    }
+
     func deleteCustomPlay(_ customPlay: CustomPlay) {
         guard activeCustomPlaySession?.customPlay.id != customPlay.id else {
             practiceRuntimeMessage = "End the active custom play before deleting it."
@@ -393,6 +406,7 @@ final class ShellViewModel: ObservableObject {
         do {
             try audioPlayer.startLoopingPlayback(for: media)
             activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
+            soundPlayer.playSound(named: customPlay.startSoundName)
             practiceRuntimeMessage = nil
             recordLastUsedPracticeTarget(
                 LastUsedPracticeTarget(
@@ -904,6 +918,7 @@ final class ShellViewModel: ObservableObject {
 
         let log = activeCustomPlaySession.makeSessionLog(status: status, endedAt: endedAt)
         audioPlayer.stopPlayback()
+        soundPlayer.playSound(named: activeCustomPlaySession.customPlay.endSoundName)
         insertLogs([log])
         self.activeCustomPlaySession = nil
         stopClockIfIdle()

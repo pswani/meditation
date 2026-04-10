@@ -44,6 +44,10 @@ public enum SampleData {
                     name: "Vipassana Sit 20",
                     meditationType: .vipassana,
                     durationSeconds: 1_200,
+                    startSoundName: "Temple Bell",
+                    endSoundName: "Temple Bell",
+                    recordingLabel: "Morning recording",
+                    linkedMediaIdentifier: "native-media-vipassana-sit-20",
                     media: CustomPlayMedia(asset: .templeBellLoop),
                     isFavorite: true
                 ),
@@ -52,6 +56,10 @@ public enum SampleData {
                     name: "Ajapa Evening Sit",
                     meditationType: .ajapa,
                     durationSeconds: 900,
+                    startSoundName: "Gong",
+                    endSoundName: "Wood Block",
+                    recordingLabel: "Breath emphasis",
+                    linkedMediaIdentifier: "native-media-ajapa-evening-sit",
                     media: CustomPlayMedia(asset: .gongLoop),
                     isFavorite: false
                 ),

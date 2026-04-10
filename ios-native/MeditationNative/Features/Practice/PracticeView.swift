@@ -95,6 +95,20 @@ struct PracticeView: View {
                 Text(viewModel.activeCustomPlaySession?.customPlay.name ?? "Custom play")
                     .font(.title3.weight(.semibold))
 
+                if let customPlay = viewModel.activeCustomPlaySession?.customPlay {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(customPlaySoundSummary(customPlay))
+                        if let recordingLabel = customPlay.recordingLabel {
+                            Text("Session note: \(recordingLabel)")
+                        }
+                        if let linkedMediaIdentifier = customPlay.linkedMediaIdentifier {
+                            Text("Linked media identifier: \(linkedMediaIdentifier)")
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                }
+
                 Text(viewModel.activeCustomPlayPrimaryText())
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
@@ -199,14 +213,31 @@ struct PracticeView: View {
                             .font(.headline)
                         Text("\(featuredCustomPlay.meditationType.rawValue) • \(featuredCustomPlay.durationSeconds / 60) min")
                             .foregroundStyle(.secondary)
+                        Text(customPlaySoundSummary(featuredCustomPlay))
+                            .foregroundStyle(.secondary)
+                        if let recordingLabel = featuredCustomPlay.recordingLabel {
+                            Text("Session note: \(recordingLabel)")
+                                .foregroundStyle(.secondary)
+                        }
+                        if let linkedMediaIdentifier = featuredCustomPlay.linkedMediaIdentifier {
+                            Text("Linked media identifier: \(linkedMediaIdentifier)")
+                                .foregroundStyle(.secondary)
+                        }
                         Text(featuredCustomPlay.media == nil ? "Needs bundled placeholder audio before it can start." : "Ready to play locally on this device.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
 
-                    if featuredCustomPlay.media != nil {
-                        Button("Start featured custom play") {
-                            viewModel.startCustomPlay(featuredCustomPlay)
+                    HStack(spacing: 12) {
+                        if featuredCustomPlay.media != nil {
+                            Button("Start featured custom play") {
+                                viewModel.startCustomPlay(featuredCustomPlay)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Button("Apply to timer") {
+                            viewModel.applyCustomPlayToTimer(featuredCustomPlay)
                         }
                         .buttonStyle(.bordered)
                     }
@@ -317,7 +348,20 @@ private struct CustomPlayLibraryView: View {
                                     Text("\(customPlay.meditationType.rawValue) • \(customPlay.durationSeconds / 60) min")
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
-                                    Text(customPlay.media?.asset.rawValue ?? "Needs bundled placeholder audio")
+                                    Text(customPlaySoundSummary(customPlay))
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                    if let recordingLabel = customPlay.recordingLabel {
+                                        Text("Session note: \(recordingLabel)")
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    if let linkedMediaIdentifier = customPlay.linkedMediaIdentifier {
+                                        Text("Linked media identifier: \(linkedMediaIdentifier)")
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text(customPlay.media == nil ? "Needs bundled placeholder audio" : "Placeholder audio: \(customPlay.media?.asset.rawValue ?? "")")
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
@@ -335,6 +379,11 @@ private struct CustomPlayLibraryView: View {
                                 .buttonStyle(.borderedProminent)
                                 .tint(.teal)
                                 .disabled(customPlay.media == nil)
+
+                                Button("Apply to timer") {
+                                    viewModel.applyCustomPlayToTimer(customPlay)
+                                }
+                                .buttonStyle(.bordered)
 
                                 Button("Edit") {
                                     viewModel.customPlayValidationMessage = nil
@@ -410,11 +459,31 @@ private struct CustomPlayEditorView: View {
                     HStack {
                         Text("Duration")
                         Spacer()
-                        Text("\(draft.durationMinutes) min")
+                    Text("\(draft.durationMinutes) min")
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
 
+            Section("Sounds") {
+                Picker("Start sound (optional)", selection: $draft.startSoundName) {
+                    Text("None").tag(String?.none)
+                    ForEach(ReferenceData.timerSoundOptions, id: \.self) { sound in
+                        Text(sound.rawValue).tag(Optional(sound.rawValue))
+                    }
+                }
+
+                Picker("End sound (optional)", selection: $draft.endSoundName) {
+                    Text("None").tag(String?.none)
+                    ForEach(ReferenceData.timerSoundOptions, id: \.self) { sound in
+                        Text(sound.rawValue).tag(Optional(sound.rawValue))
+                    }
+                }
+            }
+
+            Section("Recording details") {
+                TextField("Session note", text: $draft.recordingLabel)
+                TextField("Linked media identifier", text: $draft.linkedMediaIdentifier)
                 Picker("Bundled audio", selection: $draft.mediaAsset) {
                     Text("Choose").tag(CustomPlayMediaAsset?.none)
                     ForEach(ReferenceData.customPlayMediaAssets, id: \.self) { mediaAsset in
@@ -426,7 +495,7 @@ private struct CustomPlayEditorView: View {
             }
 
             Section("Local media guidance") {
-                Text("Milestone 3 uses bundled placeholder tracks so custom plays stay runnable in simulator and on device without widening into import yet.")
+                Text("Milestone 3 uses bundled placeholder tracks so custom plays stay runnable in simulator and on device. The linked media identifier is a sync seam for later, not a new playback source yet.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -803,4 +872,10 @@ private struct PlaylistItemEditorView: View {
         draft.durationMinutes = max(1, selectedCustomPlay.durationSeconds / 60)
         draft.meditationType = selectedCustomPlay.meditationType
     }
+}
+
+fileprivate func customPlaySoundSummary(_ customPlay: CustomPlay) -> String {
+    let startSound = customPlay.startSoundName ?? "None"
+    let endSound = customPlay.endSoundName ?? "None"
+    return "Start sound: \(startSound) • End sound: \(endSound)"
 }

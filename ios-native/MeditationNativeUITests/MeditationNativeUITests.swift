@@ -108,6 +108,24 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start featured custom play"].waitForExistence(timeout: 2))
     }
 
+    func testPracticeCanApplyFeaturedCustomPlayToTimerSetup() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        let applyButton = app.buttons["Apply to timer"]
+        XCTAssertTrue(applyButton.waitForExistence(timeout: 2))
+        applyButton.tap()
+
+        let startButton = app.buttons["Start session"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+        startButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["20:00"].waitForExistence(timeout: 2))
+    }
+
     func testPracticeCanStartAndEndFeaturedPlaylist() throws {
         let app = XCUIApplication()
         app.launch()
