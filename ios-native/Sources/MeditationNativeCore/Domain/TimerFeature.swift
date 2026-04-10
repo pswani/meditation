@@ -445,8 +445,11 @@ public struct ActivePlaylistSession: Identifiable, Equatable, Sendable {
 
                 logs.append(
                     PlaylistFeature.makePlaylistItemLog(
+                        playlistRunID: id,
                         playlistName: playlist.name,
                         item: item,
+                        itemIndex: index,
+                        itemCount: playlist.items.count,
                         status: .completed,
                         startedAt: phaseStartedAt,
                         endedAt: completedAt
@@ -494,8 +497,11 @@ public struct ActivePlaylistSession: Identifiable, Equatable, Sendable {
 
         let adjustedEndedAt = phaseStartedAt.addingTimeInterval(TimeInterval(practicedSeconds))
         return PlaylistFeature.makePlaylistItemLog(
+            playlistRunID: id,
             playlistName: playlist.name,
             item: item,
+            itemIndex: playlist.items.firstIndex(where: { $0.id == item.id }),
+            itemCount: playlist.items.count,
             status: .endedEarly,
             startedAt: phaseStartedAt,
             endedAt: adjustedEndedAt
@@ -506,13 +512,16 @@ public struct ActivePlaylistSession: Identifiable, Equatable, Sendable {
 public struct SessionLogFilter: Equatable, Sendable {
     public var meditationType: MeditationType?
     public var source: SessionSource?
+    public var status: SessionStatus?
 
     public init(
         meditationType: MeditationType? = nil,
-        source: SessionSource? = nil
+        source: SessionSource? = nil,
+        status: SessionStatus? = nil
     ) {
         self.meditationType = meditationType
         self.source = source
+        self.status = status
     }
 }
 
@@ -631,7 +640,13 @@ public enum CustomPlayFeature {
             endedAt: endedAt,
             completedDurationSeconds: completedDurationSeconds,
             plannedDurationSeconds: customPlay.durationSeconds,
-            notes: notes
+            notes: notes,
+            context: SessionLogContext(
+                customPlayID: customPlay.id,
+                customPlayName: customPlay.name,
+                recordingLabel: customPlay.recordingLabel,
+                linkedMediaIdentifier: customPlay.linkedMediaIdentifier
+            )
         )
     }
 }
@@ -784,8 +799,11 @@ public enum PlaylistFeature {
     }
 
     public static func makePlaylistItemLog(
+        playlistRunID: UUID,
         playlistName: String,
         item: PlaylistItem,
+        itemIndex: Int?,
+        itemCount: Int,
         status: SessionStatus,
         startedAt: Date,
         endedAt: Date
@@ -808,7 +826,13 @@ public enum PlaylistFeature {
             endedAt: endedAt,
             completedDurationSeconds: completedDurationSeconds,
             plannedDurationSeconds: item.durationSeconds,
-            notes: "Playlist: \(playlistName) • Item: \(item.title)"
+            notes: "Playlist: \(playlistName) • Item: \(item.title)",
+            context: SessionLogContext(
+                playlistRunID: playlistRunID,
+                playlistName: playlistName,
+                playlistItemIndex: itemIndex,
+                playlistItemCount: itemCount
+            )
         )
     }
 }
@@ -925,7 +949,8 @@ public enum TimerFeature {
             .filter { log in
                 let meditationTypeMatches = filter.meditationType.map { log.meditationType == $0 } ?? true
                 let sourceMatches = filter.source.map { log.source == $0 } ?? true
-                return meditationTypeMatches && sourceMatches
+                let statusMatches = filter.status.map { log.status == $0 } ?? true
+                return meditationTypeMatches && sourceMatches && statusMatches
             }
             .sorted { $0.endedAt > $1.endedAt }
     }
@@ -951,19 +976,21 @@ public enum SummaryFeature {
     public static func deriveSnapshot(
         from sessionLogs: [SessionLog],
         rangePreset: SummaryRangePreset = .allTime,
+        customRange: SummaryDateRange? = nil,
         now: Date = Date()
     ) -> LocalSummarySnapshot {
-        let filteredLogs = filterSessionLogs(sessionLogs, rangePreset: rangePreset, now: now)
+        let filteredLogs = filterSessionLogs(sessionLogs, rangePreset: rangePreset, customRange: customRange, now: now)
         return LocalSummarySnapshot(
             overall: deriveOverallSummary(filteredLogs),
             byMeditationType: deriveSummaryByMeditationType(filteredLogs),
             bySource: deriveSummaryBySource(filteredLogs),
+            byTimeOfDay: deriveSummaryByTimeOfDay(filteredLogs),
             sessionLogs: filteredLogs.sorted { $0.endedAt > $1.endedAt }
         )
     }
 
     public static func makeStoredSummarySnapshot(from sessionLogs: [SessionLog]) -> SummarySnapshot {
-        let derived = deriveSnapshot(from: sessionLogs)
+        let derived = deriveSnapshot(from: sessionLogs, rangePreset: .allTime)
         let completedVersusEndedEarly = "\(derived.overall.completedSessionLogs) / \(derived.overall.endedEarlySessionLogs)"
 
         return SummarySnapshot(
@@ -992,6 +1019,12 @@ public enum SummaryFeature {
                     label: row.source.title,
                     value: formatDurationLabel(row.totalDurationSeconds)
                 )
+            },
+            byTimeOfDayRows: derived.byTimeOfDay.map { row in
+                SummarySnapshot.SummaryRow(
+                    label: row.timeOfDayBucket.title,
+                    value: formatDurationLabel(row.totalDurationSeconds)
+                )
             }
         )
     }
@@ -999,17 +1032,29 @@ public enum SummaryFeature {
     public static func filterSessionLogs(
         _ sessionLogs: [SessionLog],
         rangePreset: SummaryRangePreset,
+        customRange: SummaryDateRange? = nil,
         now: Date = Date()
     ) -> [SessionLog] {
         let lowerBound: Date?
+        let upperBound: Date?
 
         switch rangePreset {
         case .allTime:
             lowerBound = nil
+            upperBound = nil
         case .last7Days:
             lowerBound = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: now))
+            upperBound = now
         case .last30Days:
             lowerBound = Calendar.current.date(byAdding: .day, value: -29, to: Calendar.current.startOfDay(for: now))
+            upperBound = now
+        case .custom:
+            guard let customRange, customRange.isValid else {
+                return []
+            }
+
+            lowerBound = Calendar.current.startOfDay(for: customRange.startDate)
+            upperBound = endOfLocalDay(customRange.endDate)
         }
 
         return sessionLogs
@@ -1018,9 +1063,32 @@ public enum SummaryFeature {
                     return true
                 }
 
-                return log.endedAt >= lowerBound && log.endedAt <= now
+                guard let upperBound else {
+                    return log.endedAt >= lowerBound
+                }
+
+                return log.endedAt >= lowerBound && log.endedAt <= upperBound
             }
             .sorted { $0.endedAt > $1.endedAt }
+    }
+
+    public static func summaryRangeValidationMessage(
+        rangePreset: SummaryRangePreset,
+        customRange: SummaryDateRange?
+    ) -> String? {
+        guard rangePreset == .custom else {
+            return nil
+        }
+
+        guard let customRange else {
+            return "Choose both a start date and an end date."
+        }
+
+        guard customRange.isValid else {
+            return "Choose a start date that is on or before the end date."
+        }
+
+        return nil
     }
 
     public static func deriveOverallSummary(_ sessionLogs: [SessionLog]) -> OverallSummary {
@@ -1065,6 +1133,17 @@ public enum SummaryFeature {
                 completedSessionLogs: completedSessionLogs,
                 endedEarlySessionLogs: sourceLogs.count - completedSessionLogs,
                 totalDurationSeconds: sourceLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+            )
+        }
+    }
+
+    public static func deriveSummaryByTimeOfDay(_ sessionLogs: [SessionLog]) -> [SummaryByTimeOfDay] {
+        ReferenceData.timeOfDayBuckets.map { bucket in
+            let bucketLogs = sessionLogs.filter { timeOfDayBucketForDate($0.endedAt) == bucket }
+            return SummaryByTimeOfDay(
+                timeOfDayBucket: bucket,
+                sessionLogs: bucketLogs.count,
+                totalDurationSeconds: bucketLogs.reduce(0) { $0 + $1.completedDurationSeconds }
             )
         }
     }

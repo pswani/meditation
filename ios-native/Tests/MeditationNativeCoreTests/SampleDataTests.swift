@@ -13,4 +13,5 @@ import Testing
 @Test func summarySeedIncludesOverallAndTypeRows() throws {
     #expect(SampleData.snapshot.summary.overallRows.count >= 2)
     #expect(SampleData.snapshot.summary.byMeditationTypeRows.count >= 2)
+    #expect(SampleData.snapshot.summary.byTimeOfDayRows.count >= 2)
 }

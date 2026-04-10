@@ -3,6 +3,12 @@ import SwiftUI
 struct GoalsView: View {
     @ObservedObject var viewModel: ShellViewModel
     @State private var summaryRangePreset: SummaryRangePreset = .last7Days
+    @State private var customSummaryStartDate = Calendar.current.date(
+        byAdding: .day,
+        value: -6,
+        to: Calendar.current.startOfDay(for: Date())
+    ) ?? Date()
+    @State private var customSummaryEndDate = Date()
     @State private var isPresentingEditor = false
     @State private var editingSankalpa: Sankalpa?
     @State private var draft = SankalpaDraft()
@@ -161,7 +167,28 @@ struct GoalsView: View {
     }
 
     private var summarySection: some View {
-        let summary = viewModel.summarySnapshot(for: summaryRangePreset)
+        let customRange = summaryRangePreset == .custom
+            ? SummaryDateRange(startDate: customSummaryStartDate, endDate: customSummaryEndDate)
+            : nil
+        let validationMessage = viewModel.summaryRangeValidationMessage(
+            for: summaryRangePreset,
+            customRange: customRange
+        )
+        let summary = validationMessage == nil
+            ? viewModel.summarySnapshot(for: summaryRangePreset, customRange: customRange)
+            : LocalSummarySnapshot(
+                overall: OverallSummary(),
+                byMeditationType: ReferenceData.meditationTypes.map {
+                    SummaryByMeditationType(meditationType: $0, sessionLogs: 0, totalDurationSeconds: 0)
+                },
+                bySource: ReferenceData.sessionSources.map {
+                    SummaryBySource(source: $0, sessionLogs: 0, completedSessionLogs: 0, endedEarlySessionLogs: 0, totalDurationSeconds: 0)
+                },
+                byTimeOfDay: ReferenceData.timeOfDayBuckets.map {
+                    SummaryByTimeOfDay(timeOfDayBucket: $0, sessionLogs: 0, totalDurationSeconds: 0)
+                },
+                sessionLogs: []
+            )
 
         return SectionCard(title: "Summary", caption: "Date range applies to session log end time.") {
             VStack(alignment: .leading, spacing: 16) {
@@ -172,9 +199,33 @@ struct GoalsView: View {
                 }
                 .pickerStyle(.segmented)
 
-                if summary.sessionLogs.isEmpty {
+                if summaryRangePreset == .custom {
+                    VStack(alignment: .leading, spacing: 12) {
+                        DatePicker(
+                            "Start date",
+                            selection: $customSummaryStartDate,
+                            displayedComponents: [.date]
+                        )
+
+                        DatePicker(
+                            "End date",
+                            selection: $customSummaryEndDate,
+                            displayedComponents: [.date]
+                        )
+                    }
+                }
+
+                if let validationMessage {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("No session logs match this range yet.")
+                        Text(validationMessage)
+                            .foregroundStyle(.red)
+                        Text("Choose a date range with a start date on or before the end date.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else if summary.sessionLogs.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(summaryRangePreset == .custom ? "No session logs match this custom range yet." : "No session logs match this range yet.")
                         Text("Practice sessions and manual logs will fill this summary automatically.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -213,6 +264,17 @@ struct GoalsView: View {
                             SummaryListRow(
                                 title: $0.source.title,
                                 detail: "\($0.completedSessionLogs) completed · \($0.endedEarlySessionLogs) ended early",
+                                value: formatDuration($0.totalDurationSeconds)
+                            )
+                        }
+                    )
+
+                    summaryListSection(
+                        title: "By time of day",
+                        rows: summary.byTimeOfDay.filter { $0.sessionLogs > 0 }.map {
+                            SummaryListRow(
+                                title: $0.timeOfDayBucket.title,
+                                detail: "\($0.sessionLogs) session logs",
                                 value: formatDuration($0.totalDurationSeconds)
                             )
                         }

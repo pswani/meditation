@@ -27,7 +27,7 @@
     - keep the active timer runtime in memory until a later milestone intentionally adds native recovery
   - keep native timer correctness wall-clock based, with pause bookkeeping derived from timestamps instead of decrement-only counters
   - keep native fixed-duration completion notifications best-effort through `UserNotifications`, while treating the on-screen timer state as the source of truth whenever the app is foregrounded
-  - keep native History filters limited to meditation type and source on iPhone so the screen stays calm and readable in the early local-first milestones
+  - keep native History filters calm and readable on iPhone while still supporting source, status, and meditation-type filtering
   - keep native milestone-3 `custom play` media local and intentionally bounded:
     - use bundled placeholder audio instead of widening into file import or backend media sync yet
     - keep saved `custom play` media metadata optional so pre-media local snapshots still decode and surface calm “needs media” guidance
@@ -43,7 +43,13 @@
   - keep native milestone-4 summary derived from local `session log` history:
     - treat local logs as the source of truth instead of persisting a second editable summary model
     - support calm all-time, 7-day, and 30-day views on iPhone
+    - support a calm custom date range alongside the preset ranges
+    - derive by-time-of-day summary rows from session-log end times
     - keep Home limited to concise progress context rather than expanding into a dashboard
+  - keep native History and summary parity explicit and context-rich:
+    - store optional `SessionLog` context for playlist runs and `custom play` entries instead of inferring everything from notes
+    - support History filtering by source, status, and meditation type
+    - keep invalid custom summary ranges calm and explicit instead of coercing them into another preset
   - keep native milestone-4 `sankalpa` local-first on the same JSON snapshot store:
     - preserve `id` and `createdAt` when editing so the original goal window remains trustworthy
     - keep archive as a boolean goal-state mutation rather than inventing a second history entity

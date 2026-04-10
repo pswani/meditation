@@ -153,6 +153,7 @@ final class MeditationNativeUITests: XCTestCase {
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.buttons["Manual log"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["Vipassana"].exists)
+        XCTAssertTrue(app.buttons["All statuses"].waitForExistence(timeout: 2))
 
         app.tabBars.buttons["Settings"].tap()
         XCTAssertTrue(app.staticTexts["Timer defaults"].waitForExistence(timeout: 2))
@@ -168,6 +169,8 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Summary"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.buttons["Create sankalpa"].exists)
         XCTAssertTrue(app.buttons["7d"].exists)
+        XCTAssertTrue(app.buttons["Custom"].exists)
+        XCTAssertTrue(app.staticTexts["By time of day"].waitForExistence(timeout: 2))
 
         app.buttons["Create sankalpa"].tap()
         XCTAssertTrue(app.navigationBars["Create sankalpa"].waitForExistence(timeout: 2))

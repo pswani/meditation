@@ -227,6 +227,10 @@ import Testing
     #expect(log.status == .completed)
     #expect(log.plannedDurationSeconds == 1_200)
     #expect(log.notes == "Vipassana Sit 20")
+    #expect(log.context?.customPlayID == customPlay.id)
+    #expect(log.context?.customPlayName == "Vipassana Sit 20")
+    #expect(log.context?.recordingLabel == nil)
+    #expect(log.context?.linkedMediaIdentifier == nil)
 }
 
 @Test func customPlaySessionLogIncludesRecordingLabelWhenAvailable() throws {
@@ -246,6 +250,8 @@ import Testing
     )
 
     #expect(log.notes == "Morning recording • Vipassana Sit 20")
+    #expect(log.context?.customPlayName == "Vipassana Sit 20")
+    #expect(log.context?.recordingLabel == "Morning recording")
 }
 
 @Test func openEndedTimerSessionLogUsesActualElapsedDuration() throws {
@@ -353,6 +359,9 @@ import Testing
     let firstAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(600))
     #expect(firstAdvance.logs.count == 1)
     #expect(firstAdvance.logs.first?.notes == "Playlist: Morning Discipline • Item: Vipassana Warmup")
+    #expect(firstAdvance.logs.first?.context?.playlistRunID == session.id)
+    #expect(firstAdvance.logs.first?.context?.playlistItemIndex == 0)
+    #expect(firstAdvance.logs.first?.context?.playlistItemCount == 2)
     #expect(session.phase == .gap(afterItemIndex: 0))
 
     let duplicateCheck = session.advanceIfNeeded(at: startDate.addingTimeInterval(601))
@@ -365,6 +374,9 @@ import Testing
     let finalAdvance = session.advanceIfNeeded(at: startDate.addingTimeInterval(930))
     #expect(finalAdvance.logs.count == 1)
     #expect(finalAdvance.logs.first?.notes == "Playlist: Morning Discipline • Item: Ajapa Evening Sit")
+    #expect(finalAdvance.logs.first?.context?.playlistRunID == session.id)
+    #expect(finalAdvance.logs.first?.context?.playlistItemIndex == 1)
+    #expect(finalAdvance.logs.first?.context?.playlistItemCount == 2)
     #expect(finalAdvance.finishedRun)
 }
 
@@ -397,6 +409,16 @@ import Testing
     #expect(filtered.first?.source == .manual)
 }
 
+@Test func sessionLogFiltersRespectStatus() throws {
+    let filtered = TimerFeature.filteredSessionLogs(
+        SampleData.snapshot.recentSessionLogs,
+        using: SessionLogFilter(status: .endedEarly)
+    )
+
+    #expect(filtered.count == 1)
+    #expect(filtered.first?.status == .endedEarly)
+}
+
 @Test func summaryDerivationIncludesOverallTypeAndSourceCoverage() throws {
     let summary = SummaryFeature.deriveSnapshot(from: SampleData.snapshot.recentSessionLogs)
 
@@ -406,7 +428,10 @@ import Testing
     #expect(summary.overall.totalDurationSeconds == 4_080)
     #expect(summary.byMeditationType.count == ReferenceData.meditationTypes.count)
     #expect(summary.bySource.count == ReferenceData.sessionSources.count)
+    #expect(summary.byTimeOfDay.count == ReferenceData.timeOfDayBuckets.count)
     #expect(summary.bySource.first(where: { $0.source == .manual })?.sessionLogs == 1)
+    #expect(summary.byTimeOfDay.first(where: { $0.timeOfDayBucket == .morning })?.sessionLogs == 2)
+    #expect(summary.byTimeOfDay.first(where: { $0.timeOfDayBucket == .evening })?.sessionLogs == 2)
 }
 
 @Test func summaryRangeFiltersKeepRecentLogsOnly() throws {
@@ -442,6 +467,55 @@ import Testing
     #expect(lastSevenDays.sessionLogs.count == 1)
     #expect(lastThirtyDays.sessionLogs.count == 1)
     #expect(lastSevenDays.sessionLogs.first?.id == recentLog.id)
+}
+
+@Test func summaryRangeSupportsCustomDateRangesAndRejectsInvalidRanges() throws {
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+    let insideRange = SessionLog(
+        meditationType: .vipassana,
+        source: .timer,
+        status: .completed,
+        startedAt: now.addingTimeInterval(-2_000),
+        endedAt: now.addingTimeInterval(-1_800),
+        completedDurationSeconds: 200
+    )
+    let outsideRange = SessionLog(
+        meditationType: .ajapa,
+        source: .manual,
+        status: .completed,
+        startedAt: now.addingTimeInterval(-(12 * 24 * 60 * 60)),
+        endedAt: now.addingTimeInterval(-(12 * 24 * 60 * 60)),
+        completedDurationSeconds: 300
+    )
+    let customRange = SummaryDateRange(
+        startDate: now.addingTimeInterval(-3 * 24 * 60 * 60),
+        endDate: now
+    )
+    let summary = SummaryFeature.deriveSnapshot(
+        from: [insideRange, outsideRange],
+        rangePreset: .custom,
+        customRange: customRange,
+        now: now
+    )
+    let invalidRangeSummary = SummaryFeature.deriveSnapshot(
+        from: [insideRange, outsideRange],
+        rangePreset: .custom,
+        customRange: SummaryDateRange(
+            startDate: now,
+            endDate: now.addingTimeInterval(-24 * 60 * 60)
+        ),
+        now: now
+    )
+
+    #expect(summary.sessionLogs.count == 1)
+    #expect(summary.sessionLogs.first?.id == insideRange.id)
+    #expect(invalidRangeSummary.sessionLogs.isEmpty)
+    #expect(
+        SummaryFeature.summaryRangeValidationMessage(
+            rangePreset: .custom,
+            customRange: SummaryDateRange(startDate: now, endDate: now.addingTimeInterval(-1))
+        ) != nil
+    )
 }
 
 @Test func sankalpaValidationRequiresTargetDaysAndObservanceLabel() throws {

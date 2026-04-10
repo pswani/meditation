@@ -121,7 +121,13 @@ public enum SampleData {
                 endedAt: dated(daysAgo: 2, hour: 18, minute: 40),
                 completedDurationSeconds: 1_200,
                 plannedDurationSeconds: 1_200,
-                notes: "Vipassana Sit 20"
+                notes: "Vipassana Sit 20",
+                context: SessionLogContext(
+                    customPlayID: vipassanaPlayID,
+                    customPlayName: "Vipassana Sit 20",
+                    recordingLabel: "Morning recording",
+                    linkedMediaIdentifier: "native-media-vipassana-sit-20"
+                )
             ),
             SessionLog(
                 meditationType: .ajapa,
@@ -131,7 +137,13 @@ public enum SampleData {
                 endedAt: dated(daysAgo: 4, hour: 7, minute: 18),
                 completedDurationSeconds: 480,
                 plannedDurationSeconds: 900,
-                notes: "Playlist: Morning Discipline • Item: Ajapa Evening Sit"
+                notes: "Playlist: Morning Discipline • Item: Ajapa Evening Sit",
+                context: SessionLogContext(
+                    playlistRunID: UUID(uuidString: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff")!,
+                    playlistName: "Morning Discipline",
+                    playlistItemIndex: 1,
+                    playlistItemCount: 2
+                )
             ),
         ]
         .sorted { $0.endedAt > $1.endedAt }

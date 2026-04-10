@@ -243,8 +243,23 @@ final class ShellViewModel: ObservableObject {
         activeSession != nil || activeCustomPlaySession != nil || activePlaylistSession != nil
     }
 
-    func summarySnapshot(for rangePreset: SummaryRangePreset) -> LocalSummarySnapshot {
-        SummaryFeature.deriveSnapshot(from: recentSessionLogs, rangePreset: rangePreset, now: now)
+    func summarySnapshot(
+        for rangePreset: SummaryRangePreset,
+        customRange: SummaryDateRange? = nil
+    ) -> LocalSummarySnapshot {
+        SummaryFeature.deriveSnapshot(
+            from: recentSessionLogs,
+            rangePreset: rangePreset,
+            customRange: customRange,
+            now: now
+        )
+    }
+
+    func summaryRangeValidationMessage(
+        for rangePreset: SummaryRangePreset,
+        customRange: SummaryDateRange?
+    ) -> String? {
+        SummaryFeature.summaryRangeValidationMessage(rangePreset: rangePreset, customRange: customRange)
     }
 
     func startTimer() {

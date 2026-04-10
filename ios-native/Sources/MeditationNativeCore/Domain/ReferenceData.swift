@@ -38,6 +38,17 @@ public enum SessionStatus: String, CaseIterable, Codable, Sendable {
     case completed
     case endedEarly = "ended-early"
     case inProgress = "in-progress"
+
+    public var title: String {
+        switch self {
+        case .completed:
+            return "Completed"
+        case .endedEarly:
+            return "Ended early"
+        case .inProgress:
+            return "In progress"
+        }
+    }
 }
 
 public enum SankalpaKind: String, CaseIterable, Sendable {
