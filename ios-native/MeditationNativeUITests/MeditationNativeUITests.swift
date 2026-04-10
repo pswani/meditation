@@ -12,6 +12,50 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
     }
 
+    func testHomeQuickStartStartsTheTimerFlow() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Start timer"].waitForExistence(timeout: 2))
+        app.buttons["Start timer"].tap()
+
+        app.tabBars.buttons["Practice"].tap()
+        XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
+    }
+
+    func testHomeLastUsedShortcutStartsTheTimerFlow() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Start last used meditation"].waitForExistence(timeout: 2))
+        app.buttons["Start last used meditation"].tap()
+
+        app.tabBars.buttons["Practice"].tap()
+        XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
+    }
+
+    func testHomeFavoriteCustomPlayShortcutStartsTheCustomPlayFlow() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Start Vipassana Sit 20"].waitForExistence(timeout: 2))
+        app.buttons["Start Vipassana Sit 20"].tap()
+
+        app.tabBars.buttons["Practice"].tap()
+        XCTAssertTrue(app.staticTexts["Active custom play"].waitForExistence(timeout: 2))
+    }
+
+    func testHomeFavoritePlaylistShortcutStartsThePlaylistFlow() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Start Morning Discipline"].waitForExistence(timeout: 2))
+        app.buttons["Start Morning Discipline"].tap()
+
+        app.tabBars.buttons["Practice"].tap()
+        XCTAssertTrue(app.staticTexts["Active playlist"].waitForExistence(timeout: 2))
+    }
+
     func testPracticeCanStartPauseResumeAndEndFixedTimer() throws {
         let app = XCUIApplication()
         app.launch()

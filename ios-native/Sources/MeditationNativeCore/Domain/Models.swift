@@ -165,6 +165,40 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
     }
 }
 
+public struct LastUsedPracticeTarget: Codable, Equatable, Sendable {
+    public enum Kind: String, Codable, CaseIterable, Sendable {
+        case timer
+        case customPlay = "custom-play"
+        case playlist
+    }
+
+    public var kind: Kind
+    public var title: String
+    public var meditationType: MeditationType
+    public var timerDraft: TimerSettingsDraft?
+    public var customPlayID: UUID?
+    public var playlistID: UUID?
+    public var updatedAt: Date
+
+    public init(
+        kind: Kind,
+        title: String,
+        meditationType: MeditationType,
+        timerDraft: TimerSettingsDraft? = nil,
+        customPlayID: UUID? = nil,
+        playlistID: UUID? = nil,
+        updatedAt: Date = Date()
+    ) {
+        self.kind = kind
+        self.title = title
+        self.meditationType = meditationType
+        self.timerDraft = timerDraft
+        self.customPlayID = customPlayID
+        self.playlistID = playlistID
+        self.updatedAt = updatedAt
+    }
+}
+
 public struct PlaylistItem: Identifiable, Codable, Equatable, Sendable {
     public enum Kind: String, Codable, CaseIterable, Sendable {
         case timer

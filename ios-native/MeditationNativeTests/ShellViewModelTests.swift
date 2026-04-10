@@ -4,6 +4,85 @@ import XCTest
 
 @MainActor
 final class ShellViewModelTests: XCTestCase {
+    func testHomeShortcutStateStaysCompactAndSorted() throws {
+        let (viewModel, _) = try makeViewModel()
+
+        XCTAssertEqual(viewModel.homeQuickStartSummary, "25 min fixed-duration • Vipassana")
+        XCTAssertEqual(viewModel.favoriteCustomPlaysForHome.map(\.name), ["Vipassana Sit 20"])
+        XCTAssertTrue(viewModel.favoriteCustomPlaysForHome.allSatisfy(\.isFavorite))
+        XCTAssertEqual(viewModel.favoritePlaylistsForHome.map(\.name), ["Morning Discipline"])
+        XCTAssertTrue(viewModel.favoritePlaylistsForHome.allSatisfy(\.isFavorite))
+        XCTAssertEqual(viewModel.homeRecentSessionLogs.count, 3)
+        XCTAssertNotNil(viewModel.lastUsedPracticeSummary)
+    }
+
+    func testLastUsedTimerShortcutStartsThePersistedTimerDraft() throws {
+        let targetDraft = TimerSettingsDraft(
+            mode: .fixedDuration,
+            durationMinutes: 12,
+            meditationType: .sahaj,
+            startSoundName: TimerSoundOption.gong.rawValue,
+            endSoundName: TimerSoundOption.templeBell.rawValue
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.lastUsedPracticeTarget = LastUsedPracticeTarget(
+            kind: .timer,
+            title: "12 min timer",
+            meditationType: .sahaj,
+            timerDraft: targetDraft,
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+
+        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+
+        viewModel.startLastUsedPractice()
+
+        XCTAssertNotNil(viewModel.activeSession)
+        XCTAssertEqual(viewModel.activeSession?.configuration.mode, .fixedDuration)
+        XCTAssertEqual(viewModel.activeSession?.configuration.durationSeconds, 720)
+        XCTAssertEqual(viewModel.activeSession?.configuration.meditationType, .sahaj)
+        XCTAssertEqual(viewModel.activeSession?.configuration.startSoundName, TimerSoundOption.gong.rawValue)
+        XCTAssertEqual(viewModel.snapshot.lastUsedPracticeTarget?.kind, .timer)
+    }
+
+    func testLastUsedCustomPlayShortcutStartsTheSavedCustomPlay() throws {
+        var snapshot = SampleData.snapshot
+        let customPlay = try XCTUnwrap(snapshot.customPlays.first(where: { $0.isFavorite }))
+        snapshot.lastUsedPracticeTarget = LastUsedPracticeTarget(
+            kind: .customPlay,
+            title: customPlay.name,
+            meditationType: customPlay.meditationType,
+            customPlayID: customPlay.id,
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
+        )
+
+        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+
+        viewModel.startLastUsedPractice()
+
+        XCTAssertEqual(viewModel.activeCustomPlaySession?.customPlay.id, customPlay.id)
+        XCTAssertEqual(viewModel.activeCustomPlaySession?.customPlay.name, customPlay.name)
+    }
+
+    func testLastUsedPlaylistShortcutStartsTheSavedPlaylist() throws {
+        var snapshot = SampleData.snapshot
+        let playlist = try XCTUnwrap(snapshot.playlists.first(where: { $0.isFavorite }))
+        snapshot.lastUsedPracticeTarget = LastUsedPracticeTarget(
+            kind: .playlist,
+            title: playlist.name,
+            meditationType: playlist.items.first?.meditationType ?? .vipassana,
+            playlistID: playlist.id,
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_200)
+        )
+
+        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+
+        viewModel.startLastUsedPractice()
+
+        XCTAssertEqual(viewModel.activePlaylistSession?.playlist.id, playlist.id)
+        XCTAssertEqual(viewModel.activePlaylistSession?.playlist.name, playlist.name)
+    }
+
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
         let (viewModel, notificationScheduler) = try makeViewModel()
 

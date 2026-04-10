@@ -8,7 +8,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Home")
                     .font(.largeTitle.weight(.semibold))
-                Text("Start quickly, check today’s progress, and keep your current sankalpa in view.")
+                Text("Start quickly, repeat the last used meditation, and keep today’s practice context visible.")
                     .foregroundStyle(.secondary)
 
                 if viewModel.isSeedData {
@@ -17,17 +17,28 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                quickStartSection
-                todaySection
-                sankalpaSection
-                recentSessionSection
-                practiceLibrarySection
-
-                if let persistenceMessage = viewModel.persistenceMessage {
-                    Text(persistenceMessage)
+                if viewModel.hasActivePracticeRuntime {
+                    Text("A practice is already active in Practice.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
+                }
+
+                quickStartSection
+                favoriteShortcutsSection
+                todaySection
+                recentSessionSection
+                sankalpaSection
+
+                if let timerValidationMessage = viewModel.timerValidationMessage {
+                    messageText(timerValidationMessage, color: .red)
+                }
+
+                if let practiceRuntimeMessage = viewModel.practiceRuntimeMessage {
+                    messageText(practiceRuntimeMessage, color: .secondary)
+                }
+
+                if let persistenceMessage = viewModel.persistenceMessage {
+                    messageText(persistenceMessage, color: .secondary)
                 }
             }
             .padding()
@@ -38,23 +49,132 @@ struct HomeView: View {
     private var quickStartSection: some View {
         SectionCard(
             title: "Quick start",
-            caption: "Current timer defaults"
+            caption: "Start the current timer defaults or repeat the last used meditation"
         ) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(viewModel.snapshot.timerDraft.meditationType?.rawValue ?? "Choose a meditation type")
+            VStack(alignment: .leading, spacing: 12) {
+                Text(viewModel.homeQuickStartSummary)
+                    .font(.headline)
 
-                if viewModel.snapshot.timerDraft.mode == .fixedDuration {
-                    Text("\(viewModel.snapshot.timerDraft.durationMinutes) minute fixed-duration session")
+                if let lastUsedPracticeSummary = viewModel.lastUsedPracticeSummary {
+                    Text("Last used: \(lastUsedPracticeSummary)")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Open-ended session")
+                    Text("No last used meditation yet.")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
-                if let startSoundName = viewModel.snapshot.timerDraft.startSoundName {
-                    Text("Start sound: \(startSoundName)")
+                Button("Start timer") {
+                    viewModel.startTimer()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.teal)
+                .disabled(viewModel.hasActivePracticeRuntime || viewModel.snapshot.timerDraft.meditationType == nil)
+
+                Button("Start last used meditation") {
+                    viewModel.startLastUsedPractice()
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.hasActivePracticeRuntime || viewModel.hasLastUsedPracticeTarget == false)
+
+                if viewModel.snapshot.timerDraft.meditationType == nil {
+                    Text("Choose a meditation type in Practice before using the timer quick start.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var favoriteShortcutsSection: some View {
+        SectionCard(
+            title: "Favorite shortcuts",
+            caption: "Start saved custom plays and playlists without opening the libraries"
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                favoriteCustomPlaySection
+
+                Divider()
+
+                favoritePlaylistSection
+            }
+        }
+    }
+
+    private var favoriteCustomPlaySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Custom plays")
+                .font(.headline)
+
+            if viewModel.favoriteCustomPlaysForHome.isEmpty {
+                Text("Mark a custom play favorite in Practice to bring a shortcut here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(viewModel.favoriteCustomPlaysForHome) { customPlay in
+                        shortcutRow(
+                            title: customPlay.name,
+                            detail: "\(customPlay.meditationType.rawValue) • \(formatDuration(customPlay.durationSeconds))",
+                            buttonTitle: "Start \(customPlay.name)",
+                            isEnabled: customPlay.media != nil && viewModel.hasActivePracticeRuntime == false
+                        ) {
+                            viewModel.startCustomPlay(customPlay)
+                        }
+
+                        if customPlay.media == nil {
+                            Text("Needs bundled placeholder audio before it can start.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if customPlay.id != viewModel.favoriteCustomPlaysForHome.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var favoritePlaylistSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Playlists")
+                .font(.headline)
+
+            if viewModel.favoritePlaylistsForHome.isEmpty {
+                Text("Mark a playlist favorite in Practice to bring a shortcut here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(viewModel.favoritePlaylistsForHome) { playlist in
+                        let validationError = PlaylistFeature.validatePlaylistForRun(
+                            playlist,
+                            availableCustomPlays: viewModel.snapshot.customPlays
+                        )
+
+                        shortcutRow(
+                            title: playlist.name,
+                            detail: "\(playlist.items.count) items • \(formatDuration(playlist.totalDurationSeconds))",
+                            buttonTitle: "Start \(playlist.name)",
+                            isEnabled: validationError == nil && viewModel.hasActivePracticeRuntime == false,
+                            footerText: playlist.gapSeconds > 0 ? "Small gap: \(playlist.gapSeconds) sec" : "No gap between items"
+                        ) {
+                            viewModel.startPlaylist(playlist)
+                        }
+
+                        if let validationError {
+                            Text(validationError.message)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if playlist.id != viewModel.favoritePlaylistsForHome.last?.id {
+                            Divider()
+                        }
+                    }
                 }
             }
         }
@@ -83,6 +203,37 @@ struct HomeView: View {
                         title: "Completed / ended early",
                         value: "\(viewModel.todayActivitySummary.completedCount) / \(viewModel.todayActivitySummary.endedEarlyCount)"
                     )
+                }
+            }
+        }
+    }
+
+    private var recentSessionSection: some View {
+        SectionCard(title: "Recent activity", caption: "Latest local session logs") {
+            if viewModel.homeRecentSessionLogs.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No recent session logs yet.")
+                    Text("Your latest sessions will appear here after you start or log them.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(viewModel.homeRecentSessionLogs) { log in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(log.meditationType.rawValue)
+                                .font(.headline)
+                            Text("\(log.source.title) • \(formatDuration(log.completedDurationSeconds))")
+                                .foregroundStyle(.secondary)
+                            Text(log.endedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if log.id != viewModel.homeRecentSessionLogs.last?.id {
+                            Divider()
+                        }
+                    }
                 }
             }
         }
@@ -121,32 +272,43 @@ struct HomeView: View {
         }
     }
 
-    private var recentSessionSection: some View {
-        Group {
-            if let latestLog = viewModel.recentSessionLogs.first {
-                SectionCard(title: "Most recent session", caption: "Latest local session log") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(latestLog.meditationType.rawValue)
-                        Text("\(latestLog.source.title) • \(formatDuration(latestLog.completedDurationSeconds))")
-                            .foregroundStyle(.secondary)
-                        Text(latestLog.endedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+    private func shortcutRow(
+        title: String,
+        detail: String,
+        buttonTitle: String,
+        isEnabled: Bool,
+        footerText: String? = nil,
+        action: @escaping () -> Void,
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                    Text(detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-            }
-        }
-    }
 
-    private var practiceLibrarySection: some View {
-        SectionCard(title: "Practice library", caption: "Local custom plays and playlists on this device") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(viewModel.customPlays.count) custom plays • \(viewModel.playlists.count) playlists")
-                Text("Summaries and sankalpas now derive from the same local session history that powers History.")
+                Spacer()
+
+                Button(buttonTitle, action: action)
+                    .buttonStyle(.bordered)
+                    .disabled(isEnabled == false)
+            }
+
+            if let footerText {
+                Text(footerText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func messageText(_ message: String, color: Color) -> some View {
+        Text(message)
+            .font(.footnote)
+            .foregroundStyle(color)
     }
 
     private func metricRow(title: String, value: String) -> some View {

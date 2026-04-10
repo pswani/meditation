@@ -18,6 +18,7 @@ Implemented native surfaces through milestone 4 now include:
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
 - History filters plus manual log entry
+- Home quick start, last-used meditation, favorite shortcut, and recent-session context on iPhone
 - Home progress context with today totals, recent session signal, and an active `sankalpa` snapshot
 - summary views derived from local `session log` history with all-time, 7-day, and 30-day range filters
 - local-first `sankalpa` creation, editing, archive, restore, and progress sections

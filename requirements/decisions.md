@@ -70,6 +70,9 @@
   - cache files the user has already touched
   - do not pre-cache the full managed media library by default
 - Keep persisted timer defaults separate from the Practice screen's in-progress draft state so Home, Settings, and Practice do not overwrite one another unintentionally.
+- Keep Home shortcut state local and compact:
+  - persist a small `lastUsedPracticeTarget` snapshot for timer, `custom play`, and playlist launches
+  - keep the shortcut groups limited so the screen stays calm
 - Persist active timer recovery as one canonical active-session snapshot and preserve paused recovery truthfully instead of reconstructing timer state from looser fragments.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
 - Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:

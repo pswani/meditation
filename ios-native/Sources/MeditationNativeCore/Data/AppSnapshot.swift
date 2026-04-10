@@ -2,6 +2,7 @@ import Foundation
 
 public struct AppSnapshot: Codable, Equatable, Sendable {
     public var timerDraft: TimerSettingsDraft
+    public var lastUsedPracticeTarget: LastUsedPracticeTarget?
     public var recentSessionLogs: [SessionLog]
     public var customPlays: [CustomPlay]
     public var playlists: [Playlist]
@@ -10,6 +11,7 @@ public struct AppSnapshot: Codable, Equatable, Sendable {
 
     public init(
         timerDraft: TimerSettingsDraft,
+        lastUsedPracticeTarget: LastUsedPracticeTarget? = nil,
         recentSessionLogs: [SessionLog],
         customPlays: [CustomPlay],
         playlists: [Playlist],
@@ -17,6 +19,7 @@ public struct AppSnapshot: Codable, Equatable, Sendable {
         summary: SummarySnapshot
     ) {
         self.timerDraft = timerDraft
+        self.lastUsedPracticeTarget = lastUsedPracticeTarget
         self.recentSessionLogs = recentSessionLogs
         self.customPlays = customPlays
         self.playlists = playlists

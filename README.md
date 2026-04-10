@@ -43,6 +43,7 @@ This README is intentionally grounded in the current repository contents. It exp
   - stale queued deletes for `custom play` and playlist records now return the current backend-backed record so the UI can restore it with explicit warning guidance
 - Timer, playlist, history, summary, sankalpa, and custom play flows are implemented in the front end.
 - Timer sound playback is now wired for session start, interval cues, and session end in the timer flow.
+- Home now adds quick start, last-used, favorite `custom play`, favorite playlist, and concise recent-session shortcuts on iPhone.
 - `custom play` now supports a dedicated prerecorded-session runtime with:
   - direct start from Home and Practice
   - resumeable playback state
@@ -83,8 +84,7 @@ The chosen target architecture for the next implementation phase is:
 
 The app supports a focused meditation practice workflow:
 
-- quick start from Home
-- start the last used meditation from Home
+- quick start from Home, including last-used meditation and favorite `custom play` / playlist shortcuts
 - timer-based meditation sessions
 - dedicated `custom play` runtime sessions
 - optional start, end, and interval sound selections
