@@ -45,7 +45,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
             meditationType: .vipassana,
             durationSeconds: 1_200,
             recordingLabel: "Morning recording",
-            media: CustomPlayMedia(asset: .templeBellLoop)
+            media: .bundledSample(.vipassanaSit20)
         )
         let log = SessionLog(
             meditationType: .vipassana,
@@ -78,6 +78,42 @@ final class ShellViewModelPresentationTests: XCTestCase {
         XCTAssertEqual(target?.kind, .customPlay)
         XCTAssertEqual(target?.customPlayID, customPlay.id)
         XCTAssertEqual(target?.title, customPlay.name)
+    }
+
+    func testSnapshotNormalizationUpgradesLegacySoundLabelsAndSampleMedia() throws {
+        let legacyMedia = try JSONDecoder().decode(
+            CustomPlayMedia.self,
+            from: Data(#"{"asset":"Temple Bell loop"}"#.utf8)
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.timerDraft.startSoundName = TimerSoundOption.softChime.rawValue
+        snapshot.timerDraft.endSoundName = TimerSoundOption.woodBlock.rawValue
+        snapshot.timerDraft.intervalSoundName = TimerSoundOption.woodBlock.rawValue
+        snapshot.timerDraft.intervalMinutes = 5
+        snapshot.lastUsedPracticeTarget = LastUsedPracticeTarget(
+            kind: .timer,
+            title: "Legacy timer",
+            meditationType: .vipassana,
+            timerDraft: snapshot.timerDraft
+        )
+        snapshot.customPlays = [
+            CustomPlay(
+                name: "Legacy bundled sample",
+                meditationType: .vipassana,
+                durationSeconds: 1_200,
+                linkedMediaIdentifier: "native-media-vipassana-sit-20",
+                media: legacyMedia
+            ),
+        ]
+
+        let normalized = ShellSnapshotSupport.normalizedSnapshot(snapshot)
+
+        XCTAssertEqual(normalized.timerDraft.startSoundName, TimerSoundOption.templeBell.rawValue)
+        XCTAssertEqual(normalized.timerDraft.endSoundName, TimerSoundOption.gong.rawValue)
+        XCTAssertEqual(normalized.timerDraft.intervalSoundName, TimerSoundOption.gong.rawValue)
+        XCTAssertEqual(normalized.lastUsedPracticeTarget?.timerDraft?.startSoundName, TimerSoundOption.templeBell.rawValue)
+        XCTAssertEqual(normalized.customPlays.first?.media?.bundledAsset, .vipassanaSit20)
+        XCTAssertEqual(normalized.customPlays.first?.linkedMediaIdentifier, CustomPlayMediaAsset.vipassanaSit20.id)
     }
 
     func testActivePlaylistPresentationReflectsItemAndGapPhases() {

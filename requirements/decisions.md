@@ -29,12 +29,14 @@
   - keep native fixed-duration completion notifications best-effort through `UserNotifications`, while treating the on-screen timer state as the source of truth whenever the app is foregrounded
   - keep native History filters calm and readable on iPhone while still supporting source, status, and meditation-type filtering
   - keep native milestone-3 `custom play` media local and intentionally bounded:
-    - use bundled placeholder audio instead of widening into file import or backend media sync yet
-    - keep saved `custom play` media metadata optional so pre-media local snapshots still decode and surface calm “needs media” guidance
+    - use truthful recording targets instead of placeholder loops:
+      - bundled sample media that really ships in the app for local-only use
+      - backend-linked media metadata when sync is configured
+    - keep saved `custom play` media metadata optional so older local snapshots still decode and surface calm “needs media” guidance
   - keep native `custom play` parity metadata local-first and optional where possible:
     - carry optional start and end sounds directly on the saved `custom play`
     - carry an optional recording label or session note for calm history/context display
-    - carry an optional link-aware media identifier seam for later sync without replacing bundled placeholder playback yet
+    - carry an optional link-aware media identifier seam for later sync while keeping playback tied to truthful bundled-sample or backend-linked media
     - keep `Apply To Timer` as an explicit copy action from saved `custom play` values into timer defaults
   - keep native playlist items snapshot-based but still link-aware:
     - store the resolved title, meditation type, and duration on the playlist item itself
@@ -104,6 +106,10 @@
   - `Soft Chime` -> `Temple Bell`
   - `Wood Block` -> `Gong`
 - Keep shipped timer sounds inline-bundled into the frontend so playback does not depend on a backend `/media/**` route or separate runtime asset fetches.
+- Keep native iOS timer sounds aligned with that same web contract:
+  - only `Temple Bell` and `Gong` are first-class current choices
+  - the iOS app reuses the same bundled `temple-bell.mp3` and `gong.mp3` assets for playback
+  - legacy native or synced values normalize through the same `Soft Chime` -> `Temple Bell` and `Wood Block` -> `Gong` mapping
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
   - force timer catch-up evaluation on `visibilitychange`/`pageshow` foreground return
@@ -126,6 +132,10 @@
   - linked media metadata is required before save and reused for runtime duration
   - auto-created `session log` entries carry `custom play` name and recording context for History and summaries
   - optional start and end sounds play with the custom-play runtime so the saved model stays visible in the session itself
+- Keep native iOS `custom play` and linked-playlist recording playback honest:
+  - bundled sample media should only be offered when the actual recording ships in the app
+  - backend `/api/media/custom-plays` metadata should map to real remote playback URLs rather than meditation-type placeholder loops
+  - missing recordings should fail calmly with explicit guidance instead of substituting another sound
 - Keep playlist runs modeled as a runtime snapshot instead of reading mutable playlist records live during playback:
   - each run stores resolved item titles, durations, and any linked `custom play` media metadata at launch time
   - optional small gaps are stored at the playlist level and replayed as explicit runtime segments

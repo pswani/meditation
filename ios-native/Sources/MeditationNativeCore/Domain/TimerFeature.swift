@@ -55,7 +55,7 @@ public enum CustomPlayValidationError: String, Error, Equatable, Sendable {
         case .durationMustBeGreaterThanZero:
             return "Choose a duration greater than 0 minutes."
         case .mediaRequired:
-            return "Choose bundled placeholder audio before saving."
+            return "Choose available recording media before saving."
         }
     }
 }
@@ -90,7 +90,7 @@ public enum PlaylistValidationError: String, Error, Equatable, Sendable {
         case .customPlayMissing:
             return "A linked custom play is no longer available."
         case .customPlayNeedsMedia:
-            return "A linked custom play still needs bundled placeholder audio before this playlist can run."
+            return "A linked custom play needs an available recording before this playlist can run."
         }
     }
 }
@@ -541,7 +541,7 @@ public enum CustomPlayFeature {
             errors.append(.durationMustBeGreaterThanZero)
         }
 
-        if draft.mediaAsset == nil {
+        if draft.media?.isPlayable != true {
             errors.append(.mediaRequired)
         }
 
@@ -556,8 +556,9 @@ public enum CustomPlayFeature {
         updatedDraft.mode = .fixedDuration
         updatedDraft.durationMinutes = max(1, customPlay.durationSeconds / 60)
         updatedDraft.meditationType = customPlay.meditationType
-        updatedDraft.startSoundName = customPlay.startSoundName
-        updatedDraft.endSoundName = customPlay.endSoundName
+        updatedDraft.startSoundName = TimerSoundCatalog.normalizeSelection(customPlay.startSoundName)
+        updatedDraft.endSoundName = TimerSoundCatalog.normalizeSelection(customPlay.endSoundName)
+        updatedDraft.intervalSoundName = TimerSoundCatalog.normalizeSelection(draft.intervalSoundName)
         return updatedDraft
     }
 
@@ -573,20 +574,22 @@ public enum CustomPlayFeature {
             throw CustomPlayValidationError.meditationTypeRequired
         }
 
-        guard let mediaAsset = draft.mediaAsset else {
+        guard let media = draft.media, media.isPlayable else {
             throw CustomPlayValidationError.mediaRequired
         }
+
+        let normalizedLinkedMediaIdentifier = draft.linkedMediaIdentifier.nilIfBlank ?? media.id
 
         return CustomPlay(
             id: existingID ?? draft.id ?? UUID(),
             name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
             meditationType: meditationType,
             durationSeconds: draft.durationMinutes * 60,
-            startSoundName: draft.startSoundName.flatMap { $0.nilIfBlank },
-            endSoundName: draft.endSoundName.flatMap { $0.nilIfBlank },
+            startSoundName: TimerSoundCatalog.normalizeSelection(draft.startSoundName),
+            endSoundName: TimerSoundCatalog.normalizeSelection(draft.endSoundName),
             recordingLabel: draft.recordingLabel.nilIfBlank,
-            linkedMediaIdentifier: draft.linkedMediaIdentifier.nilIfBlank,
-            media: CustomPlayMedia(asset: mediaAsset),
+            linkedMediaIdentifier: normalizedLinkedMediaIdentifier,
+            media: media.updatedIdentifier(normalizedLinkedMediaIdentifier),
             isFavorite: draft.isFavorite
         )
     }
@@ -601,7 +604,7 @@ public enum CustomPlayFeature {
             endSoundName: customPlay.endSoundName,
             recordingLabel: customPlay.recordingLabel ?? "",
             linkedMediaIdentifier: customPlay.linkedMediaIdentifier ?? "",
-            mediaAsset: customPlay.media?.asset,
+            media: customPlay.media,
             isFavorite: customPlay.isFavorite
         )
     }
@@ -693,7 +696,7 @@ public enum PlaylistFeature {
                     continue
                 }
 
-                if customPlay.media == nil {
+                if customPlay.media?.isPlayable != true {
                     errors.append(.customPlayNeedsMedia)
                 }
             }
@@ -734,7 +737,7 @@ public enum PlaylistFeature {
                     throw PlaylistValidationError.customPlayMissing
                 }
 
-                guard customPlay.media != nil else {
+                guard customPlay.media?.isPlayable == true else {
                     throw PlaylistValidationError.customPlayNeedsMedia
                 }
 
@@ -790,7 +793,7 @@ public enum PlaylistFeature {
                 return .customPlayMissing
             }
 
-            if customPlay.media == nil {
+            if customPlay.media?.isPlayable != true {
                 return .customPlayNeedsMedia
             }
         }
@@ -883,9 +886,9 @@ public enum TimerFeature {
             mode: draft.mode,
             durationSeconds: draft.mode == .fixedDuration ? draft.durationMinutes * 60 : nil,
             meditationType: meditationType,
-            startSoundName: draft.startSoundName,
-            endSoundName: draft.endSoundName,
-            intervalSoundName: draft.intervalSoundName,
+            startSoundName: TimerSoundCatalog.normalizeSelection(draft.startSoundName),
+            endSoundName: TimerSoundCatalog.normalizeSelection(draft.endSoundName),
+            intervalSoundName: TimerSoundCatalog.normalizeSelection(draft.intervalSoundName),
             intervalMinutes: draft.intervalMinutes
         )
     }

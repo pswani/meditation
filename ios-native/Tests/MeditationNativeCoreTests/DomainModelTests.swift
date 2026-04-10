@@ -12,6 +12,17 @@ import Testing
     ])
 }
 
+@Test func timerSoundCatalogMatchesWebContractAndNormalizesLegacyValues() throws {
+    #expect(ReferenceData.timerSoundOptions.map(\.rawValue) == [
+        "Temple Bell",
+        "Gong",
+    ])
+    #expect(TimerSoundCatalog.normalizeSelection("Temple Bell") == "Temple Bell")
+    #expect(TimerSoundCatalog.normalizeSelection("Soft Chime") == "Temple Bell")
+    #expect(TimerSoundCatalog.normalizeSelection("Wood Block") == "Gong")
+    #expect(TimerSoundCatalog.normalizeSelection("None") == nil)
+}
+
 @Test func playlistTotalDurationIncludesGaps() throws {
     let playlist = Playlist(
         name: "Morning",
@@ -56,7 +67,7 @@ import Testing
         name: "",
         meditationType: nil,
         durationMinutes: 0,
-        mediaAsset: nil
+        media: nil
     )
 
     let errors = CustomPlayFeature.validateCustomPlayDraft(draft)
@@ -76,7 +87,7 @@ import Testing
         endSoundName: TimerSoundOption.gong.rawValue,
         recordingLabel: "Breath emphasis",
         linkedMediaIdentifier: "media-session-123",
-        mediaAsset: .gongLoop,
+        media: .bundledSample(.vipassanaSit20),
         isFavorite: true
     )
 
@@ -91,7 +102,9 @@ import Testing
     #expect(roundTrippedDraft.endSoundName == draft.endSoundName)
     #expect(roundTrippedDraft.recordingLabel == draft.recordingLabel)
     #expect(roundTrippedDraft.linkedMediaIdentifier == draft.linkedMediaIdentifier)
-    #expect(roundTrippedDraft.mediaAsset == draft.mediaAsset)
+    #expect(roundTrippedDraft.media?.bundledAsset == draft.media?.bundledAsset)
+    #expect(roundTrippedDraft.media?.source == draft.media?.source)
+    #expect(roundTrippedDraft.media?.label == draft.media?.label)
     #expect(roundTrippedDraft.isFavorite == draft.isFavorite)
 }
 
@@ -123,7 +136,7 @@ import Testing
         name: "Ajapa Evening Sit",
         meditationType: .ajapa,
         durationSeconds: 900,
-        media: CustomPlayMedia(asset: .gongLoop)
+        media: .bundledSample(.vipassanaSit20)
     )
 
     var session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
@@ -155,7 +168,7 @@ import Testing
         endSoundName: TimerSoundOption.gong.rawValue,
         recordingLabel: "Morning recording",
         linkedMediaIdentifier: "media-session-456",
-        media: CustomPlayMedia(asset: .templeBellLoop)
+        media: .bundledSample(.vipassanaSit20)
     )
 
     let updatedDraft = CustomPlayFeature.applyToTimerDraft(baseDraft, from: customPlay)
@@ -165,7 +178,7 @@ import Testing
     #expect(updatedDraft.meditationType == .vipassana)
     #expect(updatedDraft.startSoundName == TimerSoundOption.templeBell.rawValue)
     #expect(updatedDraft.endSoundName == TimerSoundOption.gong.rawValue)
-    #expect(updatedDraft.intervalSoundName == TimerSoundOption.woodBlock.rawValue)
+    #expect(updatedDraft.intervalSoundName == TimerSoundOption.gong.rawValue)
     #expect(updatedDraft.intervalMinutes == 10)
 }
 
@@ -214,7 +227,7 @@ import Testing
         name: "Vipassana Sit 20",
         meditationType: .vipassana,
         durationSeconds: 1_200,
-        media: CustomPlayMedia(asset: .templeBellLoop)
+        media: .bundledSample(.vipassanaSit20)
     )
 
     let session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
@@ -240,7 +253,7 @@ import Testing
         meditationType: .vipassana,
         durationSeconds: 1_200,
         recordingLabel: "Morning recording",
-        media: CustomPlayMedia(asset: .templeBellLoop)
+        media: .bundledSample(.vipassanaSit20)
     )
 
     let session = ActiveCustomPlaySession(customPlay: customPlay, startedAt: startDate)
@@ -332,7 +345,7 @@ import Testing
         name: "Ajapa Evening Sit",
         meditationType: .ajapa,
         durationSeconds: 300,
-        media: CustomPlayMedia(asset: .gongLoop)
+        media: .bundledSample(.vipassanaSit20)
     )
     let playlist = try PlaylistFeature.makePlaylist(
         from: PlaylistDraft(

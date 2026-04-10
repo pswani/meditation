@@ -45,13 +45,17 @@ struct FeaturedCustomPlayLibrarySection: View {
                             Text("Linked media identifier: \(linkedMediaIdentifier)")
                                 .foregroundStyle(.secondary)
                         }
-                        Text(featuredCustomPlay.media == nil ? "Needs bundled placeholder audio before it can start." : "Ready to play locally on this device.")
+                        Text(
+                            viewModel.canResolvePlayback(for: featuredCustomPlay.media)
+                                ? "Ready to play with linked recording media on this device."
+                                : "Needs available recording media before it can start."
+                        )
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
 
                     HStack(spacing: 12) {
-                        if featuredCustomPlay.media != nil {
+                        if viewModel.canResolvePlayback(for: featuredCustomPlay.media) {
                             Button("Start featured custom play") {
                                 viewModel.startCustomPlay(featuredCustomPlay)
                             }
@@ -64,7 +68,7 @@ struct FeaturedCustomPlayLibrarySection: View {
                         .buttonStyle(.bordered)
                     }
                 } else {
-                    Text("No custom plays yet. Add one with a bundled placeholder track so you can start it quickly from Practice.")
+                    Text("No custom plays yet. Add one with bundled sample media or a synced linked recording so you can start it quickly from Practice.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -87,6 +91,7 @@ struct FeaturedPlaylistLibrarySection: View {
         SectionCard(title: "Playlists", caption: "Sequence timer items and custom plays in a calm order") {
             VStack(alignment: .leading, spacing: 12) {
                 if let featuredPlaylist = viewModel.playlists.first {
+                    let validationMessage = viewModel.playlistRunValidationMessage(for: featuredPlaylist)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(featuredPlaylist.name)
                             .font(.headline)
@@ -101,6 +106,13 @@ struct FeaturedPlaylistLibrarySection: View {
                         viewModel.startPlaylist(featuredPlaylist)
                     }
                     .buttonStyle(.bordered)
+                    .disabled(validationMessage != nil)
+
+                    if let validationMessage {
+                        Text(validationMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
                     Text("No playlists yet. Build one from timer items and saved custom plays when you want an ordered practice flow.")
                         .font(.footnote)

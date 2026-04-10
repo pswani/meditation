@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching` and `ios-native-decomposition-hardening-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
-- Latest merge outcome: merged `codex/ios-native-decomposition-hardening-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, and `ios-native-media-sound-parity-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
+- Latest merge outcome: merged `codex/ios-native-media-sound-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -31,6 +31,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-summary-sankalpa-feature.md`
   - `docs/execplan-ios-native-history-summary-parity-feature.md`
   - `docs/execplan-ios-native-decomposition-hardening-feature.md`
+  - `docs/execplan-ios-native-media-sound-parity-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
@@ -38,6 +39,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/review-ios-native-summary-sankalpa-feature.md`
   - `docs/review-ios-native-history-summary-parity-feature.md`
   - `docs/review-ios-native-decomposition-hardening-feature.md`
+  - `docs/review-ios-native-media-sound-parity-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
@@ -45,6 +47,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/test-ios-native-summary-sankalpa-feature.md`
   - `docs/test-ios-native-history-summary-parity-feature.md`
   - `docs/test-ios-native-decomposition-hardening-feature.md`
+  - `docs/test-ios-native-media-sound-parity-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -143,6 +146,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - a composition-first Practice route with active-session sections, featured-library sections, and dedicated `custom play` and playlist library-editor files nearby
   - context-first `last used` practice reconstruction that prefers structured `SessionLog` metadata before falling back to notes parsing
   - focused XCTest coverage for extracted shell presentation helpers plus UI confirmation flows beyond launch-only smoke checks
+- Native iOS media and sound parity now adds:
+  - a web-aligned native timer sound contract with only `Temple Bell` and `Gong` as current selectable timer cues
+  - legacy native and synced timer sound values that normalize from `Soft Chime` to `Temple Bell` and from `Wood Block` to `Gong`
+  - bundled timer cue playback through the same shipped audio assets instead of platform system-sound IDs
+  - truthful native `custom play` media modeling for either bundled sample recordings or backend-linked remote recording metadata
+  - snapshot and sync normalization that upgrades older placeholder media shapes without faking playback
+  - Home and Practice affordances that disable or explain launches when recording playback cannot be resolved on the current device or environment
+  - one bundled sample recording resource packaged with the app for local-only playback coverage
 - Native iOS summary and `sankalpa` milestone now adds:
   - Home progress context with today totals, recent session signal, and a top active `sankalpa` snapshot
   - local summary aggregation from native `session log` history with all-time, 7-day, and 30-day range views
@@ -201,6 +212,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-runtime-safety-hardening-feature.md`
 - Review artifact: `docs/review-ios-native-sync-parity-feature.md`
 - Review artifact: `docs/review-ios-native-decomposition-hardening-feature.md`
+- Review artifact: `docs/review-ios-native-media-sound-parity-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -218,6 +230,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-lock-screen-end-bell-fix-feature.md`
 - Verification report: `docs/test-ios-lock-screen-end-bell-mitigation.md`
 - Verification report: `docs/test-ios-native-foundation-feature.md`
+- Verification report: `docs/test-ios-native-media-sound-parity-feature.md`
 - Verification report: `docs/test-ios-native-timer-history-feature.md`
 - Verification report: `docs/test-ios-native-custom-play-playlist-feature.md`
 - Verification report: `docs/test-ios-native-custom-play-parity-feature.md`

@@ -8,10 +8,54 @@ public enum MeditationType: String, CaseIterable, Codable, Sendable {
     case sahaj = "Sahaj"
 }
 
-public enum TimerSoundOption: String, CaseIterable, Codable, Sendable {
+public enum TimerSoundOption: String, Codable, Sendable {
     case templeBell = "Temple Bell"
     case gong = "Gong"
+    case softChime = "Soft Chime"
     case woodBlock = "Wood Block"
+}
+
+public enum TimerSoundCatalog {
+    public static let noneLabel = "None"
+    public static let selectableOptions: [TimerSoundOption] = [
+        .templeBell,
+        .gong,
+    ]
+
+    public static let selectableLabels = selectableOptions.map(\.rawValue)
+
+    private static let legacyLabelMap: [String: String] = [
+        TimerSoundOption.softChime.rawValue: TimerSoundOption.templeBell.rawValue,
+        TimerSoundOption.woodBlock.rawValue: TimerSoundOption.gong.rawValue,
+    ]
+
+    public static func normalizeSelection(_ label: String?) -> String? {
+        guard let trimmedLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmedLabel.isEmpty == false,
+              trimmedLabel != noneLabel
+        else {
+            return nil
+        }
+
+        let normalizedLabel = legacyLabelMap[trimmedLabel] ?? trimmedLabel
+        return selectableLabels.contains(normalizedLabel) ? normalizedLabel : nil
+    }
+
+    public static func bundledFilename(for label: String?) -> String? {
+        switch normalizeSelection(label) {
+        case TimerSoundOption.templeBell.rawValue:
+            return "temple-bell.mp3"
+        case TimerSoundOption.gong.rawValue:
+            return "gong.mp3"
+        default:
+            return nil
+        }
+    }
+
+    public static func bundledResourceName(for label: String?) -> String? {
+        bundledFilename(for: label)?
+            .replacingOccurrences(of: ".mp3", with: "")
+    }
 }
 
 public enum SessionSource: String, CaseIterable, Codable, Sendable {
@@ -135,7 +179,7 @@ public enum AppDestination: String, CaseIterable, Codable, Sendable {
 public enum ReferenceData {
     public static let primaryDestinations = AppDestination.allCases
     public static let meditationTypes = MeditationType.allCases
-    public static let timerSoundOptions = TimerSoundOption.allCases
+    public static let timerSoundOptions = TimerSoundCatalog.selectableOptions
     public static let sessionSources = SessionSource.allCases
     public static let sankalpaKinds = SankalpaKind.allCases
     public static let timeOfDayBuckets = TimeOfDayBucket.allCases

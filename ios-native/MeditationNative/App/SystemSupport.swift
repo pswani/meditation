@@ -1,5 +1,4 @@
 import AVFoundation
-import AudioToolbox
 import Foundation
 @preconcurrency import UserNotifications
 
@@ -120,78 +119,84 @@ struct LiveNotificationScheduler: NotificationScheduling {
     }
 }
 
-protocol TimerSoundPlaying: Sendable {
+@MainActor
+protocol TimerSoundPlaying: AnyObject {
     func playSound(named soundName: String?)
 }
 
-struct SystemSoundPlayer: TimerSoundPlaying {
+@MainActor
+final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAudioPlayerDelegate {
+    private var activePlayers: [AVAudioPlayer] = []
+
     func playSound(named soundName: String?) {
-        guard let soundName else {
+        guard let resourceName = TimerSoundCatalog.bundledResourceName(for: soundName),
+              let fileURL = Bundle.main.url(forResource: resourceName, withExtension: "mp3")
+        else {
             return
         }
 
-        let soundID: SystemSoundID
-        switch soundName {
-        case TimerSoundOption.templeBell.rawValue:
-            soundID = 1025
-        case TimerSoundOption.gong.rawValue:
-            soundID = 1016
-        case TimerSoundOption.woodBlock.rawValue:
-            soundID = 1104
-        default:
+        do {
+            let player = try AVAudioPlayer(contentsOf: fileURL)
+            player.delegate = self
+            player.prepareToPlay()
+            guard player.play() else {
+                return
+            }
+            activePlayers.append(player)
+        } catch {
             return
         }
+    }
 
-        AudioServicesPlaySystemSound(soundID)
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        activePlayers.removeAll { $0 === player }
     }
 }
 
 enum LocalAudioPlaybackError: Error {
     case bundledAssetMissing
+    case recordingUnavailable
+    case invalidMediaURL
     case audioSetupFailed
 
     var message: String {
         switch self {
         case .bundledAssetMissing:
-            return "The bundled placeholder audio is unavailable right now."
+            return "The bundled recording is unavailable right now."
+        case .recordingUnavailable:
+            return "The linked recording is unavailable on this device right now."
+        case .invalidMediaURL:
+            return "The linked recording media path is invalid."
         case .audioSetupFailed:
-            return "The app could not start local audio playback right now."
+            return "The app could not start recording playback right now."
         }
     }
 }
 
+@MainActor
 protocol CustomPlayAudioControlling: AnyObject {
-    func startLoopingPlayback(for media: CustomPlayMedia) throws
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws
     func pausePlayback()
     func resumePlayback() throws
     func stopPlayback()
 }
 
-final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling, AVAudioPlayerDelegate {
-    private var audioPlayer: AVAudioPlayer?
+@MainActor
+final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
+    private var player: AVPlayer?
 
-    func startLoopingPlayback(for media: CustomPlayMedia) throws {
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws {
         stopPlayback()
-
-        guard let url = Bundle.main.url(
-            forResource: media.asset.bundledResourceName,
-            withExtension: media.asset.bundledResourceExtension
-        ) else {
-            throw LocalAudioPlaybackError.bundledAssetMissing
-        }
+        let url = try resolvePlaybackURL(for: media, environment: environment)
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
 
-            let player = try AVAudioPlayer(contentsOf: url)
-            player.numberOfLoops = -1
-            player.delegate = self
-            player.prepareToPlay()
-            guard player.play() else {
-                throw LocalAudioPlaybackError.audioSetupFailed
-            }
-            audioPlayer = player
+            let player = AVPlayer(url: url)
+            player.automaticallyWaitsToMinimizeStalling = true
+            player.play()
+            self.player = player
         } catch let playbackError as LocalAudioPlaybackError {
             throw playbackError
         } catch {
@@ -200,21 +205,77 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling, 
     }
 
     func pausePlayback() {
-        audioPlayer?.pause()
+        player?.pause()
     }
 
     func resumePlayback() throws {
-        guard let audioPlayer else {
+        guard let player else {
             throw LocalAudioPlaybackError.audioSetupFailed
         }
 
-        guard audioPlayer.play() else {
-            throw LocalAudioPlaybackError.audioSetupFailed
-        }
+        player.play()
     }
 
     func stopPlayback() {
-        audioPlayer?.stop()
-        audioPlayer = nil
+        player?.pause()
+        player = nil
+    }
+
+    private func resolvePlaybackURL(
+        for media: CustomPlayMedia,
+        environment: AppEnvironment
+    ) throws -> URL {
+        switch media.source {
+        case .bundledSample:
+            guard let bundledAsset = media.bundledAsset,
+                  let url = Bundle.main.url(
+                      forResource: bundledAsset.bundledResourceName,
+                      withExtension: bundledAsset.bundledResourceExtension
+                  )
+            else {
+                throw LocalAudioPlaybackError.bundledAssetMissing
+            }
+
+            return url
+        case .remote:
+            if let filePath = media.filePath?.trimmingCharacters(in: .whitespacesAndNewlines),
+               filePath.isEmpty == false {
+                if let absoluteURL = URL(string: filePath), absoluteURL.scheme != nil {
+                    return absoluteURL
+                }
+
+                guard let originURL = environment.apiBaseURL.flatMap(originURL(from:)) else {
+                    throw LocalAudioPlaybackError.recordingUnavailable
+                }
+
+                guard let resolvedURL = URL(string: filePath.hasPrefix("/") ? filePath : "/\(filePath)", relativeTo: originURL)?.absoluteURL else {
+                    throw LocalAudioPlaybackError.invalidMediaURL
+                }
+
+                return resolvedURL
+            }
+
+            guard media.relativePath.isEmpty == false,
+                  let originURL = environment.apiBaseURL.flatMap(originURL(from:)),
+                  let resolvedURL = URL(string: "/media/\(media.relativePath)", relativeTo: originURL)?.absoluteURL
+            else {
+                throw LocalAudioPlaybackError.recordingUnavailable
+            }
+
+            return resolvedURL
+        case .legacyPlaceholder:
+            throw LocalAudioPlaybackError.recordingUnavailable
+        }
+    }
+
+    private func originURL(from apiBaseURL: URL) -> URL? {
+        guard var components = URLComponents(url: apiBaseURL, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+
+        components.path = ""
+        components.query = nil
+        components.fragment = nil
+        return components.url
     }
 }

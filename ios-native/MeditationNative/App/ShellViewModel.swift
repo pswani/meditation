@@ -41,15 +41,15 @@ final class ShellViewModel: ObservableObject {
             environment: AppEnvironment.from()
         ),
         notificationScheduler: NotificationScheduling = LiveNotificationScheduler(),
-        soundPlayer: TimerSoundPlaying = SystemSoundPlayer(),
-        audioPlayer: CustomPlayAudioControlling = BundledCustomPlayAudioPlayer(),
+        soundPlayer: TimerSoundPlaying? = nil,
+        audioPlayer: CustomPlayAudioControlling? = nil,
         syncClient: AppSyncClient? = nil
     ) {
         self.repository = repository
         self.syncRepository = syncRepository
         self.notificationScheduler = notificationScheduler
-        self.soundPlayer = soundPlayer
-        self.audioPlayer = audioPlayer
+        self.soundPlayer = soundPlayer ?? SystemSoundPlayer()
+        self.audioPlayer = audioPlayer ?? BundledCustomPlayAudioPlayer()
         self.syncClient = syncClient ?? repository.environment.apiBaseURL.map { LiveAppSyncClient(baseURL: $0) }
 
         do {
@@ -166,6 +166,34 @@ final class ShellViewModel: ObservableObject {
 
     var hasActivePracticeRuntime: Bool {
         activeSession != nil || activeCustomPlaySession != nil || activePlaylistSession != nil
+    }
+
+    func canResolvePlayback(for media: CustomPlayMedia?) -> Bool {
+        guard let media else {
+            return false
+        }
+
+        return media.canResolvePlaybackURL(apiBaseURL: environment.apiBaseURL)
+    }
+
+    func playlistRunValidationMessage(for playlist: Playlist) -> String? {
+        if let validationError = PlaylistFeature.validatePlaylistForRun(
+            playlist,
+            availableCustomPlays: snapshot.customPlays
+        ) {
+            return validationError.message
+        }
+
+        for item in playlist.items where item.kind == .customPlay {
+            guard let customPlayID = item.customPlayID,
+                  let customPlay = snapshot.customPlays.first(where: { $0.id == customPlayID }),
+                  canResolvePlayback(for: customPlay.media)
+            else {
+                return PlaylistValidationError.customPlayNeedsMedia.message
+            }
+        }
+
+        return nil
     }
 
     func summarySnapshot(
@@ -344,13 +372,18 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        guard canResolvePlayback(for: customPlay.media) else {
+            practiceRuntimeMessage = "This custom play needs an available recording before it can start."
+            return
+        }
+
         guard let media = customPlay.media else {
-            practiceRuntimeMessage = "This custom play still needs bundled placeholder audio before it can start."
+            practiceRuntimeMessage = "This custom play needs an available recording before it can start."
             return
         }
 
         do {
-            try audioPlayer.startLoopingPlayback(for: media)
+            try audioPlayer.startPlayback(for: media, environment: environment)
             activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
             soundPlayer.playSound(named: customPlay.startSoundName)
             practiceRuntimeMessage = nil
@@ -536,8 +569,8 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        if let validationError = PlaylistFeature.validatePlaylistForRun(playlist, availableCustomPlays: snapshot.customPlays) {
-            practiceRuntimeMessage = validationError.message
+        if let validationMessage = playlistRunValidationMessage(for: playlist) {
+            practiceRuntimeMessage = validationMessage
             return
         }
 
@@ -975,7 +1008,8 @@ final class ShellViewModel: ObservableObject {
               currentItem.kind == .customPlay,
               let customPlayID = currentItem.customPlayID,
               let customPlay = snapshot.customPlays.first(where: { $0.id == customPlayID }),
-              let media = customPlay.media
+              let media = customPlay.media,
+              canResolvePlayback(for: media)
         else {
             audioPlayer.stopPlayback()
             return
@@ -986,7 +1020,7 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        try audioPlayer.startLoopingPlayback(for: media)
+        try audioPlayer.startPlayback(for: media, environment: environment)
     }
 
     private func startTimer(

@@ -161,28 +161,220 @@ public struct CustomPlay: Identifiable, Codable, Equatable, Sendable {
 }
 
 public enum CustomPlayMediaAsset: String, CaseIterable, Codable, Sendable {
-    case templeBellLoop = "Temple Bell loop"
-    case gongLoop = "Gong loop"
+    case vipassanaSit20 = "Vipassana Sit (20 min)"
+
+    public var id: String {
+        switch self {
+        case .vipassanaSit20:
+            return "media-vipassana-sit-20"
+        }
+    }
+
+    public var meditationType: MeditationType {
+        switch self {
+        case .vipassanaSit20:
+            return .vipassana
+        }
+    }
+
+    public var durationSeconds: Int {
+        switch self {
+        case .vipassanaSit20:
+            return 1_200
+        }
+    }
+
+    public var label: String {
+        rawValue
+    }
+
+    public var relativePath: String {
+        switch self {
+        case .vipassanaSit20:
+            return "custom-plays/vipassana-sit-20.mp3"
+        }
+    }
 
     public var bundledResourceName: String {
         switch self {
-        case .templeBellLoop:
-            return "temple-bell"
-        case .gongLoop:
-            return "gong"
+        case .vipassanaSit20:
+            return "vipassana-sit-20"
         }
     }
 
     public var bundledResourceExtension: String {
         "mp3"
     }
+
+    public var legacyIdentifiers: [String] {
+        switch self {
+        case .vipassanaSit20:
+            return ["native-media-vipassana-sit-20"]
+        }
+    }
+
+    public static func resolve(identifier: String?) -> CustomPlayMediaAsset? {
+        guard let trimmedIdentifier = identifier?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmedIdentifier.isEmpty == false
+        else {
+            return nil
+        }
+
+        return allCases.first { asset in
+            asset.id == trimmedIdentifier || asset.legacyIdentifiers.contains(trimmedIdentifier)
+        }
+    }
+}
+
+public enum CustomPlayMediaSource: String, Codable, Sendable {
+    case bundledSample = "bundled-sample"
+    case remote
+    case legacyPlaceholder = "legacy-placeholder"
 }
 
 public struct CustomPlayMedia: Codable, Equatable, Sendable {
-    public var asset: CustomPlayMediaAsset
+    public var id: String
+    public var label: String
+    public var source: CustomPlayMediaSource
+    public var relativePath: String
+    public var filePath: String?
+    public var bundledAsset: CustomPlayMediaAsset?
 
-    public init(asset: CustomPlayMediaAsset) {
-        self.asset = asset
+    public init(
+        id: String,
+        label: String,
+        source: CustomPlayMediaSource,
+        relativePath: String,
+        filePath: String? = nil,
+        bundledAsset: CustomPlayMediaAsset? = nil
+    ) {
+        self.id = id
+        self.label = label
+        self.source = source
+        self.relativePath = relativePath
+        self.filePath = filePath
+        self.bundledAsset = bundledAsset
+    }
+
+    public static func bundledSample(_ asset: CustomPlayMediaAsset) -> CustomPlayMedia {
+        CustomPlayMedia(
+            id: asset.id,
+            label: asset.label,
+            source: .bundledSample,
+            relativePath: asset.relativePath,
+            bundledAsset: asset
+        )
+    }
+
+    public static func remote(
+        id: String,
+        label: String,
+        relativePath: String,
+        filePath: String
+    ) -> CustomPlayMedia {
+        CustomPlayMedia(
+            id: id,
+            label: label,
+            source: .remote,
+            relativePath: relativePath,
+            filePath: filePath
+        )
+    }
+
+    public var isPlayable: Bool {
+        switch source {
+        case .bundledSample:
+            return bundledAsset != nil
+        case .remote:
+            return filePath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false || relativePath.isEmpty == false
+        case .legacyPlaceholder:
+            return false
+        }
+    }
+
+    public func canResolvePlaybackURL(apiBaseURL: URL?) -> Bool {
+        guard isPlayable else {
+            return false
+        }
+
+        switch source {
+        case .bundledSample:
+            return bundledAsset != nil
+        case .remote:
+            if let trimmedFilePath = filePath?.trimmingCharacters(in: .whitespacesAndNewlines),
+               trimmedFilePath.isEmpty == false,
+               let url = URL(string: trimmedFilePath),
+               url.scheme != nil {
+                return true
+            }
+
+            return apiBaseURL != nil
+        case .legacyPlaceholder:
+            return false
+        }
+    }
+
+    public var sourceSummary: String {
+        switch source {
+        case .bundledSample:
+            return "Bundled sample"
+        case .remote:
+            return "Backend linked"
+        case .legacyPlaceholder:
+            return "Legacy placeholder"
+        }
+    }
+
+    public func updatedIdentifier(_ identifier: String?) -> CustomPlayMedia {
+        guard let trimmedIdentifier = identifier?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmedIdentifier.isEmpty == false
+        else {
+            return self
+        }
+
+        var updatedMedia = self
+        updatedMedia.id = trimmedIdentifier
+        return updatedMedia
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case label
+        case source
+        case relativePath
+        case filePath
+        case bundledAsset
+    }
+
+    private enum LegacyCodingKeys: String, CodingKey {
+        case asset
+    }
+
+    private enum LegacyCustomPlayMediaAsset: String, Codable {
+        case templeBellLoop = "Temple Bell loop"
+        case gongLoop = "Gong loop"
+    }
+
+    public init(from decoder: Decoder) throws {
+        if let container = try? decoder.container(keyedBy: CodingKeys.self),
+           container.contains(.id) || container.contains(.source) || container.contains(.label) {
+            id = try container.decode(String.self, forKey: .id)
+            label = try container.decode(String.self, forKey: .label)
+            source = try container.decode(CustomPlayMediaSource.self, forKey: .source)
+            relativePath = try container.decode(String.self, forKey: .relativePath)
+            filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
+            bundledAsset = try container.decodeIfPresent(CustomPlayMediaAsset.self, forKey: .bundledAsset)
+            return
+        }
+
+        let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
+        let legacyAsset = try legacyContainer.decode(LegacyCustomPlayMediaAsset.self, forKey: .asset)
+        id = "legacy-\(legacyAsset.rawValue.lowercased().replacingOccurrences(of: " ", with: "-"))"
+        label = legacyAsset.rawValue
+        source = .legacyPlaceholder
+        relativePath = ""
+        filePath = nil
+        bundledAsset = nil
     }
 }
 
@@ -195,7 +387,7 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
     public var endSoundName: String?
     public var recordingLabel: String
     public var linkedMediaIdentifier: String
-    public var mediaAsset: CustomPlayMediaAsset?
+    public var media: CustomPlayMedia?
     public var isFavorite: Bool
 
     public init(
@@ -207,7 +399,7 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
         endSoundName: String? = nil,
         recordingLabel: String = "",
         linkedMediaIdentifier: String = "",
-        mediaAsset: CustomPlayMediaAsset? = .templeBellLoop,
+        media: CustomPlayMedia? = nil,
         isFavorite: Bool = false
     ) {
         self.id = id
@@ -218,7 +410,7 @@ public struct CustomPlayDraft: Codable, Equatable, Sendable {
         self.endSoundName = endSoundName
         self.recordingLabel = recordingLabel
         self.linkedMediaIdentifier = linkedMediaIdentifier
-        self.mediaAsset = mediaAsset
+        self.media = media
         self.isFavorite = isFavorite
     }
 }
