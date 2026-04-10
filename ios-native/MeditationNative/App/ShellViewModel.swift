@@ -166,12 +166,61 @@ final class ShellViewModel: ObservableObject {
         snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
     }
 
+    var homeRecentSessionLogs: [SessionLog] {
+        Array(recentSessionLogs.prefix(3))
+    }
+
     var customPlays: [CustomPlay] {
         snapshot.customPlays.sorted(by: sortCustomPlays)
     }
 
+    var favoriteCustomPlaysForHome: [CustomPlay] {
+        Array(customPlays.filter(\.isFavorite).prefix(3))
+    }
+
     var playlists: [Playlist] {
         snapshot.playlists.sorted(by: sortPlaylists)
+    }
+
+    var favoritePlaylistsForHome: [Playlist] {
+        Array(playlists.filter(\.isFavorite).prefix(3))
+    }
+
+    var homeQuickStartSummary: String {
+        let meditationType = snapshot.timerDraft.meditationType?.rawValue ?? "Choose a meditation type"
+        if snapshot.timerDraft.mode == .fixedDuration {
+            return "\(snapshot.timerDraft.durationMinutes) min fixed-duration • \(meditationType)"
+        }
+
+        return "Open-ended • \(meditationType)"
+    }
+
+    var lastUsedPracticeSummary: String? {
+        guard let target = snapshot.lastUsedPracticeTarget else {
+            return nil
+        }
+
+        switch target.kind {
+        case .timer:
+            if let timerDraft = target.timerDraft {
+                let meditationType = timerDraft.meditationType?.rawValue ?? target.meditationType.rawValue
+                if timerDraft.mode == .fixedDuration {
+                    return "\(target.title) • \(timerDraft.durationMinutes) min • \(meditationType)"
+                }
+
+                return "\(target.title) • Open-ended • \(meditationType)"
+            }
+
+            return "\(target.title) • \(target.meditationType.rawValue)"
+        case .customPlay:
+            return "\(target.title) • \(target.meditationType.rawValue)"
+        case .playlist:
+            return "\(target.title) • \(target.meditationType.rawValue)"
+        }
+    }
+
+    var hasLastUsedPracticeTarget: Bool {
+        snapshot.lastUsedPracticeTarget != nil
     }
 
     var todayActivitySummary: TodayActivitySummary {
@@ -199,25 +248,38 @@ final class ShellViewModel: ObservableObject {
     }
 
     func startTimer() {
-        guard hasActivePracticeRuntime == false else {
-            practiceRuntimeMessage = "Finish the current practice before starting something new."
+        startTimer(using: snapshot.timerDraft, recordLastUsedTarget: makeTimerLastUsedTarget(from: snapshot.timerDraft))
+    }
+
+    func startLastUsedPractice() {
+        guard let lastUsedPracticeTarget = snapshot.lastUsedPracticeTarget else {
+            practiceRuntimeMessage = "There is no last used meditation yet."
             return
         }
 
-        timerValidationMessage = nil
-        practiceRuntimeMessage = nil
-        persistenceMessage = nil
+        switch lastUsedPracticeTarget.kind {
+        case .timer:
+            var timerDraft = lastUsedPracticeTarget.timerDraft ?? snapshot.timerDraft
+            if timerDraft.meditationType == nil {
+                timerDraft.meditationType = lastUsedPracticeTarget.meditationType
+            }
+            startTimer(using: timerDraft, recordLastUsedTarget: lastUsedPracticeTarget)
+        case .customPlay:
+            guard let customPlayID = lastUsedPracticeTarget.customPlayID,
+                  let customPlay = snapshot.customPlays.first(where: { $0.id == customPlayID }) else {
+                practiceRuntimeMessage = "The last used custom play is no longer available."
+                return
+            }
 
-        do {
-            activeSession = try TimerFeature.makeActiveSession(from: snapshot.timerDraft, now: Date())
-            now = Date()
-            soundPlayer.playSound(named: activeSession?.configuration.startSoundName)
-            startClock()
-            rescheduleTimerNotificationIfNeeded()
-        } catch let error as TimerValidationError {
-            timerValidationMessage = error.message
-        } catch {
-            timerValidationMessage = "The timer could not start with the current setup."
+            startCustomPlay(customPlay)
+        case .playlist:
+            guard let playlistID = lastUsedPracticeTarget.playlistID,
+                  let playlist = snapshot.playlists.first(where: { $0.id == playlistID }) else {
+                practiceRuntimeMessage = "The last used playlist is no longer available."
+                return
+            }
+
+            startPlaylist(playlist)
         }
     }
 
@@ -332,6 +394,15 @@ final class ShellViewModel: ObservableObject {
             try audioPlayer.startLoopingPlayback(for: media)
             activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
             practiceRuntimeMessage = nil
+            recordLastUsedPracticeTarget(
+                LastUsedPracticeTarget(
+                    kind: .customPlay,
+                    title: customPlay.name,
+                    meditationType: customPlay.meditationType,
+                    customPlayID: customPlay.id,
+                    updatedAt: Date()
+                )
+            )
             startClock()
         } catch let error as LocalAudioPlaybackError {
             practiceRuntimeMessage = error.message
@@ -513,6 +584,15 @@ final class ShellViewModel: ObservableObject {
 
         do {
             try syncPlaylistAudio()
+            recordLastUsedPracticeTarget(
+                LastUsedPracticeTarget(
+                    kind: .playlist,
+                    title: playlist.name,
+                    meditationType: playlist.items.first?.meditationType ?? snapshot.timerDraft.meditationType ?? .vipassana,
+                    playlistID: playlist.id,
+                    updatedAt: Date()
+                )
+            )
             startClock()
         } catch let error as LocalAudioPlaybackError {
             activePlaylistSession = nil
@@ -889,6 +969,37 @@ final class ShellViewModel: ObservableObject {
         try audioPlayer.startLoopingPlayback(for: media)
     }
 
+    private func startTimer(
+        using draft: TimerSettingsDraft,
+        recordLastUsedTarget lastUsedTarget: LastUsedPracticeTarget?
+    ) {
+        guard hasActivePracticeRuntime == false else {
+            practiceRuntimeMessage = "Finish the current practice before starting something new."
+            return
+        }
+
+        timerValidationMessage = nil
+        practiceRuntimeMessage = nil
+        persistenceMessage = nil
+
+        do {
+            activeSession = try TimerFeature.makeActiveSession(from: draft, now: Date())
+            now = Date()
+            soundPlayer.playSound(named: activeSession?.configuration.startSoundName)
+            if let lastUsedTarget {
+                var updatedLastUsedTarget = lastUsedTarget
+                updatedLastUsedTarget.updatedAt = Date()
+                recordLastUsedPracticeTarget(updatedLastUsedTarget)
+            }
+            startClock()
+            rescheduleTimerNotificationIfNeeded()
+        } catch let error as TimerValidationError {
+            timerValidationMessage = error.message
+        } catch {
+            timerValidationMessage = "The timer could not start with the current setup."
+        }
+    }
+
     private func customPlayTargetEndAt(_ session: ActiveCustomPlaySession) -> Date {
         session.startedAt
             .addingTimeInterval(TimeInterval(session.customPlay.durationSeconds))
@@ -922,6 +1033,26 @@ final class ShellViewModel: ObservableObject {
         return updatedValues
     }
 
+    private func recordLastUsedPracticeTarget(_ target: LastUsedPracticeTarget) {
+        snapshot.lastUsedPracticeTarget = target
+        persistSnapshot()
+    }
+
+    private func makeTimerLastUsedTarget(from draft: TimerSettingsDraft) -> LastUsedPracticeTarget {
+        let meditationType = draft.meditationType ?? snapshot.lastUsedPracticeTarget?.meditationType ?? .vipassana
+        let title = draft.mode == .fixedDuration
+            ? "\(draft.durationMinutes) min timer"
+            : "Open-ended timer"
+
+        return LastUsedPracticeTarget(
+            kind: .timer,
+            title: title,
+            meditationType: meditationType,
+            timerDraft: draft,
+            updatedAt: Date()
+        )
+    }
+
     private func formatClock(_ totalSeconds: Int) -> String {
         let hours = totalSeconds / 3_600
         let minutes = (totalSeconds % 3_600) / 60
@@ -938,6 +1069,77 @@ final class ShellViewModel: ObservableObject {
         var normalizedSnapshot = snapshot
         normalizedSnapshot.recentSessionLogs = snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
         normalizedSnapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: normalizedSnapshot.recentSessionLogs)
+        if normalizedSnapshot.lastUsedPracticeTarget == nil {
+            normalizedSnapshot.lastUsedPracticeTarget = deriveLastUsedPracticeTarget(from: normalizedSnapshot)
+        }
         return normalizedSnapshot
+    }
+
+    private static func deriveLastUsedPracticeTarget(from snapshot: AppSnapshot) -> LastUsedPracticeTarget? {
+        guard let latestLog = snapshot.recentSessionLogs.first else {
+            return nil
+        }
+
+        switch latestLog.source {
+        case .timer:
+            let timerDraft = snapshot.timerDraft
+            return LastUsedPracticeTarget(
+                kind: .timer,
+                title: timerDraft.mode == .fixedDuration ? "\(timerDraft.durationMinutes) min timer" : "Open-ended timer",
+                meditationType: latestLog.meditationType,
+                timerDraft: timerDraft,
+                updatedAt: latestLog.endedAt
+            )
+        case .customPlay:
+            guard let customPlayName = latestLog.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  customPlayName.isEmpty == false,
+                  let customPlay = snapshot.customPlays.first(where: { $0.name == customPlayName })
+            else {
+                return nil
+            }
+
+            return LastUsedPracticeTarget(
+                kind: .customPlay,
+                title: customPlay.name,
+                meditationType: customPlay.meditationType,
+                customPlayID: customPlay.id,
+                updatedAt: latestLog.endedAt
+            )
+        case .playlist:
+            guard let playlistName = playlistName(from: latestLog.notes),
+                  let playlist = snapshot.playlists.first(where: { $0.name == playlistName })
+            else {
+                return nil
+            }
+
+            return LastUsedPracticeTarget(
+                kind: .playlist,
+                title: playlist.name,
+                meditationType: playlist.items.first?.meditationType ?? snapshot.timerDraft.meditationType ?? .vipassana,
+                playlistID: playlist.id,
+                updatedAt: latestLog.endedAt
+            )
+        case .manual:
+            return nil
+        }
+    }
+
+    private static func playlistName(from notes: String?) -> String? {
+        guard let notes else {
+            return nil
+        }
+
+        let prefix = "Playlist: "
+        let itemMarker = " • Item: "
+        guard notes.hasPrefix(prefix),
+              let itemRange = notes.range(of: itemMarker)
+        else {
+            return nil
+        }
+
+        let extractedName = String(notes[notes.index(notes.startIndex, offsetBy: prefix.count)..<itemRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return extractedName.isEmpty ? nil : extractedName
     }
 }

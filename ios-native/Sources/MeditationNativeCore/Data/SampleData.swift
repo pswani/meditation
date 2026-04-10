@@ -22,6 +22,21 @@ public enum SampleData {
                 intervalSoundName: nil,
                 intervalMinutes: nil
             ),
+            lastUsedPracticeTarget: LastUsedPracticeTarget(
+                kind: .timer,
+                title: "Vipassana timer",
+                meditationType: .vipassana,
+                timerDraft: TimerSettingsDraft(
+                    mode: .fixedDuration,
+                    durationMinutes: 25,
+                    meditationType: .vipassana,
+                    startSoundName: "Temple Bell",
+                    endSoundName: "Temple Bell",
+                    intervalSoundName: nil,
+                    intervalMinutes: nil
+                ),
+                updatedAt: sessionLogs.first?.endedAt ?? seedNow
+            ),
             recentSessionLogs: sessionLogs,
             customPlays: [
                 CustomPlay(

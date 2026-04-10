@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios-native-runtime-safety-hardening-feature-bundle-with-branching`
-- Active bundle: none
+- Current branch: `codex/ios-native-home-parity-feature-bundle-with-branching`
+- Active bundle: `ios-native-home-parity-feature-bundle-with-branching`
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, and `ios-native-summary-sankalpa-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-summary-sankalpa-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
@@ -90,6 +90,11 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - a hand-authored `MeditationNative.xcodeproj` with app, unit-test, and UI-test targets
   - explicit local-only environment configuration seams for future backend sync
   - sample-backed first-launch content that keeps destination navigation visible without implying finished native feature flows
+- Native iOS Home parity now includes:
+  - quick start from Home
+  - a last-used meditation shortcut that can resume timer, `custom play`, or playlist flows
+  - favorite `custom play` and playlist shortcuts
+  - concise recent-session context on iPhone
 - Native iOS timer-history now includes:
   - Practice timer setup for fixed-duration and open-ended sessions
   - a wall-clock-based active timer runtime with pause, resume, interval cues, and early-end handling
@@ -221,6 +226,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/meditation-ios-derived build`
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/meditation-ios-derived test`
+- Native iOS Home parity verified on 2026-04-09:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed with 27 focused core tests
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-home-parity CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-home-parity CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device and CoreSimulator was unavailable
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS Home parity slice
 - Review outcome:
   - no blocker, high, or medium findings were recorded for the native iOS timer-history slice
 
