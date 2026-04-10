@@ -4,12 +4,104 @@ import SwiftUI
 
 @MainActor
 final class ShellViewModel: ObservableObject {
+    enum RuntimeSafetyPrompt: Equatable, Identifiable {
+        case endTimer(mode: TimerSettingsDraft.Mode)
+        case endCustomPlay(name: String)
+        case endPlaylist(name: String)
+        case archiveSankalpa(title: String, sankalpaID: UUID)
+        case deleteArchivedSankalpa(title: String, sankalpaID: UUID)
+        case deleteCustomPlay(name: String, customPlayID: UUID)
+        case deletePlaylist(name: String, playlistID: UUID)
+
+        var id: String {
+            switch self {
+            case .endTimer(let mode):
+                return "end-timer-\(mode.rawValue)"
+            case .endCustomPlay(let name):
+                return "end-custom-play-\(name)"
+            case .endPlaylist(let name):
+                return "end-playlist-\(name)"
+            case .archiveSankalpa(_, let sankalpaID):
+                return "archive-sankalpa-\(sankalpaID.uuidString)"
+            case .deleteArchivedSankalpa(_, let sankalpaID):
+                return "delete-archived-sankalpa-\(sankalpaID.uuidString)"
+            case .deleteCustomPlay(_, let customPlayID):
+                return "delete-custom-play-\(customPlayID.uuidString)"
+            case .deletePlaylist(_, let playlistID):
+                return "delete-playlist-\(playlistID.uuidString)"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .endTimer(let mode):
+                return mode == .fixedDuration ? "End timer early?" : "End session?"
+            case .endCustomPlay:
+                return "End custom play?"
+            case .endPlaylist:
+                return "End playlist?"
+            case .archiveSankalpa:
+                return "Archive sankalpa?"
+            case .deleteArchivedSankalpa:
+                return "Delete archived sankalpa?"
+            case .deleteCustomPlay:
+                return "Delete custom play?"
+            case .deletePlaylist:
+                return "Delete playlist?"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .endTimer(let mode):
+                if mode == .fixedDuration {
+                    return "This ends the fixed-duration session now and saves an ended-early session log."
+                }
+
+                return "This ends the open-ended session now and saves the session log."
+            case .endCustomPlay(let name):
+                return "This stops \"\(name)\" now and saves the session log."
+            case .endPlaylist(let name):
+                return "This stops \"\(name)\" now and saves the current item log if needed."
+            case .archiveSankalpa(let title, _):
+                return "This moves \"\(title)\" out of the active path while keeping its progress visible."
+            case .deleteArchivedSankalpa(let title, _):
+                return "This permanently removes the archived sankalpa \"\(title)\" from this device."
+            case .deleteCustomPlay(let name, _):
+                return "This removes the saved custom play \"\(name)\" from this device."
+            case .deletePlaylist(let name, _):
+                return "This removes the saved playlist \"\(name)\" from this device."
+            }
+        }
+
+        var confirmButtonTitle: String {
+            switch self {
+            case .endTimer, .endCustomPlay, .endPlaylist:
+                return "End"
+            case .archiveSankalpa:
+                return "Archive"
+            case .deleteArchivedSankalpa, .deleteCustomPlay, .deletePlaylist:
+                return "Delete"
+            }
+        }
+
+        var confirmButtonRole: ButtonRole? {
+            switch self {
+            case .deleteArchivedSankalpa, .deleteCustomPlay, .deletePlaylist:
+                return .destructive
+            case .endTimer, .endCustomPlay, .endPlaylist, .archiveSankalpa:
+                return nil
+            }
+        }
+    }
+
     @Published private(set) var snapshot: AppSnapshot
     @Published private(set) var environment: AppEnvironment
     @Published private(set) var isSeedData: Bool
     @Published private(set) var activeSession: ActiveTimerSession?
     @Published private(set) var activeCustomPlaySession: ActiveCustomPlaySession?
     @Published private(set) var activePlaylistSession: ActivePlaylistSession?
+    @Published private(set) var runtimeSafetyPrompt: RuntimeSafetyPrompt?
     @Published private(set) var now = Date()
     @Published private(set) var notificationPermissionState: NotificationPermissionState = .checking
     @Published var timerValidationMessage: String?
@@ -161,6 +253,14 @@ final class ShellViewModel: ObservableObject {
         finishTimer(status: status, endedAt: Date())
     }
 
+    func requestEndTimerConfirmation() {
+        guard let activeSession else {
+            return
+        }
+
+        runtimeSafetyPrompt = .endTimer(mode: activeSession.configuration.mode)
+    }
+
     func saveManualLog(_ draft: ManualLogDraft) -> Bool {
         manualLogValidationMessage = nil
         persistenceMessage = nil
@@ -204,6 +304,10 @@ final class ShellViewModel: ObservableObject {
 
         snapshot.customPlays.removeAll { $0.id == customPlay.id }
         persistSnapshot()
+    }
+
+    func requestDeleteCustomPlayConfirmation(_ customPlay: CustomPlay) {
+        runtimeSafetyPrompt = .deleteCustomPlay(name: customPlay.name, customPlayID: customPlay.id)
     }
 
     func toggleFavorite(for customPlay: CustomPlay) {
@@ -267,6 +371,14 @@ final class ShellViewModel: ObservableObject {
         finishCustomPlay(status: .endedEarly, endedAt: Date())
     }
 
+    func requestEndCustomPlayConfirmation() {
+        guard let activeCustomPlaySession else {
+            return
+        }
+
+        runtimeSafetyPrompt = .endCustomPlay(name: activeCustomPlaySession.customPlay.name)
+    }
+
     func savePlaylist(_ draft: PlaylistDraft) -> Bool {
         playlistValidationMessage = nil
         practiceRuntimeMessage = nil
@@ -297,6 +409,10 @@ final class ShellViewModel: ObservableObject {
 
         snapshot.playlists.removeAll { $0.id == playlist.id }
         persistSnapshot()
+    }
+
+    func requestDeletePlaylistConfirmation(_ playlist: Playlist) {
+        runtimeSafetyPrompt = .deletePlaylist(name: playlist.name, playlistID: playlist.id)
     }
 
     func toggleFavorite(for playlist: Playlist) {
@@ -332,11 +448,36 @@ final class ShellViewModel: ObservableObject {
         sankalpaFeedbackMessage = "Sankalpa archived."
     }
 
+    func requestArchiveSankalpaConfirmation(_ sankalpa: Sankalpa) {
+        runtimeSafetyPrompt = .archiveSankalpa(title: sankalpa.title, sankalpaID: sankalpa.id)
+    }
+
     func restoreSankalpa(_ sankalpa: Sankalpa) {
         sankalpaFeedbackMessage = nil
         snapshot.sankalpas = upsert(SankalpaFeature.restore(sankalpa), into: snapshot.sankalpas)
         persistSnapshot()
         sankalpaFeedbackMessage = "Sankalpa restored."
+    }
+
+    func deleteArchivedSankalpa(_ sankalpa: Sankalpa) {
+        guard sankalpa.archived else {
+            sankalpaFeedbackMessage = "Delete is available only for archived sankalpas."
+            return
+        }
+
+        sankalpaFeedbackMessage = nil
+        snapshot.sankalpas.removeAll { $0.id == sankalpa.id }
+        persistSnapshot()
+        sankalpaFeedbackMessage = "Archived sankalpa deleted."
+    }
+
+    func requestDeleteArchivedSankalpaConfirmation(_ sankalpa: Sankalpa) {
+        guard sankalpa.archived else {
+            sankalpaFeedbackMessage = "Delete is available only for archived sankalpas."
+            return
+        }
+
+        runtimeSafetyPrompt = .deleteArchivedSankalpa(title: sankalpa.title, sankalpaID: sankalpa.id)
     }
 
     func setObservanceStatus(
@@ -424,6 +565,63 @@ final class ShellViewModel: ObservableObject {
         audioPlayer.stopPlayback()
         self.activePlaylistSession = nil
         stopClockIfIdle()
+    }
+
+    func requestEndPlaylistConfirmation() {
+        guard let activePlaylistSession else {
+            return
+        }
+
+        runtimeSafetyPrompt = .endPlaylist(name: activePlaylistSession.playlist.name)
+    }
+
+    func confirmRuntimeSafetyPrompt() {
+        guard let runtimeSafetyPrompt else {
+            return
+        }
+
+        self.runtimeSafetyPrompt = nil
+
+        switch runtimeSafetyPrompt {
+        case .endTimer:
+            endTimerManually()
+        case .endCustomPlay:
+            endCustomPlayManually()
+        case .endPlaylist:
+            endPlaylistManually()
+        case .archiveSankalpa(_, let sankalpaID):
+            guard let sankalpa = snapshot.sankalpas.first(where: { $0.id == sankalpaID }) else {
+                sankalpaFeedbackMessage = "The sankalpa is no longer available."
+                return
+            }
+
+            archiveSankalpa(sankalpa)
+        case .deleteArchivedSankalpa(_, let sankalpaID):
+            guard let sankalpa = snapshot.sankalpas.first(where: { $0.id == sankalpaID }) else {
+                sankalpaFeedbackMessage = "The archived sankalpa is no longer available."
+                return
+            }
+
+            deleteArchivedSankalpa(sankalpa)
+        case .deleteCustomPlay(_, let customPlayID):
+            guard let customPlay = snapshot.customPlays.first(where: { $0.id == customPlayID }) else {
+                practiceRuntimeMessage = "The custom play is no longer available."
+                return
+            }
+
+            deleteCustomPlay(customPlay)
+        case .deletePlaylist(_, let playlistID):
+            guard let playlist = snapshot.playlists.first(where: { $0.id == playlistID }) else {
+                practiceRuntimeMessage = "The playlist is no longer available."
+                return
+            }
+
+            deletePlaylist(playlist)
+        }
+    }
+
+    func cancelRuntimeSafetyPrompt() {
+        runtimeSafetyPrompt = nil
     }
 
     func handleScenePhaseChange(isActive: Bool) {

@@ -6,7 +6,6 @@ struct GoalsView: View {
     @State private var isPresentingEditor = false
     @State private var editingSankalpa: Sankalpa?
     @State private var draft = SankalpaDraft()
-    @State private var pendingArchiveSankalpa: Sankalpa?
 
     var body: some View {
         ScrollView {
@@ -68,6 +67,20 @@ struct GoalsView: View {
             .padding()
         }
         .navigationTitle("Goals")
+        .alert(
+            viewModel.runtimeSafetyPrompt?.title ?? "",
+            isPresented: runtimeSafetyPromptIsPresented,
+            presenting: viewModel.runtimeSafetyPrompt
+        ) { prompt in
+            Button(prompt.confirmButtonTitle, role: prompt.confirmButtonRole) {
+                viewModel.confirmRuntimeSafetyPrompt()
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelRuntimeSafetyPrompt()
+            }
+        } message: { prompt in
+            Text(prompt.message)
+        }
         .sheet(isPresented: $isPresentingEditor) {
             NavigationStack {
                 Form {
@@ -144,29 +157,6 @@ struct GoalsView: View {
                     }
                 }
             }
-        }
-        .alert(
-            "Archive sankalpa?",
-            isPresented: Binding(
-                get: { pendingArchiveSankalpa != nil },
-                set: { isPresented in
-                    if isPresented == false {
-                        pendingArchiveSankalpa = nil
-                    }
-                }
-            )
-        ) {
-            Button("Cancel", role: .cancel) {
-                pendingArchiveSankalpa = nil
-            }
-            Button("Archive", role: .destructive) {
-                if let pendingArchiveSankalpa {
-                    viewModel.archiveSankalpa(pendingArchiveSankalpa)
-                }
-                pendingArchiveSankalpa = nil
-            }
-        } message: {
-            Text("Move this sankalpa out of the active path while keeping its progress history visible.")
         }
     }
 
@@ -303,12 +293,17 @@ struct GoalsView: View {
                     .buttonStyle(.bordered)
 
                     Button("Archive") {
-                        pendingArchiveSankalpa = progress.goal
+                        viewModel.requestArchiveSankalpaConfirmation(progress.goal)
                     }
                     .buttonStyle(.bordered)
                 } else {
                     Button("Restore") {
                         viewModel.restoreSankalpa(progress.goal)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Delete", role: .destructive) {
+                        viewModel.requestDeleteArchivedSankalpaConfirmation(progress.goal)
                     }
                     .buttonStyle(.bordered)
                 }
@@ -492,6 +487,17 @@ struct GoalsView: View {
         }
 
         return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private var runtimeSafetyPromptIsPresented: Binding<Bool> {
+        Binding(
+            get: { viewModel.runtimeSafetyPrompt != nil },
+            set: { isPresented in
+                if isPresented == false {
+                    viewModel.cancelRuntimeSafetyPrompt()
+                }
+            }
+        )
     }
 }
 
