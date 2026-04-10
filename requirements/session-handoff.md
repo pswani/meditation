@@ -5,16 +5,23 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles in `prompts/`: `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, and `ios-native-foundation-feature-bundle-with-branching` completed on 2026-04-09, plus `observance-sankalpa-feature-bundle-with-branching` completed on 2026-04-07 and `runtime-boundary-hardening-feature-bundle-with-branching`, `backend-scale-hardening-feature-bundle-with-branching`, `production-reference-cleanup-feature-bundle-with-branching`, and `media-cache-hygiene-feature-bundle-with-branching`, which were completed on 2026-04-05 and retained in-repo as reusable prompt bundles
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, and `ios-native-summary-sankalpa-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-summary-sankalpa-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
+  - `prompts/ios-native-parity-gap-phased-plan.md`
   - `prompts/ios-native-app-step-by-step.md`
   - `prompts/ios-native-foundation-feature-bundle-with-branching/`
   - `prompts/ios-native-timer-history-feature-bundle-with-branching/`
   - `prompts/ios-native-custom-play-playlist-feature-bundle-with-branching/`
   - `prompts/ios-native-summary-sankalpa-feature-bundle-with-branching/`
   - `prompts/ios-native-sync-polish-feature-bundle-with-branching/`
+  - `prompts/ios-native-runtime-safety-hardening-feature-bundle-with-branching/`
+  - `prompts/ios-native-home-parity-feature-bundle-with-branching/`
+  - `prompts/ios-native-custom-play-parity-feature-bundle-with-branching/`
+  - `prompts/ios-native-history-summary-parity-feature-bundle-with-branching/`
+  - `prompts/ios-native-sync-parity-feature-bundle-with-branching/`
+  - `prompts/ios-native-decomposition-hardening-feature-bundle-with-branching/`
   - `docs/ios-native/README.md`
   - `ios-native/MeditationNative.xcodeproj`
   - `docs/execplan-ios-native-foundation-feature.md`
@@ -107,6 +114,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - archive and restore flows that preserve goal identity and original goal windows
   - observance day tracking with explicit `Pending`, `Observed`, and `Missed` states plus future-date locking
   - focused core coverage for summary derivation, goal validation, progress math, and observance-state trustworthiness
+- New native parity prompt bundles prepared on 2026-04-09 now cover the next review-derived gaps:
+  - runtime-safety hardening for confirm-before-end and confirm-before-delete flows
+  - Home parity for quick start, last-used, favorites, and richer recent context
+  - `custom play` parity for richer metadata and `Apply To Timer`
+  - History and summary parity for richer `session log` context, filters, custom ranges, and time-of-day summaries
+  - sync parity for backend-backed local-first behavior and connectivity UX
+  - decomposition hardening for oversized native files and stronger tests
 
 ## Evidence and artifacts
 - Implementation planning: `docs/execplan-custom-play-media-library-feature.md`
