@@ -317,3 +317,171 @@ import Testing
     #expect(filtered.first?.meditationType == .ajapa)
     #expect(filtered.first?.source == .manual)
 }
+
+@Test func summaryDerivationIncludesOverallTypeAndSourceCoverage() throws {
+    let summary = SummaryFeature.deriveSnapshot(from: SampleData.snapshot.recentSessionLogs)
+
+    #expect(summary.overall.totalSessionLogs == 4)
+    #expect(summary.overall.completedSessionLogs == 3)
+    #expect(summary.overall.endedEarlySessionLogs == 1)
+    #expect(summary.overall.totalDurationSeconds == 4_080)
+    #expect(summary.byMeditationType.count == ReferenceData.meditationTypes.count)
+    #expect(summary.bySource.count == ReferenceData.sessionSources.count)
+    #expect(summary.bySource.first(where: { $0.source == .manual })?.sessionLogs == 1)
+}
+
+@Test func summaryRangeFiltersKeepRecentLogsOnly() throws {
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+    let recentLog = SessionLog(
+        meditationType: .vipassana,
+        source: .timer,
+        status: .completed,
+        startedAt: now.addingTimeInterval(-1_200),
+        endedAt: now.addingTimeInterval(-600),
+        completedDurationSeconds: 600
+    )
+    let oldLog = SessionLog(
+        meditationType: .ajapa,
+        source: .manual,
+        status: .completed,
+        startedAt: now.addingTimeInterval(-(40 * 24 * 60 * 60) - 900),
+        endedAt: now.addingTimeInterval(-(40 * 24 * 60 * 60)),
+        completedDurationSeconds: 900
+    )
+
+    let lastSevenDays = SummaryFeature.deriveSnapshot(
+        from: [recentLog, oldLog],
+        rangePreset: .last7Days,
+        now: now
+    )
+    let lastThirtyDays = SummaryFeature.deriveSnapshot(
+        from: [recentLog, oldLog],
+        rangePreset: .last30Days,
+        now: now
+    )
+
+    #expect(lastSevenDays.sessionLogs.count == 1)
+    #expect(lastThirtyDays.sessionLogs.count == 1)
+    #expect(lastSevenDays.sessionLogs.first?.id == recentLog.id)
+}
+
+@Test func sankalpaValidationRequiresTargetDaysAndObservanceLabel() throws {
+    let invalidDurationDraft = SankalpaDraft(
+        title: "",
+        kind: .durationBased,
+        targetValue: 0,
+        days: 0
+    )
+    let invalidObservanceDraft = SankalpaDraft(
+        title: "",
+        kind: .observanceBased,
+        targetValue: 7,
+        days: 7,
+        observanceLabel: ""
+    )
+
+    #expect(SankalpaFeature.validateSankalpaDraft(invalidDurationDraft).contains(.targetValueMustBeGreaterThanZero))
+    #expect(SankalpaFeature.validateSankalpaDraft(invalidDurationDraft).contains(.daysMustBeGreaterThanZero))
+    #expect(SankalpaFeature.validateSankalpaDraft(invalidObservanceDraft).contains(.observanceLabelRequired))
+}
+
+@Test func sankalpaProgressCountsDurationAndSessionGoalsWithFilters() throws {
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+    let logs = [
+        SessionLog(
+            meditationType: .vipassana,
+            source: .timer,
+            status: .completed,
+            startedAt: now.addingTimeInterval(-2_000),
+            endedAt: now.addingTimeInterval(-1_200),
+            completedDurationSeconds: 1_200
+        ),
+        SessionLog(
+            meditationType: .vipassana,
+            source: .manual,
+            status: .completed,
+            startedAt: now.addingTimeInterval(-1_000),
+            endedAt: now.addingTimeInterval(-400),
+            completedDurationSeconds: 600
+        ),
+        SessionLog(
+            meditationType: .ajapa,
+            source: .manual,
+            status: .completed,
+            startedAt: now.addingTimeInterval(-800),
+            endedAt: now.addingTimeInterval(-300),
+            completedDurationSeconds: 500
+        ),
+    ]
+
+    let durationGoal = Sankalpa(
+        title: "Morning Vipassana",
+        kind: .durationBased,
+        targetValue: 20,
+        days: 5,
+        meditationType: .vipassana,
+        createdAt: now.addingTimeInterval(-(2 * 24 * 60 * 60))
+    )
+    let sessionGoal = Sankalpa(
+        title: "Ajapa count",
+        kind: .sessionCount,
+        targetValue: 1,
+        days: 5,
+        meditationType: .ajapa,
+        createdAt: now.addingTimeInterval(-(2 * 24 * 60 * 60))
+    )
+
+    let durationProgress = SankalpaFeature.deriveProgress(for: durationGoal, sessionLogs: logs, now: now)
+    let sessionProgress = SankalpaFeature.deriveProgress(for: sessionGoal, sessionLogs: logs, now: now)
+
+    #expect(durationProgress.matchedDurationSeconds == 1_800)
+    #expect(durationProgress.status == .completed)
+    #expect(sessionProgress.matchedSessionCount == 1)
+    #expect(sessionProgress.status == .completed)
+}
+
+@Test func observanceProgressDerivesPendingObservedMissedAndFutureStates() throws {
+    let calendar = Calendar(identifier: .gregorian)
+    let now = calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 8, minute: 0))!
+    let start = calendar.date(byAdding: .day, value: -2, to: now)!
+    let goal = Sankalpa(
+        title: "Meal before 7 PM",
+        kind: .observanceBased,
+        targetValue: 5,
+        days: 5,
+        observanceLabel: "Observed meal before 7 PM",
+        observanceRecords: [
+            SankalpaObservanceRecord(dateKey: "2026-04-07", status: .observed),
+            SankalpaObservanceRecord(dateKey: "2026-04-08", status: .missed),
+        ],
+        createdAt: start
+    )
+
+    let progress = SankalpaFeature.deriveProgress(for: goal, sessionLogs: [], now: now)
+    let futureDay = progress.observanceDays.last(where: { $0.isFuture })
+    let updated = SankalpaFeature.setObservanceStatus(for: goal, dateKey: futureDay?.dateKey ?? "", status: .observed, now: now)
+
+    #expect(progress.matchedObservanceCount == 1)
+    #expect(progress.missedObservanceCount == 1)
+    #expect(progress.pendingObservanceCount == 3)
+    #expect(futureDay?.status == .pending)
+    #expect(updated == goal)
+}
+
+@Test func archivedSankalpasRestoreWithoutChangingIdentity() throws {
+    let goal = Sankalpa(
+        id: UUID(uuidString: "99999999-2222-3333-4444-555555555555")!,
+        title: "Archived sit",
+        kind: .durationBased,
+        targetValue: 120,
+        days: 7,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+        archived: true
+    )
+
+    let restored = SankalpaFeature.restore(goal)
+
+    #expect(restored.id == goal.id)
+    #expect(restored.createdAt == goal.createdAt)
+    #expect(restored.archived == false)
+}
