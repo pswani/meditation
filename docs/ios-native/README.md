@@ -23,6 +23,9 @@ Implemented native surfaces through milestone 4 now include:
 - local-first `sankalpa` creation, editing, archive, restore, and progress sections
 - `observance-based` `sankalpa` check-ins with explicit `Pending`, `Observed`, and `Missed` states
 - Settings support for timer defaults and notification permission messaging
+- runtime-safety confirmation flows for ending active timer, `custom play`, and playlist sessions
+- shared confirmation prompts for deleting `custom play` and playlist library items
+- archived-only delete support for `sankalpa`
 
 ## Goal
 

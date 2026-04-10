@@ -36,6 +36,20 @@ struct PracticeView: View {
             .padding()
         }
         .navigationTitle("Practice")
+        .alert(
+            viewModel.runtimeSafetyPrompt?.title ?? "",
+            isPresented: runtimeSafetyPromptIsPresented,
+            presenting: viewModel.runtimeSafetyPrompt
+        ) { prompt in
+            Button(prompt.confirmButtonTitle, role: prompt.confirmButtonRole) {
+                viewModel.confirmRuntimeSafetyPrompt()
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelRuntimeSafetyPrompt()
+            }
+        } message: { prompt in
+            Text(prompt.message)
+        }
     }
 
     private var activeTimerSection: some View {
@@ -62,7 +76,7 @@ struct PracticeView: View {
                     }
 
                     Button(timerEndButtonTitle) {
-                        viewModel.endTimerManually()
+                        viewModel.requestEndTimerConfirmation()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.teal)
@@ -102,7 +116,7 @@ struct PracticeView: View {
                     }
 
                     Button("End session") {
-                        viewModel.endCustomPlayManually()
+                        viewModel.requestEndCustomPlayConfirmation()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.teal)
@@ -142,7 +156,7 @@ struct PracticeView: View {
                     }
 
                     Button("End playlist") {
-                        viewModel.endPlaylistManually()
+                        viewModel.requestEndPlaylistConfirmation()
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.teal)
@@ -267,6 +281,17 @@ struct PracticeView: View {
             .font(.footnote)
             .foregroundStyle(color)
     }
+
+    private var runtimeSafetyPromptIsPresented: Binding<Bool> {
+        Binding(
+            get: { viewModel.runtimeSafetyPrompt != nil },
+            set: { isPresented in
+                if isPresented == false {
+                    viewModel.cancelRuntimeSafetyPrompt()
+                }
+            }
+        )
+    }
 }
 
 private struct CustomPlayLibraryView: View {
@@ -324,7 +349,7 @@ private struct CustomPlayLibraryView: View {
                                 .buttonStyle(.bordered)
 
                                 Button("Delete", role: .destructive) {
-                                    viewModel.deleteCustomPlay(customPlay)
+                                    viewModel.requestDeleteCustomPlayConfirmation(customPlay)
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -486,7 +511,7 @@ private struct PlaylistLibraryView: View {
                                 .buttonStyle(.bordered)
 
                                 Button("Delete", role: .destructive) {
-                                    viewModel.deletePlaylist(playlist)
+                                    viewModel.requestDeletePlaylistConfirmation(playlist)
                                 }
                                 .buttonStyle(.bordered)
                             }

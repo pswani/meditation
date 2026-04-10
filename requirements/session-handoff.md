@@ -3,7 +3,7 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios`
+- Current branch: `codex/ios-native-runtime-safety-hardening-feature-bundle-with-branching`
 - Active bundle: none
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, and `ios-native-summary-sankalpa-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-summary-sankalpa-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
@@ -156,6 +156,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-timer-history-feature.md`
 - Review artifact: `docs/review-ios-native-custom-play-playlist-feature.md`
 - Review artifact: `docs/review-ios-native-summary-sankalpa-feature.md`
+- Review artifact: `docs/review-ios-native-runtime-safety-hardening-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -176,6 +177,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-timer-history-feature.md`
 - Verification report: `docs/test-ios-native-custom-play-playlist-feature.md`
 - Verification report: `docs/test-ios-native-summary-sankalpa-feature.md`
+- Verification report: `docs/test-ios-native-runtime-safety-hardening-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -195,6 +197,18 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-summary-sankalpa CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device for the test targets and CoreSimulator was unavailable
 - Review outcome:
   - no blocker, high, or medium findings were recorded for the native iOS summary and `sankalpa` slice
+
+- Native iOS runtime-safety hardening bundle completed on `codex/ios-native-runtime-safety-hardening-feature-bundle-with-branching`:
+  - completed on 2026-04-09
+  - Practice now confirms before ending active timer, `custom play`, and playlist sessions
+  - Practice and Goals share one calm runtime-safety prompt path for end, archive, and delete actions
+  - archived `sankalpa` delete now requires an archived-only confirmation path
+  - focused XCTest coverage now exercises timer end confirmation, shared prompt handling, and library delete confirmations
+  - verification state:
+    - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed
+    - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-safety CODE_SIGNING_ALLOWED=NO build` passed
+    - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-safety CODE_SIGNING_ALLOWED=NO build-for-testing` passed
+    - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-safety CODE_SIGNING_ALLOWED=NO test` is still blocked in this environment because Xcode requires a concrete simulator device and CoreSimulator is unavailable
 
 - Native iOS `custom play` and playlist milestone verified on 2026-04-09:
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides

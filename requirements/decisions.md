@@ -44,6 +44,11 @@
     - keep archive as a boolean goal-state mutation rather than inventing a second history entity
     - keep `observance-based` check-ins derived from explicit per-date records with `Pending`, `Observed`, and `Missed` states
     - keep future observance dates locked until their day arrives
+  - keep runtime safety prompts shared across the Practice and Goals surfaces:
+    - use one calm confirmation enum for ending active timer, `custom play`, and playlist sessions
+    - reuse the same prompt path for archiving and deleting archived `sankalpa`
+    - require confirmation before deleting `custom play` and playlist library items
+    - allow permanent `sankalpa` delete only after archive, keeping destructive actions deliberate
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:

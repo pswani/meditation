@@ -31,6 +31,7 @@
 		A10000010000000000000011 /* SampleDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* SampleDataTests.swift */; };
 		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
 		A10000010000000000000013 /* MeditationNativeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000013 /* MeditationNativeUITests.swift */; };
+		A10000010000000000000019 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000020 /* ShellViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +71,7 @@
 		B10000010000000000000011 /* SampleDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleDataTests.swift; sourceTree = "<group>"; };
 		B10000010000000000000012 /* JSONFileStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONFileStoreTests.swift; sourceTree = "<group>"; };
 		B10000010000000000000013 /* MeditationNativeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeUITests.swift; sourceTree = "<group>"; };
+		B10000010000000000000020 /* ShellViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelTests.swift; sourceTree = SOURCE_ROOT; };
 		B10000010000000000000014 /* MeditationNative.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeditationNative.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000015 /* MeditationNativeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000016 /* MeditationNativeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -110,6 +112,7 @@
 			children = (
 				F10000010000000000000002 /* MeditationNative */,
 				F10000010000000000000003 /* Sources/MeditationNativeCore */,
+				F10000010000000000000012 /* MeditationNativeTests */,
 				F10000010000000000000004 /* Tests/MeditationNativeCoreTests */,
 				F10000010000000000000005 /* MeditationNativeUITests */,
 				F10000010000000000000006 /* Products */,
@@ -145,6 +148,14 @@
 				B10000010000000000000012 /* JSONFileStoreTests.swift */,
 			);
 			path = Tests/MeditationNativeCoreTests;
+			sourceTree = SOURCE_ROOT;
+		};
+		F10000010000000000000012 /* MeditationNativeTests */ = {
+			isa = PBXGroup;
+			children = (
+				B10000010000000000000020 /* ShellViewModelTests.swift */,
+			);
+			path = MeditationNativeTests;
 			sourceTree = SOURCE_ROOT;
 		};
 		F10000010000000000000005 /* MeditationNativeUITests */ = {
@@ -429,6 +440,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000010000000000000019 /* ShellViewModelTests.swift in Sources */,
 				A10000010000000000000010 /* DomainModelTests.swift in Sources */,
 				A10000010000000000000011 /* SampleDataTests.swift in Sources */,
 				A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */,
