@@ -42,6 +42,16 @@ struct ShellRootView: View {
             }
         }
         .tint(.teal)
+        .safeAreaInset(edge: .top) {
+            if let syncBannerMessage = viewModel.syncBannerMessage {
+                Text(syncBannerMessage)
+                    .font(.footnote.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.teal.opacity(0.12))
+            }
+        }
         .task {
             await viewModel.refreshNotificationPermissionState()
         }

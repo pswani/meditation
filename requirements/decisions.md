@@ -55,6 +55,11 @@
     - keep archive as a boolean goal-state mutation rather than inventing a second history entity
     - keep `observance-based` check-ins derived from explicit per-date records with `Pending`, `Observed`, and `Missed` states
     - keep future observance dates locked until their day arrives
+  - keep native milestone-5 sync parity local-first and explicit:
+    - reuse the existing backend REST routes instead of introducing a native-only sync endpoint
+    - persist queued native mutations, sync timestamps, and connectivity classification in a dedicated `sync-state.json` file beside the foundation snapshot
+    - merge backend reads with device-only placeholder media bindings and local `sankalpa` titles so reconciliation does not silently erase native-only context
+    - keep stale backend delete outcomes trust-preserving by restoring the current backend-backed record and surfacing a calm replay notice
   - keep runtime safety prompts shared across the Practice and Goals surfaces:
     - use one calm confirmation enum for ending active timer, `custom play`, and playlist sessions
     - reuse the same prompt path for archiving and deleting archived `sankalpa`

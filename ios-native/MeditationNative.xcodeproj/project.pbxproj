@@ -32,6 +32,8 @@
 		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
 		A10000010000000000000013 /* MeditationNativeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000013 /* MeditationNativeUITests.swift */; };
 		A10000010000000000000019 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000020 /* ShellViewModelTests.swift */; };
+		A1000001000000000000001A /* AppSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000021 /* AppSyncState.swift */; };
+		A1000001000000000000001B /* AppSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000022 /* AppSyncService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,6 +82,8 @@
 		B10000010000000000000019 /* TimerDraftForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDraftForm.swift; sourceTree = "<group>"; };
 		B1000001000000000000001A /* temple-bell.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "temple-bell.mp3"; path = ../src/assets/sounds/temple-bell.mp3; sourceTree = SOURCE_ROOT; };
 		B1000001000000000000001B /* gong.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "gong.mp3"; path = ../src/assets/sounds/gong.mp3; sourceTree = SOURCE_ROOT; };
+		B10000010000000000000021 /* AppSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncState.swift; sourceTree = "<group>"; };
+		B10000010000000000000022 /* AppSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -223,6 +227,7 @@
 			children = (
 				B1000001000000000000000C /* AppEnvironment.swift */,
 				B1000001000000000000000D /* AppSnapshot.swift */,
+				B10000010000000000000021 /* AppSyncState.swift */,
 				B1000001000000000000000E /* SampleData.swift */,
 			);
 			path = Data;
@@ -231,6 +236,7 @@
 		F1000001000000000000000C /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				B10000010000000000000022 /* AppSyncService.swift */,
 				B1000001000000000000000F /* JSONFileStore.swift */,
 			);
 			path = Services;
@@ -428,7 +434,9 @@
 				A1000001000000000000000B /* Models.swift in Sources */,
 				A1000001000000000000000C /* AppEnvironment.swift in Sources */,
 				A1000001000000000000000D /* AppSnapshot.swift in Sources */,
+				A1000001000000000000001A /* AppSyncState.swift in Sources */,
 				A1000001000000000000000E /* SampleData.swift in Sources */,
+				A1000001000000000000001B /* AppSyncService.swift in Sources */,
 				A1000001000000000000000F /* JSONFileStore.swift in Sources */,
 				A10000010000000000000014 /* TimerFeature.swift in Sources */,
 				A10000010000000000000015 /* SystemSupport.swift in Sources */,
