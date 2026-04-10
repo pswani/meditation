@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios-native-home-parity-feature-bundle-with-branching`
-- Active bundle: `ios-native-home-parity-feature-bundle-with-branching`
-- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, and `ios-native-summary-sankalpa-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
-- Latest merge outcome: merged `codex/ios-native-summary-sankalpa-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Current branch: `codex/ios`
+- Active bundle: none
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, and `ios-native-home-parity-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
+- Latest merge outcome: merged `codex/ios-native-home-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
