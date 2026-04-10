@@ -60,6 +60,11 @@
     - persist queued native mutations, sync timestamps, and connectivity classification in a dedicated `sync-state.json` file beside the foundation snapshot
     - merge backend reads with device-only placeholder media bindings and local `sankalpa` titles so reconciliation does not silently erase native-only context
     - keep stale backend delete outcomes trust-preserving by restoring the current backend-backed record and surfacing a calm replay notice
+  - keep native shell decomposition explicit and local to the app target:
+    - retain `ShellViewModel` as the observable-object coordination boundary for the app shell
+    - move runtime prompt copy, snapshot normalization, sync-pass orchestration, and derived presentation helpers into nearby app-target files instead of regrowing one catch-all type
+    - keep Practice route files composition-first, with active-session sections and library or editor views split into adjacent feature-local files
+  - prefer explicit native `SessionLog` context when reconstructing `last used` practice targets, while keeping notes parsing only as a backward-compatible fallback for older local snapshots
   - keep runtime safety prompts shared across the Practice and Goals surfaces:
     - use one calm confirmation enum for ending active timer, `custom play`, and playlist sessions
     - reuse the same prompt path for archiving and deleting archived `sankalpa`

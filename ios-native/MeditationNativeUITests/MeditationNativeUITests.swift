@@ -77,6 +77,27 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(startButton.waitForExistence(timeout: 2))
     }
 
+    func testPracticeCancelingEndTimerPromptKeepsSessionRunning() throws {
+        let app = makeApp()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        let startButton = app.buttons["Start session"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 2))
+        startButton.tap()
+
+        let endEarlyButton = app.buttons["End early"]
+        XCTAssertTrue(endEarlyButton.waitForExistence(timeout: 2))
+        endEarlyButton.tap()
+
+        let alert = app.alerts["End timer early?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        alert.buttons["Cancel"].tap()
+
+        XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
+        XCTAssertTrue(endEarlyButton.waitForExistence(timeout: 2))
+    }
+
     func testPracticeCanRunPauseResumeAndEndFeaturedCustomPlay() throws {
         let app = makeApp()
 
@@ -144,6 +165,36 @@ final class MeditationNativeUITests: XCTestCase {
         confirmAlert(in: app, title: "End playlist?", button: "End")
 
         XCTAssertTrue(app.buttons["Start featured playlist"].waitForExistence(timeout: 2))
+    }
+
+    func testPracticeLibrariesSupportDeleteConfirmationFlows() throws {
+        let app = makeApp()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        XCTAssertTrue(app.buttons["Open custom play library"].waitForExistence(timeout: 2))
+        app.buttons["Open custom play library"].tap()
+        XCTAssertTrue(app.navigationBars["Custom plays"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Vipassana Sit 20"].waitForExistence(timeout: 2))
+
+        let customPlayDeleteButton = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(customPlayDeleteButton.waitForExistence(timeout: 2))
+        customPlayDeleteButton.tap()
+        confirmAlert(in: app, title: "Delete custom play?", button: "Delete")
+        XCTAssertFalse(app.staticTexts["Vipassana Sit 20"].exists)
+
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        XCTAssertTrue(app.buttons["Open playlist library"].waitForExistence(timeout: 2))
+        app.buttons["Open playlist library"].tap()
+        XCTAssertTrue(app.navigationBars["Playlists"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Morning Discipline"].waitForExistence(timeout: 2))
+
+        let playlistDeleteButton = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(playlistDeleteButton.waitForExistence(timeout: 2))
+        playlistDeleteButton.tap()
+        confirmAlert(in: app, title: "Delete playlist?", button: "Delete")
+        XCTAssertFalse(app.staticTexts["Morning Discipline"].exists)
     }
 
     func testHistoryAndSettingsExposeMilestoneControls() throws {

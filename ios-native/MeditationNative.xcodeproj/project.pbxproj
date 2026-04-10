@@ -34,6 +34,16 @@
 		A10000010000000000000019 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000020 /* ShellViewModelTests.swift */; };
 		A1000001000000000000001A /* AppSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000021 /* AppSyncState.swift */; };
 		A1000001000000000000001B /* AppSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000022 /* AppSyncService.swift */; };
+		A1000001000000000000001C /* ShellRuntimeSafetyPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */; };
+		A1000001000000000000001D /* ShellViewModelPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000024 /* ShellViewModelPresentation.swift */; };
+		A1000001000000000000001E /* ShellSnapshotSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000025 /* ShellSnapshotSupport.swift */; };
+		A1000001000000000000001F /* ShellSyncPassRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000026 /* ShellSyncPassRunner.swift */; };
+		A10000010000000000000020 /* PracticeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000027 /* PracticeFormatting.swift */; };
+		A10000010000000000000021 /* PracticeActiveSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000028 /* PracticeActiveSections.swift */; };
+		A10000010000000000000022 /* PracticeOverviewSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000029 /* PracticeOverviewSections.swift */; };
+		A10000010000000000000023 /* CustomPlayLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002A /* CustomPlayLibraryView.swift */; };
+		A10000010000000000000024 /* PlaylistLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002B /* PlaylistLibraryView.swift */; };
+		A10000010000000000000025 /* ShellViewModelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002C /* ShellViewModelPresentationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +94,16 @@
 		B1000001000000000000001B /* gong.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "gong.mp3"; path = ../src/assets/sounds/gong.mp3; sourceTree = SOURCE_ROOT; };
 		B10000010000000000000021 /* AppSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncState.swift; sourceTree = "<group>"; };
 		B10000010000000000000022 /* AppSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncService.swift; sourceTree = "<group>"; };
+		B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRuntimeSafetyPrompt.swift; sourceTree = "<group>"; };
+		B10000010000000000000024 /* ShellViewModelPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModelPresentation.swift; sourceTree = "<group>"; };
+		B10000010000000000000025 /* ShellSnapshotSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellSnapshotSupport.swift; sourceTree = "<group>"; };
+		B10000010000000000000026 /* ShellSyncPassRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellSyncPassRunner.swift; sourceTree = "<group>"; };
+		B10000010000000000000027 /* PracticeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeFormatting.swift; sourceTree = "<group>"; };
+		B10000010000000000000028 /* PracticeActiveSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeActiveSections.swift; sourceTree = "<group>"; };
+		B10000010000000000000029 /* PracticeOverviewSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeOverviewSections.swift; sourceTree = "<group>"; };
+		B1000001000000000000002A /* CustomPlayLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPlayLibraryView.swift; sourceTree = "<group>"; };
+		B1000001000000000000002B /* PlaylistLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistLibraryView.swift; sourceTree = "<group>"; };
+		B1000001000000000000002C /* ShellViewModelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelPresentationTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +178,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000010000000000000020 /* ShellViewModelTests.swift */,
+				B1000001000000000000002C /* ShellViewModelPresentationTests.swift */,
 			);
 			path = MeditationNativeTests;
 			sourceTree = SOURCE_ROOT;
@@ -185,6 +206,10 @@
 			children = (
 				B10000010000000000000001 /* MeditationNativeApp.swift */,
 				B10000010000000000000002 /* ShellViewModel.swift */,
+				B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */,
+				B10000010000000000000024 /* ShellViewModelPresentation.swift */,
+				B10000010000000000000025 /* ShellSnapshotSupport.swift */,
+				B10000010000000000000026 /* ShellSyncPassRunner.swift */,
 				B10000010000000000000003 /* ShellRootView.swift */,
 				B10000010000000000000018 /* SystemSupport.swift */,
 			);
@@ -254,6 +279,11 @@
 			isa = PBXGroup;
 			children = (
 				B10000010000000000000006 /* PracticeView.swift */,
+				B10000010000000000000028 /* PracticeActiveSections.swift */,
+				B1000001000000000000002A /* CustomPlayLibraryView.swift */,
+				B1000001000000000000002B /* PlaylistLibraryView.swift */,
+				B10000010000000000000027 /* PracticeFormatting.swift */,
+				B10000010000000000000029 /* PracticeOverviewSections.swift */,
 			);
 			path = Practice;
 			sourceTree = "<group>";
@@ -441,6 +471,15 @@
 				A10000010000000000000014 /* TimerFeature.swift in Sources */,
 				A10000010000000000000015 /* SystemSupport.swift in Sources */,
 				A10000010000000000000016 /* TimerDraftForm.swift in Sources */,
+				A1000001000000000000001C /* ShellRuntimeSafetyPrompt.swift in Sources */,
+				A1000001000000000000001D /* ShellViewModelPresentation.swift in Sources */,
+				A1000001000000000000001E /* ShellSnapshotSupport.swift in Sources */,
+				A1000001000000000000001F /* ShellSyncPassRunner.swift in Sources */,
+				A10000010000000000000020 /* PracticeFormatting.swift in Sources */,
+				A10000010000000000000021 /* PracticeActiveSections.swift in Sources */,
+				A10000010000000000000022 /* PracticeOverviewSections.swift in Sources */,
+				A10000010000000000000023 /* CustomPlayLibraryView.swift in Sources */,
+				A10000010000000000000024 /* PlaylistLibraryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -449,6 +488,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000019 /* ShellViewModelTests.swift in Sources */,
+				A10000010000000000000025 /* ShellViewModelPresentationTests.swift in Sources */,
 				A10000010000000000000010 /* DomainModelTests.swift in Sources */,
 				A10000010000000000000011 /* SampleDataTests.swift in Sources */,
 				A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */,

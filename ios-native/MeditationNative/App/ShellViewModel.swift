@@ -4,97 +4,6 @@ import SwiftUI
 
 @MainActor
 final class ShellViewModel: ObservableObject {
-    enum RuntimeSafetyPrompt: Equatable, Identifiable {
-        case endTimer(mode: TimerSettingsDraft.Mode)
-        case endCustomPlay(name: String)
-        case endPlaylist(name: String)
-        case archiveSankalpa(title: String, sankalpaID: UUID)
-        case deleteArchivedSankalpa(title: String, sankalpaID: UUID)
-        case deleteCustomPlay(name: String, customPlayID: UUID)
-        case deletePlaylist(name: String, playlistID: UUID)
-
-        var id: String {
-            switch self {
-            case .endTimer(let mode):
-                return "end-timer-\(mode.rawValue)"
-            case .endCustomPlay(let name):
-                return "end-custom-play-\(name)"
-            case .endPlaylist(let name):
-                return "end-playlist-\(name)"
-            case .archiveSankalpa(_, let sankalpaID):
-                return "archive-sankalpa-\(sankalpaID.uuidString)"
-            case .deleteArchivedSankalpa(_, let sankalpaID):
-                return "delete-archived-sankalpa-\(sankalpaID.uuidString)"
-            case .deleteCustomPlay(_, let customPlayID):
-                return "delete-custom-play-\(customPlayID.uuidString)"
-            case .deletePlaylist(_, let playlistID):
-                return "delete-playlist-\(playlistID.uuidString)"
-            }
-        }
-
-        var title: String {
-            switch self {
-            case .endTimer(let mode):
-                return mode == .fixedDuration ? "End timer early?" : "End session?"
-            case .endCustomPlay:
-                return "End custom play?"
-            case .endPlaylist:
-                return "End playlist?"
-            case .archiveSankalpa:
-                return "Archive sankalpa?"
-            case .deleteArchivedSankalpa:
-                return "Delete archived sankalpa?"
-            case .deleteCustomPlay:
-                return "Delete custom play?"
-            case .deletePlaylist:
-                return "Delete playlist?"
-            }
-        }
-
-        var message: String {
-            switch self {
-            case .endTimer(let mode):
-                if mode == .fixedDuration {
-                    return "This ends the fixed-duration session now and saves an ended-early session log."
-                }
-
-                return "This ends the open-ended session now and saves the session log."
-            case .endCustomPlay(let name):
-                return "This stops \"\(name)\" now and saves the session log."
-            case .endPlaylist(let name):
-                return "This stops \"\(name)\" now and saves the current item log if needed."
-            case .archiveSankalpa(let title, _):
-                return "This moves \"\(title)\" out of the active path while keeping its progress visible."
-            case .deleteArchivedSankalpa(let title, _):
-                return "This permanently removes the archived sankalpa \"\(title)\" from this device."
-            case .deleteCustomPlay(let name, _):
-                return "This removes the saved custom play \"\(name)\" from this device."
-            case .deletePlaylist(let name, _):
-                return "This removes the saved playlist \"\(name)\" from this device."
-            }
-        }
-
-        var confirmButtonTitle: String {
-            switch self {
-            case .endTimer, .endCustomPlay, .endPlaylist:
-                return "End"
-            case .archiveSankalpa:
-                return "Archive"
-            case .deleteArchivedSankalpa, .deleteCustomPlay, .deletePlaylist:
-                return "Delete"
-            }
-        }
-
-        var confirmButtonRole: ButtonRole? {
-            switch self {
-            case .deleteArchivedSankalpa, .deleteCustomPlay, .deletePlaylist:
-                return .destructive
-            case .endTimer, .endCustomPlay, .endPlaylist, .archiveSankalpa:
-                return nil
-            }
-        }
-    }
-
     @Published private(set) var snapshot: AppSnapshot
     @Published private(set) var syncState: AppSyncState
     @Published private(set) var environment: AppEnvironment
@@ -157,14 +66,14 @@ final class ShellViewModel: ObservableObject {
 
         do {
             let storedSnapshot = try repository.loadOrSeed(seed: SampleData.snapshot)
-            let loadedSnapshot = Self.normalizedSnapshot(storedSnapshot)
+            let loadedSnapshot = ShellSnapshotSupport.normalizedSnapshot(storedSnapshot)
             self.snapshot = loadedSnapshot
             self.isSeedData = loadedSnapshot == SampleData.snapshot
             if loadedSnapshot != storedSnapshot {
                 try? repository.save(loadedSnapshot)
             }
         } catch {
-            self.snapshot = Self.normalizedSnapshot(SampleData.snapshot)
+            self.snapshot = ShellSnapshotSupport.normalizedSnapshot(SampleData.snapshot)
             self.isSeedData = true
         }
 
@@ -200,86 +109,19 @@ final class ShellViewModel: ObservableObject {
     }
 
     var syncBannerMessage: String? {
-        switch syncState.connectionState {
-        case .localOnly:
-            if syncState.pendingMutationCount > 0 {
-                return "\(syncState.pendingMutationCount) local changes are waiting for a configured backend."
-            }
-            return nil
-        case .syncing:
-            return "Syncing with the configured backend."
-        case .upToDate:
-            return syncState.lastNoticeMessage
-        case .pendingSync:
-            let count = syncState.pendingMutationCount
-            guard count > 0 else {
-                return nil
-            }
-            return count == 1 ? "1 local change is pending sync." : "\(count) local changes are pending sync."
-        case .offline:
-            let count = syncState.pendingMutationCount
-            if count > 0 {
-                return count == 1
-                    ? "Offline. 1 local change will sync when the connection returns."
-                    : "Offline. \(count) local changes will sync when the connection returns."
-            }
-            return "Offline. Showing the latest saved local state."
-        case .backendUnavailable:
-            let count = syncState.pendingMutationCount
-            if count > 0 {
-                return count == 1
-                    ? "Backend unavailable. 1 local change will sync when the API is reachable."
-                    : "Backend unavailable. \(count) local changes will sync when the API is reachable."
-            }
-            return "Backend unavailable. Showing the latest saved local state."
-        }
+        ShellViewModelPresentation.syncBannerMessage(for: syncState)
     }
 
     var syncStatusHeadline: String {
-        switch syncState.connectionState {
-        case .localOnly:
-            return "Local-only profile"
-        case .syncing:
-            return "Syncing"
-        case .upToDate:
-            return "Backend synced"
-        case .pendingSync:
-            return "Pending sync"
-        case .offline:
-            return "Offline"
-        case .backendUnavailable:
-            return "Backend unavailable"
-        }
+        ShellViewModelPresentation.syncStatusHeadline(for: syncState)
     }
 
     var syncStatusDetail: String {
-        let pendingCount = syncState.pendingMutationCount
-        switch syncState.connectionState {
-        case .localOnly:
-            if pendingCount > 0 {
-                return "This device kept local changes, but the current profile does not have a backend base URL to replay them."
-            }
-            return "This native profile stays local-first until `MEDITATION_IOS_API_BASE_URL` is configured."
-        case .syncing:
-            return "The app is refreshing backend-backed timer settings, session logs, custom plays, playlists, sankalpas, and summary data."
-        case .upToDate:
-            if let lastSuccessfulSyncAt = syncState.lastSuccessfulSyncAt {
-                return "Last successful sync: \(RelativeDateTimeFormatter().localizedString(for: lastSuccessfulSyncAt, relativeTo: now))."
-            }
-            return "Local-first data is aligned with the configured backend."
-        case .pendingSync:
-            return pendingCount == 1
-                ? "1 local change is queued safely on this device and will replay next time the backend is reachable."
-                : "\(pendingCount) local changes are queued safely on this device and will replay next time the backend is reachable."
-        case .offline:
-            return "The device appears offline. Local-first changes stay visible here and will replay when connectivity returns."
-        case .backendUnavailable:
-            return "The device is online, but the configured backend could not be reached. Local-first changes stay visible here in the meantime."
-        }
+        ShellViewModelPresentation.syncStatusDetail(for: syncState, now: now)
     }
 
     var customPlays: [CustomPlay] {
-        snapshot.customPlays.sorted(by: sortCustomPlays)
+        ShellViewModelPresentation.sortedCustomPlays(from: snapshot.customPlays)
     }
 
     var favoriteCustomPlaysForHome: [CustomPlay] {
@@ -287,7 +129,7 @@ final class ShellViewModel: ObservableObject {
     }
 
     var playlists: [Playlist] {
-        snapshot.playlists.sorted(by: sortPlaylists)
+        ShellViewModelPresentation.sortedPlaylists(from: snapshot.playlists)
     }
 
     var favoritePlaylistsForHome: [Playlist] {
@@ -295,36 +137,11 @@ final class ShellViewModel: ObservableObject {
     }
 
     var homeQuickStartSummary: String {
-        let meditationType = snapshot.timerDraft.meditationType?.rawValue ?? "Choose a meditation type"
-        if snapshot.timerDraft.mode == .fixedDuration {
-            return "\(snapshot.timerDraft.durationMinutes) min fixed-duration • \(meditationType)"
-        }
-
-        return "Open-ended • \(meditationType)"
+        ShellViewModelPresentation.homeQuickStartSummary(for: snapshot.timerDraft)
     }
 
     var lastUsedPracticeSummary: String? {
-        guard let target = snapshot.lastUsedPracticeTarget else {
-            return nil
-        }
-
-        switch target.kind {
-        case .timer:
-            if let timerDraft = target.timerDraft {
-                let meditationType = timerDraft.meditationType?.rawValue ?? target.meditationType.rawValue
-                if timerDraft.mode == .fixedDuration {
-                    return "\(target.title) • \(timerDraft.durationMinutes) min • \(meditationType)"
-                }
-
-                return "\(target.title) • Open-ended • \(meditationType)"
-            }
-
-            return "\(target.title) • \(target.meditationType.rawValue)"
-        case .customPlay:
-            return "\(target.title) • \(target.meditationType.rawValue)"
-        case .playlist:
-            return "\(target.title) • \(target.meditationType.rawValue)"
-        }
+        ShellViewModelPresentation.lastUsedPracticeSummary(for: snapshot.lastUsedPracticeTarget)
     }
 
     var hasLastUsedPracticeTarget: Bool {
@@ -371,7 +188,13 @@ final class ShellViewModel: ObservableObject {
     }
 
     func startTimer() {
-        startTimer(using: snapshot.timerDraft, recordLastUsedTarget: makeTimerLastUsedTarget(from: snapshot.timerDraft))
+        startTimer(
+            using: snapshot.timerDraft,
+            recordLastUsedTarget: ShellSnapshotSupport.makeTimerLastUsedTarget(
+                from: snapshot.timerDraft,
+                fallbackMeditationType: snapshot.lastUsedPracticeTarget?.meditationType
+            )
+        )
     }
 
     func startLastUsedPractice() {
@@ -865,85 +688,31 @@ final class ShellViewModel: ObservableObject {
     }
 
     func activeTimerPrimaryText() -> String {
-        guard let activeSession else {
-            return "00:00"
-        }
-
-        if let remainingSeconds = activeSession.remainingSeconds(at: now) {
-            return formatClock(remainingSeconds)
-        }
-
-        return formatClock(activeSession.elapsedSeconds(at: now))
+        ShellViewModelPresentation.activeTimerPrimaryText(for: activeSession, now: now)
     }
 
     func activeTimerSecondaryText() -> String {
-        guard let activeSession else {
-            return ""
-        }
-
-        if activeSession.configuration.mode == .fixedDuration {
-            return "Elapsed \(formatClock(activeSession.elapsedSeconds(at: now)))"
-        }
-
-        return "Open-ended practice"
+        ShellViewModelPresentation.activeTimerSecondaryText(for: activeSession, now: now)
     }
 
     func activeCustomPlayPrimaryText() -> String {
-        guard let activeCustomPlaySession else {
-            return "00:00"
-        }
-
-        return formatClock(activeCustomPlaySession.remainingSeconds(at: now))
+        ShellViewModelPresentation.activeCustomPlayPrimaryText(for: activeCustomPlaySession, now: now)
     }
 
     func activeCustomPlaySecondaryText() -> String {
-        guard let activeCustomPlaySession else {
-            return ""
-        }
-
-        return "Elapsed \(formatClock(activeCustomPlaySession.elapsedSeconds(at: now)))"
+        ShellViewModelPresentation.activeCustomPlaySecondaryText(for: activeCustomPlaySession, now: now)
     }
 
     func activePlaylistPrimaryText() -> String {
-        guard let activePlaylistSession else {
-            return "00:00"
-        }
-
-        return formatClock(activePlaylistSession.remainingSecondsInPhase(at: now))
+        ShellViewModelPresentation.activePlaylistPrimaryText(for: activePlaylistSession, now: now)
     }
 
     func activePlaylistTitle() -> String {
-        guard let activePlaylistSession else {
-            return ""
-        }
-
-        switch activePlaylistSession.phase {
-        case .item(let index):
-            let itemCount = activePlaylistSession.playlist.items.count
-            let itemTitle = activePlaylistSession.currentItem?.title ?? "Current item"
-            return "Item \(index + 1) of \(itemCount): \(itemTitle)"
-        case .gap:
-            return "Small gap"
-        }
+        ShellViewModelPresentation.activePlaylistTitle(for: activePlaylistSession)
     }
 
     func activePlaylistSecondaryText() -> String {
-        guard let activePlaylistSession else {
-            return ""
-        }
-
-        switch activePlaylistSession.phase {
-        case .item:
-            if let upcomingItem = activePlaylistSession.upcomingItem {
-                return "Next: \(upcomingItem.title)"
-            }
-            return "Final item in this playlist"
-        case .gap:
-            if let upcomingItem = activePlaylistSession.upcomingItem {
-                return "Up next: \(upcomingItem.title)"
-            }
-            return "Preparing the next item"
-        }
+        ShellViewModelPresentation.activePlaylistSecondaryText(for: activePlaylistSession)
     }
 
     private func startClock() {
@@ -1145,47 +914,15 @@ final class ShellViewModel: ObservableObject {
         let timeZoneIdentifier = TimeZone.current.identifier
 
         do {
-            let remoteState = try await syncClient.fetchRemoteState(
-                localSnapshot: snapshot,
+            let result = try await ShellSyncPassRunner.run(
+                syncClient: syncClient,
+                repository: repository,
+                snapshot: snapshot,
+                syncState: syncState,
                 timeZoneIdentifier: timeZoneIdentifier
             )
-            snapshot = Self.normalizedSnapshot(
-                AppSyncFeature.reconcile(
-                    remoteState: remoteState,
-                    localSnapshot: snapshot,
-                    pendingMutations: syncState.pendingMutations
-                )
-            )
-            if let summary = remoteState.summary {
-                syncState.lastRemoteSummary = summary
-            }
-            try repository.save(snapshot)
-
-            while let nextMutation = syncState.pendingMutations.first {
-                let authoritativeState = try await syncClient.applyMutation(
-                    nextMutation,
-                    localSnapshot: snapshot,
-                    timeZoneIdentifier: timeZoneIdentifier
-                )
-                snapshot = Self.normalizedSnapshot(
-                    AppSyncFeature.applyAuthoritativeMutationResult(
-                        mutation: nextMutation,
-                        remoteState: authoritativeState,
-                        to: snapshot
-                    )
-                )
-                syncState.pendingMutations.removeFirst()
-                syncState.lastRemoteSummary = authoritativeState.summary ?? syncState.lastRemoteSummary
-                if let syncNoticeMessage = authoritativeState.syncNoticeMessage {
-                    syncState.lastNoticeMessage = syncNoticeMessage
-                }
-                try repository.save(snapshot)
-                saveSyncState()
-            }
-
-            syncState.lastSuccessfulSyncAt = Date()
-            syncState.lastErrorMessage = nil
-            syncState.connectionState = .upToDate
+            snapshot = result.snapshot
+            syncState = result.syncState
             saveSyncState()
         } catch let error as AppSyncError {
             switch error {
@@ -1289,22 +1026,6 @@ final class ShellViewModel: ObservableObject {
             .addingTimeInterval(session.accumulatedPauseSeconds)
     }
 
-    private func sortCustomPlays(_ lhs: CustomPlay, _ rhs: CustomPlay) -> Bool {
-        if lhs.isFavorite != rhs.isFavorite {
-            return lhs.isFavorite && rhs.isFavorite == false
-        }
-
-        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-    }
-
-    private func sortPlaylists(_ lhs: Playlist, _ rhs: Playlist) -> Bool {
-        if lhs.isFavorite != rhs.isFavorite {
-            return lhs.isFavorite && rhs.isFavorite == false
-        }
-
-        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-    }
-
     private func upsert<Value: Identifiable & Equatable>(_ value: Value, into values: [Value]) -> [Value] {
         var updatedValues = values
         if let existingIndex = updatedValues.firstIndex(where: { $0.id == value.id }) {
@@ -1319,110 +1040,5 @@ final class ShellViewModel: ObservableObject {
     private func recordLastUsedPracticeTarget(_ target: LastUsedPracticeTarget) {
         snapshot.lastUsedPracticeTarget = target
         persistSnapshot()
-    }
-
-    private func makeTimerLastUsedTarget(from draft: TimerSettingsDraft) -> LastUsedPracticeTarget {
-        let meditationType = draft.meditationType ?? snapshot.lastUsedPracticeTarget?.meditationType ?? .vipassana
-        let title = draft.mode == .fixedDuration
-            ? "\(draft.durationMinutes) min timer"
-            : "Open-ended timer"
-
-        return LastUsedPracticeTarget(
-            kind: .timer,
-            title: title,
-            meditationType: meditationType,
-            timerDraft: draft,
-            updatedAt: Date()
-        )
-    }
-
-    private func formatClock(_ totalSeconds: Int) -> String {
-        let hours = totalSeconds / 3_600
-        let minutes = (totalSeconds % 3_600) / 60
-        let seconds = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        }
-
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private static func normalizedSnapshot(_ snapshot: AppSnapshot) -> AppSnapshot {
-        var normalizedSnapshot = snapshot
-        normalizedSnapshot.recentSessionLogs = snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
-        normalizedSnapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: normalizedSnapshot.recentSessionLogs)
-        if normalizedSnapshot.lastUsedPracticeTarget == nil {
-            normalizedSnapshot.lastUsedPracticeTarget = deriveLastUsedPracticeTarget(from: normalizedSnapshot)
-        }
-        return normalizedSnapshot
-    }
-
-    private static func deriveLastUsedPracticeTarget(from snapshot: AppSnapshot) -> LastUsedPracticeTarget? {
-        guard let latestLog = snapshot.recentSessionLogs.first else {
-            return nil
-        }
-
-        switch latestLog.source {
-        case .timer:
-            let timerDraft = snapshot.timerDraft
-            return LastUsedPracticeTarget(
-                kind: .timer,
-                title: timerDraft.mode == .fixedDuration ? "\(timerDraft.durationMinutes) min timer" : "Open-ended timer",
-                meditationType: latestLog.meditationType,
-                timerDraft: timerDraft,
-                updatedAt: latestLog.endedAt
-            )
-        case .customPlay:
-            guard let customPlayName = latestLog.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  customPlayName.isEmpty == false,
-                  let customPlay = snapshot.customPlays.first(where: { $0.name == customPlayName })
-            else {
-                return nil
-            }
-
-            return LastUsedPracticeTarget(
-                kind: .customPlay,
-                title: customPlay.name,
-                meditationType: customPlay.meditationType,
-                customPlayID: customPlay.id,
-                updatedAt: latestLog.endedAt
-            )
-        case .playlist:
-            guard let playlistName = playlistName(from: latestLog.notes),
-                  let playlist = snapshot.playlists.first(where: { $0.name == playlistName })
-            else {
-                return nil
-            }
-
-            return LastUsedPracticeTarget(
-                kind: .playlist,
-                title: playlist.name,
-                meditationType: playlist.items.first?.meditationType ?? snapshot.timerDraft.meditationType ?? .vipassana,
-                playlistID: playlist.id,
-                updatedAt: latestLog.endedAt
-            )
-        case .manual:
-            return nil
-        }
-    }
-
-    private static func playlistName(from notes: String?) -> String? {
-        guard let notes else {
-            return nil
-        }
-
-        let prefix = "Playlist: "
-        let itemMarker = " • Item: "
-        guard notes.hasPrefix(prefix),
-              let itemRange = notes.range(of: itemMarker)
-        else {
-            return nil
-        }
-
-        let extractedName = String(notes[notes.index(notes.startIndex, offsetBy: prefix.count)..<itemRange.lowerBound])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return extractedName.isEmpty ? nil : extractedName
     }
 }
