@@ -3,10 +3,10 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios-native-custom-play-parity-feature-bundle-with-branching`
-- Active bundle: `ios-native-custom-play-parity-feature-bundle-with-branching`
-- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, and `ios-native-home-parity-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
-- Latest merge outcome: merged `codex/ios-native-home-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
+- Current branch: `codex/ios`
+- Active bundle: none
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, and `ios-native-custom-play-parity-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
+- Latest merge outcome: merged `codex/ios-native-custom-play-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -113,6 +113,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - playlist runtime with explicit current-item state plus per-item `session log` creation
   - calm missing-media and invalid-reference guidance when a linked `custom play` can no longer run
   - focused core coverage for playback math, playlist ordering, and logging behavior
+- Native iOS `custom play` parity now adds:
+  - optional start and end sounds on saved `custom play` records
+  - optional session-note or recording-label metadata
+  - an optional linked media identifier seam for later sync
+  - an explicit `Apply To Timer` action that copies the saved `custom play` into timer defaults
+  - richer Practice-screen library rows and editor fields for the added metadata
 - Native iOS summary and `sankalpa` milestone now adds:
   - Home progress context with today totals, recent session signal, and a top active `sankalpa` snapshot
   - local summary aggregation from native `session log` history with all-time, 7-day, and 30-day range views
@@ -227,6 +233,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-playlist CODE_SIGNING_ALLOWED=NO test` could not run in this environment because CoreSimulator was unavailable and Xcode test targets require a concrete simulator device
 - Review outcome:
   - no blocker, high, or medium findings were recorded for the native iOS `custom play` and playlist slice
+
+- Native iOS `custom play` parity verified on 2026-04-09:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed with 30 focused core tests
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-parity CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-parity CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device and CoreSimulator was unavailable
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS `custom play` parity slice
 
 - Native iOS timer-history verified on 2026-04-09:
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides
