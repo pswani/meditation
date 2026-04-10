@@ -167,7 +167,9 @@ public enum AppSyncFeature {
             }
 
             var mergedCustomPlay = remoteCustomPlay
-            if mergedCustomPlay.media == nil {
+            if mergedCustomPlay.media == nil,
+               let localMedia = localCustomPlay.media,
+               localMedia.source != .legacyPlaceholder {
                 mergedCustomPlay.media = localCustomPlay.media
             }
             if mergedCustomPlay.recordingLabel == nil {
@@ -501,9 +503,9 @@ private struct BackendTimerSettingsResponse: Decodable {
             }(),
             durationMinutes: durationMinutes ?? lastFixedDurationMinutes,
             meditationType: meditationType.isEmpty ? nil : MeditationType(rawValue: meditationType),
-            startSoundName: startSound.nilIfNone,
-            endSoundName: endSound.nilIfNone,
-            intervalSoundName: intervalEnabled ? intervalSound.nilIfNone : nil,
+            startSoundName: TimerSoundCatalog.normalizeSelection(startSound.nilIfNone),
+            endSoundName: TimerSoundCatalog.normalizeSelection(endSound.nilIfNone),
+            intervalSoundName: intervalEnabled ? TimerSoundCatalog.normalizeSelection(intervalSound.nilIfNone) : nil,
             intervalMinutes: intervalEnabled && intervalMinutes > 0 ? intervalMinutes : nil
         )
     }
@@ -525,11 +527,11 @@ private struct BackendTimerSettingsUpsertRequest: Encodable {
         self.durationMinutes = timerSettings.mode == .fixedDuration ? max(1, timerSettings.durationMinutes) : nil
         self.lastFixedDurationMinutes = max(1, timerSettings.durationMinutes)
         self.meditationType = timerSettings.meditationType?.rawValue
-        self.startSound = timerSettings.startSoundName ?? "None"
-        self.endSound = timerSettings.endSoundName ?? "None"
+        self.startSound = TimerSoundCatalog.normalizeSelection(timerSettings.startSoundName) ?? "None"
+        self.endSound = TimerSoundCatalog.normalizeSelection(timerSettings.endSoundName) ?? "None"
         self.intervalEnabled = timerSettings.intervalMinutes != nil && timerSettings.intervalMinutes ?? 0 > 0
         self.intervalMinutes = max(0, timerSettings.intervalMinutes ?? 0)
-        self.intervalSound = timerSettings.intervalSoundName ?? "None"
+        self.intervalSound = TimerSoundCatalog.normalizeSelection(timerSettings.intervalSoundName) ?? "None"
     }
 }
 
@@ -680,11 +682,11 @@ private struct BackendCustomPlayResponse: Decodable {
             name: name,
             meditationType: meditationType,
             durationSeconds: mediaAsset?.durationSeconds ?? (durationMinutes * 60),
-            startSoundName: startSound.nilIfNone,
-            endSoundName: endSound.nilIfNone,
+            startSoundName: TimerSoundCatalog.normalizeSelection(startSound.nilIfNone),
+            endSoundName: TimerSoundCatalog.normalizeSelection(endSound.nilIfNone),
             recordingLabel: recordingLabel?.nilIfBlank,
             linkedMediaIdentifier: mediaAssetId.nilIfBlank,
-            media: mediaAsset?.placeholderMedia,
+            media: mediaAsset?.playbackMedia,
             isFavorite: favorite
         )
     }
@@ -706,13 +708,14 @@ private struct BackendCustomPlayUpsertRequest: Encodable {
     init(from customPlay: CustomPlay, availableMediaAssets: [RemoteMediaAsset]) {
         let now = Date().ISO8601Format()
         let resolvedMediaAssetID = customPlay.linkedMediaIdentifier
+            ?? customPlay.media.map(\.id).flatMap { $0.nilIfBlank }
             ?? availableMediaAssets.first(where: { $0.meditationType == customPlay.meditationType })?.id
         id = customPlay.id.uuidString.lowercased()
         name = customPlay.name
         meditationType = customPlay.meditationType.rawValue
         durationMinutes = max(1, customPlay.durationSeconds / 60)
-        startSound = customPlay.startSoundName ?? "None"
-        endSound = customPlay.endSoundName ?? "None"
+        startSound = TimerSoundCatalog.normalizeSelection(customPlay.startSoundName) ?? "None"
+        endSound = TimerSoundCatalog.normalizeSelection(customPlay.endSoundName) ?? "None"
         mediaAssetId = resolvedMediaAssetID ?? ""
         recordingLabel = customPlay.recordingLabel?.nilIfBlank
         favorite = customPlay.isFavorite
@@ -970,13 +973,13 @@ private struct BackendDeleteResult<Record: Decodable>: Decodable {
 }
 
 private extension RemoteMediaAsset {
-    var placeholderMedia: CustomPlayMedia {
-        switch meditationType {
-        case .ajapa, .kriya:
-            return CustomPlayMedia(asset: .gongLoop)
-        case .vipassana, .tratak, .sahaj:
-            return CustomPlayMedia(asset: .templeBellLoop)
-        }
+    var playbackMedia: CustomPlayMedia {
+        .remote(
+            id: id,
+            label: label,
+            relativePath: relativePath,
+            filePath: filePath
+        )
     }
 }
 

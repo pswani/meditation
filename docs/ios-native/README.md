@@ -16,7 +16,11 @@ Implemented native surfaces through milestone 5 now include:
 - `custom play` parity metadata including optional start/end sounds, session notes, and a link-aware media identifier seam for later sync
 - `Apply to timer` from the custom-play library so saved playback settings can seed timer defaults
 - playlist creation, editing, reordering, favorite handling, and ordered runtime
-- bundled placeholder audio for local `custom play` playback without backend sync or file import
+- web-aligned timer sound choices and bundled timer cue playback using the shared `Temple Bell` and `Gong` audio files
+- truthful `custom play` and linked-playlist recording playback:
+  - one bundled sample recording ships with the app for local-only use
+  - synced backend media metadata now maps to real remote recording URLs instead of placeholder loops
+  - missing recordings stay explicit and unavailable instead of silently substituting another sound
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
 - History filters plus manual log entry
@@ -144,7 +148,8 @@ For the current milestone-5 state, physical iPhone or concrete simulator verific
 - notification permission prompts
 - fixed-duration completion notifications
 - background or foreground transitions around timer completion
-- bundled placeholder audio output for `custom play` and playlist-linked recording items
+- bundled timer cue playback for `Temple Bell` and `Gong`
+- bundled-sample and backend-linked recording playback for `custom play` and playlist-linked items
 - pause or resume behavior when audio playback is interrupted by the system
 - Home density and readability on a real iPhone-sized screen
 - `sankalpa` editor ergonomics and observance day-menu interactions on a concrete device
@@ -200,14 +205,20 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
 - Prefer local-first persistence until the core experience feels trustworthy on device.
 - Preserve the exact product terms already used elsewhere in the repo.
 - Keep sample content explicitly labeled as local foundation data until real feature flows replace it.
-- Milestone 3 intentionally uses bundled placeholder audio for native `custom play` playback instead of widening into file import or backend media sync.
-- Milestone 3 also keeps `custom play` start/end sounds, session notes, and the linked media identifier as optional local-first metadata so the richer model stays readable before sync lands.
+- Native timer sounds now follow the same selectable contract as the web app:
+  - `Temple Bell`
+  - `Gong`
+  - legacy `Soft Chime` and `Wood Block` values normalize to those labels during hydration
+- Native `custom play` media is now truthful rather than placeholder-backed:
+  - local-only playback uses the bundled `Vipassana Sit (20 min)` sample recording when selected
+  - synced backend media metadata maps to its real `/media/custom-plays/...` playback path
+  - if no playable recording exists on the device, the app shows calm unavailable-media guidance instead of faking playback
 - The native Practice custom-play library includes an explicit `Apply to timer` action that copies the saved `custom play` duration, meditation type, and sounds into the timer defaults.
 - Milestone 4 keeps native summary derived from local `session log` history instead of introducing a second stored summary source of truth.
 - Milestone 4 keeps `sankalpa` status local-first with archive or restore support while leaving backend sync for milestone 5.
 - Milestone 5 keeps the native sync seam explicit and local-first:
   - queued writes replay through the existing backend routes
-  - backend reads merge with device-only placeholder media and local `sankalpa` titles
+  - backend reads merge with device-only bundled sample media and local `sankalpa` titles
   - stale backend delete outcomes restore the current backend record with calm notice copy
 - Saved playlist items snapshot the current title, meditation type, and duration from linked `custom play` entries while still retaining a lightweight link for runtime validation.
 - Keep milestone docs updated when project names, schemes, signing steps, or base-URL rules change.

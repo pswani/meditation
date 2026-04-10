@@ -61,7 +61,7 @@ struct ActiveCustomPlaySection: View {
     @ObservedObject var viewModel: ShellViewModel
 
     var body: some View {
-        SectionCard(title: "Active custom play", caption: "Bundled placeholder audio is looping locally") {
+        SectionCard(title: "Active custom play", caption: "The linked recording stays aligned with the current session") {
             VStack(alignment: .leading, spacing: 16) {
                 Text(viewModel.activeCustomPlaySession?.customPlay.name ?? "Custom play")
                     .font(.title3.weight(.semibold))
@@ -74,6 +74,9 @@ struct ActiveCustomPlaySection: View {
                         }
                         if let linkedMediaIdentifier = customPlay.linkedMediaIdentifier {
                             Text("Linked media identifier: \(linkedMediaIdentifier)")
+                        }
+                        if let media = customPlay.media {
+                            Text("Recording: \(media.label) • \(media.sourceSummary)")
                         }
                     }
                     .font(.footnote)
@@ -107,7 +110,7 @@ struct ActiveCustomPlaySection: View {
                     .tint(.teal)
                 }
 
-                Text("This milestone uses calm bundled placeholder audio so custom plays stay local-first on simulator and device without widening into media import yet.")
+                Text("The session timing here follows the saved recording contract. If media is missing later, the app will say so instead of substituting another sound.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

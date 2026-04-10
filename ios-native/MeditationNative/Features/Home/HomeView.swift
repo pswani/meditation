@@ -118,13 +118,13 @@ struct HomeView: View {
                             title: customPlay.name,
                             detail: "\(customPlay.meditationType.rawValue) • \(formatDuration(customPlay.durationSeconds))",
                             buttonTitle: "Start \(customPlay.name)",
-                            isEnabled: customPlay.media != nil && viewModel.hasActivePracticeRuntime == false
+                            isEnabled: viewModel.canResolvePlayback(for: customPlay.media) && viewModel.hasActivePracticeRuntime == false
                         ) {
                             viewModel.startCustomPlay(customPlay)
                         }
 
-                        if customPlay.media == nil {
-                            Text("Needs bundled placeholder audio before it can start.")
+                        if viewModel.canResolvePlayback(for: customPlay.media) == false {
+                            Text("Needs available recording media before it can start.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -140,8 +140,8 @@ struct HomeView: View {
 
     private var favoritePlaylistSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Playlists")
-                .font(.headline)
+                Text("Playlists")
+                    .font(.headline)
 
             if viewModel.favoritePlaylistsForHome.isEmpty {
                 Text("Mark a playlist favorite in Practice to bring a shortcut here.")
@@ -150,23 +150,20 @@ struct HomeView: View {
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.favoritePlaylistsForHome) { playlist in
-                        let validationError = PlaylistFeature.validatePlaylistForRun(
-                            playlist,
-                            availableCustomPlays: viewModel.snapshot.customPlays
-                        )
+                        let validationMessage = viewModel.playlistRunValidationMessage(for: playlist)
 
                         shortcutRow(
                             title: playlist.name,
                             detail: "\(playlist.items.count) items • \(formatDuration(playlist.totalDurationSeconds))",
                             buttonTitle: "Start \(playlist.name)",
-                            isEnabled: validationError == nil && viewModel.hasActivePracticeRuntime == false,
+                            isEnabled: validationMessage == nil && viewModel.hasActivePracticeRuntime == false,
                             footerText: playlist.gapSeconds > 0 ? "Small gap: \(playlist.gapSeconds) sec" : "No gap between items"
                         ) {
                             viewModel.startPlaylist(playlist)
                         }
 
-                        if let validationError {
-                            Text(validationError.message)
+                        if let validationMessage {
+                            Text(validationMessage)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }

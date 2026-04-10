@@ -47,8 +47,8 @@ public enum SampleData {
                     startSoundName: "Temple Bell",
                     endSoundName: "Temple Bell",
                     recordingLabel: "Morning recording",
-                    linkedMediaIdentifier: "native-media-vipassana-sit-20",
-                    media: CustomPlayMedia(asset: .templeBellLoop),
+                    linkedMediaIdentifier: CustomPlayMediaAsset.vipassanaSit20.id,
+                    media: .bundledSample(.vipassanaSit20),
                     isFavorite: true
                 ),
                 CustomPlay(
@@ -57,10 +57,9 @@ public enum SampleData {
                     meditationType: .ajapa,
                     durationSeconds: 900,
                     startSoundName: "Gong",
-                    endSoundName: "Wood Block",
+                    endSoundName: "Gong",
                     recordingLabel: "Breath emphasis",
-                    linkedMediaIdentifier: "native-media-ajapa-evening-sit",
-                    media: CustomPlayMedia(asset: .gongLoop),
+                    linkedMediaIdentifier: "media-ajapa-breath-15",
                     isFavorite: false
                 ),
             ],
@@ -75,11 +74,11 @@ public enum SampleData {
                             meditationType: .vipassana
                         ),
                         PlaylistItem(
-                            title: "Ajapa Evening Sit",
+                            title: "Vipassana Sit 20",
                             kind: .customPlay,
-                            durationSeconds: 900,
-                            meditationType: .ajapa,
-                            customPlayID: ajapaPlayID
+                            durationSeconds: 1_200,
+                            meditationType: .vipassana,
+                            customPlayID: vipassanaPlayID
                         ),
                     ],
                     gapSeconds: 60,
@@ -126,7 +125,7 @@ public enum SampleData {
                     customPlayID: vipassanaPlayID,
                     customPlayName: "Vipassana Sit 20",
                     recordingLabel: "Morning recording",
-                    linkedMediaIdentifier: "native-media-vipassana-sit-20"
+                    linkedMediaIdentifier: CustomPlayMediaAsset.vipassanaSit20.id
                 )
             ),
             SessionLog(
@@ -136,8 +135,8 @@ public enum SampleData {
                 startedAt: dated(daysAgo: 4, hour: 7, minute: 10),
                 endedAt: dated(daysAgo: 4, hour: 7, minute: 18),
                 completedDurationSeconds: 480,
-                plannedDurationSeconds: 900,
-                notes: "Playlist: Morning Discipline • Item: Ajapa Evening Sit",
+                plannedDurationSeconds: 1_200,
+                notes: "Playlist: Morning Discipline • Item: Vipassana Sit 20",
                 context: SessionLogContext(
                     playlistRunID: UUID(uuidString: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff")!,
                     playlistName: "Morning Discipline",

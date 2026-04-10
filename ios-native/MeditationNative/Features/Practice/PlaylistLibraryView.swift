@@ -15,6 +15,7 @@ struct PlaylistLibraryView: View {
             } else {
                 Section {
                     ForEach(viewModel.playlists) { playlist in
+                        let validationMessage = viewModel.playlistRunValidationMessage(for: playlist)
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -40,6 +41,7 @@ struct PlaylistLibraryView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.teal)
+                                .disabled(validationMessage != nil)
 
                                 Button("Edit") {
                                     viewModel.playlistValidationMessage = nil
@@ -59,6 +61,12 @@ struct PlaylistLibraryView: View {
                                 .buttonStyle(.bordered)
                             }
                             .font(.footnote)
+
+                            if let validationMessage {
+                                Text(validationMessage)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .padding(.vertical, 4)
                     }
@@ -213,6 +221,7 @@ struct PlaylistEditorView: View {
             NavigationStack {
                 PlaylistItemEditorView(
                     availableCustomPlays: viewModel.customPlays,
+                    canResolvePlayback: viewModel.canResolvePlayback(for:),
                     draft: $itemDraft
                 ) { savedItem in
                     draft.items.append(savedItem)
@@ -246,6 +255,7 @@ struct PlaylistEditorView: View {
 
 struct PlaylistItemEditorView: View {
     let availableCustomPlays: [CustomPlay]
+    let canResolvePlayback: (CustomPlayMedia?) -> Bool
     @Binding var draft: PlaylistDraftItem
     let onSave: (PlaylistDraftItem) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -292,7 +302,11 @@ struct PlaylistItemEditorView: View {
                     if let selectedCustomPlay = selectedCustomPlay {
                         LabeledContent("Meditation type", value: selectedCustomPlay.meditationType.rawValue)
                         LabeledContent("Duration", value: "\(selectedCustomPlay.durationSeconds / 60) min")
-                        Text(selectedCustomPlay.media == nil ? "Needs bundled placeholder audio before this playlist can run." : "Uses the saved custom play title, type, duration, and local audio.")
+                        Text(
+                            canResolvePlayback(selectedCustomPlay.media)
+                                ? "Uses the saved custom play title, type, duration, and linked recording media."
+                                : "This custom play needs an available recording before the playlist can run."
+                        )
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {

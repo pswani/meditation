@@ -91,7 +91,7 @@ final class ShellViewModelTests: XCTestCase {
             durationSeconds: 900,
             startSoundName: TimerSoundOption.templeBell.rawValue,
             endSoundName: TimerSoundOption.gong.rawValue,
-            media: CustomPlayMedia(asset: .gongLoop)
+            media: .bundledSample(.vipassanaSit20)
         )
 
         viewModel.applyCustomPlayToTimer(customPlay)
@@ -243,7 +243,8 @@ private final class StubNotificationScheduler: NotificationScheduling, @unchecke
     }
 }
 
-private final class RecordingTimerSoundPlayer: TimerSoundPlaying, @unchecked Sendable {
+@MainActor
+private final class RecordingTimerSoundPlayer: TimerSoundPlaying {
     private(set) var playedSoundNames: [String?] = []
 
     func playSound(named soundName: String?) {
@@ -251,13 +252,14 @@ private final class RecordingTimerSoundPlayer: TimerSoundPlaying, @unchecked Sen
     }
 }
 
+@MainActor
 private final class RecordingAudioPlayer: CustomPlayAudioControlling {
     private(set) var startedMediaAssets: [CustomPlayMedia] = []
     private(set) var pauseCount = 0
     private(set) var resumeCount = 0
     private(set) var stopCount = 0
 
-    func startLoopingPlayback(for media: CustomPlayMedia) throws {
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws {
         startedMediaAssets.append(media)
     }
 

@@ -9,7 +9,7 @@ struct CustomPlayLibraryView: View {
         List {
             if viewModel.customPlays.isEmpty {
                 Section {
-                    Text("No custom plays yet. Add one with bundled placeholder audio so playback stays local-first.")
+                    Text("No custom plays yet. Add one with real recording media so playback stays truthful on this device.")
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -36,7 +36,10 @@ struct CustomPlayLibraryView: View {
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
                                     }
-                                    Text(customPlay.media == nil ? "Needs bundled placeholder audio" : "Placeholder audio: \(customPlay.media?.asset.rawValue ?? "")")
+                                    Text(mediaSummary(
+                                        customPlay,
+                                        canResolvePlayback: viewModel.canResolvePlayback(for: customPlay.media)
+                                    ))
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
@@ -53,7 +56,7 @@ struct CustomPlayLibraryView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.teal)
-                                .disabled(customPlay.media == nil)
+                                .disabled(viewModel.canResolvePlayback(for: customPlay.media) == false)
 
                                 Button("Apply to timer") {
                                     viewModel.applyCustomPlayToTimer(customPlay)
@@ -159,8 +162,12 @@ struct CustomPlayEditorView: View {
             Section("Recording details") {
                 TextField("Session note", text: $draft.recordingLabel)
                 TextField("Linked media identifier", text: $draft.linkedMediaIdentifier)
-                Picker("Bundled audio", selection: $draft.mediaAsset) {
-                    Text("Choose").tag(CustomPlayMediaAsset?.none)
+                Picker("Bundled sample media", selection: bundledSampleSelection) {
+                    if draft.media?.source == .remote {
+                        Text("Keep current linked media").tag(CustomPlayMediaAsset?.none)
+                    } else {
+                        Text("Choose").tag(CustomPlayMediaAsset?.none)
+                    }
                     ForEach(ReferenceData.customPlayMediaAssets, id: \.self) { mediaAsset in
                         Text(mediaAsset.rawValue).tag(Optional(mediaAsset))
                     }
@@ -169,8 +176,13 @@ struct CustomPlayEditorView: View {
                 Toggle("Favorite", isOn: $draft.isFavorite)
             }
 
-            Section("Local media guidance") {
-                Text("Milestone 3 uses bundled placeholder tracks so custom plays stay runnable in simulator and on device. The linked media identifier is a sync seam for later, not a new playback source yet.")
+            Section("Media guidance") {
+                if let media = draft.media {
+                    Text("Current media: \(media.label) • \(media.sourceSummary)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Choose bundled sample media for local-only playback, or keep a backend-linked recording when one is already synced. The linked media identifier remains the sync seam for managed media.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -199,4 +211,32 @@ struct CustomPlayEditorView: View {
             }
         }
     }
+
+    private var bundledSampleSelection: Binding<CustomPlayMediaAsset?> {
+        Binding(
+            get: { draft.media?.bundledAsset },
+            set: { selectedAsset in
+                if let selectedAsset {
+                    draft.media = .bundledSample(selectedAsset)
+                    if draft.linkedMediaIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        draft.linkedMediaIdentifier = selectedAsset.id
+                    }
+                } else if draft.media?.source == .bundledSample {
+                    draft.media = nil
+                }
+            }
+        )
+    }
+}
+
+private func mediaSummary(_ customPlay: CustomPlay, canResolvePlayback: Bool) -> String {
+    guard let media = customPlay.media else {
+        return "Recording unavailable on this device"
+    }
+
+    if canResolvePlayback {
+        return "Recording: \(media.label) • \(media.sourceSummary)"
+    }
+
+    return "Recording unavailable on this device"
 }

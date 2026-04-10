@@ -3,6 +3,9 @@ import Foundation
 enum ShellSnapshotSupport {
     static func normalizedSnapshot(_ snapshot: AppSnapshot) -> AppSnapshot {
         var normalizedSnapshot = snapshot
+        normalizedSnapshot.timerDraft = normalizedTimerDraft(snapshot.timerDraft)
+        normalizedSnapshot.customPlays = snapshot.customPlays.map(normalizedCustomPlay)
+        normalizedSnapshot.lastUsedPracticeTarget = normalizedLastUsedPracticeTarget(snapshot.lastUsedPracticeTarget)
         normalizedSnapshot.recentSessionLogs = snapshot.recentSessionLogs.sorted { $0.endedAt > $1.endedAt }
         normalizedSnapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: normalizedSnapshot.recentSessionLogs)
         if normalizedSnapshot.lastUsedPracticeTarget == nil {
@@ -121,5 +124,72 @@ enum ShellSnapshotSupport {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         return extractedName.isEmpty ? nil : extractedName
+    }
+
+    private static func normalizedTimerDraft(_ draft: TimerSettingsDraft) -> TimerSettingsDraft {
+        var normalizedDraft = draft
+        normalizedDraft.startSoundName = TimerSoundCatalog.normalizeSelection(draft.startSoundName)
+        normalizedDraft.endSoundName = TimerSoundCatalog.normalizeSelection(draft.endSoundName)
+        normalizedDraft.intervalSoundName = TimerSoundCatalog.normalizeSelection(draft.intervalSoundName)
+        if normalizedDraft.intervalSoundName == nil {
+            normalizedDraft.intervalMinutes = nil
+        }
+        return normalizedDraft
+    }
+
+    private static func normalizedCustomPlay(_ customPlay: CustomPlay) -> CustomPlay {
+        var normalizedCustomPlay = customPlay
+        normalizedCustomPlay.startSoundName = TimerSoundCatalog.normalizeSelection(customPlay.startSoundName)
+        normalizedCustomPlay.endSoundName = TimerSoundCatalog.normalizeSelection(customPlay.endSoundName)
+        normalizedCustomPlay.linkedMediaIdentifier = trimmedOrNil(customPlay.linkedMediaIdentifier)
+
+        if let bundledSampleAsset = CustomPlayMediaAsset.resolve(identifier: normalizedCustomPlay.linkedMediaIdentifier) {
+            normalizedCustomPlay.media = .bundledSample(bundledSampleAsset)
+            normalizedCustomPlay.linkedMediaIdentifier = bundledSampleAsset.id
+            if normalizedCustomPlay.durationSeconds <= 0 {
+                normalizedCustomPlay.durationSeconds = bundledSampleAsset.durationSeconds
+            }
+            return normalizedCustomPlay
+        }
+
+        switch normalizedCustomPlay.media?.source {
+        case .legacyPlaceholder:
+            normalizedCustomPlay.media = nil
+        case .bundledSample:
+            if let bundledAsset = normalizedCustomPlay.media?.bundledAsset {
+                normalizedCustomPlay.media = .bundledSample(bundledAsset)
+                normalizedCustomPlay.linkedMediaIdentifier = normalizedCustomPlay.linkedMediaIdentifier ?? bundledAsset.id
+            } else {
+                normalizedCustomPlay.media = nil
+            }
+        case .remote:
+            if let media = normalizedCustomPlay.media {
+                normalizedCustomPlay.media = media.updatedIdentifier(normalizedCustomPlay.linkedMediaIdentifier ?? media.id)
+                normalizedCustomPlay.linkedMediaIdentifier = normalizedCustomPlay.linkedMediaIdentifier ?? media.id
+            }
+        case nil:
+            break
+        }
+
+        return normalizedCustomPlay
+    }
+
+    private static func normalizedLastUsedPracticeTarget(_ target: LastUsedPracticeTarget?) -> LastUsedPracticeTarget? {
+        guard var target else {
+            return nil
+        }
+
+        target.timerDraft = target.timerDraft.map(normalizedTimerDraft)
+        return target
+    }
+
+    private static func trimmedOrNil(_ value: String?) -> String? {
+        guard let trimmedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmedValue.isEmpty == false
+        else {
+            return nil
+        }
+
+        return trimmedValue
     }
 }
