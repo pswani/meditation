@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class ShellViewModelTests: XCTestCase {
     func testHomeShortcutStateStaysCompactAndSorted() throws {
-        let (viewModel, _) = try makeViewModel()
+        let (viewModel, _, _) = try makeViewModel()
 
         XCTAssertEqual(viewModel.homeQuickStartSummary, "25 min fixed-duration • Vipassana")
         XCTAssertEqual(viewModel.favoriteCustomPlaysForHome.map(\.name), ["Vipassana Sit 20"])
@@ -33,7 +33,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
 
-        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -56,7 +56,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
         )
 
-        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -75,7 +75,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_200)
         )
 
-        let (viewModel, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -84,7 +84,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testApplyCustomPlayToTimerCopiesTheParityMetadata() throws {
-        let (viewModel, _) = try makeViewModel()
+        let (viewModel, _, _) = try makeViewModel()
         let customPlay = CustomPlay(
             name: "Morning Focus",
             meditationType: .ajapa,
@@ -105,7 +105,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
-        let (viewModel, notificationScheduler) = try makeViewModel()
+        let (viewModel, notificationScheduler, _) = try makeViewModel()
         let existingLogCount = viewModel.recentSessionLogs.count
 
         viewModel.startTimer()
@@ -139,7 +139,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testSharedPromptSupportsArchiveDeleteAndArchivedOnlyGuard() throws {
-        let (viewModel, _) = try makeViewModel()
+        let (viewModel, _, _) = try makeViewModel()
 
         let activeSankalpa = try XCTUnwrap(viewModel.sankalpaProgressGroups.active.first?.goal)
         viewModel.requestArchiveSankalpaConfirmation(activeSankalpa)
@@ -171,7 +171,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testLibraryDeletesRequireConfirmationBeforeRemoval() throws {
-        let (viewModel, _) = try makeViewModel()
+        let (viewModel, _, _) = try makeViewModel()
 
         let customPlay = try XCTUnwrap(viewModel.customPlays.first)
         viewModel.requestDeleteCustomPlayConfirmation(customPlay)
@@ -192,9 +192,78 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.snapshot.playlists.contains(where: { $0.id == playlist.id }))
     }
 
+    func testSaveTimerDefaultsPersistsOnlyWhenCalledExplicitly() throws {
+        let (viewModel, _, _) = try makeViewModel()
+        let updatedDraft = TimerSettingsDraft(
+            mode: .fixedDuration,
+            durationMinutes: 18,
+            meditationType: .ajapa,
+            startSoundName: TimerSoundOption.templeBell.rawValue,
+            endSoundName: TimerSoundOption.gong.rawValue
+        )
+
+        viewModel.saveTimerDefaults(updatedDraft)
+
+        XCTAssertEqual(viewModel.snapshot.timerDraft.durationMinutes, 18)
+        XCTAssertEqual(viewModel.snapshot.timerDraft.meditationType, .ajapa)
+        XCTAssertEqual(viewModel.timerDefaultsFeedbackMessage, "Timer defaults saved.")
+    }
+
+    func testSaveTimerDefaultsRejectsInvalidTimerDraft() throws {
+        let (viewModel, _, _) = try makeViewModel()
+        let invalidDraft = TimerSettingsDraft(
+            mode: .fixedDuration,
+            durationMinutes: 0,
+            meditationType: .vipassana
+        )
+
+        viewModel.saveTimerDefaults(invalidDraft)
+
+        XCTAssertEqual(viewModel.snapshot.timerDraft.durationMinutes, 25)
+        XCTAssertEqual(
+            viewModel.timerDefaultsValidationMessage,
+            TimerValidationError.durationMustBeGreaterThanZero.message
+        )
+    }
+
+    func testRestoresRunningCustomPlayFromPersistedActiveRuntime() throws {
+        let startDate = Date().addingTimeInterval(-300)
+        var snapshot = SampleData.snapshot
+        let customPlay = try XCTUnwrap(snapshot.customPlays.first(where: { $0.media?.isPlayable == true }))
+        snapshot.activeRuntime = ActivePracticeSnapshot(
+            customPlaySession: ActiveCustomPlaySession(
+                customPlay: customPlay,
+                startedAt: startDate
+            )
+        )
+
+        let (viewModel, _, audioPlayer) = try makeViewModel(snapshot: snapshot)
+
+        XCTAssertEqual(viewModel.activeCustomPlaySession?.customPlay.id, customPlay.id)
+        XCTAssertEqual(audioPlayer.startedMediaAssets.first?.id, customPlay.media?.id)
+        let resumedOffset = try XCTUnwrap(audioPlayer.startedOffsets.first)
+        XCTAssertTrue((299 ... 301).contains(Int(resumedOffset.rounded(.down))))
+    }
+
+    func testRestoresPausedTimerFromPersistedActiveRuntime() throws {
+        let startDate = Date().addingTimeInterval(-600)
+        var snapshot = SampleData.snapshot
+        var activeSession = try TimerFeature.makeActiveSession(
+            from: snapshot.timerDraft,
+            now: startDate
+        )
+        activeSession.pause(at: startDate.addingTimeInterval(240))
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: activeSession)
+
+        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
+
+        XCTAssertTrue(viewModel.activeSession?.isPaused == true)
+        XCTAssertEqual(viewModel.snapshot.activeRuntime?.timerSession?.id, activeSession.id)
+    }
+
     private func makeViewModel(
         snapshot: AppSnapshot = SampleData.snapshot
-    ) throws -> (ShellViewModel, StubNotificationScheduler) {
+    ) throws -> (ShellViewModel, StubNotificationScheduler, RecordingAudioPlayer) {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let storeURL = tempDirectory.appendingPathComponent("snapshot.json")
@@ -217,7 +286,7 @@ final class ShellViewModelTests: XCTestCase {
             audioPlayer: audioPlayer
         )
 
-        return (viewModel, notificationScheduler)
+        return (viewModel, notificationScheduler, audioPlayer)
     }
 }
 
@@ -255,12 +324,14 @@ private final class RecordingTimerSoundPlayer: TimerSoundPlaying {
 @MainActor
 private final class RecordingAudioPlayer: CustomPlayAudioControlling {
     private(set) var startedMediaAssets: [CustomPlayMedia] = []
+    private(set) var startedOffsets: [TimeInterval] = []
     private(set) var pauseCount = 0
     private(set) var resumeCount = 0
     private(set) var stopCount = 0
 
-    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment) throws {
+    func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval) throws {
         startedMediaAssets.append(media)
+        startedOffsets.append(offsetSeconds)
     }
 
     func pausePlayback() {

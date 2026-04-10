@@ -112,7 +112,7 @@ public enum SankalpaValidationError: String, Error, Equatable, Sendable {
     }
 }
 
-public struct TimerSessionConfiguration: Equatable, Sendable {
+public struct TimerSessionConfiguration: Codable, Equatable, Sendable {
     public var mode: TimerSettingsDraft.Mode
     public var durationSeconds: Int?
     public var meditationType: MeditationType
@@ -140,7 +140,7 @@ public struct TimerSessionConfiguration: Equatable, Sendable {
     }
 }
 
-public struct ActiveTimerSession: Identifiable, Equatable, Sendable {
+public struct ActiveTimerSession: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var configuration: TimerSessionConfiguration
     public var startedAt: Date
@@ -264,7 +264,7 @@ public struct ActiveTimerSession: Identifiable, Equatable, Sendable {
     }
 }
 
-public struct ActiveCustomPlaySession: Identifiable, Equatable, Sendable {
+public struct ActiveCustomPlaySession: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var customPlay: CustomPlay
     public var startedAt: Date
@@ -326,7 +326,23 @@ public struct ActiveCustomPlaySession: Identifiable, Equatable, Sendable {
     }
 }
 
-public enum PlaylistRunPhase: Equatable, Sendable {
+public struct ActivePracticeSnapshot: Codable, Equatable, Sendable {
+    public var timerSession: ActiveTimerSession?
+    public var customPlaySession: ActiveCustomPlaySession?
+    public var playlistSession: ActivePlaylistSession?
+
+    public init(
+        timerSession: ActiveTimerSession? = nil,
+        customPlaySession: ActiveCustomPlaySession? = nil,
+        playlistSession: ActivePlaylistSession? = nil
+    ) {
+        self.timerSession = timerSession
+        self.customPlaySession = customPlaySession
+        self.playlistSession = playlistSession
+    }
+}
+
+public enum PlaylistRunPhase: Codable, Equatable, Sendable {
     case item(index: Int)
     case gap(afterItemIndex: Int)
 }
@@ -347,7 +363,7 @@ public struct PlaylistRunAdvanceResult: Equatable, Sendable {
     }
 }
 
-public struct ActivePlaylistSession: Identifiable, Equatable, Sendable {
+public struct ActivePlaylistSession: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var playlist: Playlist
     public var phase: PlaylistRunPhase

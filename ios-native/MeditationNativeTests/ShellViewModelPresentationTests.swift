@@ -38,6 +38,35 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
     }
 
+    func testLocalOnlyPresentationReadsAsIntentionalMode() {
+        var localOnlyState = AppSyncState(connectionState: .localOnly)
+        localOnlyState.pendingMutations = [
+            .timerSettingsUpsert(
+                TimerSettingsDraft(
+                    mode: .fixedDuration,
+                    durationMinutes: 25,
+                    meditationType: .vipassana
+                )
+            ),
+        ]
+
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncStatusHeadline(for: localOnlyState),
+            "Local-only mode"
+        )
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncBannerMessage(for: localOnlyState),
+            "This iPhone is in local-only mode. 1 saved change will stay on this device until a backend base URL is configured."
+        )
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncStatusDetail(
+                for: localOnlyState,
+                now: Date(timeIntervalSince1970: 1_700_000_000)
+            ),
+            "This profile is working intentionally on-device only right now. Add `MEDITATION_IOS_API_BASE_URL` when you want saved changes to replay to a backend."
+        )
+    }
+
     func testSnapshotSupportDerivesLastUsedCustomPlayFromContextAwareLog() {
         let customPlay = CustomPlay(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,

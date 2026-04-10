@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, and `ios-native-media-sound-parity-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
-- Latest merge outcome: merged `codex/ios-native-media-sound-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, and `ios-native-runtime-ux-resilience-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
+- Latest merge outcome: merged `codex/ios-native-runtime-ux-resilience-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -22,6 +22,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `prompts/ios-native-history-summary-parity-feature-bundle-with-branching/`
   - `prompts/ios-native-sync-parity-feature-bundle-with-branching/`
   - `prompts/ios-native-decomposition-hardening-feature-bundle-with-branching/`
+  - `prompts/ios-native-runtime-ux-resilience-feature-bundle-with-branching/`
   - `docs/ios-native/README.md`
   - `ios-native/MeditationNative.xcodeproj`
   - `docs/execplan-ios-native-foundation-feature.md`
@@ -32,6 +33,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-history-summary-parity-feature.md`
   - `docs/execplan-ios-native-decomposition-hardening-feature.md`
   - `docs/execplan-ios-native-media-sound-parity-feature.md`
+  - `docs/execplan-ios-native-runtime-ux-resilience-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
@@ -40,6 +42,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/review-ios-native-history-summary-parity-feature.md`
   - `docs/review-ios-native-decomposition-hardening-feature.md`
   - `docs/review-ios-native-media-sound-parity-feature.md`
+  - `docs/review-ios-native-runtime-ux-resilience-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
@@ -48,6 +51,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/test-ios-native-history-summary-parity-feature.md`
   - `docs/test-ios-native-decomposition-hardening-feature.md`
   - `docs/test-ios-native-media-sound-parity-feature.md`
+  - `docs/test-ios-native-runtime-ux-resilience-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -154,6 +158,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - snapshot and sync normalization that upgrades older placeholder media shapes without faking playback
   - Home and Practice affordances that disable or explain launches when recording playback cannot be resolved on the current device or environment
   - one bundled sample recording resource packaged with the app for local-only playback coverage
+- Native iOS runtime UX resilience now adds:
+  - persisted active-session recovery for timer, `custom play`, and playlist runtime state when the saved session can still be reconstructed truthfully on relaunch
+  - relaunch recovery that preserves paused state and resumes audio-backed sessions from the saved elapsed offset where playback can still be resolved
+  - direct numeric entry for timer duration, interval minutes, and manual-log duration alongside quick-adjust controls
+  - explicit save or reset behavior for Settings timer defaults instead of immediate persistence on every edit
+  - clearer shell and Settings copy that makes local-only mode sound intentional rather than broken
+  - focused XCTest coverage for active-runtime restoration, local-only presentation copy, and timer-default save validation
 - Native iOS summary and `sankalpa` milestone now adds:
   - Home progress context with today totals, recent session signal, and a top active `sankalpa` snapshot
   - local summary aggregation from native `session log` history with all-time, 7-day, and 30-day range views
@@ -190,6 +201,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-ios-native-summary-sankalpa-feature.md`
 - Implementation planning: `docs/execplan-ios-native-sync-parity-feature.md`
 - Implementation planning: `docs/execplan-ios-native-decomposition-hardening-feature.md`
+- Implementation planning: `docs/execplan-ios-native-runtime-ux-resilience-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -213,6 +225,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-sync-parity-feature.md`
 - Review artifact: `docs/review-ios-native-decomposition-hardening-feature.md`
 - Review artifact: `docs/review-ios-native-media-sound-parity-feature.md`
+- Review artifact: `docs/review-ios-native-runtime-ux-resilience-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -238,6 +251,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-runtime-safety-hardening-feature.md`
 - Verification report: `docs/test-ios-native-sync-parity-feature.md`
 - Verification report: `docs/test-ios-native-decomposition-hardening-feature.md`
+- Verification report: `docs/test-ios-native-runtime-ux-resilience-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -251,6 +265,15 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS runtime UX resilience verified on 2026-04-10:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-ux-resilience CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-ux-resilience-tests CODE_SIGNING_ALLOWED=NO build-for-testing` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-ux-resilience-tests CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device and CoreSimulator is unavailable
+  - `xcodebuild` still reports the pre-existing `Resources` duplicate-group warning, but it did not block compilation
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS runtime-UX-resilience slice after timer-default save validation was added
+
 - Native iOS decomposition hardening verified on 2026-04-10:
   - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-decomposition CODE_SIGNING_ALLOWED=NO build` passed
@@ -454,7 +477,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
 - Native iOS timer-history still needs physical iPhone validation for notification permission prompts, completion delivery timing, and background or foreground transitions around fixed-duration completion.
-- Native iOS active-session relaunch recovery is still intentionally absent; this milestone keeps the live timer runtime in memory until a later native bundle decides whether durable recovery belongs in scope.
+- Native iOS active-session relaunch recovery now exists, but it still needs concrete simulator or physical-iPhone validation for audio-backed sessions, background completion, and notification timing.
 
 ## Recommended next slice
 - The requested native iOS parity and decomposition bundle sequence is complete.

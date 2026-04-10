@@ -22,6 +22,8 @@ final class ShellViewModel: ObservableObject {
     @Published var sankalpaFeedbackMessage: String?
     @Published var practiceRuntimeMessage: String?
     @Published var persistenceMessage: String?
+    @Published var timerDefaultsFeedbackMessage: String?
+    @Published var timerDefaultsValidationMessage: String?
 
     private let repository: LocalAppSnapshotRepository
     private let syncRepository: LocalAppSyncStateRepository
@@ -78,6 +80,7 @@ final class ShellViewModel: ObservableObject {
         }
 
         self.environment = repository.environment
+        restorePersistedActiveRuntimeIfNeeded()
 
         if environment.requiresBackend {
             scheduleSync()
@@ -264,6 +267,7 @@ final class ShellViewModel: ObservableObject {
 
         activeSession.pause(at: now)
         self.activeSession = activeSession
+        persistSnapshot()
         Task {
             await notificationScheduler.cancelTimerCompletionNotification()
         }
@@ -274,9 +278,11 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        activeSession.resume(at: Date())
+        let resumedAt = Date()
+        activeSession.resume(at: resumedAt)
         self.activeSession = activeSession
-        now = Date()
+        now = resumedAt
+        persistSnapshot()
         rescheduleTimerNotificationIfNeeded()
     }
 
@@ -345,6 +351,28 @@ final class ShellViewModel: ObservableObject {
         practiceRuntimeMessage = "Custom play \"\(customPlay.name)\" applied to timer setup."
     }
 
+    func saveTimerDefaults(_ draft: TimerSettingsDraft) {
+        timerDefaultsFeedbackMessage = nil
+        timerDefaultsValidationMessage = nil
+        persistenceMessage = nil
+
+        if let validationError = TimerFeature.validateTimerDraft(draft).first {
+            timerDefaultsValidationMessage = validationError.message
+            return
+        }
+
+        snapshot.timerDraft = draft
+        persistSnapshot(syncMutations: [.timerSettingsUpsert(draft)])
+        if persistenceMessage == nil {
+            timerDefaultsFeedbackMessage = "Timer defaults saved."
+        }
+    }
+
+    func clearTimerDefaultsFeedback() {
+        timerDefaultsFeedbackMessage = nil
+        timerDefaultsValidationMessage = nil
+    }
+
     func deleteCustomPlay(_ customPlay: CustomPlay) {
         guard activeCustomPlaySession?.customPlay.id != customPlay.id else {
             practiceRuntimeMessage = "End the active custom play before deleting it."
@@ -383,7 +411,7 @@ final class ShellViewModel: ObservableObject {
         }
 
         do {
-            try audioPlayer.startPlayback(for: media, environment: environment)
+            try audioPlayer.startPlayback(for: media, environment: environment, at: 0)
             activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
             soundPlayer.playSound(named: customPlay.startSoundName)
             practiceRuntimeMessage = nil
@@ -412,6 +440,7 @@ final class ShellViewModel: ObservableObject {
         activeCustomPlaySession.pause(at: now)
         self.activeCustomPlaySession = activeCustomPlaySession
         audioPlayer.pausePlayback()
+        persistSnapshot()
     }
 
     func resumeCustomPlay() {
@@ -419,11 +448,13 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        let resumedAt = Date()
         do {
-            try audioPlayer.resumePlayback()
-            activeCustomPlaySession.resume(at: Date())
+            try resumeCustomPlayAudioIfNeeded(for: activeCustomPlaySession, at: resumedAt)
+            activeCustomPlaySession.resume(at: resumedAt)
             self.activeCustomPlaySession = activeCustomPlaySession
             practiceRuntimeMessage = nil
+            persistSnapshot()
         } catch let error as LocalAudioPlaybackError {
             practiceRuntimeMessage = error.message
         } catch {
@@ -609,6 +640,7 @@ final class ShellViewModel: ObservableObject {
            case .item = activePlaylistSession.phase {
             audioPlayer.pausePlayback()
         }
+        persistSnapshot()
     }
 
     func resumePlaylist() {
@@ -616,11 +648,13 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        let resumedAt = Date()
         do {
-            activePlaylistSession.resume(at: Date())
+            activePlaylistSession.resume(at: resumedAt)
             self.activePlaylistSession = activePlaylistSession
-            try syncPlaylistAudio()
+            try resumePlaylistAudioIfNeeded(for: activePlaylistSession, at: resumedAt)
             practiceRuntimeMessage = nil
+            persistSnapshot()
         } catch let error as LocalAudioPlaybackError {
             practiceRuntimeMessage = error.message
         } catch {
@@ -633,12 +667,14 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        self.activePlaylistSession = nil
         if let log = activePlaylistSession.makeCurrentItemEarlyStopLog(at: Date()) {
             insertLogs([log])
+        } else {
+            persistSnapshot()
         }
 
         audioPlayer.stopPlayback()
-        self.activePlaylistSession = nil
         stopClockIfIdle()
     }
 
@@ -770,12 +806,16 @@ final class ShellViewModel: ObservableObject {
         now = currentDate
 
         if var activeSession {
+            let previousSession = activeSession
             if activeSession.isPaused == false,
                activeSession.nextDueIntervalCount(at: currentDate) != nil {
                 soundPlayer.playSound(named: activeSession.configuration.intervalSoundName)
             }
 
             self.activeSession = activeSession
+            if activeSession != previousSession {
+                persistSnapshot()
+            }
 
             if activeSession.configuration.mode == .fixedDuration,
                activeSession.remainingSeconds(at: currentDate) == 0 {
@@ -799,6 +839,7 @@ final class ShellViewModel: ObservableObject {
             if advanceResult.finishedRun {
                 audioPlayer.stopPlayback()
                 self.activePlaylistSession = nil
+                persistSnapshot()
                 stopClockIfIdle()
                 return
             }
@@ -807,15 +848,18 @@ final class ShellViewModel: ObservableObject {
                 self.activePlaylistSession = activePlaylistSession
                 do {
                     try syncPlaylistAudio()
+                    persistSnapshot()
                 } catch let error as LocalAudioPlaybackError {
                     self.activePlaylistSession = nil
                     practiceRuntimeMessage = error.message
                     audioPlayer.stopPlayback()
+                    persistSnapshot()
                     stopClockIfIdle()
                 } catch {
                     self.activePlaylistSession = nil
                     practiceRuntimeMessage = "The playlist could not continue right now."
                     audioPlayer.stopPlayback()
+                    persistSnapshot()
                     stopClockIfIdle()
                 }
             } else {
@@ -831,8 +875,8 @@ final class ShellViewModel: ObservableObject {
 
         let log = activeSession.makeSessionLog(status: status, endedAt: endedAt)
         soundPlayer.playSound(named: activeSession.configuration.endSoundName)
-        insertLogs([log])
         self.activeSession = nil
+        insertLogs([log])
 
         Task {
             await notificationScheduler.cancelTimerCompletionNotification()
@@ -849,8 +893,8 @@ final class ShellViewModel: ObservableObject {
         let log = activeCustomPlaySession.makeSessionLog(status: status, endedAt: endedAt)
         audioPlayer.stopPlayback()
         soundPlayer.playSound(named: activeCustomPlaySession.customPlay.endSoundName)
-        insertLogs([log])
         self.activeCustomPlaySession = nil
+        insertLogs([log])
         stopClockIfIdle()
     }
 
@@ -866,6 +910,7 @@ final class ShellViewModel: ObservableObject {
 
     private func persistSnapshot(syncMutations: [SyncMutation] = []) {
         do {
+            snapshot.activeRuntime = currentActiveRuntimeSnapshot()
             snapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: snapshot.recentSessionLogs)
             try repository.save(snapshot)
             isSeedData = snapshot == SampleData.snapshot
@@ -984,6 +1029,7 @@ final class ShellViewModel: ObservableObject {
 
     private func rescheduleTimerNotificationIfNeeded() {
         guard let activeSession,
+              activeSession.isPaused == false,
               activeSession.configuration.mode == .fixedDuration,
               let targetEndAt = activeSession.targetEndAt()
         else {
@@ -1020,7 +1066,7 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        try audioPlayer.startPlayback(for: media, environment: environment)
+        try audioPlayer.startPlayback(for: media, environment: environment, at: 0)
     }
 
     private func startTimer(
@@ -1044,6 +1090,8 @@ final class ShellViewModel: ObservableObject {
                 var updatedLastUsedTarget = lastUsedTarget
                 updatedLastUsedTarget.updatedAt = Date()
                 recordLastUsedPracticeTarget(updatedLastUsedTarget)
+            } else {
+                persistSnapshot()
             }
             startClock()
             rescheduleTimerNotificationIfNeeded()
@@ -1058,6 +1106,261 @@ final class ShellViewModel: ObservableObject {
         session.startedAt
             .addingTimeInterval(TimeInterval(session.customPlay.durationSeconds))
             .addingTimeInterval(session.accumulatedPauseSeconds)
+    }
+
+    private func currentActiveRuntimeSnapshot() -> ActivePracticeSnapshot? {
+        if let activeSession {
+            return ActivePracticeSnapshot(timerSession: activeSession)
+        }
+
+        if let activeCustomPlaySession {
+            return ActivePracticeSnapshot(customPlaySession: activeCustomPlaySession)
+        }
+
+        if let activePlaylistSession {
+            return ActivePracticeSnapshot(playlistSession: activePlaylistSession)
+        }
+
+        return nil
+    }
+
+    private func restorePersistedActiveRuntimeIfNeeded() {
+        guard let activeRuntime = snapshot.activeRuntime else {
+            return
+        }
+
+        let currentDate = Date()
+        now = currentDate
+
+        if let timerSession = activeRuntime.timerSession {
+            restoreTimerSession(timerSession, at: currentDate)
+            return
+        }
+
+        if let customPlaySession = activeRuntime.customPlaySession {
+            restoreCustomPlaySession(customPlaySession, at: currentDate)
+            return
+        }
+
+        if let playlistSession = activeRuntime.playlistSession {
+            restorePlaylistSession(playlistSession, at: currentDate)
+            return
+        }
+
+        snapshot.activeRuntime = nil
+        persistSnapshot()
+    }
+
+    private func restoreTimerSession(_ session: ActiveTimerSession, at currentDate: Date) {
+        var restoredSession = session
+
+        if restoredSession.isPaused == false,
+           let intervalMinutes = restoredSession.configuration.intervalMinutes,
+           intervalMinutes > 0 {
+            let completedIntervals = restoredSession.elapsedSeconds(at: currentDate) / (intervalMinutes * 60)
+            restoredSession.lastCompletedIntervalCount = max(
+                restoredSession.lastCompletedIntervalCount,
+                completedIntervals
+            )
+        }
+
+        activeSession = restoredSession
+
+        if restoredSession.configuration.mode == .fixedDuration,
+           restoredSession.remainingSeconds(at: currentDate) == 0 {
+            finishRecoveredTimer(endedAt: restoredSession.targetEndAt() ?? currentDate)
+            practiceRuntimeMessage = "The previous timer finished while the app was away and was saved to History."
+            return
+        }
+
+        startClock()
+        rescheduleTimerNotificationIfNeeded()
+        persistSnapshot()
+    }
+
+    private func restoreCustomPlaySession(_ session: ActiveCustomPlaySession, at currentDate: Date) {
+        guard let media = session.customPlay.media,
+              canResolvePlayback(for: media)
+        else {
+            activeCustomPlaySession = nil
+            snapshot.activeRuntime = nil
+            practiceRuntimeMessage = "The previous custom play could not be restored because its recording is unavailable on this device."
+            persistSnapshot()
+            return
+        }
+
+        activeCustomPlaySession = session
+
+        if session.isPaused == false,
+           session.remainingSeconds(at: currentDate) == 0 {
+            finishRecoveredCustomPlay(endedAt: customPlayTargetEndAt(session))
+            practiceRuntimeMessage = "The previous custom play finished while the app was away and was saved to History."
+            return
+        }
+
+        if session.isPaused == false {
+            do {
+                try audioPlayer.startPlayback(
+                    for: media,
+                    environment: environment,
+                    at: TimeInterval(session.elapsedSeconds(at: currentDate))
+                )
+            } catch let error as LocalAudioPlaybackError {
+                activeCustomPlaySession = nil
+                practiceRuntimeMessage = error.message
+                persistSnapshot()
+                return
+            } catch {
+                activeCustomPlaySession = nil
+                practiceRuntimeMessage = "The previous custom play could not be restored right now."
+                persistSnapshot()
+                return
+            }
+        }
+
+        startClock()
+        persistSnapshot()
+    }
+
+    private func restorePlaylistSession(_ session: ActivePlaylistSession, at currentDate: Date) {
+        var restoredSession = session
+        let advanceResult = restoredSession.advanceIfNeeded(at: currentDate)
+
+        if advanceResult.finishedRun {
+            activePlaylistSession = nil
+            if advanceResult.logs.isEmpty == false {
+                insertLogs(advanceResult.logs)
+            } else {
+                persistSnapshot()
+            }
+            practiceRuntimeMessage = "The previous playlist finished while the app was away and was saved to History."
+            return
+        }
+
+        activePlaylistSession = restoredSession
+
+        if advanceResult.logs.isEmpty == false {
+            insertLogs(advanceResult.logs)
+            activePlaylistSession = restoredSession
+        }
+
+        do {
+            try startCurrentPlaylistAudioIfNeeded(for: restoredSession, at: currentDate)
+        } catch let error as LocalAudioPlaybackError {
+            activePlaylistSession = nil
+            practiceRuntimeMessage = error.message
+            persistSnapshot()
+            return
+        } catch {
+            activePlaylistSession = nil
+            practiceRuntimeMessage = "The previous playlist could not be restored right now."
+            persistSnapshot()
+            return
+        }
+
+        startClock()
+        persistSnapshot()
+    }
+
+    private func finishRecoveredTimer(endedAt: Date) {
+        guard let activeSession else {
+            return
+        }
+
+        let log = activeSession.makeSessionLog(status: .completed, endedAt: endedAt)
+        self.activeSession = nil
+        insertLogs([log])
+
+        Task {
+            await notificationScheduler.cancelTimerCompletionNotification()
+        }
+
+        stopClockIfIdle()
+    }
+
+    private func finishRecoveredCustomPlay(endedAt: Date) {
+        guard let activeCustomPlaySession else {
+            return
+        }
+
+        let log = activeCustomPlaySession.makeSessionLog(status: .completed, endedAt: endedAt)
+        audioPlayer.stopPlayback()
+        self.activeCustomPlaySession = nil
+        insertLogs([log])
+        stopClockIfIdle()
+    }
+
+    private func resumeCustomPlayAudioIfNeeded(
+        for session: ActiveCustomPlaySession,
+        at date: Date
+    ) throws {
+        do {
+            try audioPlayer.resumePlayback()
+        } catch LocalAudioPlaybackError.audioSetupFailed {
+            guard let media = session.customPlay.media else {
+                throw LocalAudioPlaybackError.recordingUnavailable
+            }
+
+            try audioPlayer.startPlayback(
+                for: media,
+                environment: environment,
+                at: TimeInterval(session.elapsedSeconds(at: date))
+            )
+        }
+    }
+
+    private func resumePlaylistAudioIfNeeded(
+        for session: ActivePlaylistSession,
+        at date: Date
+    ) throws {
+        guard case .item = session.phase,
+              session.currentItem?.kind == .customPlay
+        else {
+            audioPlayer.stopPlayback()
+            return
+        }
+
+        do {
+            try audioPlayer.resumePlayback()
+        } catch LocalAudioPlaybackError.audioSetupFailed {
+            try startCurrentPlaylistAudioIfNeeded(for: session, at: date)
+        }
+    }
+
+    private func startCurrentPlaylistAudioIfNeeded(
+        for session: ActivePlaylistSession,
+        at date: Date
+    ) throws {
+        guard case .item = session.phase,
+              let currentItem = session.currentItem
+        else {
+            audioPlayer.stopPlayback()
+            return
+        }
+
+        guard currentItem.kind == .customPlay else {
+            audioPlayer.stopPlayback()
+            return
+        }
+
+        guard let customPlayID = currentItem.customPlayID,
+              let customPlay = snapshot.customPlays.first(where: { $0.id == customPlayID }),
+              let media = customPlay.media,
+              canResolvePlayback(for: media)
+        else {
+            throw LocalAudioPlaybackError.recordingUnavailable
+        }
+
+        if session.isPaused {
+            audioPlayer.pausePlayback()
+            return
+        }
+
+        try audioPlayer.startPlayback(
+            for: media,
+            environment: environment,
+            at: TimeInterval(session.elapsedSecondsInPhase(at: date))
+        )
     }
 
     private func upsert<Value: Identifiable & Equatable>(_ value: Value, into values: [Value]) -> [Value] {

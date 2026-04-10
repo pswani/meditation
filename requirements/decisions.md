@@ -96,7 +96,12 @@
 - Keep Home shortcut state local and compact:
   - persist a small `lastUsedPracticeTarget` snapshot for timer, `custom play`, and playlist launches
   - keep the shortcut groups limited so the screen stays calm
-- Persist active timer recovery as one canonical active-session snapshot and preserve paused recovery truthfully instead of reconstructing timer state from looser fragments.
+- Persist native active timer, `custom play`, and playlist recovery as one canonical active-session snapshot inside the foundation snapshot, and preserve paused recovery truthfully instead of reconstructing runtime state from looser fragments.
+- Keep recovered native audio-backed sessions truthful:
+  - resume from the saved elapsed offset when playback can still be resolved
+  - otherwise clear the stale runtime with calm guidance instead of guessing
+- Keep native Settings timer defaults on an explicit save or reset workflow while Practice remains the next-session setup surface.
+- Keep native local-only sync copy explicit that the device is intentionally working without a configured backend, rather than implying broken connectivity.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
 - Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:
   - `None` stays runtime-derived rather than a second catalog entry

@@ -2,6 +2,12 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var viewModel: ShellViewModel
+    @State private var timerDefaultsDraft: TimerSettingsDraft
+
+    init(viewModel: ShellViewModel) {
+        self.viewModel = viewModel
+        _timerDefaultsDraft = State(initialValue: viewModel.snapshot.timerDraft)
+    }
 
     var body: some View {
         ScrollView {
@@ -10,10 +16,53 @@ struct SettingsView: View {
                     .font(.largeTitle.weight(.semibold))
 
                 TimerDraftForm(
-                    draft: viewModel.timerDraftBinding,
+                    draft: $timerDefaultsDraft,
                     headline: "Timer defaults",
                     showsIntroCopy: false
                 )
+
+                SectionCard(
+                    title: "Timer defaults actions",
+                    caption: "Review the next-session defaults here before saving them."
+                ) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            Button("Reset") {
+                                timerDefaultsDraft = viewModel.snapshot.timerDraft
+                                viewModel.clearTimerDefaultsFeedback()
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(hasUnsavedTimerDefaultsChanges == false)
+
+                            Button("Save") {
+                                viewModel.saveTimerDefaults(timerDefaultsDraft)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.teal)
+                            .disabled(hasUnsavedTimerDefaultsChanges == false)
+                        }
+
+                        Text(
+                            hasUnsavedTimerDefaultsChanges
+                                ? "Changes stay in this screen until you save them."
+                                : "The saved timer defaults match what is shown here."
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                        if let timerDefaultsFeedbackMessage = viewModel.timerDefaultsFeedbackMessage {
+                            Text(timerDefaultsFeedbackMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let timerDefaultsValidationMessage = viewModel.timerDefaultsValidationMessage {
+                            Text(timerDefaultsValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
 
                 SectionCard(title: "Notifications", caption: "Fixed-duration completion support") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -34,7 +83,7 @@ struct SettingsView: View {
                     }
                 }
 
-                SectionCard(title: "Environment", caption: "Native local-first profile") {
+                SectionCard(title: "Environment", caption: "Current native runtime profile") {
                     VStack(alignment: .leading, spacing: 8) {
                         LabeledContent("Profile", value: viewModel.environment.profileName)
                         LabeledContent(
@@ -80,5 +129,17 @@ struct SettingsView: View {
             .padding()
         }
         .navigationTitle("Settings")
+        .onChange(of: timerDefaultsDraft) { _, _ in
+            viewModel.clearTimerDefaultsFeedback()
+        }
+        .onChange(of: viewModel.snapshot.timerDraft) { _, newValue in
+            if hasUnsavedTimerDefaultsChanges == false {
+                timerDefaultsDraft = newValue
+            }
+        }
+    }
+
+    private var hasUnsavedTimerDefaultsChanges: Bool {
+        timerDefaultsDraft != viewModel.snapshot.timerDraft
     }
 }

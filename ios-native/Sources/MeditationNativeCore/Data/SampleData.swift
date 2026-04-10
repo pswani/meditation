@@ -37,6 +37,7 @@ public enum SampleData {
                 ),
                 updatedAt: sessionLogs.first?.endedAt ?? seedNow
             ),
+            activeRuntime: nil,
             recentSessionLogs: sessionLogs,
             customPlays: [
                 CustomPlay(
