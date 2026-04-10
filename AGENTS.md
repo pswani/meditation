@@ -225,7 +225,7 @@ After each meaningful implementation slice:
 When creating reusable prompts for future work:
 - place them under `prompts/`
 - keep each bundle focused on one meaningful vertical slice
-- prefer one folder per slice using a clear suffix such as `-feature-bundle-with-branching`
+- prefer one folder per slice using a clear suffix such as `-feature`
 - include the same bounded sequence unless the user explicitly wants a different flow:
   - `00-create-branch.md`
   - `01-implement-*.md`
@@ -236,7 +236,7 @@ When creating reusable prompts for future work:
 - include or update a reusable parameterized runner prompt when it helps execute bundles consistently
 - make each prompt file self-contained about required docs, scope, verification, documentation updates, and expected commit style
 - keep prompt bundles production-aware and aligned with the current repo workflow instead of reviving removed dev-only paths
-- avoid generating prompt bundles that are overly granular, overlapping, or disconnected from the product roadmap
+- avoid generating prompt bundles that are overly granular, overlapping, or disconnected from the product roadmap.  Use a sizable chunk of work per bundle.  Include multiple implementation prompts per slice of work within a bundle as appropriate.
 
 ## Done means
 Before considering work complete:
