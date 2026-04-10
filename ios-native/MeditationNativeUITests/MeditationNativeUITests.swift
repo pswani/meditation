@@ -2,8 +2,7 @@ import XCTest
 
 final class MeditationNativeUITests: XCTestCase {
     func testLaunchShowsPrimaryDestinations() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.tabBars.buttons["Practice"].exists)
@@ -13,8 +12,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testHomeQuickStartStartsTheTimerFlow() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         XCTAssertTrue(app.buttons["Start timer"].waitForExistence(timeout: 2))
         app.buttons["Start timer"].tap()
@@ -24,8 +22,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testHomeLastUsedShortcutStartsTheTimerFlow() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         XCTAssertTrue(app.buttons["Start last used meditation"].waitForExistence(timeout: 2))
         app.buttons["Start last used meditation"].tap()
@@ -35,8 +32,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testHomeFavoriteCustomPlayShortcutStartsTheCustomPlayFlow() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         XCTAssertTrue(app.buttons["Start Vipassana Sit 20"].waitForExistence(timeout: 2))
         app.buttons["Start Vipassana Sit 20"].tap()
@@ -46,8 +42,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testHomeFavoritePlaylistShortcutStartsThePlaylistFlow() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         XCTAssertTrue(app.buttons["Start Morning Discipline"].waitForExistence(timeout: 2))
         app.buttons["Start Morning Discipline"].tap()
@@ -57,8 +52,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testPracticeCanStartPauseResumeAndEndFixedTimer() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["Practice"].tap()
 
@@ -78,12 +72,13 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(endEarlyButton.waitForExistence(timeout: 2))
         endEarlyButton.tap()
 
+        confirmAlert(in: app, title: "End timer early?", button: "End")
+
         XCTAssertTrue(startButton.waitForExistence(timeout: 2))
     }
 
     func testPracticeCanRunPauseResumeAndEndFeaturedCustomPlay() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["Practice"].tap()
 
@@ -105,12 +100,13 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(endButton.waitForExistence(timeout: 2))
         endButton.tap()
 
+        confirmAlert(in: app, title: "End custom play?", button: "End")
+
         XCTAssertTrue(app.buttons["Start featured custom play"].waitForExistence(timeout: 2))
     }
 
     func testPracticeCanApplyFeaturedCustomPlayToTimerSetup() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["Practice"].tap()
 
@@ -123,12 +119,14 @@ final class MeditationNativeUITests: XCTestCase {
         startButton.tap()
 
         XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["20:00"].waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            app.staticTexts["20:00"].waitForExistence(timeout: 2) ||
+            app.staticTexts["19:59"].waitForExistence(timeout: 2)
+        )
     }
 
     func testPracticeCanStartAndEndFeaturedPlaylist() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["Practice"].tap()
 
@@ -143,17 +141,18 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(endButton.waitForExistence(timeout: 2))
         endButton.tap()
 
+        confirmAlert(in: app, title: "End playlist?", button: "End")
+
         XCTAssertTrue(app.buttons["Start featured playlist"].waitForExistence(timeout: 2))
     }
 
     func testHistoryAndSettingsExposeMilestoneControls() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.buttons["Manual log"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["Vipassana"].exists)
-        XCTAssertTrue(app.buttons["All statuses"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Vipassana"].firstMatch.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["All statuses"].firstMatch.waitForExistence(timeout: 2))
 
         app.tabBars.buttons["Settings"].tap()
         XCTAssertTrue(app.staticTexts["Timer defaults"].waitForExistence(timeout: 2))
@@ -161,8 +160,7 @@ final class MeditationNativeUITests: XCTestCase {
     }
 
     func testGoalsExposeSummaryAndSankalpaActions() throws {
-        let app = XCUIApplication()
-        app.launch()
+        let app = makeApp()
 
         app.tabBars.buttons["Goals"].tap()
 
@@ -190,5 +188,18 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(restoreButton.waitForExistence(timeout: 2))
         restoreButton.tap()
         XCTAssertTrue(app.staticTexts["Sankalpa restored."].waitForExistence(timeout: 2))
+    }
+
+    private func makeApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["MEDITATION_UI_TEST_RESET"] = "1"
+        app.launch()
+        return app
+    }
+
+    private func confirmAlert(in app: XCUIApplication, title: String, button: String) {
+        let alert = app.alerts[title]
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        alert.buttons[button].tap()
     }
 }

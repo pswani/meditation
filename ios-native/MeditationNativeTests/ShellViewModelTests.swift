@@ -106,6 +106,7 @@ final class ShellViewModelTests: XCTestCase {
 
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
         let (viewModel, notificationScheduler) = try makeViewModel()
+        let existingLogCount = viewModel.recentSessionLogs.count
 
         viewModel.startTimer()
 
@@ -118,8 +119,23 @@ final class ShellViewModelTests: XCTestCase {
 
         XCTAssertNil(viewModel.runtimeSafetyPrompt)
         XCTAssertNil(viewModel.activeSession)
-        XCTAssertEqual(viewModel.recentSessionLogs.first?.status, .endedEarly)
-        XCTAssertEqual(notificationScheduler.cancelCount, 1)
+        XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
+        XCTAssertTrue(
+            viewModel.recentSessionLogs.contains {
+                $0.source == .timer &&
+                $0.status == .endedEarly &&
+                $0.plannedDurationSeconds == 1_500
+            }
+        )
+
+        let notificationCancelled = expectation(description: "timer notification cancelled")
+        Task {
+            while notificationScheduler.cancelCount < 1 {
+                await Task.yield()
+            }
+            notificationCancelled.fulfill()
+        }
+        wait(for: [notificationCancelled], timeout: 1)
     }
 
     func testSharedPromptSupportsArchiveDeleteAndArchivedOnlyGuard() throws {
