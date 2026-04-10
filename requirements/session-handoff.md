@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios`
-- Active bundle: none
+- Current branch: `codex/ios-native-history-summary-parity-feature-bundle-with-branching`
+- Active bundle: `ios-native-history-summary-parity-feature-bundle-with-branching`
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, and `ios-native-custom-play-parity-feature-bundle-with-branching` completed on 2026-04-09; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-custom-play-parity-feature-bundle-with-branching` back into `codex/ios` on 2026-04-09 with a normal local merge commit
 - Native iOS artifacts now include:
@@ -29,16 +29,19 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-custom-play-playlist-feature.md`
   - `docs/execplan-ios-native-custom-play-parity-feature.md`
   - `docs/execplan-ios-native-summary-sankalpa-feature.md`
+  - `docs/execplan-ios-native-history-summary-parity-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
   - `docs/review-ios-native-custom-play-parity-feature.md`
   - `docs/review-ios-native-summary-sankalpa-feature.md`
+  - `docs/review-ios-native-history-summary-parity-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
   - `docs/test-ios-native-custom-play-parity-feature.md`
   - `docs/test-ios-native-summary-sankalpa-feature.md`
+  - `docs/test-ios-native-history-summary-parity-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -119,6 +122,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - an optional linked media identifier seam for later sync
   - an explicit `Apply To Timer` action that copies the saved `custom play` into timer defaults
   - richer Practice-screen library rows and editor fields for the added metadata
+- Native iOS History and summary parity now adds:
+  - explicit optional `SessionLog` context for playlist runs and `custom play` entries
+  - History filtering by source, status, and meditation type
+  - clearer start-to-end History time ranges and playlist-run labels
+  - custom Goals summary date ranges with calm invalid-range guidance
+  - by-time-of-day summary rows derived from session-log end times
+  - focused core coverage for the new filtering, range, and aggregation helpers
 - Native iOS summary and `sankalpa` milestone now adds:
   - Home progress context with today totals, recent session signal, and a top active `sankalpa` snapshot
   - local summary aggregation from native `session log` history with all-time, 7-day, and 30-day range views
@@ -240,6 +250,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-custom-play-parity CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device and CoreSimulator was unavailable
 - Review outcome:
   - no blocker, high, or medium findings were recorded for the native iOS `custom play` parity slice
+
+- Native iOS history-summary parity verified on 2026-04-09:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed with 32 focused core tests
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-history-summary CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-history-summary CODE_SIGNING_ALLOWED=NO test` could not run in this environment because Xcode requires a concrete simulator device and CoreSimulator was unavailable
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS history-summary parity slice
 
 - Native iOS timer-history verified on 2026-04-09:
   - `swift test --package-path ios-native` passed with writable temp module-cache environment overrides

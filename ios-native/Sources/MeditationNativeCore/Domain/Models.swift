@@ -33,6 +33,37 @@ public struct TimerSettingsDraft: Codable, Equatable, Sendable {
     }
 }
 
+public struct SessionLogContext: Codable, Equatable, Sendable {
+    public var playlistRunID: UUID?
+    public var playlistName: String?
+    public var playlistItemIndex: Int?
+    public var playlistItemCount: Int?
+    public var customPlayID: UUID?
+    public var customPlayName: String?
+    public var recordingLabel: String?
+    public var linkedMediaIdentifier: String?
+
+    public init(
+        playlistRunID: UUID? = nil,
+        playlistName: String? = nil,
+        playlistItemIndex: Int? = nil,
+        playlistItemCount: Int? = nil,
+        customPlayID: UUID? = nil,
+        customPlayName: String? = nil,
+        recordingLabel: String? = nil,
+        linkedMediaIdentifier: String? = nil
+    ) {
+        self.playlistRunID = playlistRunID
+        self.playlistName = playlistName
+        self.playlistItemIndex = playlistItemIndex
+        self.playlistItemCount = playlistItemCount
+        self.customPlayID = customPlayID
+        self.customPlayName = customPlayName
+        self.recordingLabel = recordingLabel
+        self.linkedMediaIdentifier = linkedMediaIdentifier
+    }
+}
+
 public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var meditationType: MeditationType
@@ -44,6 +75,7 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
     public var plannedDurationSeconds: Int?
     public var timerMode: TimerSettingsDraft.Mode?
     public var notes: String?
+    public var context: SessionLogContext?
 
     public init(
         id: UUID = UUID(),
@@ -55,7 +87,8 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
         completedDurationSeconds: Int,
         plannedDurationSeconds: Int? = nil,
         timerMode: TimerSettingsDraft.Mode? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        context: SessionLogContext? = nil
     ) {
         self.id = id
         self.meditationType = meditationType
@@ -67,6 +100,7 @@ public struct SessionLog: Identifiable, Codable, Equatable, Sendable {
         self.plannedDurationSeconds = plannedDurationSeconds
         self.timerMode = timerMode
         self.notes = notes
+        self.context = context
     }
 }
 
@@ -662,22 +696,55 @@ public struct SummaryBySource: Identifiable, Equatable, Sendable {
     }
 }
 
+public struct SummaryByTimeOfDay: Identifiable, Equatable, Sendable {
+    public var id: TimeOfDayBucket {
+        timeOfDayBucket
+    }
+
+    public var timeOfDayBucket: TimeOfDayBucket
+    public var sessionLogs: Int
+    public var totalDurationSeconds: Int
+
+    public init(timeOfDayBucket: TimeOfDayBucket, sessionLogs: Int, totalDurationSeconds: Int) {
+        self.timeOfDayBucket = timeOfDayBucket
+        self.sessionLogs = sessionLogs
+        self.totalDurationSeconds = totalDurationSeconds
+    }
+}
+
 public struct LocalSummarySnapshot: Equatable, Sendable {
     public var overall: OverallSummary
     public var byMeditationType: [SummaryByMeditationType]
     public var bySource: [SummaryBySource]
+    public var byTimeOfDay: [SummaryByTimeOfDay]
     public var sessionLogs: [SessionLog]
 
     public init(
         overall: OverallSummary,
         byMeditationType: [SummaryByMeditationType],
         bySource: [SummaryBySource],
+        byTimeOfDay: [SummaryByTimeOfDay],
         sessionLogs: [SessionLog]
     ) {
         self.overall = overall
         self.byMeditationType = byMeditationType
         self.bySource = bySource
+        self.byTimeOfDay = byTimeOfDay
         self.sessionLogs = sessionLogs
+    }
+}
+
+public struct SummaryDateRange: Equatable, Sendable {
+    public var startDate: Date
+    public var endDate: Date
+
+    public init(startDate: Date, endDate: Date) {
+        self.startDate = startDate
+        self.endDate = endDate
+    }
+
+    public var isValid: Bool {
+        startDate <= endDate
     }
 }
 
@@ -685,6 +752,7 @@ public enum SummaryRangePreset: String, CaseIterable, Codable, Sendable {
     case allTime = "all-time"
     case last7Days = "last-7-days"
     case last30Days = "last-30-days"
+    case custom = "custom"
 
     public var title: String {
         switch self {
@@ -694,6 +762,8 @@ public enum SummaryRangePreset: String, CaseIterable, Codable, Sendable {
             return "7d"
         case .last30Days:
             return "30d"
+        case .custom:
+            return "Custom"
         }
     }
 }
@@ -714,21 +784,25 @@ public struct SummarySnapshot: Codable, Equatable, Sendable {
     public var overallRows: [SummaryRow]
     public var byMeditationTypeRows: [SummaryRow]
     public var bySourceRows: [SummaryRow]
+    public var byTimeOfDayRows: [SummaryRow]
 
     private enum CodingKeys: String, CodingKey {
         case overallRows
         case byMeditationTypeRows
         case bySourceRows
+        case byTimeOfDayRows
     }
 
     public init(
         overallRows: [SummaryRow],
         byMeditationTypeRows: [SummaryRow],
-        bySourceRows: [SummaryRow] = []
+        bySourceRows: [SummaryRow] = [],
+        byTimeOfDayRows: [SummaryRow] = []
     ) {
         self.overallRows = overallRows
         self.byMeditationTypeRows = byMeditationTypeRows
         self.bySourceRows = bySourceRows
+        self.byTimeOfDayRows = byTimeOfDayRows
     }
 
     public init(from decoder: Decoder) throws {
@@ -736,5 +810,6 @@ public struct SummarySnapshot: Codable, Equatable, Sendable {
         overallRows = try container.decodeIfPresent([SummaryRow].self, forKey: .overallRows) ?? []
         byMeditationTypeRows = try container.decodeIfPresent([SummaryRow].self, forKey: .byMeditationTypeRows) ?? []
         bySourceRows = try container.decodeIfPresent([SummaryRow].self, forKey: .bySourceRows) ?? []
+        byTimeOfDayRows = try container.decodeIfPresent([SummaryRow].self, forKey: .byTimeOfDayRows) ?? []
     }
 }

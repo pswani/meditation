@@ -16,6 +16,13 @@ struct HistoryView: View {
                     }
                 }
 
+                Picker("Status", selection: $filter.status) {
+                    Text("All statuses").tag(SessionStatus?.none)
+                    ForEach(SessionStatus.allCases, id: \.self) { status in
+                        Text(status.title).tag(Optional(status))
+                    }
+                }
+
                 Picker("Meditation type", selection: $filter.meditationType) {
                     Text("All types").tag(MeditationType?.none)
                     ForEach(ReferenceData.meditationTypes, id: \.self) { meditationType in
@@ -39,7 +46,7 @@ struct HistoryView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(log.meditationType.rawValue)
                                         .font(.headline)
-                                    Text(log.endedAt.formatted(date: .abbreviated, time: .shortened))
+                                    Text(timeRangeLabel(for: log))
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
@@ -49,8 +56,8 @@ struct HistoryView: View {
                             }
 
                             HStack(spacing: 8) {
-                                badge(log.source.rawValue)
-                                badge(statusLabel(for: log))
+                                badge(log.source.title)
+                                badge(log.status.title)
                                 if log.timerMode == .openEnded {
                                     badge("open-ended")
                                 }
@@ -58,12 +65,20 @@ struct HistoryView: View {
 
                             if let plannedDurationSeconds = log.plannedDurationSeconds,
                                log.status == .endedEarly {
-                                Text("Planned \(plannedDurationSeconds / 60) min")
+                                Text("Planned \(formatDuration(plannedDurationSeconds))")
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
 
-                            if let notes = log.notes {
+                            let contextLabel = contextLabel(for: log)
+
+                            if let contextLabel {
+                                Text(contextLabel)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if let notes = notesLabel(for: log, contextLabel: contextLabel) {
                                 Text(notes)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
@@ -150,18 +165,59 @@ struct HistoryView: View {
     }
 
     private func durationLabel(for log: SessionLog) -> String {
-        "\(log.completedDurationSeconds / 60) min"
+        formatDuration(log.completedDurationSeconds)
     }
 
-    private func statusLabel(for log: SessionLog) -> String {
-        switch log.status {
-        case .completed:
-            return "completed"
-        case .endedEarly:
-            return "ended early"
-        case .inProgress:
-            return "in progress"
+    private func timeRangeLabel(for log: SessionLog) -> String {
+        let start = log.startedAt.formatted(date: .abbreviated, time: .shortened)
+        let end = log.endedAt.formatted(date: .abbreviated, time: .shortened)
+        return "\(start) → \(end)"
+    }
+
+    private func contextLabel(for log: SessionLog) -> String? {
+        guard let context = log.context else {
+            return nil
         }
+
+        if log.source == .playlist,
+           let playlistName = context.playlistName,
+           let itemIndex = context.playlistItemIndex,
+           let itemCount = context.playlistItemCount {
+            return "Playlist run: \(playlistName) • Item \(itemIndex + 1) of \(itemCount)"
+        }
+
+        if log.source == .customPlay,
+           let customPlayName = context.customPlayName {
+            if let recordingLabel = context.recordingLabel {
+                return "Custom play: \(customPlayName) • Recording: \(recordingLabel)"
+            }
+
+            return "Custom play: \(customPlayName)"
+        }
+
+        return nil
+    }
+
+    private func notesLabel(for log: SessionLog, contextLabel: String?) -> String? {
+        if contextLabel != nil {
+            return nil
+        }
+
+        return log.notes
+    }
+
+    private func formatDuration(_ totalSeconds: Int) -> String {
+        let totalMinutes = max(0, totalSeconds / 60)
+        if totalMinutes >= 60 {
+            let hours = totalMinutes / 60
+            let minutes = totalMinutes % 60
+            if minutes == 0 {
+                return "\(hours) hr"
+            }
+            return "\(hours) hr \(minutes) min"
+        }
+
+        return "\(totalMinutes) min"
     }
 
     private func badge(_ title: String) -> some View {
