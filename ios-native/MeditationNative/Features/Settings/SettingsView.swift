@@ -105,14 +105,14 @@ struct SettingsView: View {
                         }
 
                         LabeledContent("API base URL") {
-                            TextField("http://192.168.1.12:8080", text: $backendConfigurationDraft.apiBaseURLString)
+                            TextField("http://meditation-mac-mini.local", text: $backendConfigurationDraft.apiBaseURLString)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.URL)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                         }
 
-                        Text("Use your Mac's LAN IP for a physical iPhone, for example `http://192.168.1.12:8080`.")
+                        Text("For the supported Mac Mini install, use the nginx app origin, for example `http://meditation-mac-mini.local` or `http://192.168.1.12`. Use a direct `:8080` backend URL only when you intentionally expose the backend for debugging.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 

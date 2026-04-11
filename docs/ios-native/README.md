@@ -204,7 +204,11 @@ If `MEDITATION_IOS_API_BASE_URL` is explicitly set to an empty value for a run, 
 The iPhone app also exposes an in-app Settings form for backend configuration:
 - save a profile label plus backend base URL directly on the device
 - use this for physical-iPhone installs that are not being relaunched from an Xcode run configuration
+- for the supported Mac Mini install, enter the nginx app origin such as `http://<Mac-Local-Hostname>.local` or `http://<Mac-LAN-IP>` rather than the loopback-only backend port
+- reserve `http://<Mac-LAN-IP>:8080` or similar direct-backend URLs for short-lived debugging only when the backend has been intentionally exposed beyond loopback
 - clear the saved backend there when you want to return the phone to intentional local-only mode
+
+There is no in-app destructive wipe for the native local snapshot yet. To clear local test data on a physical iPhone today, delete the app from iOS and reinstall it. The Settings `Clear` button only removes the saved backend configuration and returns the app to local-only mode.
 
 ## Practical Working Notes
 

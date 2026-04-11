@@ -204,6 +204,7 @@
   - a loopback-bound Spring Boot backend
   - `launchd` service management on macOS
   - filesystem-backed H2 and media storage
+- Keep physical-device native clients pointed at the nginx app origin for the supported Mac Mini install instead of the loopback backend port; reserve direct `:8080` backend access for explicit debugging setups only.
 
 ## Current intentional limitations
 - Custom-play recordings now use a managed backend-backed media library with frontend fallback metadata, but registration is still script-driven and there is still no browser upload/import workflow.

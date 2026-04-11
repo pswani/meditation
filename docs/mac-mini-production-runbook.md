@@ -168,6 +168,12 @@ tail -n 40 /opt/meditation/runtime-production/logs/backend-production.log
 sudo brew services list | grep nginx
 ```
 
+LAN-device checks:
+
+- open `http://<Mac-Local-Hostname>.local/api/health` or `http://<Mac-LAN-IP>/api/health` from another device on the same network
+- configure native iPhone clients to the nginx app origin such as `http://<Mac-Local-Hostname>.local` or `http://<Mac-LAN-IP>`
+- do not point the iPhone app at `:8080` unless you intentionally exposed the backend directly on the LAN for debugging
+
 ## Updates
 
 For an update:

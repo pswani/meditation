@@ -452,10 +452,13 @@ Current production defaults:
 
 - installed app root: `/opt/meditation`
 - public app URL after install: `http://<MAC-LAN-IP>/` or your configured domain
+- native iPhone base URL for the supported nginx-backed install: `http://<Mac-Local-Hostname>.local/` or `http://<MAC-LAN-IP>/`
 - backend bind URL: `http://127.0.0.1:8080/`
 - backend health endpoint: `http://127.0.0.1:8080/api/health`
 - backend media catalog endpoint: `http://127.0.0.1:8080/api/media/custom-plays`
 - backend API base URL behind nginx: same-origin `/api`
+
+For physical iPhone clients, configure the nginx app origin rather than `http://127.0.0.1:8080` or a raw `:8080` backend URL unless you have explicitly exposed the backend on a LAN-visible port for debugging.
 
 ### How the front end is configured to call backend APIs
 
