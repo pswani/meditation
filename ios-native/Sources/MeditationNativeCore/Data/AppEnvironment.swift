@@ -6,7 +6,7 @@ public enum AppEnvironmentConfigurationError: Error, Equatable, Sendable {
     public var message: String {
         switch self {
         case .invalidAPIBaseURL:
-            return "Enter a full backend URL such as http://192.168.1.12:8080."
+            return "Enter a full backend URL such as http://192.168.68.78."
         }
     }
 }
@@ -32,9 +32,16 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
         requiresBackend: false
     )
 
+    public static let defaultBackend = AppEnvironment(
+        profileName: "Mac Mini",
+        apiBaseURL: URL(string: "http://192.168.68.78"),
+        requiresBackend: true
+    )
+
     private enum PersistenceKey {
         static let profileName = "meditation.native.profileName"
         static let apiBaseURL = "meditation.native.apiBaseURL"
+        static let defaultBackendSuppressed = "meditation.native.defaultBackendSuppressed"
     }
 
     public static func from(
@@ -76,6 +83,23 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
             return persistedEnvironment
         }
 
+        if userDefaults.bool(forKey: PersistenceKey.defaultBackendSuppressed) {
+            return AppEnvironment(
+                profileName: normalizedProfileName ?? localOnly.profileName,
+                apiBaseURL: nil,
+                requiresBackend: false
+            )
+        }
+
+        if let defaultBackendURL = defaultBackend.apiBaseURL?.absoluteString {
+            persistConfiguration(
+                profileName: defaultBackend.profileName,
+                apiBaseURLString: defaultBackendURL,
+                userDefaults: userDefaults
+            )
+            return defaultBackend
+        }
+
         return AppEnvironment(
             profileName: normalizedProfileName ?? localOnly.profileName,
             apiBaseURL: nil,
@@ -86,6 +110,7 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
     public static func clearPersistedConfiguration(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: PersistenceKey.profileName)
         userDefaults.removeObject(forKey: PersistenceKey.apiBaseURL)
+        userDefaults.set(true, forKey: PersistenceKey.defaultBackendSuppressed)
     }
 
     public static func configured(
@@ -140,6 +165,7 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
     ) {
         userDefaults.set(profileName, forKey: PersistenceKey.profileName)
         userDefaults.set(apiBaseURLString, forKey: PersistenceKey.apiBaseURL)
+        userDefaults.set(false, forKey: PersistenceKey.defaultBackendSuppressed)
     }
 }
 

@@ -190,7 +190,9 @@ The native foundation reads optional process environment values so local runs ca
 - `MEDITATION_IOS_PROFILE`
 - `MEDITATION_IOS_API_BASE_URL`
 
-If these are absent, the app stays in the default local-only profile and does not require backend connectivity.
+If these are absent, the app falls back to persisted device configuration when available.
+
+For this repository's current Mac Mini workflow, first-launch native installs now bootstrap to `http://192.168.68.78` with the `Mac Mini` profile unless the user explicitly clears backend sync in Settings, in which case the app returns to durable local-only mode.
 
 If `MEDITATION_IOS_API_BASE_URL` is present, the app:
 - attempts a background refresh on launch and when the scene becomes active

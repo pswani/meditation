@@ -69,6 +69,29 @@ import Testing
     #expect(restored == configured)
 }
 
+@Test func appEnvironmentBootstrapsTheDefaultBackendWhenNoConfigurationExists() throws {
+    let suiteName = "AppEnvironmentTests.\(UUID().uuidString)"
+    let userDefaults = try #require(UserDefaults(suiteName: suiteName))
+    userDefaults.removePersistentDomain(forName: suiteName)
+    defer {
+        userDefaults.removePersistentDomain(forName: suiteName)
+    }
+
+    let bootstrapped = AppEnvironment.from(
+        profileName: nil,
+        apiBaseURLString: nil,
+        userDefaults: userDefaults
+    )
+    let restored = AppEnvironment.from(
+        profileName: nil,
+        apiBaseURLString: nil,
+        userDefaults: userDefaults
+    )
+
+    #expect(bootstrapped == .defaultBackend)
+    #expect(restored == .defaultBackend)
+}
+
 @Test func appEnvironmentCanClearPersistedBackendConfiguration() throws {
     let suiteName = "AppEnvironmentTests.\(UUID().uuidString)"
     let userDefaults = try #require(UserDefaults(suiteName: suiteName))
