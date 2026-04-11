@@ -1,5 +1,7 @@
 import AVFoundation
 import Foundation
+import SwiftUI
+import UIKit
 @preconcurrency import UserNotifications
 
 enum NotificationPermissionState: Equatable {
@@ -136,6 +138,7 @@ final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAu
         }
 
         do {
+            try PlaybackAudioSessionSupport.activatePlaybackSession()
             let player = try AVAudioPlayer(contentsOf: fileURL)
             player.delegate = self
             player.prepareToPlay()
@@ -190,8 +193,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
         let url = try resolvePlaybackURL(for: media, environment: environment)
 
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
+            try PlaybackAudioSessionSupport.activatePlaybackSession()
 
             let player = AVPlayer(url: url)
             player.automaticallyWaitsToMinimizeStalling = true
@@ -218,6 +220,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
             throw LocalAudioPlaybackError.audioSetupFailed
         }
 
+        try PlaybackAudioSessionSupport.activatePlaybackSession()
         player.play()
     }
 
@@ -282,5 +285,32 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
         components.query = nil
         components.fragment = nil
         return components.url
+    }
+}
+
+enum PlaybackAudioSessionSupport {
+    static func activatePlaybackSession() throws {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .default)
+        try session.setActive(true)
+    }
+}
+
+enum KeyboardSupport {
+    @MainActor
+    static func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+extension View {
+    func dismissesKeyboardOnBackgroundTap() -> some View {
+        background(
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    KeyboardSupport.dismissKeyboard()
+                }
+        )
     }
 }

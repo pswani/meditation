@@ -5,8 +5,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Repository status
 - Current branch: `codex/ios`
 - Active bundle: none
-- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, and `ios-native-low-risk-cleanup-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
-- Latest merge outcome: merged `codex/ios-native-low-risk-cleanup-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
+- Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
+- Latest merge outcome: merged `codex/ios-native-runtime-device-defects-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -36,6 +36,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-media-sound-parity-feature.md`
   - `docs/execplan-ios-native-runtime-ux-resilience-feature.md`
   - `docs/execplan-ios-native-low-risk-cleanup-feature.md`
+  - `docs/execplan-ios-native-runtime-device-defects-feature.md`
   - `docs/review-ios-native-foundation-feature.md`
   - `docs/review-ios-native-timer-history-feature.md`
   - `docs/review-ios-native-custom-play-playlist-feature.md`
@@ -46,6 +47,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/review-ios-native-media-sound-parity-feature.md`
   - `docs/review-ios-native-runtime-ux-resilience-feature.md`
   - `docs/review-ios-native-low-risk-cleanup-feature.md`
+  - `docs/review-ios-native-runtime-device-defects-feature.md`
   - `docs/test-ios-native-foundation-feature.md`
   - `docs/test-ios-native-timer-history-feature.md`
   - `docs/test-ios-native-custom-play-playlist-feature.md`
@@ -56,6 +58,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/test-ios-native-media-sound-parity-feature.md`
   - `docs/test-ios-native-runtime-ux-resilience-feature.md`
   - `docs/test-ios-native-low-risk-cleanup-feature.md`
+  - `docs/test-ios-native-runtime-device-defects-feature.md`
 
 ## Product state
 - The repo is a working full-stack meditation application with:
@@ -169,13 +172,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - explicit save or reset behavior for Settings timer defaults instead of immediate persistence on every edit
   - clearer shell and Settings copy that makes local-only mode sound intentional rather than broken
   - focused XCTest coverage for active-runtime restoration, local-only presentation copy, and timer-default save validation
-- New native defect-fix prompt bundle prepared on 2026-04-10:
-  - `prompts/ios-native-runtime-device-defects-feature-bundle-with-branching/`
-  - targets four reported iPhone issues in one bounded slice:
-    - timer duration step buttons should move by 1 minute instead of 5
-    - numeric duration editing should dismiss the keyboard when the user taps away
-    - configured device runs should reach the backend or show truthful configured-but-unreachable guidance instead of the unconfigured-base-URL state
-    - meditation audio should play regardless of the iPhone silent switch position
+- Native iOS runtime device-defect fixes now add:
+  - 1-minute quick-adjust controls for the main timer duration field
+  - keyboard `Done` plus tap-away dismissal on the touched numeric-entry flows in Practice, Settings, and Manual Log
+  - persisted native backend profile and base-URL configuration across relaunches, with an explicit clear path back to local-only mode
+  - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
+  - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
 - Native iOS low-risk cleanup now adds:
   - a resolved malformed Xcode project warning by assigning the `Resources` group its own PBX object id instead of reusing the `MeditationNativeTests` group id
   - native iOS README wording that now describes the current app state and setup flow directly instead of keeping stale milestone sequencing in operator guidance
@@ -218,6 +220,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-ios-native-decomposition-hardening-feature.md`
 - Implementation planning: `docs/execplan-ios-native-runtime-ux-resilience-feature.md`
 - Implementation planning: `docs/execplan-ios-native-low-risk-cleanup-feature.md`
+- Implementation planning: `docs/execplan-ios-native-runtime-device-defects-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -243,6 +246,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-media-sound-parity-feature.md`
 - Review artifact: `docs/review-ios-native-runtime-ux-resilience-feature.md`
 - Review artifact: `docs/review-ios-native-low-risk-cleanup-feature.md`
+- Review artifact: `docs/review-ios-native-runtime-device-defects-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -270,6 +274,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-decomposition-hardening-feature.md`
 - Verification report: `docs/test-ios-native-runtime-ux-resilience-feature.md`
 - Verification report: `docs/test-ios-native-low-risk-cleanup-feature.md`
+- Verification report: `docs/test-ios-native-runtime-device-defects-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
@@ -283,6 +288,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS runtime device defects verified on 2026-04-10:
+  - `swift test --package-path ios-native` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-device-defects CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-device-defects-tests CODE_SIGNING_ALLOWED=NO build-for-testing` passed
+  - physical-device verification is still recommended for silent-switch playback, LAN-IP backend reachability, and keyboard-dismiss feel on concrete iPhone hardware
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the native iOS runtime-device-defects slice
+
 - Native iOS low-risk cleanup verified on 2026-04-10:
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -showBuildSettings` passed
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-low-risk-cleanup CODE_SIGNING_ALLOWED=NO build` passed

@@ -27,6 +27,7 @@ Implemented native surfaces today include:
 - History status filtering plus explicit playlist-run and `custom play` context
 - persisted active-session recovery for timer, `custom play`, and playlist runtime state when the saved session can still be reconstructed truthfully on relaunch
 - direct numeric entry for timer duration, interval minutes, and manual-log duration alongside quick-adjust controls
+- 1-minute quick-adjust controls for the main timer duration so short-session edits feel precise on iPhone
 - Goals summary with custom date ranges and by-time-of-day breakdowns
 - Home quick start, last-used meditation, favorite shortcut, and recent-session context on iPhone
 - Home progress context with today totals, recent session signal, and an active `sankalpa` snapshot
@@ -154,6 +155,7 @@ Physical iPhone or concrete simulator verification is still recommended for:
 - active-session relaunch recovery for timer, `custom play`, and playlist
 - bundled timer cue playback for `Temple Bell` and `Gong`
 - bundled-sample and backend-linked recording playback for `custom play` and playlist-linked items
+- silent-switch playback for timer cues and recording-backed sessions on physical hardware
 - pause or resume behavior when audio playback is interrupted by the system
 - Home density and readability on a real iPhone-sized screen
 - `sankalpa` editor ergonomics and observance day-menu interactions on a concrete device
@@ -178,6 +180,8 @@ Optional backend-backed sync is enabled when `MEDITATION_IOS_API_BASE_URL` is co
    - `/api/summaries`
    - `/api/media/custom-plays`
 5. Native writes stay local-first and queue for replay when the backend is offline or unavailable.
+6. The generated Info.plist now allows local-network HTTP development targets so a physical iPhone can reach a backend running on your Mac by LAN IP without extra app-code changes.
+7. The first local-LAN connection on device can still trigger the iOS local-network permission prompt because the app now declares why it needs that access.
 
 ## Environment Configuration Seam
 
@@ -193,6 +197,9 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
 - keeps local edits visible immediately
 - persists queued writes under `sync-state.json`
 - surfaces calm sync or replay messaging in the shell and Settings
+- persists the configured profile and base URL in native defaults so device relaunches stay on the configured backend instead of falling back to the local-only profile
+
+If `MEDITATION_IOS_API_BASE_URL` is explicitly set to an empty value for a run, the app clears the persisted backend configuration and returns to the local-only profile.
 
 ## Practical Working Notes
 
@@ -204,6 +211,7 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
   - `Temple Bell`
   - `Gong`
   - legacy `Soft Chime` and `Wood Block` values normalize to those labels during hydration
+- Native timer cues and recording-backed session playback now activate an `AVAudioSession` playback category before playback so meditation audio can continue even when the iPhone silent switch is on.
 - Native `custom play` media is now truthful rather than placeholder-backed:
   - local-only playback uses the bundled `Vipassana Sit (20 min)` sample recording when selected
   - synced backend media metadata maps to its real `/media/custom-plays/...` playback path

@@ -20,6 +20,8 @@ struct MeditationNativeApp: App {
             return
         }
 
+        AppEnvironment.clearPersistedConfiguration()
+
         let fileManager = FileManager.default
         let applicationSupportDirectory = fileManager.urls(
             for: .applicationSupportDirectory,

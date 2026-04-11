@@ -44,6 +44,61 @@ import Testing
     #expect(environment.requiresBackend == false)
 }
 
+@Test func appEnvironmentPersistsConfiguredBackendAcrossLaunches() throws {
+    let suiteName = "AppEnvironmentTests.\(UUID().uuidString)"
+    let userDefaults = try #require(UserDefaults(suiteName: suiteName))
+    userDefaults.removePersistentDomain(forName: suiteName)
+    defer {
+        userDefaults.removePersistentDomain(forName: suiteName)
+    }
+
+    let configured = AppEnvironment.from(
+        profileName: "Phone Sync",
+        apiBaseURLString: "http://192.168.1.12:8080",
+        userDefaults: userDefaults
+    )
+    let restored = AppEnvironment.from(
+        profileName: nil,
+        apiBaseURLString: nil,
+        userDefaults: userDefaults
+    )
+
+    #expect(configured.profileName == "Phone Sync")
+    #expect(configured.apiBaseURL?.absoluteString == "http://192.168.1.12:8080")
+    #expect(configured.requiresBackend == true)
+    #expect(restored == configured)
+}
+
+@Test func appEnvironmentCanClearPersistedBackendConfiguration() throws {
+    let suiteName = "AppEnvironmentTests.\(UUID().uuidString)"
+    let userDefaults = try #require(UserDefaults(suiteName: suiteName))
+    userDefaults.removePersistentDomain(forName: suiteName)
+    defer {
+        userDefaults.removePersistentDomain(forName: suiteName)
+    }
+
+    _ = AppEnvironment.from(
+        profileName: "Phone Sync",
+        apiBaseURLString: "http://192.168.1.12:8080",
+        userDefaults: userDefaults
+    )
+
+    let cleared = AppEnvironment.from(
+        profileName: "Local Foundation",
+        apiBaseURLString: "",
+        userDefaults: userDefaults
+    )
+    let restored = AppEnvironment.from(
+        profileName: nil,
+        apiBaseURLString: nil,
+        userDefaults: userDefaults
+    )
+
+    #expect(cleared.apiBaseURL == nil)
+    #expect(cleared.requiresBackend == false)
+    #expect(restored == .localOnly)
+}
+
 @Test func timerValidationRequiresMeditationTypePositiveDurationAndFittingIntervals() throws {
     let draft = TimerSettingsDraft(
         mode: .fixedDuration,
