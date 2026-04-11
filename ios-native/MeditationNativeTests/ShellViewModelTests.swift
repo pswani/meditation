@@ -240,6 +240,14 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.environment.apiBaseURL?.absoluteString, "http://192.168.1.12:8080")
         XCTAssertTrue(viewModel.environment.requiresBackend)
         XCTAssertEqual(viewModel.backendConfigurationFeedbackMessage, "Backend configuration saved.")
+        let syncStarted = expectation(description: "sync client created")
+        Task {
+            while syncClientFactory.createdBaseURLs.isEmpty {
+                await Task.yield()
+            }
+            syncStarted.fulfill()
+        }
+        wait(for: [syncStarted], timeout: 1)
         XCTAssertEqual(syncClientFactory.createdBaseURLs.map(\.absoluteString), ["http://192.168.1.12:8080"])
         XCTAssertNotEqual(viewModel.syncState.connectionState, .localOnly)
     }
