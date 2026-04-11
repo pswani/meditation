@@ -63,7 +63,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
                 for: localOnlyState,
                 now: Date(timeIntervalSince1970: 1_700_000_000)
             ),
-            "This profile is working intentionally on-device only right now. Add `MEDITATION_IOS_API_BASE_URL` when you want saved changes to replay to a backend."
+            "This profile is working intentionally on-device only right now. Save a backend base URL below when you want saved changes to replay to a backend."
         )
     }
 

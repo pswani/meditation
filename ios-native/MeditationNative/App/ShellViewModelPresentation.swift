@@ -61,9 +61,9 @@ enum ShellViewModelPresentation {
         switch syncState.connectionState {
         case .localOnly:
             if pendingCount > 0 {
-                return "This profile is working intentionally on-device only right now. Add `MEDITATION_IOS_API_BASE_URL` when you want saved changes to replay to a backend."
+                return "This profile is working intentionally on-device only right now. Save a backend base URL below when you want saved changes to replay to a backend."
             }
-            return "This iPhone is working in local-only mode. Add `MEDITATION_IOS_API_BASE_URL` in the run configuration when you want backend sync."
+            return "This iPhone is working in local-only mode. Save a backend base URL below when you want backend sync."
         case .syncing:
             return "The app is refreshing backend-backed timer settings, session logs, custom plays, playlists, sankalpas, and summary data."
         case .upToDate:

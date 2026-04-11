@@ -103,6 +103,7 @@
 - Keep native Settings timer defaults on an explicit save or reset workflow while Practice remains the next-session setup surface.
 - Keep native local-only sync copy explicit that the device is intentionally working without a configured backend, rather than implying broken connectivity.
 - Keep native backend configuration durable across relaunches by persisting the configured iOS profile name and backend base URL locally, while still allowing an explicit empty base URL to clear that persisted state and return the app to local-only mode.
+- Keep native backend configuration user-reachable on physical iPhone installs through a Settings form, while still supporting launch-environment overrides for Xcode or operator-driven runs.
 - Keep native physical-device development able to target a Mac-hosted backend over LAN HTTP by allowing local-network ATS access and a local-network usage description in the generated iOS Info.plist instead of hard-coding one host exception.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
 - Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:

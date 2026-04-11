@@ -1,5 +1,16 @@
 import Foundation
 
+public enum AppEnvironmentConfigurationError: Error, Equatable, Sendable {
+    case invalidAPIBaseURL
+
+    public var message: String {
+        switch self {
+        case .invalidAPIBaseURL:
+            return "Enter a full backend URL such as http://192.168.1.12:8080."
+        }
+    }
+}
+
 public struct AppEnvironment: Codable, Equatable, Sendable {
     public var profileName: String
     public var apiBaseURL: URL?
@@ -75,6 +86,34 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
     public static func clearPersistedConfiguration(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: PersistenceKey.profileName)
         userDefaults.removeObject(forKey: PersistenceKey.apiBaseURL)
+    }
+
+    public static func configured(
+        profileName: String?,
+        apiBaseURLString: String,
+        userDefaults: UserDefaults = .standard
+    ) throws -> AppEnvironment {
+        let normalizedProfileName = profileName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let normalizedAPIBaseURLString = apiBaseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let baseURL = URL(string: normalizedAPIBaseURLString),
+              let scheme = baseURL.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              baseURL.host?.nilIfEmpty != nil else {
+            throw AppEnvironmentConfigurationError.invalidAPIBaseURL
+        }
+
+        let resolvedProfileName = normalizedProfileName ?? "Configured Backend"
+        persistConfiguration(
+            profileName: resolvedProfileName,
+            apiBaseURLString: normalizedAPIBaseURLString,
+            userDefaults: userDefaults
+        )
+        return AppEnvironment(
+            profileName: resolvedProfileName,
+            apiBaseURL: baseURL,
+            requiresBackend: true
+        )
     }
 
     private static func persistedConfiguration(userDefaults: UserDefaults) -> AppEnvironment? {

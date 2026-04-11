@@ -176,6 +176,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - 1-minute quick-adjust controls for the main timer duration field
   - keyboard `Done` plus tap-away dismissal on the touched numeric-entry flows in Practice, Settings, and Manual Log
   - persisted native backend profile and base-URL configuration across relaunches, with an explicit clear path back to local-only mode
+  - an in-app Settings form that lets a physical iPhone save or clear its backend profile and base URL without depending on an Xcode launch environment
   - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
 - Native iOS low-risk cleanup now adds:
@@ -288,6 +289,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Native iOS Settings backend-configuration follow-up verified on 2026-04-11:
+  - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-settings-backend-config CODE_SIGNING_ALLOWED=NO build` passed
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-settings-backend-config-tests CODE_SIGNING_ALLOWED=NO build-for-testing` passed
+  - physical-device verification is still recommended for saving a LAN-IP backend from Settings and confirming the local-only banner transitions to configured sync or backend-unavailable states on a real iPhone
+
 - Native iOS runtime device defects verified on 2026-04-10:
   - `swift test --package-path ios-native` passed
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-runtime-device-defects CODE_SIGNING_ALLOWED=NO build` passed

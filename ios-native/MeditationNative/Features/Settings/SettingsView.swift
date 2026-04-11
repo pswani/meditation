@@ -1,12 +1,24 @@
 import SwiftUI
 
+private struct BackendConfigurationDraft: Equatable {
+    var profileName: String
+    var apiBaseURLString: String
+}
+
 struct SettingsView: View {
     @ObservedObject var viewModel: ShellViewModel
     @State private var timerDefaultsDraft: TimerSettingsDraft
+    @State private var backendConfigurationDraft: BackendConfigurationDraft
 
     init(viewModel: ShellViewModel) {
         self.viewModel = viewModel
         _timerDefaultsDraft = State(initialValue: viewModel.snapshot.timerDraft)
+        _backendConfigurationDraft = State(
+            initialValue: BackendConfigurationDraft(
+                profileName: viewModel.environment.profileName == AppEnvironment.localOnly.profileName ? "" : viewModel.environment.profileName,
+                apiBaseURLString: viewModel.environment.apiBaseURL?.absoluteString ?? ""
+            )
+        )
     }
 
     var body: some View {
@@ -83,6 +95,65 @@ struct SettingsView: View {
                     }
                 }
 
+                SectionCard(title: "Backend sync", caption: "Configure the backend this iPhone should use") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        LabeledContent("Profile") {
+                            TextField("Configured Backend", text: $backendConfigurationDraft.profileName)
+                                .multilineTextAlignment(.trailing)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled()
+                        }
+
+                        LabeledContent("API base URL") {
+                            TextField("http://192.168.1.12:8080", text: $backendConfigurationDraft.apiBaseURLString)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+
+                        Text("Use your Mac's LAN IP for a physical iPhone, for example `http://192.168.1.12:8080`.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 12) {
+                            Button("Clear") {
+                                viewModel.clearBackendConfiguration()
+                                backendConfigurationDraft = BackendConfigurationDraft(profileName: "", apiBaseURLString: "")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(viewModel.environment.apiBaseURL == nil && backendConfigurationDraft.apiBaseURLString.isEmpty)
+
+                            Button("Save backend") {
+                                if viewModel.saveBackendConfiguration(
+                                    profileName: backendConfigurationDraft.profileName,
+                                    apiBaseURLString: backendConfigurationDraft.apiBaseURLString
+                                ) {
+                                    backendConfigurationDraft = BackendConfigurationDraft(
+                                        profileName: viewModel.environment.profileName == AppEnvironment.localOnly.profileName ? "" : viewModel.environment.profileName,
+                                        apiBaseURLString: viewModel.environment.apiBaseURL?.absoluteString ?? ""
+                                    )
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.teal)
+                            .disabled(hasUnsavedBackendConfigurationChanges == false)
+                        }
+
+                        if let backendConfigurationFeedbackMessage = viewModel.backendConfigurationFeedbackMessage {
+                            Text(backendConfigurationFeedbackMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let backendConfigurationValidationMessage = viewModel.backendConfigurationValidationMessage {
+                            Text(backendConfigurationValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+
                 SectionCard(title: "Environment", caption: "Current native runtime profile") {
                     VStack(alignment: .leading, spacing: 8) {
                         LabeledContent("Profile", value: viewModel.environment.profileName)
@@ -139,9 +210,25 @@ struct SettingsView: View {
                 timerDefaultsDraft = newValue
             }
         }
+        .onChange(of: viewModel.environment) { _, newValue in
+            if hasUnsavedBackendConfigurationChanges == false {
+                backendConfigurationDraft = BackendConfigurationDraft(
+                    profileName: newValue.profileName == AppEnvironment.localOnly.profileName ? "" : newValue.profileName,
+                    apiBaseURLString: newValue.apiBaseURL?.absoluteString ?? ""
+                )
+            }
+        }
     }
 
     private var hasUnsavedTimerDefaultsChanges: Bool {
         timerDefaultsDraft != viewModel.snapshot.timerDraft
+    }
+
+    private var hasUnsavedBackendConfigurationChanges: Bool {
+        let savedDraft = BackendConfigurationDraft(
+            profileName: viewModel.environment.profileName == AppEnvironment.localOnly.profileName ? "" : viewModel.environment.profileName,
+            apiBaseURLString: viewModel.environment.apiBaseURL?.absoluteString ?? ""
+        )
+        return backendConfigurationDraft != savedDraft
     }
 }

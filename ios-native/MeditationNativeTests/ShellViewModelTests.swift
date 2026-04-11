@@ -226,6 +226,58 @@ final class ShellViewModelTests: XCTestCase {
         )
     }
 
+    func testSaveBackendConfigurationUpdatesEnvironmentAndStartsConfiguredSync() throws {
+        let syncClientFactory = RecordingSyncClientFactory()
+        let (viewModel, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+
+        let saved = viewModel.saveBackendConfiguration(
+            profileName: "Phone Sync",
+            apiBaseURLString: "http://192.168.1.12:8080"
+        )
+
+        XCTAssertTrue(saved)
+        XCTAssertEqual(viewModel.environment.profileName, "Phone Sync")
+        XCTAssertEqual(viewModel.environment.apiBaseURL?.absoluteString, "http://192.168.1.12:8080")
+        XCTAssertTrue(viewModel.environment.requiresBackend)
+        XCTAssertEqual(viewModel.backendConfigurationFeedbackMessage, "Backend configuration saved.")
+        XCTAssertEqual(syncClientFactory.createdBaseURLs.map(\.absoluteString), ["http://192.168.1.12:8080"])
+        XCTAssertNotEqual(viewModel.syncState.connectionState, .localOnly)
+    }
+
+    func testSaveBackendConfigurationRejectsInvalidURL() throws {
+        let (viewModel, _, _) = try makeViewModel()
+
+        let saved = viewModel.saveBackendConfiguration(
+            profileName: "Phone Sync",
+            apiBaseURLString: "192.168.1.12:8080"
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(viewModel.environment, .localOnly)
+        XCTAssertEqual(
+            viewModel.backendConfigurationValidationMessage,
+            AppEnvironmentConfigurationError.invalidAPIBaseURL.message
+        )
+    }
+
+    func testClearBackendConfigurationReturnsToLocalOnlyMode() throws {
+        let syncClientFactory = RecordingSyncClientFactory()
+        let (viewModel, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+        _ = viewModel.saveBackendConfiguration(
+            profileName: "Phone Sync",
+            apiBaseURLString: "http://192.168.1.12:8080"
+        )
+
+        viewModel.clearBackendConfiguration()
+
+        XCTAssertEqual(viewModel.environment, .localOnly)
+        XCTAssertEqual(viewModel.syncState.connectionState, .localOnly)
+        XCTAssertEqual(
+            viewModel.backendConfigurationFeedbackMessage,
+            "Backend configuration cleared. This iPhone is local-only again."
+        )
+    }
+
     func testRestoresRunningCustomPlayFromPersistedActiveRuntime() throws {
         let startDate = Date().addingTimeInterval(-300)
         var snapshot = SampleData.snapshot
@@ -262,13 +314,16 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     private func makeViewModel(
-        snapshot: AppSnapshot = SampleData.snapshot
+        snapshot: AppSnapshot = SampleData.snapshot,
+        environment: AppEnvironment = .localOnly,
+        syncClientFactory: @escaping @Sendable (URL) -> AppSyncClient = { _ in StubAppSyncClient() }
     ) throws -> (ShellViewModel, StubNotificationScheduler, RecordingAudioPlayer) {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let storeURL = tempDirectory.appendingPathComponent("snapshot.json")
         let store = JSONFileStore<AppSnapshot>(fileURL: storeURL)
         try store.save(snapshot)
+        let syncStore = JSONFileStore<AppSyncState>(fileURL: tempDirectory.appendingPathComponent("sync-state.json"))
 
         let notificationScheduler = StubNotificationScheduler()
         let soundPlayer = RecordingTimerSoundPlayer()
@@ -276,17 +331,65 @@ final class ShellViewModelTests: XCTestCase {
 
         let repository = LocalAppSnapshotRepository(
             store: store,
-            environment: .localOnly
+            environment: environment
+        )
+        let syncRepository = LocalAppSyncStateRepository(
+            store: syncStore,
+            environment: environment
         )
 
         let viewModel = ShellViewModel(
             repository: repository,
+            syncRepository: syncRepository,
             notificationScheduler: notificationScheduler,
             soundPlayer: soundPlayer,
-            audioPlayer: audioPlayer
+            audioPlayer: audioPlayer,
+            syncClientFactory: syncClientFactory
         )
 
         return (viewModel, notificationScheduler, audioPlayer)
+    }
+}
+
+private final class RecordingSyncClientFactory: @unchecked Sendable {
+    private(set) var createdBaseURLs: [URL] = []
+
+    func makeClient(baseURL: URL) -> AppSyncClient {
+        StubAppSyncClient(
+            onFetch: { [weak self] in
+                self?.record(baseURL: baseURL)
+            }
+        )
+    }
+
+    private func record(baseURL: URL) {
+        createdBaseURLs.append(baseURL)
+    }
+}
+
+private struct StubAppSyncClient: AppSyncClient {
+    var onFetch: @Sendable () -> Void = {}
+
+    func fetchRemoteState(localSnapshot: AppSnapshot, timeZoneIdentifier: String) async throws -> RemoteAppState {
+        onFetch()
+        return RemoteAppState(
+            snapshot: localSnapshot,
+            summary: localSnapshot.summary,
+            mediaAssets: []
+        )
+    }
+
+    func applyMutation(
+        _ mutation: SyncMutation,
+        localSnapshot: AppSnapshot,
+        timeZoneIdentifier: String
+    ) async throws -> RemoteAppState {
+        onFetch()
+        return RemoteAppState(
+            snapshot: AppSyncFeature.applyQueuedMutation(mutation, to: localSnapshot),
+            summary: localSnapshot.summary,
+            mediaAssets: []
+        )
     }
 }
 

@@ -201,6 +201,11 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
 
 If `MEDITATION_IOS_API_BASE_URL` is explicitly set to an empty value for a run, the app clears the persisted backend configuration and returns to the local-only profile.
 
+The iPhone app also exposes an in-app Settings form for backend configuration:
+- save a profile label plus backend base URL directly on the device
+- use this for physical-iPhone installs that are not being relaunched from an Xcode run configuration
+- clear the saved backend there when you want to return the phone to intentional local-only mode
+
 ## Practical Working Notes
 
 - Keep the native app separate from the web app rather than embedding the SPA in a web view.

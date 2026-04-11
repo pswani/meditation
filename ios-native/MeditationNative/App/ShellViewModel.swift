@@ -24,6 +24,8 @@ final class ShellViewModel: ObservableObject {
     @Published var persistenceMessage: String?
     @Published var timerDefaultsFeedbackMessage: String?
     @Published var timerDefaultsValidationMessage: String?
+    @Published var backendConfigurationFeedbackMessage: String?
+    @Published var backendConfigurationValidationMessage: String?
 
     private let repository: LocalAppSnapshotRepository
     private let syncRepository: LocalAppSyncStateRepository
@@ -31,7 +33,8 @@ final class ShellViewModel: ObservableObject {
     private let soundPlayer: TimerSoundPlaying
     private let audioPlayer: CustomPlayAudioControlling
     private var clockCancellable: AnyCancellable?
-    private let syncClient: AppSyncClient?
+    private let syncClientFactory: @Sendable (URL) -> AppSyncClient
+    private var syncClient: AppSyncClient?
     private var isRunningSync = false
     private var needsSyncPass = false
 
@@ -45,14 +48,16 @@ final class ShellViewModel: ObservableObject {
         notificationScheduler: NotificationScheduling = LiveNotificationScheduler(),
         soundPlayer: TimerSoundPlaying? = nil,
         audioPlayer: CustomPlayAudioControlling? = nil,
-        syncClient: AppSyncClient? = nil
+        syncClient: AppSyncClient? = nil,
+        syncClientFactory: @escaping @Sendable (URL) -> AppSyncClient = { LiveAppSyncClient(baseURL: $0) }
     ) {
         self.repository = repository
         self.syncRepository = syncRepository
         self.notificationScheduler = notificationScheduler
         self.soundPlayer = soundPlayer ?? SystemSoundPlayer()
         self.audioPlayer = audioPlayer ?? BundledCustomPlayAudioPlayer()
-        self.syncClient = syncClient ?? repository.environment.apiBaseURL.map { LiveAppSyncClient(baseURL: $0) }
+        self.syncClientFactory = syncClientFactory
+        self.syncClient = syncClient ?? repository.environment.apiBaseURL.map(syncClientFactory)
 
         do {
             self.syncState = try syncRepository.load(
@@ -371,6 +376,46 @@ final class ShellViewModel: ObservableObject {
     func clearTimerDefaultsFeedback() {
         timerDefaultsFeedbackMessage = nil
         timerDefaultsValidationMessage = nil
+    }
+
+    func saveBackendConfiguration(profileName: String, apiBaseURLString: String) -> Bool {
+        backendConfigurationFeedbackMessage = nil
+        backendConfigurationValidationMessage = nil
+        persistenceMessage = nil
+
+        do {
+            let updatedEnvironment = try AppEnvironment.configured(
+                profileName: profileName,
+                apiBaseURLString: apiBaseURLString
+            )
+            applyEnvironment(updatedEnvironment)
+            saveSyncState()
+            backendConfigurationFeedbackMessage = "Backend configuration saved."
+            scheduleSync()
+            return true
+        } catch let error as AppEnvironmentConfigurationError {
+            backendConfigurationValidationMessage = error.message
+            return false
+        } catch {
+            backendConfigurationValidationMessage = "The backend configuration could not be saved."
+            return false
+        }
+    }
+
+    func clearBackendConfiguration() {
+        backendConfigurationFeedbackMessage = nil
+        backendConfigurationValidationMessage = nil
+        persistenceMessage = nil
+
+        AppEnvironment.clearPersistedConfiguration()
+        applyEnvironment(.localOnly)
+        saveSyncState()
+        backendConfigurationFeedbackMessage = "Backend configuration cleared. This iPhone is local-only again."
+    }
+
+    func clearBackendConfigurationFeedback() {
+        backendConfigurationFeedbackMessage = nil
+        backendConfigurationValidationMessage = nil
     }
 
     func deleteCustomPlay(_ customPlay: CustomPlay) {
@@ -942,6 +987,23 @@ final class ShellViewModel: ObservableObject {
         }
 
         syncState.connectionState = .pendingSync
+        syncState.lastErrorMessage = nil
+        syncState.lastNoticeMessage = nil
+    }
+
+    private func applyEnvironment(_ updatedEnvironment: AppEnvironment) {
+        environment = updatedEnvironment
+        syncClient = updatedEnvironment.apiBaseURL.map(syncClientFactory)
+        needsSyncPass = false
+
+        if updatedEnvironment.requiresBackend {
+            syncState.connectionState = syncState.pendingMutationCount > 0 ? .pendingSync : .syncing
+        } else {
+            syncState.connectionState = .localOnly
+            syncState.lastSuccessfulSyncAt = nil
+            syncState.lastAttemptedSyncAt = nil
+        }
+
         syncState.lastErrorMessage = nil
         syncState.lastNoticeMessage = nil
     }
