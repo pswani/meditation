@@ -127,7 +127,9 @@ struct SettingsView: View {
                 }
             }
             .padding()
+            .dismissesKeyboardOnBackgroundTap()
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Settings")
         .onChange(of: timerDefaultsDraft) { _, _ in
             viewModel.clearTimerDefaultsFeedback()

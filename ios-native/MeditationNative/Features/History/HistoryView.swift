@@ -140,6 +140,8 @@ struct HistoryView: View {
                         }
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .dismissesKeyboardOnBackgroundTap()
                 .navigationTitle("Manual log")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

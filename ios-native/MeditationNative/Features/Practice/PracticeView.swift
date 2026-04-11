@@ -34,7 +34,9 @@ struct PracticeView: View {
                 }
             }
             .padding()
+            .dismissesKeyboardOnBackgroundTap()
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Practice")
         .alert(
             viewModel.runtimeSafetyPrompt?.title ?? "",

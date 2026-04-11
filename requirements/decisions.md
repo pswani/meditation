@@ -102,6 +102,8 @@
   - otherwise clear the stale runtime with calm guidance instead of guessing
 - Keep native Settings timer defaults on an explicit save or reset workflow while Practice remains the next-session setup surface.
 - Keep native local-only sync copy explicit that the device is intentionally working without a configured backend, rather than implying broken connectivity.
+- Keep native backend configuration durable across relaunches by persisting the configured iOS profile name and backend base URL locally, while still allowing an explicit empty base URL to clear that persisted state and return the app to local-only mode.
+- Keep native physical-device development able to target a Mac-hosted backend over LAN HTTP by allowing local-network ATS access and a local-network usage description in the generated iOS Info.plist instead of hard-coding one host exception.
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
 - Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:
   - `None` stays runtime-derived rather than a second catalog entry
@@ -115,6 +117,7 @@
   - only `Temple Bell` and `Gong` are first-class current choices
   - the iOS app reuses the same bundled `temple-bell.mp3` and `gong.mp3` assets for playback
   - legacy native or synced values normalize through the same `Soft Chime` -> `Temple Bell` and `Wood Block` -> `Gong` mapping
+  - activate an `AVAudioSession` playback category before timer-cue and recording-backed playback so meditation audio is not muted by the iPhone silent switch
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
   - force timer catch-up evaluation on `visibilitychange`/`pageshow` foreground return

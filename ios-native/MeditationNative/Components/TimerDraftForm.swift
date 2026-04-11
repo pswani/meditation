@@ -8,6 +8,7 @@ struct MinuteValueField: View {
     var helperText: String?
 
     @State private var textValue: String
+    @FocusState private var isTextFieldFocused: Bool
 
     init(
         title: String,
@@ -34,6 +35,7 @@ struct MinuteValueField: View {
                     .multilineTextAlignment(.trailing)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 84)
+                    .focused($isTextFieldFocused)
                 Text("min")
                     .foregroundStyle(.secondary)
             }
@@ -57,12 +59,23 @@ struct MinuteValueField: View {
                 textValue = normalizedTextValue
             }
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isTextFieldFocused = false
+                    KeyboardSupport.dismissKeyboard()
+                }
+            }
+        }
     }
 
     private var stepperBinding: Binding<Int> {
         Binding(
             get: { min(max(value, range.lowerBound), range.upperBound) },
             set: { newValue in
+                isTextFieldFocused = false
+                KeyboardSupport.dismissKeyboard()
                 value = newValue
                 textValue = String(newValue)
             }
@@ -106,7 +119,7 @@ struct TimerDraftForm: View {
                         title: "Duration",
                         value: $draft.durationMinutes,
                         range: 1 ... 180,
-                        step: 5,
+                        step: 1,
                         helperText: "Fixed sessions count down to a scheduled finish."
                     )
                 } else {
