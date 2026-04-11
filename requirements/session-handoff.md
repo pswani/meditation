@@ -23,6 +23,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `prompts/ios-native-sync-parity-feature-bundle-with-branching/`
   - `prompts/ios-native-decomposition-hardening-feature-bundle-with-branching/`
   - `prompts/ios-native-runtime-ux-resilience-feature-bundle-with-branching/`
+  - `prompts/ios-native-runtime-device-defects-feature-bundle-with-branching/`
   - `docs/ios-native/README.md`
   - `ios-native/MeditationNative.xcodeproj`
   - `docs/execplan-ios-native-foundation-feature.md`
@@ -168,6 +169,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - explicit save or reset behavior for Settings timer defaults instead of immediate persistence on every edit
   - clearer shell and Settings copy that makes local-only mode sound intentional rather than broken
   - focused XCTest coverage for active-runtime restoration, local-only presentation copy, and timer-default save validation
+- New native defect-fix prompt bundle prepared on 2026-04-10:
+  - `prompts/ios-native-runtime-device-defects-feature-bundle-with-branching/`
+  - targets four reported iPhone issues in one bounded slice:
+    - timer duration step buttons should move by 1 minute instead of 5
+    - numeric duration editing should dismiss the keyboard when the user taps away
+    - configured device runs should reach the backend or show truthful configured-but-unreachable guidance instead of the unconfigured-base-URL state
+    - meditation audio should play regardless of the iPhone silent switch position
 - Native iOS low-risk cleanup now adds:
   - a resolved malformed Xcode project warning by assigning the `Resources` group its own PBX object id instead of reusing the `MeditationNativeTests` group id
   - native iOS README wording that now describes the current app state and setup flow directly instead of keeping stale milestone sequencing in operator guidance

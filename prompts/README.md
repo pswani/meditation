@@ -9,6 +9,7 @@ Current status:
   - `ios-native-runtime-ux-resilience-feature-bundle-with-branching`
   - `ios-native-build-deploy-docs-feature-bundle-with-branching`
   - `ios-native-low-risk-cleanup-feature-bundle-with-branching`
+  - `ios-native-runtime-device-defects-feature-bundle-with-branching`
 - Older bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
 
 Phased planning files currently available in-repo:
