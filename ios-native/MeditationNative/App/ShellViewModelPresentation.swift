@@ -36,6 +36,14 @@ enum ShellViewModelPresentation {
                     : "Backend unavailable. \(count) local changes will sync when the API is reachable."
             }
             return "Backend unavailable. Showing the latest saved local state."
+        case .invalidBackendResponse:
+            let count = syncState.pendingMutationCount
+            if count > 0 {
+                return count == 1
+                    ? "Backend response invalid. 1 local change will stay queued until the backend contract is corrected."
+                    : "Backend response invalid. \(count) local changes will stay queued until the backend contract is corrected."
+            }
+            return "Backend response invalid. Showing the latest saved local state."
         }
     }
 
@@ -53,6 +61,8 @@ enum ShellViewModelPresentation {
             return "Offline"
         case .backendUnavailable:
             return "Backend unavailable"
+        case .invalidBackendResponse:
+            return "Backend response invalid"
         }
     }
 
@@ -79,6 +89,8 @@ enum ShellViewModelPresentation {
             return "The device appears offline. Local-first changes stay visible here and will replay when connectivity returns."
         case .backendUnavailable:
             return "The device is online, but the configured backend could not be reached. Local-first changes stay visible here in the meantime."
+        case .invalidBackendResponse:
+            return "The device reached the configured backend, but one or more API responses did not match the app's expected contract. Local-first changes stay visible here in the meantime."
         }
     }
 

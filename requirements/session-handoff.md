@@ -183,6 +183,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - fresh native installs now bootstrap to the Mac Mini backend profile at `http://192.168.68.78`, while `Settings -> Clear` still suppresses that default and returns the app to durable local-only mode
   - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
+- Native iOS sync contract hardening on 2026-04-11 now adds:
+  - backend `session log` reads that normalize the live backend’s `source: "auto log"` and `source: "manual log"` values into the native source model instead of failing sync decode
+  - context-aware read normalization that restores `.playlist` and `.customPlay` when those logs arrive through the backend’s broader `auto log` bucket
+  - backend-compatible native `session log` writes that send `auto log` or `manual log` so queued timer, playlist, and `custom play` logs do not fail server validation on replay
+  - a distinct native sync state for invalid backend responses so the iPhone UI no longer reports payload-contract failures as plain backend-unavailable network issues
+  - live backend evidence from `curl http://127.0.0.1:8080/api/session-logs?page=0&size=5` showing the current backend still returns `"source":"auto log"` in production-like data
 - Native iOS low-risk cleanup now adds:
   - a resolved malformed Xcode project warning by assigning the `Resources` group its own PBX object id instead of reusing the `MeditationNativeTests` group id
   - native iOS README wording that now describes the current app state and setup flow directly instead of keeping stale milestone sequencing in operator guidance
@@ -527,7 +533,16 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
 - Native iOS timer-history still needs physical iPhone validation for notification permission prompts, completion delivery timing, and background or foreground transitions around fixed-duration completion.
 - Native iOS active-session relaunch recovery now exists, but it still needs concrete simulator or physical-iPhone validation for audio-backed sessions, background completion, and notification timing.
+- Synced summary-by-source rows still reflect the backend’s broader `auto log` versus `manual log` vocabulary, so remote summary labels cannot yet distinguish timer, `custom play`, and playlist runs until the backend exposes richer source categories.
 
 ## Recommended next slice
 - The requested native iOS parity and decomposition bundle sequence is complete.
 - Recommended next step for the native iOS track: use a concrete simulator or physical iPhone to run the native XCTest suites end to end, then define the next bundle from any real-device findings rather than from a standing parity gap list.
+- Latest targeted verification for the 2026-04-11 sync contract fix:
+  - `swift test --package-path ios-native`
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations`
+  - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' build-for-testing`
+  - `curl -i -s 'http://127.0.0.1:8080/api/health'`
+  - `curl -i -s 'http://127.0.0.1:8080/api/session-logs?page=0&size=5'`
+  - `curl -i -s 'http://127.0.0.1:8080/api/summaries?timeZone=America/Chicago'`
+  - `curl -i -s 'http://127.0.0.1:8080/api/settings/timer'`

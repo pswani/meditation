@@ -76,6 +76,52 @@ public enum SessionSource: String, CaseIterable, Codable, Sendable {
             return "Playlist"
         }
     }
+
+    public static func fromBackendValue(
+        _ backendValue: String,
+        hasPlaylistContext: Bool = false,
+        hasCustomPlayContext: Bool = false
+    ) -> SessionSource? {
+        let normalizedValue = backendValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        switch normalizedValue {
+        case SessionSource.manual.rawValue,
+             "manual log",
+             "manual-log":
+            return .manual
+        case SessionSource.timer.rawValue:
+            return .timer
+        case SessionSource.customPlay.rawValue,
+             "custom play":
+            return .customPlay
+        case SessionSource.playlist.rawValue:
+            return .playlist
+        case "auto log",
+             "auto-log",
+             "automatic log",
+             "automatic-log":
+            if hasPlaylistContext {
+                return .playlist
+            }
+            if hasCustomPlayContext {
+                return .customPlay
+            }
+            return .timer
+        default:
+            return nil
+        }
+    }
+
+    public var backendValue: String {
+        switch self {
+        case .manual:
+            return "manual log"
+        case .timer, .customPlay, .playlist:
+            return "auto log"
+        }
+    }
 }
 
 public enum SessionStatus: String, CaseIterable, Codable, Sendable {

@@ -7,6 +7,7 @@ public enum SyncConnectionState: String, Codable, Equatable, Sendable {
     case pendingSync = "pending-sync"
     case offline
     case backendUnavailable = "backend-unavailable"
+    case invalidBackendResponse = "invalid-backend-response"
 }
 
 public enum SyncMutationDomain: String, Codable, Equatable, Sendable {

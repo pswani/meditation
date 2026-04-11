@@ -88,7 +88,7 @@ final class AppSyncServiceTests: XCTestCase {
                                 "intendedDurationSeconds": 1200,
                                 "completedDurationSeconds": 1100,
                                 "status": "ended early",
-                                "source": "custom-play",
+                                "source": "auto log",
                                 "startSound": "Temple Bell",
                                 "endSound": "Temple Bell",
                                 "intervalEnabled": false,
@@ -222,6 +222,177 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(remoteState.snapshot.recentSessionLogs.first?.source, .customPlay)
         XCTAssertEqual(remoteState.snapshot.sankalpas.first?.title, "Vipassana goal")
         XCTAssertFalse(remoteState.snapshot.summary.overallRows.isEmpty)
+    }
+
+    func testFetchRemoteStateMapsAutoLogWithoutPlaybackContextToTimerSource() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/settings/timer":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "id": "default",
+                        "timerMode": "fixed",
+                        "durationMinutes": 20,
+                        "lastFixedDurationMinutes": 20,
+                        "meditationType": "Vipassana",
+                        "startSound": "Temple Bell",
+                        "endSound": "Temple Bell",
+                        "intervalEnabled": false,
+                        "intervalMinutes": 0,
+                        "intervalSound": "None",
+                    ]
+                )
+            case "/api/session-logs":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "items": [
+                            [
+                                "id": UUID().uuidString.lowercased(),
+                                "startedAt": "2026-04-09T12:00:00Z",
+                                "endedAt": "2026-04-09T12:20:00Z",
+                                "meditationType": "Vipassana",
+                                "timerMode": "fixed",
+                                "intendedDurationSeconds": 1200,
+                                "completedDurationSeconds": 1200,
+                                "status": "completed",
+                                "source": "auto log",
+                                "startSound": "None",
+                                "endSound": "None",
+                                "intervalEnabled": false,
+                                "intervalMinutes": 0,
+                                "intervalSound": "None",
+                                "customPlayId": NSNull(),
+                                "customPlayName": NSNull(),
+                                "customPlayRecordingLabel": NSNull(),
+                                "playlistRunId": NSNull(),
+                                "playlistName": NSNull(),
+                                "playlistItemPosition": NSNull(),
+                                "playlistItemCount": NSNull(),
+                            ],
+                        ],
+                        "page": 0,
+                        "size": 1,
+                        "totalItems": 1,
+                        "hasNextPage": false,
+                    ]
+                )
+            case "/api/custom-plays", "/api/playlists", "/api/sankalpas":
+                return URLProtocolStub.jsonResponse([])
+            case "/api/summaries":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "overallSummary": [
+                            "totalSessionLogs": 1,
+                            "completedSessionLogs": 1,
+                            "endedEarlySessionLogs": 0,
+                            "totalDurationSeconds": 1200,
+                        ],
+                        "byTypeSummary": [],
+                        "bySourceSummary": [],
+                        "byTimeOfDaySummary": [],
+                    ]
+                )
+            case "/api/media/custom-plays":
+                return URLProtocolStub.jsonResponse([])
+            default:
+                return URLProtocolStub.jsonResponse([:])
+            }
+        }
+
+        let client = makeClient()
+        let remoteState = try await client.fetchRemoteState(
+            localSnapshot: SampleData.snapshot,
+            timeZoneIdentifier: "America/Chicago"
+        )
+
+        XCTAssertEqual(remoteState.snapshot.recentSessionLogs.first?.source, .timer)
+    }
+
+    func testFetchRemoteStateAcceptsFractionalSecondISO8601Timestamps() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/settings/timer":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "id": "default",
+                        "timerMode": "fixed",
+                        "durationMinutes": 20,
+                        "lastFixedDurationMinutes": 20,
+                        "meditationType": "Vipassana",
+                        "startSound": "Temple Bell",
+                        "endSound": "Temple Bell",
+                        "intervalEnabled": false,
+                        "intervalMinutes": 0,
+                        "intervalSound": "None",
+                    ]
+                )
+            case "/api/session-logs":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "items": [
+                            [
+                                "id": UUID().uuidString.lowercased(),
+                                "startedAt": "2026-04-10T12:12:18.567Z",
+                                "endedAt": "2026-04-10T12:46:57.710Z",
+                                "meditationType": "Ajapa",
+                                "timerMode": "fixed",
+                                "intendedDurationSeconds": 300,
+                                "completedDurationSeconds": 300,
+                                "status": "completed",
+                                "source": "auto log",
+                                "startSound": "Temple Bell",
+                                "endSound": "Temple Bell",
+                                "intervalEnabled": false,
+                                "intervalMinutes": 5,
+                                "intervalSound": "Temple Bell",
+                                "customPlayId": NSNull(),
+                                "customPlayName": NSNull(),
+                                "customPlayRecordingLabel": NSNull(),
+                                "playlistRunId": NSNull(),
+                                "playlistName": NSNull(),
+                                "playlistItemPosition": NSNull(),
+                                "playlistItemCount": NSNull(),
+                                "createdAt": "2026-04-10T12:46:57.740Z",
+                            ],
+                        ],
+                        "page": 0,
+                        "size": 1,
+                        "totalItems": 1,
+                        "hasNextPage": false,
+                    ]
+                )
+            case "/api/custom-plays", "/api/playlists", "/api/sankalpas":
+                return URLProtocolStub.jsonResponse([])
+            case "/api/summaries":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "overallSummary": [
+                            "totalSessionLogs": 1,
+                            "completedSessionLogs": 1,
+                            "endedEarlySessionLogs": 0,
+                            "totalDurationSeconds": 300,
+                        ],
+                        "byTypeSummary": [],
+                        "bySourceSummary": [],
+                        "byTimeOfDaySummary": [],
+                    ]
+                )
+            case "/api/media/custom-plays":
+                return URLProtocolStub.jsonResponse([])
+            default:
+                return URLProtocolStub.jsonResponse([:])
+            }
+        }
+
+        let client = makeClient()
+        let remoteState = try await client.fetchRemoteState(
+            localSnapshot: SampleData.snapshot,
+            timeZoneIdentifier: "America/Chicago"
+        )
+
+        let remoteLog = try XCTUnwrap(remoteState.snapshot.recentSessionLogs.first)
+        XCTAssertEqual(remoteLog.source, .timer)
+        XCTAssertEqual(remoteLog.completedDurationSeconds, 300)
     }
 
     func testFetchRemoteStateAllowsCustomPlayWithoutMediaAssetID() async throws {
@@ -444,7 +615,7 @@ final class AppSyncServiceTests: XCTestCase {
         let bodyData = try XCTUnwrap(putRequest.httpBodyData)
         let bodyObject = try JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
         XCTAssertEqual(bodyObject?["status"] as? String, "ended early")
-        XCTAssertEqual(bodyObject?["source"] as? String, "custom-play")
+        XCTAssertEqual(bodyObject?["source"] as? String, "auto log")
         XCTAssertEqual(bodyObject?["customPlayName"] as? String, "Client Sit")
     }
 

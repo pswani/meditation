@@ -105,6 +105,13 @@
 - Keep native backend configuration durable across relaunches by persisting the configured iOS profile name and backend base URL locally, while still allowing an explicit empty base URL to clear that persisted state and return the app to local-only mode.
 - Keep native backend configuration user-reachable on physical iPhone installs through a Settings form, while still supporting launch-environment overrides for Xcode or operator-driven runs.
 - Keep native physical-device development able to target a Mac-hosted backend over LAN HTTP by allowing local-network ATS access and a local-network usage description in the generated iOS Info.plist instead of hard-coding one host exception.
+- Keep native iOS sync tolerant of the current backend `session log` source contract:
+  - backend reads may return web-era values such as `auto log` and `manual log`
+  - native sync should normalize those values back into the richer native source model using playlist or `custom play` context when available
+  - native writes should send backend-compatible `auto log` or `manual log` values instead of app-internal source identifiers
+- Keep native sync status honest when the backend responds with an incompatible payload:
+  - distinguish invalid backend responses from an unreachable backend in shell and Settings copy
+  - keep the concrete contract error visible so operators can tell transport failures apart from decode or normalization failures
 - Keep timer sound selection label-based in saved settings and resolve playback through the shared sound catalog at runtime.
 - Keep `src/data/timerSoundCatalog.json` as the single source of selectable and playable timer sounds:
   - `None` stays runtime-derived rather than a second catalog entry

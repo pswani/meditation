@@ -41,6 +41,7 @@ Implemented native surfaces today include:
 - backend-backed hydration for timer settings, `session log`, `custom play`, playlist, `sankalpa`, and summary data when `MEDITATION_IOS_API_BASE_URL` is configured
 - a persisted native sync queue plus sync-status snapshot under Application Support
 - calm shell and Settings sync messaging for local-only, syncing, pending-sync, offline, backend-unavailable, and last-sync-success states
+- a distinct invalid-backend-response sync state so device troubleshooting can separate payload-contract failures from raw reachability failures
 - explicit save or reset behavior for Settings timer defaults instead of immediate persistence on every edit
 - stale-delete restore notices when a queued backend delete loses reconciliation against a newer `custom play`, playlist, or `sankalpa`
 
@@ -160,6 +161,7 @@ Physical iPhone or concrete simulator verification is still recommended for:
 - Home density and readability on a real iPhone-sized screen
 - `sankalpa` editor ergonomics and observance day-menu interactions on a concrete device
 - the sync banner and Settings sync copy during real network loss or backend-unavailable states
+- the sync banner and Settings sync copy during invalid-backend-response states caused by incompatible API payloads
 - physical-device base-URL behavior when the backend runs on the same Mac
 
 ## Backend Connectivity Notes
@@ -182,6 +184,23 @@ Optional backend-backed sync is enabled when `MEDITATION_IOS_API_BASE_URL` is co
 5. Native writes stay local-first and queue for replay when the backend is offline or unavailable.
 6. The generated Info.plist now allows local-network HTTP development targets so a physical iPhone can reach a backend running on your Mac by LAN IP without extra app-code changes.
 7. The first local-LAN connection on device can still trigger the iOS local-network permission prompt because the app now declares why it needs that access.
+8. If Safari can reach the configured base URL but the native app reports a detailed sync error such as `Unsupported session log source: auto log`, treat that as a backend-contract issue rather than an ATS or routing failure:
+   - current backend reads still return `session log` sources like `auto log` and `manual log`
+   - the native app now normalizes those values and surfaces a dedicated invalid-backend-response state when another incompatible payload slips through
+   - use the Settings sync section to distinguish `Backend unavailable` from `Backend response invalid`
+
+## Live Sync Verification Path
+
+When you want to verify a real simulator or device against the current backend contract:
+
+1. Confirm the backend is reachable from the Mac:
+   - `curl -i -s 'http://127.0.0.1:8080/api/health'`
+2. Inspect the concrete payloads the native sync layer consumes:
+   - `curl -i -s 'http://127.0.0.1:8080/api/session-logs?page=0&size=5'`
+   - `curl -i -s 'http://127.0.0.1:8080/api/summaries?timeZone=America/Chicago'`
+   - `curl -i -s 'http://127.0.0.1:8080/api/settings/timer'`
+3. If you want an XCTest pass against a live backend, set `MEDITATION_NATIVE_LIVE_SYNC_BASE_URL` and run the native test target from Xcode when a simulator runtime is healthy.
+4. On physical iPhone, prefer the nginx app origin such as `http://<Mac-Local-Hostname>.local` in Settings. Safari reachability there is a transport check; the app’s sync state and detailed error message tell you whether the next issue is backend contract compatibility instead.
 
 ## Environment Configuration Seam
 

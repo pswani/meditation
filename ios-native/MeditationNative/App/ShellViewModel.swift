@@ -1073,7 +1073,7 @@ final class ShellViewModel: ObservableObject {
                 syncState.connectionState = .backendUnavailable
                 syncState.lastErrorMessage = "The configured backend is unavailable."
             case .invalidResponse(let message):
-                syncState.connectionState = .backendUnavailable
+                syncState.connectionState = .invalidBackendResponse
                 syncState.lastErrorMessage = message
             case .server(_, let message):
                 syncState.connectionState = .backendUnavailable

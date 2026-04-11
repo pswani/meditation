@@ -67,6 +67,35 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
     }
 
+    func testInvalidBackendResponsePresentationSeparatesContractFailureFromReachability() {
+        var invalidState = AppSyncState(connectionState: .invalidBackendResponse)
+        invalidState.pendingMutations = [
+            .timerSettingsUpsert(
+                TimerSettingsDraft(
+                    mode: .fixedDuration,
+                    durationMinutes: 25,
+                    meditationType: .vipassana
+                )
+            ),
+        ]
+
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncStatusHeadline(for: invalidState),
+            "Backend response invalid"
+        )
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncBannerMessage(for: invalidState),
+            "Backend response invalid. 1 local change will stay queued until the backend contract is corrected."
+        )
+        XCTAssertEqual(
+            ShellViewModelPresentation.syncStatusDetail(
+                for: invalidState,
+                now: Date(timeIntervalSince1970: 1_700_000_000)
+            ),
+            "The device reached the configured backend, but one or more API responses did not match the app's expected contract. Local-first changes stay visible here in the meantime."
+        )
+    }
+
     func testSnapshotSupportDerivesLastUsedCustomPlayFromContextAwareLog() {
         let customPlay = CustomPlay(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,

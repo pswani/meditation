@@ -23,6 +23,27 @@ import Testing
     #expect(TimerSoundCatalog.normalizeSelection("None") == nil)
 }
 
+@Test func sessionSourceNormalizesBackendValuesWithoutMaskingUnknowns() throws {
+    #expect(SessionSource.fromBackendValue("manual log") == .manual)
+    #expect(SessionSource.fromBackendValue("auto log") == .timer)
+    #expect(
+        SessionSource.fromBackendValue(
+            "auto log",
+            hasCustomPlayContext: true
+        ) == .customPlay
+    )
+    #expect(
+        SessionSource.fromBackendValue(
+            "auto log",
+            hasPlaylistContext: true
+        ) == .playlist
+    )
+    #expect(SessionSource.timer.backendValue == "auto log")
+    #expect(SessionSource.customPlay.backendValue == "auto log")
+    #expect(SessionSource.manual.backendValue == "manual log")
+    #expect(SessionSource.fromBackendValue("queued log") == nil)
+}
+
 @Test func playlistTotalDurationIncludesGaps() throws {
     let playlist = Playlist(
         name: "Morning",

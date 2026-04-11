@@ -6,7 +6,7 @@ public enum AppEnvironmentConfigurationError: Error, Equatable, Sendable {
     public var message: String {
         switch self {
         case .invalidAPIBaseURL:
-            return "Enter a full backend URL such as http://192.168.68.78."
+            return "Enter a full backend URL such as http://prashants-mac-mini.local."
         }
     }
 }
@@ -33,8 +33,8 @@ public struct AppEnvironment: Codable, Equatable, Sendable {
     )
 
     public static let defaultBackend = AppEnvironment(
-        profileName: "Mac Mini",
-        apiBaseURL: URL(string: "http://192.168.68.78"),
+        profileName: "Prashant's Mac Mini",
+        apiBaseURL: URL(string: "http://prashants-mac-mini.local"),
         requiresBackend: true
     )
 

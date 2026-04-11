@@ -286,6 +286,32 @@ final class ShellViewModelTests: XCTestCase {
         )
     }
 
+    func testInvalidBackendResponseUsesDedicatedSyncState() throws {
+        let invalidSourceClient = StubAppSyncClient(
+            fetchError: .invalidResponse("Unsupported session log source: auto log")
+        )
+        let (viewModel, _, _) = try makeViewModel(
+            environment: AppEnvironment(
+                profileName: "Phone Sync",
+                apiBaseURL: URL(string: "http://prashants-mac-mini.local"),
+                requiresBackend: true
+            ),
+            syncClientFactory: { _ in invalidSourceClient }
+        )
+
+        let syncCompleted = expectation(description: "sync settles with invalid backend response")
+        Task {
+            while viewModel.syncState.connectionState == .syncing || viewModel.syncState.connectionState == .pendingSync {
+                await Task.yield()
+            }
+            syncCompleted.fulfill()
+        }
+        wait(for: [syncCompleted], timeout: 1)
+
+        XCTAssertEqual(viewModel.syncState.connectionState, .invalidBackendResponse)
+        XCTAssertEqual(viewModel.syncState.lastErrorMessage, "Unsupported session log source: auto log")
+    }
+
     func testRestoresRunningCustomPlayFromPersistedActiveRuntime() throws {
         let startDate = Date().addingTimeInterval(-300)
         var snapshot = SampleData.snapshot
@@ -377,9 +403,14 @@ private final class RecordingSyncClientFactory: @unchecked Sendable {
 
 private struct StubAppSyncClient: AppSyncClient {
     var onFetch: @Sendable () -> Void = {}
+    var fetchError: AppSyncError?
+    var applyError: AppSyncError?
 
     func fetchRemoteState(localSnapshot: AppSnapshot, timeZoneIdentifier: String) async throws -> RemoteAppState {
         onFetch()
+        if let fetchError {
+            throw fetchError
+        }
         return RemoteAppState(
             snapshot: localSnapshot,
             summary: localSnapshot.summary,
@@ -393,6 +424,9 @@ private struct StubAppSyncClient: AppSyncClient {
         timeZoneIdentifier: String
     ) async throws -> RemoteAppState {
         onFetch()
+        if let applyError {
+            throw applyError
+        }
         return RemoteAppState(
             snapshot: AppSyncFeature.applyQueuedMutation(mutation, to: localSnapshot),
             summary: localSnapshot.summary,

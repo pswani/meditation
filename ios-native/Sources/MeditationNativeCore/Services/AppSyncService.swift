@@ -562,7 +562,11 @@ private struct BackendSessionLogResponse: Decodable {
         guard let meditationType = MeditationType(rawValue: meditationType) else {
             throw AppSyncError.invalidResponse("Unsupported meditation type: \(meditationType)")
         }
-        let source = try SessionSource(rawValue: source).unwrap("Unsupported session log source: \(source)")
+        let source = try SessionSource.fromBackendValue(
+            source,
+            hasPlaylistContext: hasPlaylistContext,
+            hasCustomPlayContext: hasCustomPlayContext
+        ).unwrap("Unsupported session log source: \(source)")
         let status = try SessionStatus.fromBackend(status)
         let timerMode = try TimerSettingsDraft.Mode.fromBackend(timerMode)
         let startedAtDate = try Date.iso8601(startedAt)
@@ -581,6 +585,19 @@ private struct BackendSessionLogResponse: Decodable {
             notes: sessionLogNotes(),
             context: sessionLogContext()
         )
+    }
+
+    private var hasPlaylistContext: Bool {
+        playlistRunId?.nilIfBlank != nil
+            || playlistName?.nilIfBlank != nil
+            || playlistItemPosition != nil
+            || playlistItemCount != nil
+    }
+
+    private var hasCustomPlayContext: Bool {
+        customPlayId?.nilIfBlank != nil
+            || customPlayName?.nilIfBlank != nil
+            || customPlayRecordingLabel?.nilIfBlank != nil
     }
 
     private func sessionLogContext() -> SessionLogContext? {
@@ -644,7 +661,7 @@ private struct BackendSessionLogUpsertRequest: Encodable {
         intendedDurationSeconds = sessionLog.plannedDurationSeconds
         completedDurationSeconds = sessionLog.completedDurationSeconds
         status = sessionLog.status.backendValue
-        source = sessionLog.source.rawValue
+        source = sessionLog.source.backendValue
         startSound = "None"
         endSound = "None"
         intervalEnabled = false
@@ -1045,10 +1062,16 @@ private extension Optional {
 
 private extension Date {
     static func iso8601(_ value: String) throws -> Date {
-        guard let date = ISO8601DateFormatter().date(from: value) else {
-            throw AppSyncError.invalidResponse("Invalid ISO-8601 timestamp: \(value)")
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let plainFormatter = ISO8601DateFormatter()
+        plainFormatter.formatOptions = [.withInternetDateTime]
+
+        if let date = fractionalFormatter.date(from: value) ?? plainFormatter.date(from: value) {
+            return date
         }
-        return date
+        throw AppSyncError.invalidResponse("Invalid ISO-8601 timestamp: \(value)")
     }
 }
 
