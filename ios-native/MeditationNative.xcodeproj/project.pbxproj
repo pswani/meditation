@@ -150,7 +150,7 @@
 			children = (
 				F10000010000000000000007 /* App */,
 				F10000010000000000000008 /* Components */,
-				F10000010000000000000012 /* Resources */,
+				F10000010000000000000013 /* Resources */,
 				F10000010000000000000009 /* Features */,
 			);
 			path = MeditationNative;
@@ -314,7 +314,7 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		F10000010000000000000012 /* Resources */ = {
+		F10000010000000000000013 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				B1000001000000000000001A /* temple-bell.mp3 */,

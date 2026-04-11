@@ -223,6 +223,7 @@
   - `requirements/roadmap.md`
   - `requirements/decisions.md`
   - `requirements/session-handoff.md`
+- Keep the native iOS README current-state oriented once the main milestone bundle sequence has landed, instead of leaving stale milestone-step framing in operator-facing setup guidance.
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
 - Author the next bounded prompt bundle before running the milestone runner again; the current bundled slices are now complete.

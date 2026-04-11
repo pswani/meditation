@@ -2,14 +2,14 @@
 
 This README is for the native iPhone app track in this repository.
 
-The milestone-1 foundation, milestone-2 timer-history journey, milestone-3 `custom play` plus playlist slice, milestone-4 summary plus `sankalpa` slice, and milestone-5 sync parity slice now exist under `ios-native/` as:
+The native iPhone app now lives under `ios-native/` as:
 - `MeditationNative.xcodeproj` for the app, unit-test, and UI-test targets
 - `Sources/MeditationNativeCore/` for shared native domain, data, and persistence foundations
 - `MeditationNative/` for the SwiftUI app shell and destination screens
 - `Tests/MeditationNativeCoreTests/` for focused core timer, playback, playlist, validation, and logging tests
 - `MeditationNativeUITests/` for launch plus timer, `custom play`, playlist, History, and Settings smoke coverage
 
-Implemented native surfaces through milestone 5 now include:
+Implemented native surfaces today include:
 - Practice timer setup for fixed-duration and open-ended sessions
 - active timer runtime with pause, resume, and end controls
 - `custom play` creation, editing, deletion, favorite handling, and local playback
@@ -60,7 +60,7 @@ Build a separate native iOS client for the meditation product that:
 - UserNotifications for timer completion and reminder behavior where needed
 - XCTest for unit and UI tests
 
-Avoid adding large cross-platform dependencies unless a milestone clearly justifies them.
+Avoid adding large cross-platform dependencies unless future scope clearly justifies them.
 
 ## Expected Project Shape
 
@@ -88,7 +88,7 @@ Project and scheme:
 2. Open Xcode once and accept any required components.
 3. Sign in with your Apple ID in Xcode if you plan to run on a physical iPhone:
    - `Xcode` -> `Settings` -> `Accounts`
-4. After milestone 1 creates the project, open:
+4. Open:
    - `ios-native/MeditationNative.xcodeproj`
 5. Select the main app target.
 6. Set:
@@ -102,7 +102,7 @@ Project and scheme:
 1. In Xcode, choose an installed iPhone simulator.
 2. Build and run the app with `Product` -> `Run`.
 3. If the app uses local persistence, delete the app from the simulator between major data-model iterations when a migration is not yet implemented.
-4. Use Xcode's console and debugger first when the milestone prompts mention launch, storage, or notification issues.
+4. Use Xcode's console and debugger first when you are investigating launch, storage, or notification issues.
 5. The native app persists local JSON state under Application Support:
    - `MeditationNative/foundation-snapshot.json`
    - `MeditationNative/sync-state.json`
@@ -147,7 +147,7 @@ swift test --package-path ios-native
 
 This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
 
-For the current milestone-5 state, physical iPhone or concrete simulator verification is still recommended for:
+Physical iPhone or concrete simulator verification is still recommended for:
 - notification permission prompts
 - fixed-duration completion notifications
 - background or foreground transitions around timer completion
@@ -162,9 +162,9 @@ For the current milestone-5 state, physical iPhone or concrete simulator verific
 
 ## Backend Connectivity Notes
 
-Milestones 1 through 4 remain usable without backend connectivity.
+The native app remains usable without backend connectivity.
 
-Milestone 5 adds optional backend-backed sync when `MEDITATION_IOS_API_BASE_URL` is configured:
+Optional backend-backed sync is enabled when `MEDITATION_IOS_API_BASE_URL` is configured:
 
 1. Do not use `localhost` from a physical iPhone if the backend is running on your Mac.
 2. Use your Mac's LAN IP or a deployed host for physical-device verification.
@@ -181,7 +181,7 @@ Milestone 5 adds optional backend-backed sync when `MEDITATION_IOS_API_BASE_URL`
 
 ## Environment Configuration Seam
 
-The native foundation reads optional process environment values so later milestones can point at a backend without changing launch behavior:
+The native foundation reads optional process environment values so local runs can point at a backend without changing app code:
 
 - `MEDITATION_IOS_PROFILE`
 - `MEDITATION_IOS_API_BASE_URL`
@@ -193,15 +193,6 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
 - keeps local edits visible immediately
 - persists queued writes under `sync-state.json`
 - surfaces calm sync or replay messaging in the shell and Settings
-
-## Suggested Milestone Order
-
-1. `ios-native-foundation-feature-bundle-with-branching`
-2. `ios-native-timer-history-feature-bundle-with-branching`
-3. `ios-native-custom-play-playlist-feature-bundle-with-branching`
-4. `ios-native-summary-sankalpa-feature-bundle-with-branching`
-5. `ios-native-sync-parity-feature-bundle-with-branching`
-6. `ios-native-decomposition-hardening-feature-bundle-with-branching`
 
 ## Practical Working Notes
 
@@ -219,11 +210,11 @@ If `MEDITATION_IOS_API_BASE_URL` is present, the app:
   - if no playable recording exists on the device, the app shows calm unavailable-media guidance instead of faking playback
 - The native Practice custom-play library includes an explicit `Apply to timer` action that copies the saved `custom play` duration, meditation type, and sounds into the timer defaults.
 - Settings timer defaults now use a screen-local draft with explicit `Save` and `Reset` actions, while Practice still behaves like the next-session setup surface.
-- Milestone 4 keeps native summary derived from local `session log` history instead of introducing a second stored summary source of truth.
-- Milestone 4 keeps `sankalpa` status local-first with archive or restore support while leaving backend sync for milestone 5.
-- Milestone 5 keeps the native sync seam explicit and local-first:
+- Native summary remains derived from local `session log` history instead of introducing a second stored summary source of truth.
+- `sankalpa` stays local-first with archive or restore support while optional backend sync remains intentionally additive.
+- The native sync seam stays explicit and local-first:
   - queued writes replay through the existing backend routes
   - backend reads merge with device-only bundled sample media and local `sankalpa` titles
   - stale backend delete outcomes restore the current backend record with calm notice copy
 - Saved playlist items snapshot the current title, meditation type, and duration from linked `custom play` entries while still retaining a lightweight link for runtime validation.
-- Keep milestone docs updated when project names, schemes, signing steps, or base-URL rules change.
+- Keep the native iOS docs updated when project names, schemes, signing steps, or base-URL rules change.
