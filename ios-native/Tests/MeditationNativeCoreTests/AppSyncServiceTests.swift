@@ -224,6 +224,88 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertFalse(remoteState.snapshot.summary.overallRows.isEmpty)
     }
 
+    func testFetchRemoteStateAllowsCustomPlayWithoutMediaAssetID() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/settings/timer":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "id": "default",
+                        "timerMode": "fixed",
+                        "durationMinutes": 20,
+                        "lastFixedDurationMinutes": 20,
+                        "meditationType": "Vipassana",
+                        "startSound": "Temple Bell",
+                        "endSound": "Temple Bell",
+                        "intervalEnabled": false,
+                        "intervalMinutes": 5,
+                        "intervalSound": "Temple Bell",
+                    ]
+                )
+            case "/api/session-logs":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "items": [],
+                        "page": 0,
+                        "size": 0,
+                        "totalItems": 0,
+                        "hasNextPage": false,
+                    ]
+                )
+            case "/api/custom-plays":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        [
+                            "id": "custom-play-legacy-server-id",
+                            "name": "Legacy Backend Sit",
+                            "meditationType": "Vipassana",
+                            "durationMinutes": 65,
+                            "startSound": "None",
+                            "endSound": "None",
+                            "mediaAssetId": NSNull(),
+                            "recordingLabel": NSNull(),
+                            "favorite": true,
+                            "createdAt": "2026-04-09T12:00:00Z",
+                            "updatedAt": "2026-04-09T12:10:00Z",
+                        ],
+                    ]
+                )
+            case "/api/playlists", "/api/sankalpas":
+                return URLProtocolStub.jsonResponse([])
+            case "/api/summaries":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "overallSummary": [
+                            "totalSessionLogs": 0,
+                            "completedSessionLogs": 0,
+                            "endedEarlySessionLogs": 0,
+                            "totalDurationSeconds": 0,
+                        ],
+                        "byTypeSummary": [],
+                        "bySourceSummary": [],
+                        "byTimeOfDaySummary": [],
+                    ]
+                )
+            case "/api/media/custom-plays":
+                return URLProtocolStub.jsonResponse([])
+            default:
+                return URLProtocolStub.jsonResponse([:])
+            }
+        }
+
+        let client = makeClient()
+        let remoteState = try await client.fetchRemoteState(
+            localSnapshot: SampleData.snapshot,
+            timeZoneIdentifier: "America/Chicago"
+        )
+
+        XCTAssertEqual(remoteState.snapshot.customPlays.count, 1)
+        XCTAssertEqual(remoteState.snapshot.customPlays[0].name, "Legacy Backend Sit")
+        XCTAssertNil(remoteState.snapshot.customPlays[0].linkedMediaIdentifier)
+        XCTAssertNil(remoteState.snapshot.customPlays[0].media)
+        XCTAssertEqual(remoteState.snapshot.customPlays[0].durationSeconds, 65 * 60)
+    }
+
     func testApplyMutationSendsQueuedHeaderAndBackendStatusMapping() async throws {
         let sessionLog = SessionLog(
             id: UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!,

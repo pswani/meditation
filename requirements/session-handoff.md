@@ -178,6 +178,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - persisted native backend profile and base-URL configuration across relaunches, with an explicit clear path back to local-only mode
   - an in-app Settings form that lets a physical iPhone save or clear its backend profile and base URL without depending on an Xcode launch environment
   - Mac Mini production-style iPhone setup should now use the nginx app origin such as `http://<Mac-Local-Hostname>.local` or `http://<Mac-LAN-IP>` rather than a raw `:8080` backend URL
+  - native backend sync now tolerates backend `custom play` records whose `mediaAssetId` is `null`, matching older web-created data instead of failing the whole sync pass on decode
   - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
 - Native iOS low-risk cleanup now adds:

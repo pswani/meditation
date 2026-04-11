@@ -669,7 +669,7 @@ private struct BackendCustomPlayResponse: Decodable {
     var durationMinutes: Int
     var startSound: String
     var endSound: String
-    var mediaAssetId: String
+    var mediaAssetId: String?
     var recordingLabel: String?
     var favorite: Bool
 
@@ -677,7 +677,9 @@ private struct BackendCustomPlayResponse: Decodable {
         guard let meditationType = MeditationType(rawValue: meditationType) else {
             throw AppSyncError.invalidResponse("Unsupported custom play meditation type: \(meditationType)")
         }
-        let mediaAsset = mediaAssets.first(where: { $0.id == mediaAssetId })
+        let mediaAsset = mediaAssetId.flatMap { identifier in
+            mediaAssets.first(where: { $0.id == identifier })
+        }
         return CustomPlay(
             id: UUID(uuidString: id) ?? UUID(),
             name: name,
@@ -686,7 +688,7 @@ private struct BackendCustomPlayResponse: Decodable {
             startSoundName: TimerSoundCatalog.normalizeSelection(startSound.nilIfNone),
             endSoundName: TimerSoundCatalog.normalizeSelection(endSound.nilIfNone),
             recordingLabel: recordingLabel?.nilIfBlank,
-            linkedMediaIdentifier: mediaAssetId.nilIfBlank,
+            linkedMediaIdentifier: mediaAssetId?.nilIfBlank,
             media: mediaAsset?.playbackMedia,
             isFavorite: favorite
         )
