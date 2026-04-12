@@ -171,13 +171,23 @@ Single-page React application with route-based screens and feature-oriented modu
   - archive remains a boolean goal-state mutation on the same record instead of creating a second history entity
 
 ## Query and API-boundary strategy
+- The canonical queued-mutation and shared-reference contract now lives in `contracts/sync-contract.json`, with generated runtime constants checked into:
+  - `src/generated/syncContract.ts`
+  - `backend/src/main/java/com/meditation/backend/sync/GeneratedSyncContract.java`
+  - `ios-native/Sources/MeditationNativeCore/Domain/GeneratedSyncContract.swift`
+- Queue-backed mutation routes now classify their result through `X-Meditation-Sync-Result` so clients do not need to infer stale outcomes from body shape alone.
+- Stale delete responses now expose one generic `currentRecord` field across backend-backed collections, while temporary compatibility aliases remain available for older callers.
 - Summary overall totals, by-type totals, by-source totals, and `sankalpa` goal-window matching now prefer repository aggregates or reduced projections over loading full `session log` entities into service memory.
 - Time-zone-aware time-of-day bucketing still happens in service code, but only after fetching reduced `endedAt`, `status`, and duration projections for the filtered window.
 - `session log` reads now expose an explicit filtered collection contract and an opt-in paged contract so larger datasets do not require a second ad hoc endpoint later.
 - The frontend shared API client now owns a default request timeout plus explicit timeout and cancellation classification so route and sync code do not need to reinvent that behavior per feature.
 - Shared product vocabularies now stay centralized per runtime:
+  - canonical raw values live in `contracts/sync-contract.json`
+  - generated frontend constants live in `src/generated/syncContract.ts`
   - frontend lists and guards live in `src/types/referenceData.ts`
+  - generated backend constants live in `backend/.../sync/GeneratedSyncContract.java`
   - backend lists, validation helpers, and time-of-day bucketing live in `backend/.../reference/ReferenceData.java`
+  - generated native constants live in `ios-native/.../GeneratedSyncContract.swift`
   - Flyway-seeded meditation types are kept aligned with backend reference order through a dedicated Spring test
 
 ## Frontend reconciliation boundaries

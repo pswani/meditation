@@ -413,7 +413,7 @@ public struct LiveAppSyncClient: AppSyncClient {
             request.httpBody = try encoder.encode(body)
         }
         if let queuedAt {
-            request.setValue(queuedAt.ISO8601Format(), forHTTPHeaderField: "X-Meditation-Sync-Queued-At")
+            request.setValue(queuedAt.ISO8601Format(), forHTTPHeaderField: GeneratedSyncContract.syncQueuedAtHeader)
         }
         request.timeoutInterval = 10
 
@@ -987,9 +987,14 @@ private struct BackendMediaAssetResponse: Decodable {
 
 private struct BackendDeleteResult<Record: Decodable>: Decodable {
     var outcome: String?
+    var currentRecord: Record?
     var currentCustomPlay: Record?
     var currentPlaylist: Record?
     var currentSankalpa: Record?
+
+    var resolvedCurrentRecord: Record? {
+        currentRecord ?? currentCustomPlay ?? currentPlaylist ?? currentSankalpa
+    }
 }
 
 private extension RemoteMediaAsset {

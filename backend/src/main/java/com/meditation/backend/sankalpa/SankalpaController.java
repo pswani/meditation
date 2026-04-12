@@ -1,8 +1,8 @@
 package com.meditation.backend.sankalpa;
 
 import com.meditation.backend.sync.SyncRequestSupport;
+import com.meditation.backend.sync.SyncMutationResult;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,13 +30,15 @@ public class SankalpaController {
   }
 
   @PutMapping("/{sankalpaId}")
-  public SankalpaProgressResponse saveSankalpa(
+  public ResponseEntity<SankalpaProgressResponse> saveSankalpa(
       @PathVariable String sankalpaId,
       @RequestBody SankalpaGoalUpsertRequest request,
       @RequestParam(required = false) String timeZone,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
-    return sankalpaService.saveSankalpa(sankalpaId, request, timeZone, syncQueuedAt);
+    SyncMutationResult<SankalpaProgressResponse> result =
+        sankalpaService.saveSankalpa(sankalpaId, request, timeZone, syncQueuedAt);
+    return SyncRequestSupport.mutationResponse(result);
   }
 
   @DeleteMapping("/{sankalpaId}")
@@ -46,10 +48,6 @@ public class SankalpaController {
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     SankalpaDeleteResult result = sankalpaService.deleteSankalpa(sankalpaId, timeZone, syncQueuedAt);
-    if ("stale".equals(result.outcome())) {
-      return ResponseEntity.ok(result);
-    }
-
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    return SyncRequestSupport.deleteResponse(result.outcome(), result);
   }
 }

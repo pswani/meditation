@@ -184,7 +184,7 @@ describe('sankalpa api boundary', () => {
         status: 200,
         json: async () => ({
           outcome: 'stale',
-          currentSankalpa: {
+          currentRecord: {
             goal: {
               id: 'goal-1',
               goalType: 'duration-based',

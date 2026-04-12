@@ -115,7 +115,7 @@ describe('playlist api boundary', () => {
         status: 200,
         json: async () => ({
           outcome: 'stale',
-          currentPlaylist: playlist,
+          currentRecord: playlist,
         }),
       })
     );

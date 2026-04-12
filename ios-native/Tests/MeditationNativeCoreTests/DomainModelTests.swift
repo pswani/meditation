@@ -3,13 +3,9 @@ import Testing
 @testable import MeditationNativeCore
 
 @Test func meditationTypesMatchProductVocabulary() throws {
-    #expect(ReferenceData.meditationTypes.map(\.rawValue) == [
-        "Vipassana",
-        "Ajapa",
-        "Tratak",
-        "Kriya",
-        "Sahaj",
-    ])
+    #expect(ReferenceData.meditationTypes.map(\.rawValue) == GeneratedSyncContract.meditationTypes)
+    #expect(ReferenceData.timeOfDayBuckets.map(\.rawValue) == GeneratedSyncContract.timeOfDayBuckets)
+    #expect(GeneratedSyncContract.sessionLogSources == ["auto log", "manual log"])
 }
 
 @Test func timerSoundCatalogMatchesWebContractAndNormalizesLegacyValues() throws {
@@ -41,6 +37,13 @@ import Testing
     #expect(SessionSource.timer.backendValue == "auto log")
     #expect(SessionSource.customPlay.backendValue == "auto log")
     #expect(SessionSource.manual.backendValue == "manual log")
+    #expect(
+        [
+            SessionSource.timer.backendValue,
+            SessionSource.manual.backendValue,
+        ]
+            .sorted() == GeneratedSyncContract.sessionLogSources.sorted()
+    )
     #expect(SessionSource.fromBackendValue("queued log") == nil)
 }
 

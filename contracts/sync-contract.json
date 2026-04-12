@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sync": {
+    "headers": {
+      "queuedAt": "X-Meditation-Sync-Queued-At",
+      "result": "X-Meditation-Sync-Result"
+    },
+    "outcomes": {
+      "applied": "applied",
+      "stale": "stale",
+      "deleted": "deleted"
+    },
+    "delete": {
+      "currentRecordField": "currentRecord",
+      "legacyAliasFields": {
+        "customPlay": "currentCustomPlay",
+        "playlist": "currentPlaylist",
+        "sankalpa": "currentSankalpa"
+      }
+    }
+  },
+  "referenceData": {
+    "meditationTypes": ["Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj"],
+    "sessionLogSources": ["auto log", "manual log"],
+    "timeOfDayBuckets": ["morning", "afternoon", "evening", "night"],
+    "goalTypes": ["duration-based", "session-count-based", "observance-based"],
+    "observanceStatuses": ["observed", "missed"],
+    "timerModes": ["fixed", "open-ended"],
+    "sessionLogStatuses": ["completed", "ended early"]
+  }
+}

@@ -1,8 +1,8 @@
 package com.meditation.backend.customplay;
 
 import com.meditation.backend.sync.SyncRequestSupport;
+import com.meditation.backend.sync.SyncMutationResult;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,12 +29,13 @@ public class CustomPlayController {
   }
 
   @PutMapping("/{customPlayId}")
-  public CustomPlayResponse saveCustomPlay(
+  public ResponseEntity<CustomPlayResponse> saveCustomPlay(
       @PathVariable String customPlayId,
       @RequestBody CustomPlayUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
-    return customPlayService.saveCustomPlay(customPlayId, request, syncQueuedAt);
+    SyncMutationResult<CustomPlayResponse> result = customPlayService.saveCustomPlay(customPlayId, request, syncQueuedAt);
+    return SyncRequestSupport.mutationResponse(result);
   }
 
   @DeleteMapping("/{customPlayId}")
@@ -43,10 +44,6 @@ public class CustomPlayController {
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     CustomPlayDeleteResult result = customPlayService.deleteCustomPlay(customPlayId, syncQueuedAt);
-    if ("stale".equals(result.outcome())) {
-      return ResponseEntity.ok(result);
-    }
-
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    return SyncRequestSupport.deleteResponse(result.outcome(), result);
   }
 }

@@ -1,10 +1,16 @@
-export const meditationTypes = ['Vipassana', 'Ajapa', 'Tratak', 'Kriya', 'Sahaj'] as const;
+import {
+  meditationTypes as generatedMeditationTypes,
+  sessionLogSources as generatedSessionLogSources,
+  timeOfDayBuckets as generatedTimeOfDayBuckets,
+} from '../generated/syncContract';
+
+export const meditationTypes = generatedMeditationTypes;
 export type MeditationType = (typeof meditationTypes)[number];
 
-export const sessionLogSources = ['auto log', 'manual log'] as const;
+export const sessionLogSources = generatedSessionLogSources;
 export type SessionLogSource = (typeof sessionLogSources)[number];
 
-export const timeOfDayBuckets = ['morning', 'afternoon', 'evening', 'night'] as const;
+export const timeOfDayBuckets = generatedTimeOfDayBuckets;
 export type TimeOfDayBucket = (typeof timeOfDayBuckets)[number];
 
 const meditationTypeSet = new Set<string>(meditationTypes);

@@ -5,6 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -109,6 +110,7 @@ class CustomPlayControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "applied"))
         .andExpect(jsonPath("$.name").value("Morning Focus"));
 
     mockMvc.perform(put("/api/custom-plays/custom-play-1")
@@ -130,13 +132,16 @@ class CustomPlayControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.name").value("Morning Focus"))
         .andExpect(jsonPath("$.favorite").value(false));
 
     mockMvc.perform(delete("/api/custom-plays/custom-play-1")
             .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentRecord.name").value("Morning Focus"))
         .andExpect(jsonPath("$.currentCustomPlay.name").value("Morning Focus"));
 
     mockMvc.perform(get("/api/custom-plays"))
