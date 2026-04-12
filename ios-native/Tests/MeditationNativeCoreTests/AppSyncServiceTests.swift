@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import MeditationNative
+@testable import MeditationNativeCore
 
 final class AppSyncServiceTests: XCTestCase {
     override func setUp() {
