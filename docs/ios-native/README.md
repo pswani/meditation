@@ -55,7 +55,7 @@ Build a separate native iOS client for the meditation product that:
 
 ## Supported Native Toolchain
 
-- Swift
+- Swift 6.3 toolchain support for the shared package manifest
 - SwiftUI
 - Xcode with iOS 17 simulator or device support
 - Swift Package Manager for the shared-core package tests
@@ -67,6 +67,8 @@ The current native stack is intentionally split:
 
 - `MeditationNative.xcodeproj` is the canonical entrypoint for app development, simulator builds, device runs, signing, and UI tests.
 - `Package.swift` exists to validate the shared `MeditationNativeCore` package in `Sources/MeditationNativeCore/`.
+- The package manifest models the shared core, not a separate macOS app target.
+- The explicit macOS deployment target in `Package.swift` is there for host-side SwiftPM test compatibility, not to advertise a second native product.
 
 Avoid adding large cross-platform dependencies unless future scope clearly justifies them.
 

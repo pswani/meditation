@@ -196,7 +196,11 @@
   - avoid absolute local filesystem links in durable repo docs
 - Keep the repo's baseline toolchain guidance minimal and machine-readable:
   - `.nvmrc` pins the expected Node major version for the web workspace
+  - `package.json` `engines` captures the supported Node and recommended npm baseline for contributor workflows
   - `.editorconfig` carries the shared line-ending and indentation defaults across the mixed-language repo
+- Keep contributor verification guidance separate from macOS-only operator install and release guidance:
+  - `README.md` should point contributors first to `npm` checks, backend verify, and `./scripts/pipeline.sh verify`
+  - `docs/mac-mini-production-runbook.md` remains the source of truth for host preparation, install, and release operations on macOS
 - Keep the repository on one production-first operational path:
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface

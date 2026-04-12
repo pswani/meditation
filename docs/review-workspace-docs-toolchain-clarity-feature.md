@@ -8,14 +8,11 @@ No remaining findings.
 
 ## Notes
 
-- `README.md` now acts as a portable workspace map instead of relying on absolute local filesystem links.
-- The repo baseline stays intentionally minimal through `.nvmrc` and `.editorconfig` rather than layering multiple overlapping version-manager files.
-- The native iOS workflow is now explicit:
-  - `ios-native/MeditationNative.xcodeproj` remains the canonical app-development entrypoint
-  - `ios-native/Package.swift` is now clearly the shared `MeditationNativeCore` package surface for focused core tests
-- The current native app build still depends on the local sample recording at `local-data/media/custom-plays/vipassana-sit-20.mp3`, but that requirement is now documented explicitly in the native README instead of staying implicit and surprising.
-- macOS-only operator flows remain intentional under `./scripts/pipeline.sh package`, `./scripts/pipeline.sh release`, and the `prod-macos-*` scripts rather than being presented as general contributor commands
+- `README.md` now separates the portable contributor quality gate from the macOS production install and release path instead of steering both audiences through `./scripts/pipeline.sh release`.
+- `package.json` now carries explicit `engines` for Node 20.x and npm 10+, which matches the documented workspace baseline without adding more overlapping version-manager files.
+- `docs/ios-native/README.md` now states more plainly that Xcode is the canonical app-development entrypoint and that `Package.swift` models only the shared `MeditationNativeCore` surface.
+- `ios-native/Package.swift` now reads correctly alongside the updated native README: the explicit macOS deployment target remains because the shared-core package tests need that host-side floor, but the docs no longer let it read like a second app target.
 
 ## Highest-priority follow-up
 
-- The next onboarding follow-up, if needed, is the separate repo-hygiene bundle that removes stale tracked generated artifacts and formalizes the local runtime setup surface even further.
+- The next useful onboarding follow-up remains the separate hygiene or contract bundles, not more workspace-doc wording in this slice.
