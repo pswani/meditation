@@ -610,7 +610,10 @@ final class AppSyncServiceTests: XCTestCase {
         let putRequest = try XCTUnwrap(
             URLProtocolStub.requests.first(where: { $0.httpMethod == "PUT" && $0.url?.path.contains("/api/session-logs/") == true })
         )
-        XCTAssertEqual(putRequest.value(forHTTPHeaderField: "X-Meditation-Sync-Queued-At"), queuedAt.ISO8601Format())
+        XCTAssertEqual(
+            putRequest.value(forHTTPHeaderField: GeneratedSyncContract.syncQueuedAtHeader),
+            queuedAt.ISO8601Format()
+        )
 
         let bodyData = try XCTUnwrap(putRequest.httpBodyData)
         let bodyObject = try JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
@@ -628,7 +631,7 @@ final class AppSyncServiceTests: XCTestCase {
                 return URLProtocolStub.jsonResponse(
                     [
                         "outcome": "stale",
-                        "currentCustomPlay": [
+                        "currentRecord": [
                             "id": customPlay.id.uuidString.lowercased(),
                             "name": customPlay.name,
                             "meditationType": customPlay.meditationType.rawValue,

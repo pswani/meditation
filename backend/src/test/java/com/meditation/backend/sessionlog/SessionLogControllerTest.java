@@ -5,6 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -390,6 +391,7 @@ class SessionLogControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "applied"))
         .andExpect(jsonPath("$.meditationType").value("Vipassana"));
 
     mockMvc.perform(put("/api/session-logs/log-1")
@@ -414,6 +416,7 @@ class SessionLogControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.meditationType").value("Vipassana"))
         .andExpect(jsonPath("$.completedDurationSeconds").value(1200))
         .andExpect(jsonPath("$.status").value("completed"));

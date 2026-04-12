@@ -10,6 +10,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -333,6 +334,7 @@ class PlaylistControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "applied"))
         .andExpect(jsonPath("$.name").value("Morning Sequence"));
 
     mockMvc.perform(put("/api/playlists/playlist-1")
@@ -355,6 +357,7 @@ class PlaylistControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.name").value("Morning Sequence"))
         .andExpect(jsonPath("$.favorite").value(false))
         .andExpect(jsonPath("$.items[0].meditationType").value("Vipassana"));
@@ -362,7 +365,9 @@ class PlaylistControllerTest {
     mockMvc.perform(delete("/api/playlists/playlist-1")
             .header("X-Meditation-Sync-Queued-At", "2026-03-27T10:05:00Z"))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentRecord.name").value("Morning Sequence"))
         .andExpect(jsonPath("$.currentPlaylist.name").value("Morning Sequence"));
 
     mockMvc.perform(get("/api/playlists"))

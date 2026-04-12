@@ -5,6 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -272,7 +273,9 @@ class SankalpaControllerTest {
             .queryParam("timeZone", "America/Chicago")
             .header(SyncRequestSupport.SYNC_QUEUED_AT_HEADER, "2026-03-24T11:00:00Z"))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.outcome").value("stale"))
+        .andExpect(jsonPath("$.currentRecord.goal.id").value("goal-stale"))
         .andExpect(jsonPath("$.currentSankalpa.goal.id").value("goal-stale"))
         .andExpect(jsonPath("$.currentSankalpa.status").value("archived"));
 

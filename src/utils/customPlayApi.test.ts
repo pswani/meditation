@@ -129,7 +129,7 @@ describe('custom play api boundary', () => {
         status: 200,
         json: async () => ({
           outcome: 'stale',
-          currentCustomPlay: customPlay,
+          currentRecord: customPlay,
         }),
       })
     );

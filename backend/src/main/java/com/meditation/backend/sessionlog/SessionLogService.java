@@ -1,6 +1,8 @@
 package com.meditation.backend.sessionlog;
 
 import com.meditation.backend.reference.ReferenceData;
+import com.meditation.backend.sync.GeneratedSyncContract;
+import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -113,7 +115,11 @@ public class SessionLogService {
     return toResponse(sessionLogRepository.save(entity));
   }
 
-  public SessionLogResponse saveSessionLog(String sessionLogId, SessionLogUpsertRequest request, String syncQueuedAtRaw) {
+  public SyncMutationResult<SessionLogResponse> saveSessionLog(
+      String sessionLogId,
+      SessionLogUpsertRequest request,
+      String syncQueuedAtRaw
+  ) {
     validateRequest(sessionLogId, request);
 
     Instant startedAt = parseTimestamp(request.startedAt(), "Started at must be a valid ISO timestamp.");
@@ -129,7 +135,7 @@ public class SessionLogService {
 
     SessionLogEntity existingEntity = sessionLogRepository.findById(sessionLogId).orElse(null);
     if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getCreatedAt(), syncQueuedAtRaw)) {
-      return toResponse(existingEntity);
+      return new SyncMutationResult<>(GeneratedSyncContract.SYNC_OUTCOME_STALE, toResponse(existingEntity));
     }
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
@@ -161,7 +167,10 @@ public class SessionLogService {
         existingEntity == null ? mutationTimestamp : existingEntity.getCreatedAt()
     );
 
-    return toResponse(sessionLogRepository.save(entity));
+    return new SyncMutationResult<>(
+        GeneratedSyncContract.SYNC_OUTCOME_APPLIED,
+        toResponse(sessionLogRepository.save(entity))
+    );
   }
 
   private SessionLogResponse toResponse(SessionLogEntity entity) {

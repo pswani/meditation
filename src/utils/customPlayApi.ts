@@ -1,7 +1,11 @@
 import type { CustomPlay } from '../types/customPlay';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
-import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  buildSyncMutationHeaders,
+  extractSyncDeleteCurrentRecord,
+  type SyncMutationRequestOptions,
+} from './syncApi';
 import {
   DEFAULT_END_SOUND_LABEL,
   DEFAULT_START_SOUND_LABEL,
@@ -41,6 +45,7 @@ interface CustomPlayUpsertRequest {
 
 interface CustomPlayDeleteApiResponse {
   readonly outcome: 'deleted' | 'stale';
+  readonly currentRecord?: CustomPlayApiResponse | null;
   readonly currentCustomPlay?: CustomPlayApiResponse | null;
 }
 
@@ -134,10 +139,11 @@ function normalizeCustomPlayDeleteResult(payload: unknown): CustomPlayDeleteResu
     return { outcome: 'deleted' };
   }
 
-  if (candidate.outcome === 'stale' && candidate.currentCustomPlay) {
+  const currentRecord = extractSyncDeleteCurrentRecord(candidate as unknown as Record<string, unknown>, ['currentCustomPlay']);
+  if (candidate.outcome === 'stale' && currentRecord) {
     return {
       outcome: 'stale',
-      currentCustomPlay: normalizeCustomPlayPayload(candidate.currentCustomPlay),
+      currentCustomPlay: normalizeCustomPlayPayload(currentRecord),
     };
   }
 

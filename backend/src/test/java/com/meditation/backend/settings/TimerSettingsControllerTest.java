@@ -3,6 +3,7 @@ package com.meditation.backend.settings;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -155,6 +156,7 @@ class TimerSettingsControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "applied"))
         .andExpect(jsonPath("$.durationMinutes").value(32));
 
     mockMvc.perform(put("/api/settings/timer")
@@ -174,6 +176,7 @@ class TimerSettingsControllerTest {
                 }
                 """))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Meditation-Sync-Result", "stale"))
         .andExpect(jsonPath("$.durationMinutes").value(32))
         .andExpect(jsonPath("$.meditationType").value("Sahaj"));
   }

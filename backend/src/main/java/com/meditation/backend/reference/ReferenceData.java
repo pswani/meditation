@@ -1,5 +1,6 @@
 package com.meditation.backend.reference;
 
+import com.meditation.backend.sync.GeneratedSyncContract;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -7,17 +8,17 @@ import java.util.Set;
 
 public final class ReferenceData {
 
-  public static final List<String> MEDITATION_TYPES = List.of("Vipassana", "Ajapa", "Tratak", "Kriya", "Sahaj");
-  public static final List<String> SESSION_LOG_SOURCES = List.of("auto log", "manual log");
-  public static final List<String> TIME_OF_DAY_BUCKETS = List.of("morning", "afternoon", "evening", "night");
+  public static final List<String> MEDITATION_TYPES = GeneratedSyncContract.MEDITATION_TYPES;
+  public static final List<String> SESSION_LOG_SOURCES = GeneratedSyncContract.SESSION_LOG_SOURCES;
+  public static final List<String> TIME_OF_DAY_BUCKETS = GeneratedSyncContract.TIME_OF_DAY_BUCKETS;
 
   private static final Set<String> MEDITATION_TYPE_SET = Set.copyOf(MEDITATION_TYPES);
   private static final Set<String> SESSION_LOG_SOURCE_SET = Set.copyOf(SESSION_LOG_SOURCES);
   private static final Set<String> TIME_OF_DAY_BUCKET_SET = Set.copyOf(TIME_OF_DAY_BUCKETS);
-  private static final Set<String> GOAL_TYPE_SET = Set.of("duration-based", "session-count-based", "observance-based");
-  private static final Set<String> OBSERVANCE_STATUS_SET = Set.of("observed", "missed");
-  private static final Set<String> TIMER_MODE_SET = Set.of("fixed", "open-ended");
-  private static final Set<String> SESSION_LOG_STATUS_SET = Set.of("completed", "ended early");
+  private static final Set<String> GOAL_TYPE_SET = Set.copyOf(GeneratedSyncContract.GOAL_TYPES);
+  private static final Set<String> OBSERVANCE_STATUS_SET = Set.copyOf(GeneratedSyncContract.OBSERVANCE_STATUSES);
+  private static final Set<String> TIMER_MODE_SET = Set.copyOf(GeneratedSyncContract.TIMER_MODES);
+  private static final Set<String> SESSION_LOG_STATUS_SET = Set.copyOf(GeneratedSyncContract.SESSION_LOG_STATUSES);
   private static final Set<String> COMPLETED_SESSION_LOG_STATUS_SET = Set.of("completed");
 
   private ReferenceData() {

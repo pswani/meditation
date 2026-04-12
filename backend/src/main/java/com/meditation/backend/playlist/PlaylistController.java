@@ -1,8 +1,8 @@
 package com.meditation.backend.playlist;
 
 import com.meditation.backend.sync.SyncRequestSupport;
+import com.meditation.backend.sync.SyncMutationResult;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,12 +29,13 @@ public class PlaylistController {
   }
 
   @PutMapping("/{playlistId}")
-  public PlaylistResponse savePlaylist(
+  public ResponseEntity<PlaylistResponse> savePlaylist(
       @PathVariable String playlistId,
       @RequestBody PlaylistUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
-    return playlistService.savePlaylist(playlistId, request, syncQueuedAt);
+    SyncMutationResult<PlaylistResponse> result = playlistService.savePlaylist(playlistId, request, syncQueuedAt);
+    return SyncRequestSupport.mutationResponse(result);
   }
 
   @DeleteMapping("/{playlistId}")
@@ -43,10 +44,6 @@ public class PlaylistController {
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     PlaylistDeleteResult result = playlistService.deletePlaylist(playlistId, syncQueuedAt);
-    if ("stale".equals(result.outcome())) {
-      return ResponseEntity.ok(result);
-    }
-
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    return SyncRequestSupport.deleteResponse(result.outcome(), result);
   }
 }

@@ -2,6 +2,8 @@ package com.meditation.backend.playlist;
 
 import com.meditation.backend.customplay.CustomPlayRepository;
 import com.meditation.backend.reference.ReferenceData;
+import com.meditation.backend.sync.GeneratedSyncContract;
+import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -49,7 +51,11 @@ public class PlaylistService {
   }
 
   @Transactional
-  public PlaylistResponse savePlaylist(String playlistId, PlaylistUpsertRequest request, String syncQueuedAtRaw) {
+  public SyncMutationResult<PlaylistResponse> savePlaylist(
+      String playlistId,
+      PlaylistUpsertRequest request,
+      String syncQueuedAtRaw
+  ) {
     validateRequest(playlistId, request);
 
     PlaylistEntity existingPlaylist = playlistRepository.findById(playlistId).orElse(null);
@@ -59,7 +65,10 @@ public class PlaylistService {
           .stream()
           .filter((item) -> existingPlaylist.getId().equals(item.getPlaylistId()))
           .toList();
-      return toResponse(existingPlaylist, existingItems);
+      return new SyncMutationResult<>(
+          GeneratedSyncContract.SYNC_OUTCOME_STALE,
+          toResponse(existingPlaylist, existingItems)
+      );
     }
 
     Instant mutationTimestamp = resolveMutationTimestamp(syncQueuedAtRaw, request.updatedAt());
@@ -93,7 +102,10 @@ public class PlaylistService {
 
     List<PlaylistItemEntity> savedItems = playlistItemRepository.saveAll(items);
     savedItems.sort((left, right) -> Integer.compare(left.getPositionIndex(), right.getPositionIndex()));
-    return toResponse(playlist, savedItems);
+    return new SyncMutationResult<>(
+        GeneratedSyncContract.SYNC_OUTCOME_APPLIED,
+        toResponse(playlist, savedItems)
+    );
   }
 
   @Transactional

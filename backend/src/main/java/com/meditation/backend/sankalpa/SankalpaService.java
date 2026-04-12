@@ -2,6 +2,8 @@ package com.meditation.backend.sankalpa;
 
 import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sessionlog.SessionLogRepository;
+import com.meditation.backend.sync.GeneratedSyncContract;
+import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,6 +21,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -51,7 +54,8 @@ public class SankalpaService {
         .toList();
   }
 
-  public SankalpaProgressResponse saveSankalpa(
+  @Transactional
+  public SyncMutationResult<SankalpaProgressResponse> saveSankalpa(
       String sankalpaId,
       SankalpaGoalUpsertRequest request,
       String timeZoneRaw,
@@ -65,7 +69,10 @@ public class SankalpaService {
     if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
       List<SankalpaObservanceEntryEntity> staleEntries =
           sankalpaObservanceEntryRepository.findAllBySankalpaIdInOrderByObservanceDateAsc(List.of(sankalpaId));
-      return toProgressResponse(existingEntity, staleEntries, now, zoneId);
+      return new SyncMutationResult<>(
+          GeneratedSyncContract.SYNC_OUTCOME_STALE,
+          toProgressResponse(existingEntity, staleEntries, now, zoneId)
+      );
     }
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, now);
@@ -111,9 +118,13 @@ public class SankalpaService {
     SankalpaProgressResponse progress = toProgressResponse(savedEntity, savedEntries, now, zoneId);
     savedEntity.setCompletedAt("completed".equals(progress.status()) ? now : null);
     SankalpaGoalEntity completedStateEntity = sankalpaGoalRepository.save(savedEntity);
-    return toProgressResponse(completedStateEntity, savedEntries, now, zoneId);
+    return new SyncMutationResult<>(
+        GeneratedSyncContract.SYNC_OUTCOME_APPLIED,
+        toProgressResponse(completedStateEntity, savedEntries, now, zoneId)
+    );
   }
 
+  @Transactional
   public SankalpaDeleteResult deleteSankalpa(String sankalpaId, String timeZoneRaw, String syncQueuedAtRaw) {
     SankalpaGoalEntity existingEntity = sankalpaGoalRepository.findById(sankalpaId).orElse(null);
     if (existingEntity == null) {

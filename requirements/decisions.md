@@ -7,9 +7,14 @@
 - Keep media files on disk under the configured media root and store stable metadata plus relative paths in the database.
 - Keep the route and module structure centered on `src/pages`, `src/components`, `src/features`, `src/types`, and `src/utils`.
 - Keep the REST boundary explicit through the existing API helper modules instead of coupling route components directly to fetch logic.
+- Keep the queued-mutation contract explicit in one canonical artifact at `contracts/sync-contract.json`, with checked-in generated runtime constants for web, backend, and iOS rather than three drifting manual copies.
 - Keep shared product vocabularies centralized per runtime layer:
+  - canonical raw values and sync metadata live in `contracts/sync-contract.json`
+  - generated frontend constants live in `src/generated/syncContract.ts`
   - frontend meditation types, `session log` sources, and time-of-day buckets live in `src/types/referenceData.ts`
+  - generated backend constants live in `backend/src/main/java/com/meditation/backend/sync/GeneratedSyncContract.java`
   - backend validation/order helpers for the same values live in `backend/src/main/java/com/meditation/backend/reference/ReferenceData.java`
+  - generated native constants live in `ios-native/Sources/MeditationNativeCore/Domain/GeneratedSyncContract.swift`
   - backend meditation-type seed order stays aligned through an automated Spring test rather than manual spot checks
 - If the native iOS client is built:
   - keep the same product vocabulary and destination structure as the existing app
@@ -80,6 +85,10 @@
   - custom plays
   - playlists
   - sankalpas
+- Keep queued mutation outcomes easy to classify:
+  - backend mutation routes emit `X-Meditation-Sync-Result` with `applied`, `stale`, or `deleted`
+  - stale deletes expose a generic `currentRecord` field
+  - temporary alias fields may remain during compatibility transitions, but clients should prefer the generic field
 - Keep offline reopening on a minimal in-repo app-shell path:
   - manifest metadata plus a service worker
   - same-origin runtime asset caching after a successful visit
@@ -174,6 +183,9 @@
 - Keep `sankalpa` archival as a first-class persisted goal state:
   - frontend, local cache, and backend contracts all carry the same `archived` flag
   - archived goals stay visible in a dedicated read-only section instead of being deleted from the product surface
+- Keep multi-step `sankalpa` writes transactional:
+  - goal updates and observance-entry replacement happen inside one transaction
+  - archived-goal delete removes observance entries and the goal row inside one transaction
 - Keep `sankalpa` restore and delete behavior explicit and trust-preserving:
   - archived goals can be restored by clearing the persisted `archived` flag and reusing the existing derived `active` / `completed` / `expired` status rules
   - permanent delete is restricted to already archived goals so destructive actions stay deliberate

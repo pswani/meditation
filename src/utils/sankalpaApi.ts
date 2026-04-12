@@ -9,7 +9,7 @@ import type {
 import { isMeditationType, isTimeOfDayBucket } from '../types/referenceData';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
-import { buildSyncMutationHeaders } from './syncApi';
+import { buildSyncMutationHeaders, extractSyncDeleteCurrentRecord } from './syncApi';
 
 export const SANKALPAS_COLLECTION_PATH = '/sankalpas';
 export const SANKALPAS_COLLECTION_ENDPOINT = buildApiPath(SANKALPAS_COLLECTION_PATH);
@@ -63,6 +63,7 @@ interface SankalpaApiOptions {
 
 interface SankalpaDeleteApiResponse {
   readonly outcome: 'deleted' | 'stale';
+  readonly currentRecord?: SankalpaProgressApiResponse | null;
   readonly currentSankalpa?: SankalpaProgressApiResponse | null;
 }
 
@@ -229,10 +230,11 @@ function normalizeDeleteResult(payload: unknown): SankalpaDeleteResult {
     return { outcome: 'deleted' };
   }
 
-  if (candidate.outcome === 'stale' && candidate.currentSankalpa) {
+  const currentRecord = extractSyncDeleteCurrentRecord(candidate as unknown as Record<string, unknown>, ['currentSankalpa']);
+  if (candidate.outcome === 'stale' && currentRecord) {
     return {
       outcome: 'stale',
-      currentSankalpa: normalizeProgressPayload(candidate.currentSankalpa),
+      currentSankalpa: normalizeProgressPayload(currentRecord),
     };
   }
 

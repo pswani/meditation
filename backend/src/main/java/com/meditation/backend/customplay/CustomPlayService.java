@@ -2,6 +2,8 @@ package com.meditation.backend.customplay;
 
 import com.meditation.backend.media.MediaAssetRepository;
 import com.meditation.backend.reference.ReferenceData;
+import com.meditation.backend.sync.GeneratedSyncContract;
+import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -33,12 +35,16 @@ public class CustomPlayService {
         .toList();
   }
 
-  public CustomPlayResponse saveCustomPlay(String customPlayId, CustomPlayUpsertRequest request, String syncQueuedAtRaw) {
+  public SyncMutationResult<CustomPlayResponse> saveCustomPlay(
+      String customPlayId,
+      CustomPlayUpsertRequest request,
+      String syncQueuedAtRaw
+  ) {
     validateRequest(customPlayId, request);
 
     CustomPlayEntity existingEntity = customPlayRepository.findById(customPlayId).orElse(null);
     if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
-      return toResponse(existingEntity);
+      return new SyncMutationResult<>(GeneratedSyncContract.SYNC_OUTCOME_STALE, toResponse(existingEntity));
     }
 
     Instant mutationTimestamp = resolveMutationTimestamp(syncQueuedAtRaw, request.updatedAt());
@@ -59,7 +65,10 @@ public class CustomPlayService {
         mutationTimestamp
     );
 
-    return toResponse(customPlayRepository.save(entity));
+    return new SyncMutationResult<>(
+        GeneratedSyncContract.SYNC_OUTCOME_APPLIED,
+        toResponse(customPlayRepository.save(entity))
+    );
   }
 
   public CustomPlayDeleteResult deleteCustomPlay(String customPlayId, String syncQueuedAtRaw) {

@@ -1,7 +1,11 @@
 import type { Playlist } from '../types/playlist';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
-import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
+import {
+  buildSyncMutationHeaders,
+  extractSyncDeleteCurrentRecord,
+  type SyncMutationRequestOptions,
+} from './syncApi';
 
 export const PLAYLISTS_COLLECTION_PATH = '/playlists';
 export const PLAYLISTS_COLLECTION_ENDPOINT = buildApiPath(PLAYLISTS_COLLECTION_PATH);
@@ -42,6 +46,7 @@ interface PlaylistUpsertRequest {
 
 interface PlaylistDeleteApiResponse {
   readonly outcome: 'deleted' | 'stale';
+  readonly currentRecord?: PlaylistApiResponse | null;
   readonly currentPlaylist?: PlaylistApiResponse | null;
 }
 
@@ -153,10 +158,11 @@ function normalizePlaylistDeleteResult(payload: unknown): PlaylistDeleteResult {
     return { outcome: 'deleted' };
   }
 
-  if (candidate.outcome === 'stale' && candidate.currentPlaylist) {
+  const currentRecord = extractSyncDeleteCurrentRecord(candidate as unknown as Record<string, unknown>, ['currentPlaylist']);
+  if (candidate.outcome === 'stale' && currentRecord) {
     return {
       outcome: 'stale',
-      currentPlaylist: normalizePlaylistPayload(candidate.currentPlaylist),
+      currentPlaylist: normalizePlaylistPayload(currentRecord),
     };
   }
 
