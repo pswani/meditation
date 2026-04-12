@@ -3,10 +3,17 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/ios`
+- Current branch: `codex/expert-review`
 - Active bundle: none
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-runtime-device-defects-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
+- New expert-review remediation prompt assets prepared on 2026-04-11:
+  - `prompts/expert-review-remediation-phased-plan.md`
+  - `prompts/repo-hygiene-foundation-feature-bundle-with-branching/`
+  - `prompts/workspace-docs-toolchain-clarity-feature-bundle-with-branching/`
+  - `prompts/cross-platform-contract-hardening-feature-bundle-with-branching/`
+  - `prompts/runtime-boundary-decomposition-feature-bundle-with-branching/`
+  - `prompts/media-surface-and-ci-hardening-feature-bundle-with-branching/`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
