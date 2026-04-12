@@ -34,11 +34,12 @@ Use the repo from the entrypoint that matches your task:
 - Java 21
 - Maven 3.9 or newer
 - Xcode with iOS 17 simulator or device support for native app work
-- Swift 6 toolchain support for `swift test --package-path ios-native`
+- Swift 6.3 toolchain support for `swift test --package-path ios-native`
 
 Machine-readable repo baselines:
 
 - `.nvmrc` pins the expected Node major version for the web and frontend-backed scripts
+- `package.json` `engines` captures the supported Node and recommended npm baseline for this workspace
 - `.editorconfig` captures the shared line-ending, charset, and indentation defaults across the mixed-language workspace
 
 ## Current Status
@@ -371,11 +372,11 @@ local-data/             Ignored local runtime state for H2, media, deploy, and b
 ### Supported toolchains and environments
 
 - Node.js 20.x via `.nvmrc`
-- npm 10 or newer recommended
+- npm 10 or newer recommended via `package.json` `engines`
 - Java 21
 - Maven 3.9 or newer
 - Xcode with iOS 17 simulator or device support if you are working in `ios-native/`
-- Swift 6 toolchain support if you are using `swift test --package-path ios-native`
+- Swift 6.3 toolchain support if you are using `swift test --package-path ios-native`
 - macOS admin access only if you will run the production install or release flow on a Mac host
 - `.editorconfig` is the shared baseline for line endings and indentation across this mixed-language repo
 
@@ -1106,16 +1107,18 @@ What you can verify today:
 
 You can verify backend reachability in this workspace now, plus the frontend media integration path.
 
-Current verification pattern:
+Current verification split:
 
-1. Run `./scripts/pipeline.sh release`.
-2. Open `http://127.0.0.1:8080/api/health`.
-3. Open `http://127.0.0.1:8080/api/media/custom-plays`.
-4. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
-5. Open the installed app through nginx.
-6. In the app, start a short timer with `Temple Bell` and `Gong`, then confirm sounds fire once at start, each interval milestone, and session end without a CORS dependency.
-7. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
-8. Save a custom play or session log and confirm it persists across a clean service restart.
+1. For the portable contributor quality gate, run `./scripts/pipeline.sh verify` and use the direct API checks above when you already have a backend running.
+2. Use the following end-to-end connectivity path only for the macOS production-style install flow.
+3. Run `./scripts/pipeline.sh release`.
+4. Open `http://127.0.0.1:8080/api/health`.
+5. Open `http://127.0.0.1:8080/api/media/custom-plays`.
+6. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
+7. Open the installed app through nginx.
+8. In the app, start a short timer with `Temple Bell` and `Gong`, then confirm sounds fire once at start, each interval milestone, and session end without a CORS dependency.
+9. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+10. Save a custom play or session log and confirm it persists across a clean service restart.
 
 ## Build And Deployment
 

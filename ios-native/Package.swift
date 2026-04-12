@@ -5,6 +5,7 @@ import PackageDescription
 let package = Package(
     name: "MeditationNativeCore",
     platforms: [
+        // SwiftPM tests run on macOS hosts even though the shipped native product remains iPhone-first.
         .iOS(.v17),
         .macOS(.v14),
     ],
