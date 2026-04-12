@@ -53,14 +53,20 @@ Build a separate native iOS client for the meditation product that:
 - works locally on device before backend sync is required
 - can later connect to the existing backend intentionally
 
-## Recommended Native Stack
+## Supported Native Toolchain
 
 - Swift
 - SwiftUI
-- SwiftData or another documented Apple-native persistence layer
+- Xcode with iOS 17 simulator or device support
+- Swift Package Manager for the shared-core package tests
 - AVFoundation for audio playback
 - UserNotifications for timer completion and reminder behavior where needed
 - XCTest for unit and UI tests
+
+The current native stack is intentionally split:
+
+- `MeditationNative.xcodeproj` is the canonical entrypoint for app development, simulator builds, device runs, signing, and UI tests.
+- `Package.swift` exists to validate the shared `MeditationNativeCore` package in `Sources/MeditationNativeCore/`.
 
 Avoid adding large cross-platform dependencies unless future scope clearly justifies them.
 
@@ -83,6 +89,14 @@ Project and scheme:
 - Xcode project: `ios-native/MeditationNative.xcodeproj`
 - main scheme: `MeditationNative`
 - minimum intended runtime: iPhone-first on iOS 17+
+- shared Swift package product: `MeditationNativeCore`
+
+## Canonical Entry Points
+
+- Use `ios-native/MeditationNative.xcodeproj` when you are working on the app target, SwiftUI screens, simulator or device builds, signing, or UI tests.
+- Use `swift test --package-path ios-native` when you want to validate only the shared core package under `Sources/MeditationNativeCore/` and `Tests/MeditationNativeCoreTests/`.
+- Do not treat `Package.swift` as the canonical app build path; it is intentionally the shared-core verification surface.
+- The current Xcode project still expects one local sample recording at `local-data/media/custom-plays/vipassana-sit-20.mp3` for app builds; `swift test --package-path ios-native` does not require that file.
 
 ## Xcode Setup
 
@@ -125,6 +139,8 @@ Project and scheme:
 
 ## Build And Test Commands
 
+If you are building the app target from a clean checkout, prepare the local media roots first and place the expected sample recording at `local-data/media/custom-plays/vipassana-sit-20.mp3`. The current Xcode project still packages that repo-local sample file into the app bundle.
+
 Use an installed simulator destination on your machine. Example shape:
 
 ```bash
@@ -139,7 +155,7 @@ If you do not know the exact simulator name, list available destinations in Xcod
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
 ```
 
-For the shared core package, you can also run:
+For the shared core package only, you can also run:
 
 ```bash
 SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache \
@@ -147,7 +163,7 @@ CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache \
 swift test --package-path ios-native
 ```
 
-This validates the foundation models, sample data, and local persistence helper on a machine where the Swift command-line toolchain is healthy.
+This validates the shared `MeditationNativeCore` package on a machine where the Swift command-line toolchain is healthy. It does not replace Xcode for app-target builds, simulator runs, device signing, or UI tests.
 
 Physical iPhone or concrete simulator verification is still recommended for:
 - notification permission prompts

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MeditationNative
+@testable import MeditationNativeCore
 
 @Test func sampleSnapshotSeedsAllPrimaryDestinations() throws {
     #expect(ReferenceData.primaryDestinations.count == 5)

@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/expert-review`
-- Active bundle: none
+- Current branch: `codex/repo-hygiene-foundation-feature-bundle-with-branching`
+- Active bundle: `repo-hygiene-foundation-feature-bundle-with-branching`
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/ios-native-runtime-device-defects-feature-bundle-with-branching` back into `codex/ios` on 2026-04-10 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -77,6 +77,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - distinct backend-reachability tracking separate from raw browser online state
   - last-successful browser snapshots for summary and managed media catalog reads
   - a unified shell pipeline wrapper at `./scripts/pipeline.sh` that provides operator-facing `verify`, `build`, `package`, and `release` stages over the existing production scripts
+  - a root workspace map in `README.md` that now distinguishes web, backend, native iOS, docs, prompts, scripts, and ignored `local-data/`
+  - a minimal machine-readable repo baseline through `.nvmrc` and `.editorconfig`
 - Implemented vertical slices now include:
   - timer setup, active runtime, sounds, and session logging
   - dedicated prerecorded `custom play` runtime with persisted recovery
@@ -118,6 +120,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - a separate SwiftUI app shell under `ios-native/MeditationNative/`
   - shared native models, sample data, and local JSON snapshot persistence under `ios-native/Sources/MeditationNativeCore/`
   - a hand-authored `MeditationNative.xcodeproj` with app, unit-test, and UI-test targets
+  - a shared-core `Package.swift` surface that is now explicitly for the `MeditationNativeCore` package rather than a second canonical app build entrypoint
   - explicit local-only environment configuration seams for future backend sync
   - sample-backed first-launch content that keeps destination navigation visible without implying finished native feature flows
 - Native iOS Home parity now includes:
