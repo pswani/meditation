@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MeditationNative
+@testable import MeditationNativeCore
 
 @Test func meditationTypesMatchProductVocabulary() throws {
     #expect(ReferenceData.meditationTypes.map(\.rawValue) == [

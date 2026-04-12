@@ -4,6 +4,43 @@ Calm, minimal meditation practice app built with React, TypeScript, and Vite.
 
 This README is intentionally grounded in the current repository contents. It explains what exists today, what is only planned, and where the operational gaps still are.
 
+## Workspace Entry Points
+
+Use the repo from the entrypoint that matches your task:
+
+- Web app and shared frontend code:
+  - `src/`, `public/`, `index.html`, `vite.config.ts`
+- Spring Boot backend:
+  - `backend/`
+- Native iPhone app:
+  - `ios-native/MeditationNative.xcodeproj` for app development, simulator builds, device runs, and UI tests
+  - `ios-native/Package.swift` for the shared `MeditationNativeCore` package and its focused core tests
+- Durable product and operational docs:
+  - `docs/`
+  - `requirements/`
+  - `AGENTS.md`
+  - `PLANS.md`
+- Repo scripts and operator flows:
+  - `scripts/`
+- Prompt bundles and phased plans:
+  - `prompts/`
+- Ignored local runtime state created by builds, scripts, or verification:
+  - `local-data/`
+
+## Supported Toolchain Baseline
+
+- Node.js 20.x
+- npm 10 or newer recommended
+- Java 21
+- Maven 3.9 or newer
+- Xcode with iOS 17 simulator or device support for native app work
+- Swift 6 toolchain support for `swift test --package-path ios-native`
+
+Machine-readable repo baselines:
+
+- `.nvmrc` pins the expected Node major version for the web and frontend-backed scripts
+- `.editorconfig` captures the shared line-ending, charset, and indentation defaults across the mixed-language workspace
+
 ## Current Status
 
 - This workspace now contains:
@@ -123,7 +160,7 @@ Compatibility redirect:
 - Place local custom-play audio files under `local-data/media/custom-plays/` for backend-served development media.
 - The seeded media catalog maps those files to stable media asset ids and relative paths such as `custom-plays/vipassana-sit-20.mp3`.
 - Frontend `custom play` entries store the selected `mediaAssetId`; the backend validates that the referenced asset exists and is active before saving.
-- For scripted registration and parameter docs, see [docs/media-registration-scripts.md](/Users/prashantwani/wrk/meditation/docs/media-registration-scripts.md).
+- For scripted registration and parameter docs, see [docs/media-registration-scripts.md](docs/media-registration-scripts.md).
 
 ## Architecture
 
@@ -307,6 +344,15 @@ This is now an early feature slice:
 ## Repository Layout
 
 ```text
+AGENTS.md                Repo-specific Codex operating rules
+PLANS.md                 ExecPlan structure and working rules
+README.md                Root workspace map and workflow guide
+backend/                 Spring Boot + H2 backend foundation
+docs/                    Product, architecture, UX, iOS, and ops docs
+ios-native/              Native iPhone app project plus shared core package
+prompts/                 Reusable prompt bundles and phased implementation plans
+requirements/            Intent, roadmap, decisions, and current-state notes
+scripts/                 Setup, media, verification, packaging, and operator helpers
 src/
   app/                  App shell and navigation metadata
   features/
@@ -316,66 +362,83 @@ src/
   pages/                Route-level screens
   types/                Shared domain types
   utils/                Validation, persistence, summaries, API boundaries
-docs/                   Product, architecture, UX, and operations docs
-requirements/           Intent, roadmap, decisions, and current-state notes
-backend/                Spring Boot + H2 backend foundation
+public/                 Static frontend fallback assets
+local-data/             Ignored local runtime state for H2, media, deploy, and build caches
 ```
 
-## Production Workflow
+## Working In This Repo
 
-### Prerequisites
+### Supported toolchains and environments
 
-- Node.js 20 or newer
+- Node.js 20.x via `.nvmrc`
 - npm 10 or newer recommended
 - Java 21
 - Maven 3.9 or newer
-- macOS admin access if you will run `./scripts/pipeline.sh release` on a production Mac host
+- Xcode with iOS 17 simulator or device support if you are working in `ios-native/`
+- Swift 6 toolchain support if you are using `swift test --package-path ios-native`
+- macOS admin access only if you will run the production install or release flow on a Mac host
+- `.editorconfig` is the shared baseline for line endings and indentation across this mixed-language repo
 
-### Install
+### Daily developer workflow
 
 ```bash
 npm ci
 ```
 
-### Prepare media roots
+Optional media setup when you need backend-served or fallback local media paths:
 
 ```bash
 ./scripts/setup-media-root.sh
 ```
 
-This keeps the tracked frontend fallback media tree and the backend media-storage tree present under:
-
-- `public/media/`
-- `local-data/media/`
-
-Optional npm wrapper:
+Cross-platform verification path:
 
 ```bash
-npm run media:setup
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+cd backend
+mvn -Dmaven.repo.local=../local-data/m2 verify
 ```
 
-### `pipeline.sh` commands
+The repo also exposes one broader convenience wrapper:
 
-Use `./scripts/pipeline.sh` as the top-level build and deployment entrypoint:
+```bash
+./scripts/pipeline.sh verify
+```
+
+That quality gate runs the frontend checks, backend Maven verify, and a temporary backend health smoke check.
+
+### Native iOS workflow
+
+- App development, simulator builds, device signing, and UI tests:
+  - `ios-native/MeditationNative.xcodeproj`
+- Shared-core package tests and package metadata:
+  - `swift test --package-path ios-native`
+- Native setup, simulator, device, and backend-connectivity guidance:
+  - [docs/ios-native/README.md](docs/ios-native/README.md)
+
+### macOS-only operator workflow
+
+Use `./scripts/pipeline.sh` as the top-level operator entrypoint for the supported macOS production-style deployment flow:
 
 ```bash
 ./scripts/pipeline.sh help
 ```
 
-Supported commands:
+Supported command surface:
 
-| Command | When to use it | What it does |
+| Command | Audience | What it does |
 | --- | --- | --- |
-| `./scripts/pipeline.sh verify` | Run the repo quality gate | Runs frontend typecheck, lint, test, and build, then backend `mvn verify`, then a temporary backend health smoke check. |
-| `./scripts/pipeline.sh build` | Build production artifacts | Builds the frontend and backend artifacts through the repo's production build flow. |
-| `./scripts/pipeline.sh package` | Assemble a deploy bundle | Builds by default, then prepares `local-data/deploy/`. |
-| `./scripts/pipeline.sh package --skip-build` | Repackage existing artifacts | Reuses current build output and refreshes `local-data/deploy/`. |
-| `./scripts/pipeline.sh release` | Run the normal production release flow | Packages the bundle and installs it on the prepared macOS production host. |
-| `./scripts/pipeline.sh release --skip-build --bundle-dir local-data/deploy --domain meditation.example.com --email ops@example.com` | Reinstall an existing bundle or pass install options | Forwards supported install flags to the release flow. |
+| `./scripts/pipeline.sh verify` | contributors and operators | Runs frontend typecheck, lint, test, and build, then backend `mvn verify`, then a temporary backend health smoke check. |
+| `./scripts/pipeline.sh build` | operators | Builds the frontend and backend artifacts through the repo's production build flow. |
+| `./scripts/pipeline.sh package` | operators | Builds by default, then prepares `local-data/deploy/`. |
+| `./scripts/pipeline.sh package --skip-build` | operators | Reuses current build output and refreshes `local-data/deploy/`. |
+| `./scripts/pipeline.sh release` | operators | Packages the bundle and installs it on the prepared macOS production host. |
+| `./scripts/pipeline.sh release --skip-build --bundle-dir local-data/deploy --domain meditation.example.com --email ops@example.com` | operators | Reinstalls an existing bundle or passes install options through the release flow. |
 
-### Recommended flow
-
-Use this sequence for the normal repo workflow:
+Recommended operator flow on a prepared Mac host:
 
 ```bash
 ./scripts/setup-media-root.sh
@@ -393,7 +456,7 @@ backend/target/
 local-data/deploy/
 ```
 
-The `release` command assumes the production Mac host has already been prepared for installation. If you need host setup or post-install operations, use [docs/mac-mini-production-runbook.md](/Users/prashantwani/wrk/meditation/docs/mac-mini-production-runbook.md).
+The `release` command assumes the production Mac host has already been prepared for installation. If you need host setup or post-install operations, use [docs/mac-mini-production-runbook.md](docs/mac-mini-production-runbook.md).
 
 ### Environment and configuration variables
 
@@ -483,7 +546,7 @@ This keeps the supported deployed runtime shape simple:
 - no preview server
 - no CORS split between UI and API in the supported deployment
 
-Local development still uses the checked-in Vite `/api` proxy in [vite.config.ts](/Users/prashantwani/wrk/meditation/vite.config.ts) when `VITE_API_BASE_URL` is unset.
+Local development still uses the checked-in Vite `/api` proxy in [vite.config.ts](vite.config.ts) when `VITE_API_BASE_URL` is unset.
 
 ## Current Persistence Model
 
@@ -868,7 +931,7 @@ The UI will automatically expose the new option in:
 
 The timer playback mapping will update automatically, using:
 
-- [`src/data/timerSoundCatalog.json`](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json)
+- [src/data/timerSoundCatalog.json](src/data/timerSoundCatalog.json)
 
 Current limitations:
 
@@ -929,10 +992,10 @@ The backend now has a Flyway seed layer for meditation types and sample media me
 
 Current shared reference data is maintained in stable source modules rather than repeated ad hoc arrays:
 
-- frontend meditation types, `session log` sources, and time-of-day buckets: [src/types/referenceData.ts](/Users/prashantwani/wrk/meditation/src/types/referenceData.ts)
-- backend meditation types, `session log` sources, time-of-day buckets, and validation helpers: [ReferenceData.java](/Users/prashantwani/wrk/meditation/backend/src/main/java/com/meditation/backend/reference/ReferenceData.java)
-- backend meditation-type seed alignment coverage: [ReferenceDataSeedTest.java](/Users/prashantwani/wrk/meditation/backend/src/test/java/com/meditation/backend/reference/ReferenceDataSeedTest.java)
-- timer sound catalog and selectable labels: [src/data/timerSoundCatalog.json](/Users/prashantwani/wrk/meditation/src/data/timerSoundCatalog.json), [src/utils/timerSound.ts](/Users/prashantwani/wrk/meditation/src/utils/timerSound.ts), and [src/features/timer/timerSoundCatalog.ts](/Users/prashantwani/wrk/meditation/src/features/timer/timerSoundCatalog.ts)
+- frontend meditation types, `session log` sources, and time-of-day buckets: [src/types/referenceData.ts](src/types/referenceData.ts)
+- backend meditation types, `session log` sources, time-of-day buckets, and validation helpers: [backend/src/main/java/com/meditation/backend/reference/ReferenceData.java](backend/src/main/java/com/meditation/backend/reference/ReferenceData.java)
+- backend meditation-type seed alignment coverage: [backend/src/test/java/com/meditation/backend/reference/ReferenceDataSeedTest.java](backend/src/test/java/com/meditation/backend/reference/ReferenceDataSeedTest.java)
+- timer sound catalog and selectable labels: [src/data/timerSoundCatalog.json](src/data/timerSoundCatalog.json), [src/utils/timerSound.ts](src/utils/timerSound.ts), and [src/features/timer/timerSoundCatalog.ts](src/features/timer/timerSoundCatalog.ts)
 - fallback custom-play media catalog: `src/data/customPlayMediaCatalog.json`
 
 ### Validate that a new media file is visible and usable
@@ -1056,7 +1119,7 @@ Current verification pattern:
 
 ## Build And Deployment
 
-Use the pipeline commands from [Production Workflow](#production-workflow) for builds and releases:
+Use the pipeline commands from [Working In This Repo](#working-in-this-repo) for builds and releases:
 
 ```bash
 ./scripts/pipeline.sh verify
@@ -1065,7 +1128,7 @@ Use the pipeline commands from [Production Workflow](#production-workflow) for b
 ./scripts/pipeline.sh release
 ```
 
-For host-specific setup and post-install operations, see [docs/mac-mini-production-runbook.md](/Users/prashantwani/wrk/meditation/docs/mac-mini-production-runbook.md).
+For host-specific setup and post-install operations, see [docs/mac-mini-production-runbook.md](docs/mac-mini-production-runbook.md).
 
 ### Static assets and media in deployment
 

@@ -5,22 +5,23 @@ import PackageDescription
 let package = Package(
     name: "MeditationNativeCore",
     platforms: [
+        .iOS(.v17),
         .macOS(.v14),
     ],
     products: [
         .library(
             name: "MeditationNativeCore",
-            targets: ["MeditationNative"]
+            targets: ["MeditationNativeCore"]
         ),
     ],
     targets: [
         .target(
-            name: "MeditationNative",
+            name: "MeditationNativeCore",
             path: "Sources/MeditationNativeCore"
         ),
         .testTarget(
             name: "MeditationNativeCoreTests",
-            dependencies: ["MeditationNative"],
+            dependencies: ["MeditationNativeCore"],
             path: "Tests/MeditationNativeCoreTests"
         ),
     ],

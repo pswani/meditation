@@ -191,12 +191,21 @@
   - `TimerContext` remains the runtime boundary; screen cleanup should not widen shared provider responsibilities just to reduce page file size
 
 ## Operational workflow
+- Keep the root `README.md` current-state oriented and portable:
+  - surface the real workspace entrypoints for web, backend, native iOS, docs, scripts, prompts, and `local-data/`
+  - avoid absolute local filesystem links in durable repo docs
+- Keep the repo's baseline toolchain guidance minimal and machine-readable:
+  - `.nvmrc` pins the expected Node major version for the web workspace
+  - `.editorconfig` carries the shared line-ending and indentation defaults across the mixed-language repo
 - Keep the repository on one production-first operational path:
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface
   - `./scripts/pipeline.sh verify` should remain the single repeatable quality gate covering frontend checks, backend `mvn verify`, and a temporary backend health smoke check
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
+- Keep native iOS workflow boundaries explicit:
+  - `ios-native/MeditationNative.xcodeproj` is the canonical app-development, simulator, device, and UI-test entrypoint
+  - `ios-native/Package.swift` exists for the shared `MeditationNativeCore` package and its focused core tests, not as a second canonical app build path
 - Keep `vite.config.ts` as the only Vite config file and reserve its `/api` proxy for local development only.
 - Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
