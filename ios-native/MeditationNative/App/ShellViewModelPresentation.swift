@@ -133,6 +133,25 @@ enum ShellViewModelPresentation {
         }
     }
 
+    static func canStartCustomPlay(
+        canResolvePlayback: Bool,
+        hasActivePracticeRuntime: Bool
+    ) -> Bool {
+        canResolvePlayback && hasActivePracticeRuntime == false
+    }
+
+    static func customPlayStartSupportMessage(
+        canResolvePlayback: Bool,
+        hasActivePracticeRuntime: Bool
+    ) -> String? {
+        if canResolvePlayback == false {
+            return "Needs available recording media before it can start."
+        }
+
+        _ = hasActivePracticeRuntime
+        return nil
+    }
+
     static func activeTimerPrimaryText(for activeSession: ActiveTimerSession?, now: Date) -> String {
         guard let activeSession else {
             return "00:00"

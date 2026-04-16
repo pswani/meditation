@@ -104,6 +104,44 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.practiceRuntimeMessage, "Custom play \"Morning Focus\" applied to timer setup.")
     }
 
+    func testLocalOnlyBundledFavoriteCustomPlayRemainsStartable() throws {
+        let (viewModel, _, _) = try makeViewModel(environment: .localOnly)
+        let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
+
+        XCTAssertTrue(viewModel.canResolvePlayback(for: customPlay.media))
+        XCTAssertTrue(viewModel.canStartCustomPlay(customPlay))
+        XCTAssertNil(viewModel.customPlayStartSupportMessage(for: customPlay))
+    }
+
+    func testCustomPlayWithoutResolvableMediaShowsCalmStartGuidance() throws {
+        var snapshot = SampleData.snapshot
+        let unavailableCustomPlay = CustomPlay(
+            name: "Unavailable Recording",
+            meditationType: .vipassana,
+            durationSeconds: 600,
+            recordingLabel: "Missing file",
+            linkedMediaIdentifier: "remote-only",
+            media: .remote(
+                id: "remote-only",
+                label: "Unavailable Recording",
+                relativePath: "custom-plays/unavailable.mp3",
+                filePath: ""
+            ),
+            isFavorite: true
+        )
+        snapshot.customPlays = [unavailableCustomPlay]
+
+        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot, environment: .localOnly)
+        let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
+
+        XCTAssertFalse(viewModel.canResolvePlayback(for: customPlay.media))
+        XCTAssertFalse(viewModel.canStartCustomPlay(customPlay))
+        XCTAssertEqual(
+            viewModel.customPlayStartSupportMessage(for: customPlay),
+            "Needs available recording media before it can start."
+        )
+    }
+
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
         let (viewModel, notificationScheduler, _) = try makeViewModel()
         let existingLogCount = viewModel.recentSessionLogs.count

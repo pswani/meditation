@@ -3,8 +3,8 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/expert-review`
-- Active bundle: none; `cross-platform-contract-hardening-feature-bundle-with-branching` was merged here on 2026-04-11
+- Current branch: `codex/defects-enhancements-16Apr`
+- Active bundle: `ios-native-home-practice-navigation-defects-feature-bundle-with-branching` completed on 2026-04-16; manual simulator or device confirmation of the Home/Practice title and Practice-library back path is still recommended
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -208,6 +208,11 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - fresh native installs now bootstrap to the Mac Mini backend profile at `http://192.168.68.78`, while `Settings -> Clear` still suppresses that default and returns the app to durable local-only mode
   - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
+- Native iOS Home and Practice navigation defect fixes on 2026-04-16 now add:
+  - one clear navigation title on the Home and Practice tab roots instead of duplicate in-content headings plus navigation titles
+  - shared `custom play` startability rules so Home favorites and Practice `custom play` surfaces stay aligned about when locally available media can start
+  - a consistently visible Practice featured `custom play` start action with calm missing-media guidance when playback is unavailable
+  - a state-owned Practice -> `custom plays` navigation path plus pop-back-on-start behavior so successful library launches return cleanly to Practice
 - Native iOS sync contract hardening on 2026-04-11 now adds:
   - backend `session log` reads that normalize the live backend’s `source: "auto log"` and `source: "manual log"` values into the native source model instead of failing sync decode
   - context-aware read normalization that restores `.playlist` and `.customPlay` when those logs arrive through the backend’s broader `auto log` bucket

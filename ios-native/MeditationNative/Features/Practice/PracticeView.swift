@@ -1,14 +1,18 @@
 import SwiftUI
 
 struct PracticeView: View {
+    private enum Destination: Hashable, Identifiable {
+        case customPlays
+
+        var id: Self { self }
+    }
+
     @ObservedObject var viewModel: ShellViewModel
+    @State private var destination: Destination?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Practice")
-                    .font(.largeTitle.weight(.semibold))
-
                 if viewModel.activeSession != nil {
                     ActiveTimerSection(viewModel: viewModel)
                 } else if viewModel.activeCustomPlaySession != nil {
@@ -17,7 +21,10 @@ struct PracticeView: View {
                     ActivePlaylistSection(viewModel: viewModel)
                 } else {
                     TimerSetupSection(viewModel: viewModel)
-                    FeaturedCustomPlayLibrarySection(viewModel: viewModel)
+                    FeaturedCustomPlayLibrarySection(
+                        viewModel: viewModel,
+                        openLibrary: { destination = .customPlays }
+                    )
                     FeaturedPlaylistLibrarySection(viewModel: viewModel)
                 }
 
@@ -51,6 +58,12 @@ struct PracticeView: View {
             }
         } message: { prompt in
             Text(prompt.message)
+        }
+        .navigationDestination(item: $destination) { destination in
+            switch destination {
+            case .customPlays:
+                CustomPlayLibraryView(viewModel: viewModel)
+            }
         }
     }
 

@@ -6,8 +6,6 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Home")
-                    .font(.largeTitle.weight(.semibold))
                 Text("Start quickly, repeat the last used meditation, and keep today’s practice context visible.")
                     .foregroundStyle(.secondary)
 
@@ -114,19 +112,16 @@ struct HomeView: View {
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.favoriteCustomPlaysForHome) { customPlay in
+                        let startSupportMessage = viewModel.customPlayStartSupportMessage(for: customPlay)
+
                         shortcutRow(
                             title: customPlay.name,
                             detail: "\(customPlay.meditationType.rawValue) • \(formatDuration(customPlay.durationSeconds))",
                             buttonTitle: "Start \(customPlay.name)",
-                            isEnabled: viewModel.canResolvePlayback(for: customPlay.media) && viewModel.hasActivePracticeRuntime == false
+                            isEnabled: viewModel.canStartCustomPlay(customPlay),
+                            footerText: startSupportMessage
                         ) {
                             viewModel.startCustomPlay(customPlay)
-                        }
-
-                        if viewModel.canResolvePlayback(for: customPlay.media) == false {
-                            Text("Needs available recording media before it can start.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
                         }
 
                         if customPlay.id != viewModel.favoriteCustomPlaysForHome.last?.id {

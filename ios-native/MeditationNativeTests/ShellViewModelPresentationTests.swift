@@ -96,6 +96,35 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
     }
 
+    func testCustomPlayStartPresentationSupportsOfflinePlayableAndUnavailableStates() {
+        XCTAssertTrue(
+            ShellViewModelPresentation.canStartCustomPlay(
+                canResolvePlayback: true,
+                hasActivePracticeRuntime: false
+            )
+        )
+        XCTAssertNil(
+            ShellViewModelPresentation.customPlayStartSupportMessage(
+                canResolvePlayback: true,
+                hasActivePracticeRuntime: false
+            )
+        )
+
+        XCTAssertFalse(
+            ShellViewModelPresentation.canStartCustomPlay(
+                canResolvePlayback: false,
+                hasActivePracticeRuntime: false
+            )
+        )
+        XCTAssertEqual(
+            ShellViewModelPresentation.customPlayStartSupportMessage(
+                canResolvePlayback: false,
+                hasActivePracticeRuntime: false
+            ),
+            "Needs available recording media before it can start."
+        )
+    }
+
     func testSnapshotSupportDerivesLastUsedCustomPlayFromContextAwareLog() {
         let customPlay = CustomPlay(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
