@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify:
+    name: Web And Backend Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Run pipeline verify
+        run: ./scripts/pipeline.sh verify
+
+      - name: Check repo hygiene
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            git fetch origin "${GITHUB_BASE_REF}" --depth=1
+            ./scripts/check-repo-hygiene.sh --diff-range "origin/${GITHUB_BASE_REF}...HEAD"
+          elif [[ -n "${GITHUB_EVENT_BEFORE:-}" && "${GITHUB_EVENT_BEFORE}" != "0000000000000000000000000000000000000000" ]]; then
+            ./scripts/check-repo-hygiene.sh --diff-range "${GITHUB_EVENT_BEFORE}...HEAD"
+          else
+            ./scripts/check-repo-hygiene.sh --diff-range "HEAD"
+          fi
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+
+  ios-native:
+    name: iOS Native Verify
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run Swift package tests
+        run: swift test --package-path ios-native
+
+      - name: Build iOS app target
+        run: xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

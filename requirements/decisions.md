@@ -126,10 +126,18 @@
   - `None` stays runtime-derived rather than a second catalog entry
   - shipped sounds declare `bundled` ownership and resolve from `src/assets/sounds/`
   - script-added sounds declare `media` ownership and resolve from `/media/sounds/<filename>`
+- Keep backend media serving limited to validated child directories under the configured media root:
+  - serve `custom-plays/` through `/media/custom-plays/**`
+  - serve script-managed sounds through `/media/sounds/**`
+  - reject blank, absolute, or parent-traversing media subdirectory configuration
 - Keep timer sound hydration backward compatible by remapping retired labels:
   - `Soft Chime` -> `Temple Bell`
   - `Wood Block` -> `Gong`
 - Keep shipped timer sounds inline-bundled into the frontend so playback does not depend on a backend `/media/**` route or separate runtime asset fetches.
+- Keep offline media caching bounded and honest:
+  - cache only full-media responses that advertise a size within the worker's cacheable limit
+  - cap retained cached media entries instead of letting the media cache grow without bound
+  - do not emulate range responses from a full in-memory media buffer when offline
 - Keep native iOS timer sounds aligned with that same web contract:
   - only `Temple Bell` and `Gong` are first-class current choices
   - the iOS app reuses the same bundled `temple-bell.mp3` and `gong.mp3` assets for playback
@@ -217,8 +225,10 @@
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface
   - `./scripts/pipeline.sh verify` should remain the single repeatable quality gate covering frontend checks, backend `mvn verify`, and a temporary backend health smoke check
+  - GitHub Actions should call that same repo verification entrypoint for web and backend checks instead of maintaining a second shadow command sequence
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
+- Keep repo-hygiene enforcement focused on diff-time artifact classes the repo already expects to stay untracked, with a lightweight scripted check that can run both locally and in CI.
 - Keep native iOS workflow boundaries explicit:
   - `ios-native/MeditationNative.xcodeproj` is the canonical app-development, simulator, device, and UI-test entrypoint
   - `ios-native/Package.swift` exists for the shared `MeditationNativeCore` package and its focused core tests, not as a second canonical app build path

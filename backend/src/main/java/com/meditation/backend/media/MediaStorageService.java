@@ -20,6 +20,7 @@ public class MediaStorageService {
   void initializeDirectories() {
     createDirectory(mediaStorageProperties.getRootPath());
     createDirectory(mediaStorageProperties.getCustomPlayDirectoryPath());
+    createDirectory(mediaStorageProperties.getSoundDirectoryPath());
   }
 
   public Path getMediaRootDirectory() {
@@ -28,6 +29,10 @@ public class MediaStorageService {
 
   public Path getCustomPlayDirectory() {
     return mediaStorageProperties.getCustomPlayDirectoryPath();
+  }
+
+  public Path getSoundDirectory() {
+    return mediaStorageProperties.getSoundDirectoryPath();
   }
 
   private void createDirectory(Path path) {

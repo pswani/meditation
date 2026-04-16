@@ -45,6 +45,7 @@
 		A10000010000000000000024 /* PlaylistLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002B /* PlaylistLibraryView.swift */; };
 		A10000010000000000000025 /* ShellViewModelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002C /* ShellViewModelPresentationTests.swift */; };
 		A10000010000000000000026 /* vipassana-sit-20.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002D /* vipassana-sit-20.mp3 */; };
+		A10000010000000000000027 /* GeneratedSyncContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002E /* GeneratedSyncContract.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -106,6 +107,7 @@
 		B1000001000000000000002B /* PlaylistLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistLibraryView.swift; sourceTree = "<group>"; };
 		B1000001000000000000002C /* ShellViewModelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelPresentationTests.swift; sourceTree = SOURCE_ROOT; };
 		B1000001000000000000002D /* vipassana-sit-20.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "vipassana-sit-20.mp3"; path = ../local-data/media/custom-plays/vipassana-sit-20.mp3; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000002E /* GeneratedSyncContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedSyncContract.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -242,6 +244,7 @@
 		F1000001000000000000000A /* Domain */ = {
 			isa = PBXGroup;
 			children = (
+				B1000001000000000000002E /* GeneratedSyncContract.swift */,
 				B1000001000000000000000A /* ReferenceData.swift */,
 				B1000001000000000000000B /* Models.swift */,
 				B10000010000000000000017 /* TimerFeature.swift */,
@@ -464,6 +467,7 @@
 				A10000010000000000000007 /* HistoryView.swift in Sources */,
 				A10000010000000000000008 /* GoalsView.swift in Sources */,
 				A10000010000000000000009 /* SettingsView.swift in Sources */,
+				A10000010000000000000027 /* GeneratedSyncContract.swift in Sources */,
 				A1000001000000000000000A /* ReferenceData.swift in Sources */,
 				A1000001000000000000000B /* Models.swift in Sources */,
 				A1000001000000000000000C /* AppEnvironment.swift in Sources */,

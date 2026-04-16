@@ -12,6 +12,9 @@ const CACHE_VERSION = resolveCacheVersion();
 const APP_SHELL_CACHE = `meditation-app-shell-${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `meditation-static-assets-${CACHE_VERSION}`;
 const MEDIA_ASSET_CACHE = `meditation-media-assets-${CACHE_VERSION}`;
+const MEDIA_CACHE_INDEX_URL = '/__offline__/media-cache-index';
+const MAX_CACHEABLE_MEDIA_BYTES = 25 * 1024 * 1024;
+const MAX_MEDIA_CACHE_ENTRIES = 12;
 const APP_SHELL_URL = '/';
 const MANIFEST_URL = '/manifest.webmanifest';
 const CACHE_URLS_MESSAGE_TYPE = 'CACHE_URLS';
@@ -58,7 +61,7 @@ async function cacheUrls(urls) {
         }
 
         if (isMediaRequest(url)) {
-          await mediaCache.put(url.href, response.clone());
+          await cacheMediaResponse(mediaCache, url.href, response);
           return;
         }
 
@@ -68,6 +71,73 @@ async function cacheUrls(urls) {
       }
     })
   );
+}
+
+function readContentLength(response) {
+  const rawContentLength = response.headers.get('content-length');
+  if (!rawContentLength) {
+    return null;
+  }
+
+  const contentLength = Number.parseInt(rawContentLength, 10);
+  return Number.isFinite(contentLength) && contentLength >= 0 ? contentLength : null;
+}
+
+function isCacheableMediaResponse(response) {
+  if (!response.ok || response.status !== 200 || response.type === 'opaque') {
+    return false;
+  }
+
+  const contentLength = readContentLength(response);
+  return contentLength !== null && contentLength <= MAX_CACHEABLE_MEDIA_BYTES;
+}
+
+async function readMediaCacheIndex(cache) {
+  const response = await cache.match(MEDIA_CACHE_INDEX_URL);
+  if (!response) {
+    return [];
+  }
+
+  try {
+    const payload = await response.json();
+    return Array.isArray(payload?.urls)
+      ? payload.urls.filter((value) => typeof value === 'string' && value.length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeMediaCacheIndex(cache, urls) {
+  await cache.put(
+    MEDIA_CACHE_INDEX_URL,
+    new Response(JSON.stringify({ urls }), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+  );
+}
+
+async function rememberCachedMediaUrl(cache, url) {
+  const currentUrls = await readMediaCacheIndex(cache);
+  const nextUrls = [...currentUrls.filter((value) => value !== url), url];
+  const overflowCount = Math.max(0, nextUrls.length - MAX_MEDIA_CACHE_ENTRIES);
+  const evictedUrls = nextUrls.slice(0, overflowCount);
+  const retainedUrls = nextUrls.slice(overflowCount);
+
+  await Promise.all(evictedUrls.map((value) => cache.delete(value)));
+  await writeMediaCacheIndex(cache, retainedUrls);
+}
+
+async function cacheMediaResponse(cache, cacheKey, response) {
+  if (!isCacheableMediaResponse(response)) {
+    return false;
+  }
+
+  await cache.put(cacheKey, response.clone());
+  await rememberCachedMediaUrl(cache, cacheKey);
+  return true;
 }
 
 async function deleteOldCaches() {
@@ -83,36 +153,6 @@ async function deleteOldCaches() {
       return caches.delete(cacheName);
     })
   );
-}
-
-function buildPartialContentResponse(response, rangeHeader) {
-  return response.arrayBuffer().then((arrayBuffer) => {
-    const bytesLength = arrayBuffer.byteLength;
-    const match = /bytes=(\d+)-(\d+)?/.exec(rangeHeader);
-    if (!match) {
-      return new Response(null, { status: 416 });
-    }
-
-    const start = Number.parseInt(match[1], 10);
-    const end = match[2] ? Number.parseInt(match[2], 10) : bytesLength - 1;
-    const boundedEnd = Math.min(end, bytesLength - 1);
-
-    if (Number.isNaN(start) || Number.isNaN(boundedEnd) || start >= bytesLength || start > boundedEnd) {
-      return new Response(null, { status: 416 });
-    }
-
-    const slicedBuffer = arrayBuffer.slice(start, boundedEnd + 1);
-    const headers = new Headers(response.headers);
-    headers.set('Accept-Ranges', 'bytes');
-    headers.set('Content-Length', String(slicedBuffer.byteLength));
-    headers.set('Content-Range', `bytes ${start}-${boundedEnd}/${bytesLength}`);
-
-    return new Response(slicedBuffer, {
-      status: 206,
-      statusText: 'Partial Content',
-      headers,
-    });
-  });
 }
 
 async function handleNavigationRequest(request) {
@@ -149,19 +189,22 @@ async function handleMediaRequest(request) {
   const mediaCache = await caches.open(MEDIA_ASSET_CACHE);
 
   if (rangeHeader) {
-    const cachedResponse = (await mediaCache.match(request.url)) || (await caches.match(request.url));
-    if (cachedResponse) {
-      return buildPartialContentResponse(cachedResponse, rangeHeader);
+    try {
+      return await fetch(request);
+    } catch {
+      return new Response(null, {
+        status: 503,
+        statusText: 'Offline media range requests are unavailable.',
+        headers: {
+          'X-Meditation-Offline-Media': 'range-unsupported',
+        },
+      });
     }
-
-    return fetch(request);
   }
 
   try {
     const response = await fetch(request);
-    if (response.ok && response.status === 200) {
-      await mediaCache.put(request.url, response.clone());
-    }
+    await cacheMediaResponse(mediaCache, request.url, response);
     return response;
   } catch {
     return (await mediaCache.match(request.url)) || Response.error();

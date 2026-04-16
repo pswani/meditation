@@ -197,6 +197,7 @@ The queue-backed offline behavior now keeps local edits visible immediately and 
 Backend reachability is now tracked separately from raw browser online state, so the shell can distinguish browser-offline from backend-unavailable conditions.
 Summary views and the managed media catalog now keep last-successful browser snapshots so degraded reloads can stay useful after a successful online visit.
 The shared shell now also hosts the persistent hidden audio element used to keep active `custom play` media playback and runtime progress aligned across route changes, and it requests bounded offline caching for active recording media.
+That offline media policy now caches only a small bounded set of whole-file recording responses and does not fake cached range playback when the browser later asks for byte ranges offline.
 Browser storage helpers now live under `src/utils/storage/`, with `src/utils/storage.ts` preserved as a compatibility facade so existing imports and storage keys do not drift during incremental cleanup.
 
 ### Back-end responsibilities
@@ -410,6 +411,11 @@ The repo also exposes one broader convenience wrapper:
 ```
 
 That quality gate runs the frontend checks, backend Maven verify, and a temporary backend health smoke check.
+
+Visible CI and hygiene enforcement now use the same repo surfaces:
+
+- `.github/workflows/ci.yml` runs `./scripts/pipeline.sh verify` on Ubuntu plus native iOS verification on macOS.
+- `npm run check:repo-hygiene` runs `./scripts/check-repo-hygiene.sh`, which rejects generated or runtime artifact paths in diffs and accepts `--diff-range` or `--paths` for targeted local checks.
 
 ### Native iOS workflow
 
@@ -635,7 +641,7 @@ Current behavior:
 - `backend` stores seeded media metadata rows in H2 `media_asset`
 - backend migrations store relative media paths such as `custom-plays/vipassana-sit-20.mp3`
 - backend API responses expose public media paths such as `/media/custom-plays/vipassana-sit-20.mp3`
-- the backend serves `/media/**` from the configured media root
+- the backend serves `/media/custom-plays/**` and `/media/sounds/**` from validated child directories under the configured media root
 - `src/data/customPlayMediaCatalog.json` contains the built-in sample fallback catalog for backend-unavailable cases
 - each media entry has:
   - `id`
@@ -690,7 +696,7 @@ The concrete media-path conventions currently used in code are:
 - backend media metadata responses use that same public path prefix
 - shipped timer sounds resolve from inline-bundled frontend assets under `src/assets/sounds/`
 - script-managed timer sounds resolve from `/media/sounds/<filename>` and are mirrored under the backend and optional public media roots
-- backend media storage still serves `/media/**` for custom-play files and script-managed sound files
+- backend media storage serves `/media/custom-plays/**` for custom-play files and `/media/sounds/**` for script-managed sound files
 
 ### Exact directory structure to use for custom play media
 
@@ -722,7 +728,7 @@ public/
 
 Why there are two useful locations:
 
-- the backend now serves `/media/**` from `local-data/media` by default
+- the backend now serves `/media/custom-plays/**` and `/media/sounds/**` from validated child directories under `local-data/media` by default
 - the packaged frontend build includes `public/` assets as static files when an operator wants the same repo-local fallback path
 - `npm run media:setup` mirrors any tracked `public/media/sounds/` files into `local-data/media/sounds/` for backend-served parity
 - the built-in shipped timer sounds stay bundled from `src/assets/sounds/` and no longer rely on tracked `public/media/sounds/` copies
@@ -754,7 +760,7 @@ That is a root-relative URL path, not an absolute filesystem path.
 
 Current answer:
 
-- the backend now serves `/media/**` from the configured media root
+- the backend now serves only `/media/custom-plays/**` and `/media/sounds/**` from validated child directories beneath the configured media root
 - the packaged frontend may include matching `public/` files as static assets for fallback custom-play files or script-managed timer sounds
 - timer playback uses inline-bundled shipped sounds for `Temple Bell` and `Gong`
 
@@ -1143,7 +1149,7 @@ Current repo behavior:
 
 Operational implication:
 
-- if you deploy the backend, place real custom-play media files under the configured backend media root so `/media/**` resolves correctly
+- if you deploy the backend, place real custom-play media files under the configured backend media root so `/media/custom-plays/**` resolves correctly, and place script-managed sounds under the sibling `sounds/` directory for `/media/sounds/**`
 - if you are running frontend-only static checks, `public/` assets still work for Vite-served local development
 
 ### Runtime configuration required in deployment

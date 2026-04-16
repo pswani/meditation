@@ -76,6 +76,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - distinct backend-reachability tracking separate from raw browser online state
   - last-successful browser snapshots for summary and managed media catalog reads
   - a unified shell pipeline wrapper at `./scripts/pipeline.sh` that provides operator-facing `verify`, `build`, `package`, and `release` stages over the existing production scripts
+  - validated backend media serving that now exposes only `/media/custom-plays/**` and `/media/sounds/**` from child directories beneath the configured media root
+  - a bounded offline recording-media policy that caches only limited whole-file responses and no longer emulates cached range responses from a full in-memory buffer
+  - checked-in GitHub Actions CI at `.github/workflows/ci.yml` that now runs the repo’s real web or backend verify gate plus native iOS verification
+  - a dedicated `./scripts/check-repo-hygiene.sh` diff-time check, mirrored through `npm run check:repo-hygiene`, that rejects generated or runtime artifact paths in changes
   - a root workspace map in `README.md` that now distinguishes web, backend, native iOS, docs, prompts, scripts, and ignored `local-data/`
   - a minimal machine-readable repo baseline through `.nvmrc`, `package.json` `engines`, and `.editorconfig`
   - clearer README separation between portable contributor verification and macOS-only production install or release flows
@@ -258,6 +262,9 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-observance-sankalpa-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
+- Review artifact: `docs/review-media-surface-and-ci-hardening-feature.md`
+- Verification report: `docs/test-media-surface-and-ci-hardening-feature.md`
+- Implementation planning: `docs/execplan-media-surface-and-ci-hardening-feature.md`
 - Review artifact: `docs/review-ios-safari-ux-issues.md`
 - Review artifact: `docs/review-ios-native-foundation-feature.md`
 - Review artifact: `docs/review-ios-native-timer-history-feature.md`
@@ -542,7 +549,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Browser-automation coverage for observance date check-ins is still absent; current confidence comes from unit, component, and backend tests.
 - The calmness of the decomposed route panels still needs a quick manual look on a real browser session across phone, tablet, and desktop breakpoints; automated coverage currently proves correctness more than perceived UX.
 - The default History hydration path still uses the unpaged compatibility response; future large-history consumers should opt into the paged collection contract.
-- Local Vite development still proxies `/api` only; backend-served `/media/**` verification remains easiest through the backend origin or installed same-origin path.
+- Local Vite development still proxies `/api` only; backend-served `/media/custom-plays/**` and `/media/sounds/**` verification remains easiest through the backend origin or installed same-origin path.
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
 - Native iOS timer-history still needs physical iPhone validation for notification permission prompts, completion delivery timing, and background or foreground transitions around fixed-duration completion.
 - Native iOS active-session relaunch recovery now exists, but it still needs concrete simulator or physical-iPhone validation for audio-backed sessions, background completion, and notification timing.
