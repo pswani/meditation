@@ -4,7 +4,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `ios-native-home-practice-navigation-defects-feature-bundle-with-branching` completed on 2026-04-16; manual simulator or device confirmation of the Home/Practice title and Practice-library back path is still recommended
+- Active bundle: `ios-native-history-goals-build-branding-defects-feature-bundle-with-branching` completed on 2026-04-16; manual simulator or device confirmation of the Goals single-title layout, the History manual-log and meditation-type-change path, and the installed app label is still recommended
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -213,6 +213,12 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - shared `custom play` startability rules so Home favorites and Practice `custom play` surfaces stay aligned about when locally available media can start
   - a consistently visible Practice featured `custom play` start action with calm missing-media guidance when playback is unavailable
   - a state-owned Practice -> `custom plays` navigation path plus pop-back-on-start behavior so successful library launches return cleanly to Practice
+- Native iOS History, Goals, build, and branding defect fixes on 2026-04-16 now add:
+  - one visible in-content History `Manual log` action instead of relying only on a navigation-bar affordance
+  - a narrow, explicit History meditation-type correction path that applies only to manual logs and leaves auto-created history read-only
+  - a single visible Goals title on iPhone by removing the duplicate in-content heading
+  - a user-facing native app display name of `Meditation` through `CFBundleDisplayName`, while the internal project, target, and module names remain `MeditationNative`
+  - green native verification through `swift test --package-path ios-native`, simulator `xcodebuild ... build`, and simulator `xcodebuild ... build-for-testing`
 - Native iOS sync contract hardening on 2026-04-11 now adds:
   - backend `session log` reads that normalize the live backend’s `source: "auto log"` and `source: "manual log"` values into the native source model instead of failing sync decode
   - context-aware read normalization that restores `.playlist` and `.customPlay` when those logs arrive through the backend’s broader `auto log` bucket

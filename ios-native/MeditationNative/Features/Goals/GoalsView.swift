@@ -16,8 +16,6 @@ struct GoalsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Goals")
-                    .font(.largeTitle.weight(.semibold))
                 Text("Track reflective progress and keep sankalpas disciplined, local, and explicit.")
                     .foregroundStyle(.secondary)
 
