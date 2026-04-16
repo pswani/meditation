@@ -1,10 +1,14 @@
-# Physical iPhone build
+# Physical iPhone build by name
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-  -destination "platform=iOS,id=00008150-00042DE92E84401C" \
+  -destination "platform=iOS,name=Prashant’s iPhone" \
   build
+
 
 # Physical iPhone test run
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-  -destination "platform=iOS,id=00008150-00042DE92E84401C" \
+  -destination "platform=iOS,name=Prashant’s iPhone" \
+  DEVELOPMENT_TEAM=435KZ98WJR \
+  -allowProvisioningUpdates \
   -parallel-testing-enabled NO \
   test
+

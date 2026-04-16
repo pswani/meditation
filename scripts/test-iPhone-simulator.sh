@@ -18,3 +18,22 @@ xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNati
 SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache \
 CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache \
 swift test --package-path ios-native
+
+
+
+# # Show available destinations first
+# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
+
+
+# # Simulator build by name
+# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
+#   -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4" \
+#   build
+
+# # Simulator test by name
+# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
+#   -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4" \
+#   -parallel-testing-enabled NO \
+#   test
+
+
