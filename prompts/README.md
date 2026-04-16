@@ -5,16 +5,17 @@ This folder stores reusable Codex prompt bundles when a new bounded milestone ne
 Current status:
 
 - Bundle folders currently available in-repo:
-  - `ios-native-runtime-device-defects-feature-bundle-with-branching`
-  - `repo-hygiene-foundation-feature-bundle-with-branching`
-  - `workspace-docs-toolchain-clarity-feature-bundle-with-branching`
-  - `cross-platform-contract-hardening-feature-bundle-with-branching`
-  - `runtime-boundary-decomposition-feature-bundle-with-branching`
-  - `media-surface-and-ci-hardening-feature-bundle-with-branching`
+  - `ios-native-home-practice-navigation-defects-feature-bundle-with-branching`
+  - `ios-native-history-goals-build-branding-defects-feature-bundle-with-branching`
+  - `ios-native-lock-screen-audio-mixing-feature-bundle-with-branching`
+  - `web-manual-log-open-ended-feature-bundle-with-branching`
+  - `sankalpa-threshold-frequency-goals-feature-bundle-with-branching`
+  - `backend-test-h2-isolation-feature-bundle-with-branching`
 - Older bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
 
 Phased planning files currently available in-repo:
 
+- `defects-enhancements-16Apr-phased-plan.md`
 - `production-grade-hardening-phased-plan.md`
 - `expert-review-remediation-phased-plan.md`
 - `ios-native-app-phased-plan.md`

@@ -13,6 +13,14 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `prompts/workspace-docs-toolchain-clarity-feature-bundle-with-branching/`
   - `prompts/runtime-boundary-decomposition-feature-bundle-with-branching/`
   - `prompts/media-surface-and-ci-hardening-feature-bundle-with-branching/`
+- New follow-up prompt bundles prepared on 2026-04-16:
+  - `prompts/defects-enhancements-16Apr-phased-plan.md`
+  - `prompts/ios-native-home-practice-navigation-defects-feature-bundle-with-branching/`
+  - `prompts/ios-native-history-goals-build-branding-defects-feature-bundle-with-branching/`
+  - `prompts/ios-native-lock-screen-audio-mixing-feature-bundle-with-branching/`
+  - `prompts/web-manual-log-open-ended-feature-bundle-with-branching/`
+  - `prompts/sankalpa-threshold-frequency-goals-feature-bundle-with-branching/`
+  - `prompts/backend-test-h2-isolation-feature-bundle-with-branching/`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
