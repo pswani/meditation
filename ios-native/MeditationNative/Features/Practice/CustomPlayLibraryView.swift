@@ -4,6 +4,7 @@ struct CustomPlayLibraryView: View {
     @ObservedObject var viewModel: ShellViewModel
     @State private var isPresentingEditor = false
     @State private var draft = CustomPlayDraft()
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         List {
@@ -42,6 +43,11 @@ struct CustomPlayLibraryView: View {
                                     ))
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
+                                    if let startSupportMessage = viewModel.customPlayStartSupportMessage(for: customPlay) {
+                                        Text(startSupportMessage)
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                                 Spacer()
                                 if customPlay.isFavorite {
@@ -52,11 +58,13 @@ struct CustomPlayLibraryView: View {
 
                             HStack {
                                 Button("Start") {
-                                    viewModel.startCustomPlay(customPlay)
+                                    if viewModel.startCustomPlay(customPlay) {
+                                        dismiss()
+                                    }
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.teal)
-                                .disabled(viewModel.canResolvePlayback(for: customPlay.media) == false)
+                                .disabled(viewModel.canStartCustomPlay(customPlay) == false)
 
                                 Button("Apply to timer") {
                                     viewModel.applyCustomPlayToTimer(customPlay)

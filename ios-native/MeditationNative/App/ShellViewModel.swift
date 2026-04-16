@@ -184,6 +184,20 @@ final class ShellViewModel: ObservableObject {
         return media.canResolvePlaybackURL(apiBaseURL: environment.apiBaseURL)
     }
 
+    func canStartCustomPlay(_ customPlay: CustomPlay) -> Bool {
+        ShellViewModelPresentation.canStartCustomPlay(
+            canResolvePlayback: canResolvePlayback(for: customPlay.media),
+            hasActivePracticeRuntime: hasActivePracticeRuntime
+        )
+    }
+
+    func customPlayStartSupportMessage(for customPlay: CustomPlay) -> String? {
+        ShellViewModelPresentation.customPlayStartSupportMessage(
+            canResolvePlayback: canResolvePlayback(for: customPlay.media),
+            hasActivePracticeRuntime: hasActivePracticeRuntime
+        )
+    }
+
     func playlistRunValidationMessage(for playlist: Playlist) -> String? {
         if let validationError = PlaylistFeature.validatePlaylistForRun(
             playlist,
@@ -439,20 +453,21 @@ final class ShellViewModel: ObservableObject {
         persistSnapshot(syncMutations: [.customPlayUpsert(updatedCustomPlay)])
     }
 
-    func startCustomPlay(_ customPlay: CustomPlay) {
+    @discardableResult
+    func startCustomPlay(_ customPlay: CustomPlay) -> Bool {
         guard hasActivePracticeRuntime == false else {
             practiceRuntimeMessage = "Finish the current practice before starting something new."
-            return
+            return false
         }
 
         guard canResolvePlayback(for: customPlay.media) else {
             practiceRuntimeMessage = "This custom play needs an available recording before it can start."
-            return
+            return false
         }
 
         guard let media = customPlay.media else {
             practiceRuntimeMessage = "This custom play needs an available recording before it can start."
-            return
+            return false
         }
 
         do {
@@ -470,11 +485,14 @@ final class ShellViewModel: ObservableObject {
                 )
             )
             startClock()
+            return true
         } catch let error as LocalAudioPlaybackError {
             practiceRuntimeMessage = error.message
         } catch {
             practiceRuntimeMessage = "The custom play could not start right now."
         }
+
+        return false
     }
 
     func pauseCustomPlay() {

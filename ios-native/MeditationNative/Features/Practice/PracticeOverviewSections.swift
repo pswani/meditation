@@ -25,11 +25,14 @@ struct TimerSetupSection: View {
 
 struct FeaturedCustomPlayLibrarySection: View {
     @ObservedObject var viewModel: ShellViewModel
+    let openLibrary: () -> Void
 
     var body: some View {
         SectionCard(title: "Custom plays", caption: "Create, favorite, and start prerecorded-style local sessions") {
             VStack(alignment: .leading, spacing: 12) {
                 if let featuredCustomPlay = viewModel.customPlays.first {
+                    let startSupportMessage = viewModel.customPlayStartSupportMessage(for: featuredCustomPlay)
+
                     VStack(alignment: .leading, spacing: 6) {
                         Text(featuredCustomPlay.name)
                             .font(.headline)
@@ -55,17 +58,22 @@ struct FeaturedCustomPlayLibrarySection: View {
                     }
 
                     HStack(spacing: 12) {
-                        if viewModel.canResolvePlayback(for: featuredCustomPlay.media) {
-                            Button("Start featured custom play") {
-                                viewModel.startCustomPlay(featuredCustomPlay)
-                            }
-                            .buttonStyle(.bordered)
+                        Button("Start featured custom play") {
+                            viewModel.startCustomPlay(featuredCustomPlay)
                         }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.canStartCustomPlay(featuredCustomPlay) == false)
 
                         Button("Apply to timer") {
                             viewModel.applyCustomPlayToTimer(featuredCustomPlay)
                         }
                         .buttonStyle(.bordered)
+                    }
+
+                    if let startSupportMessage {
+                        Text(startSupportMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     Text("No custom plays yet. Add one with bundled sample media or a synced linked recording so you can start it quickly from Practice.")
@@ -73,12 +81,11 @@ struct FeaturedCustomPlayLibrarySection: View {
                         .foregroundStyle(.secondary)
                 }
 
-                NavigationLink {
-                    CustomPlayLibraryView(viewModel: viewModel)
-                } label: {
+                Button(action: openLibrary) {
                     Label("Open custom play library", systemImage: "music.note.list")
                         .font(.body.weight(.medium))
                 }
+                .buttonStyle(.bordered)
             }
         }
     }
