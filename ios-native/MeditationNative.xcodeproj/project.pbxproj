@@ -22,16 +22,16 @@
 		A1000001000000000000000D /* AppSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000D /* AppSnapshot.swift */; };
 		A1000001000000000000000E /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000E /* SampleData.swift */; };
 		A1000001000000000000000F /* JSONFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000000F /* JSONFileStore.swift */; };
+		A10000010000000000000010 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000010 /* DomainModelTests.swift */; };
+		A10000010000000000000011 /* SampleDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* SampleDataTests.swift */; };
+		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
+		A10000010000000000000013 /* MeditationNativeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000013 /* MeditationNativeUITests.swift */; };
 		A10000010000000000000014 /* TimerFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000017 /* TimerFeature.swift */; };
 		A10000010000000000000015 /* SystemSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000018 /* SystemSupport.swift */; };
 		A10000010000000000000016 /* TimerDraftForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000019 /* TimerDraftForm.swift */; };
 		A10000010000000000000017 /* temple-bell.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000001A /* temple-bell.mp3 */; };
 		A10000010000000000000018 /* gong.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000001B /* gong.mp3 */; };
-		A10000010000000000000010 /* DomainModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000010 /* DomainModelTests.swift */; };
-		A10000010000000000000011 /* SampleDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000011 /* SampleDataTests.swift */; };
-		A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000012 /* JSONFileStoreTests.swift */; };
-		A10000010000000000000013 /* MeditationNativeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000013 /* MeditationNativeUITests.swift */; };
-		A10000010000000000000019 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000020 /* ShellViewModelTests.swift */; };
+		A10000010000000000000019 /* MeditationNativeTests/ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000020 /* MeditationNativeTests/ShellViewModelTests.swift */; };
 		A1000001000000000000001A /* AppSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000021 /* AppSyncState.swift */; };
 		A1000001000000000000001B /* AppSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000022 /* AppSyncService.swift */; };
 		A1000001000000000000001C /* ShellRuntimeSafetyPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */; };
@@ -43,7 +43,7 @@
 		A10000010000000000000022 /* PracticeOverviewSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000029 /* PracticeOverviewSections.swift */; };
 		A10000010000000000000023 /* CustomPlayLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002A /* CustomPlayLibraryView.swift */; };
 		A10000010000000000000024 /* PlaylistLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002B /* PlaylistLibraryView.swift */; };
-		A10000010000000000000025 /* ShellViewModelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002C /* ShellViewModelPresentationTests.swift */; };
+		A10000010000000000000025 /* MeditationNativeTests/ShellViewModelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002C /* MeditationNativeTests/ShellViewModelPresentationTests.swift */; };
 		A10000010000000000000026 /* vipassana-sit-20.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002D /* vipassana-sit-20.mp3 */; };
 		A10000010000000000000027 /* GeneratedSyncContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001000000000000002E /* GeneratedSyncContract.swift */; };
 /* End PBXBuildFile section */
@@ -85,15 +85,15 @@
 		B10000010000000000000011 /* SampleDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleDataTests.swift; sourceTree = "<group>"; };
 		B10000010000000000000012 /* JSONFileStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONFileStoreTests.swift; sourceTree = "<group>"; };
 		B10000010000000000000013 /* MeditationNativeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeUITests.swift; sourceTree = "<group>"; };
-		B10000010000000000000020 /* ShellViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelTests.swift; sourceTree = SOURCE_ROOT; };
 		B10000010000000000000014 /* MeditationNative.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeditationNative.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000015 /* MeditationNativeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000016 /* MeditationNativeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeditationNativeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000010000000000000017 /* TimerFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerFeature.swift; sourceTree = "<group>"; };
 		B10000010000000000000018 /* SystemSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSupport.swift; sourceTree = "<group>"; };
 		B10000010000000000000019 /* TimerDraftForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerDraftForm.swift; sourceTree = "<group>"; };
-		B1000001000000000000001A /* temple-bell.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "temple-bell.mp3"; path = ../src/assets/sounds/temple-bell.mp3; sourceTree = SOURCE_ROOT; };
-		B1000001000000000000001B /* gong.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "gong.mp3"; path = ../src/assets/sounds/gong.mp3; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000001A /* temple-bell.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "temple-bell.mp3"; path = "../src/assets/sounds/temple-bell.mp3"; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000001B /* gong.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = gong.mp3; path = ../src/assets/sounds/gong.mp3; sourceTree = SOURCE_ROOT; };
+		B10000010000000000000020 /* MeditationNativeTests/ShellViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelTests.swift; sourceTree = SOURCE_ROOT; };
 		B10000010000000000000021 /* AppSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncState.swift; sourceTree = "<group>"; };
 		B10000010000000000000022 /* AppSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncService.swift; sourceTree = "<group>"; };
 		B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRuntimeSafetyPrompt.swift; sourceTree = "<group>"; };
@@ -105,8 +105,8 @@
 		B10000010000000000000029 /* PracticeOverviewSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeOverviewSections.swift; sourceTree = "<group>"; };
 		B1000001000000000000002A /* CustomPlayLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPlayLibraryView.swift; sourceTree = "<group>"; };
 		B1000001000000000000002B /* PlaylistLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistLibraryView.swift; sourceTree = "<group>"; };
-		B1000001000000000000002C /* ShellViewModelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelPresentationTests.swift; sourceTree = SOURCE_ROOT; };
-		B1000001000000000000002D /* vipassana-sit-20.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "vipassana-sit-20.mp3"; path = ../local-data/media/custom-plays/vipassana-sit-20.mp3; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000002C /* MeditationNativeTests/ShellViewModelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeditationNativeTests/ShellViewModelPresentationTests.swift; sourceTree = SOURCE_ROOT; };
+		B1000001000000000000002D /* vipassana-sit-20.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = "vipassana-sit-20.mp3"; path = "../local-data/media/custom-plays/vipassana-sit-20.mp3"; sourceTree = SOURCE_ROOT; };
 		B1000001000000000000002E /* GeneratedSyncContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedSyncContract.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -176,15 +176,6 @@
 				B10000010000000000000012 /* JSONFileStoreTests.swift */,
 			);
 			path = Tests/MeditationNativeCoreTests;
-			sourceTree = SOURCE_ROOT;
-		};
-		F10000010000000000000012 /* MeditationNativeTests */ = {
-			isa = PBXGroup;
-			children = (
-				B10000010000000000000020 /* ShellViewModelTests.swift */,
-				B1000001000000000000002C /* ShellViewModelPresentationTests.swift */,
-			);
-			path = MeditationNativeTests;
 			sourceTree = SOURCE_ROOT;
 		};
 		F10000010000000000000005 /* MeditationNativeUITests */ = {
@@ -316,6 +307,15 @@
 			);
 			path = Settings;
 			sourceTree = "<group>";
+		};
+		F10000010000000000000012 /* MeditationNativeTests */ = {
+			isa = PBXGroup;
+			children = (
+				B10000010000000000000020 /* MeditationNativeTests/ShellViewModelTests.swift */,
+				B1000001000000000000002C /* MeditationNativeTests/ShellViewModelPresentationTests.swift */,
+			);
+			path = MeditationNativeTests;
+			sourceTree = SOURCE_ROOT;
 		};
 		F10000010000000000000013 /* Resources */ = {
 			isa = PBXGroup;
@@ -495,8 +495,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000010000000000000019 /* ShellViewModelTests.swift in Sources */,
-				A10000010000000000000025 /* ShellViewModelPresentationTests.swift in Sources */,
+				A10000010000000000000019 /* MeditationNativeTests/ShellViewModelTests.swift in Sources */,
+				A10000010000000000000025 /* MeditationNativeTests/ShellViewModelPresentationTests.swift in Sources */,
 				A10000010000000000000010 /* DomainModelTests.swift in Sources */,
 				A10000010000000000000011 /* SampleDataTests.swift in Sources */,
 				A10000010000000000000012 /* JSONFileStoreTests.swift in Sources */,
@@ -625,7 +625,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 435KZ98WJR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -646,7 +646,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 435KZ98WJR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -666,7 +666,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 435KZ98WJR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -686,7 +686,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 435KZ98WJR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
