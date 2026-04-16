@@ -17,6 +17,7 @@
     "pipeline:verify": "./scripts/pipeline.sh verify",
     "pipeline:package": "./scripts/pipeline.sh package",
     "pipeline:release": "./scripts/pipeline.sh release",
+    "check:repo-hygiene": "./scripts/check-repo-hygiene.sh",
     "start:prod": "./scripts/prod-macos-control.sh start",
     "stop:prod": "./scripts/prod-macos-control.sh stop",
     "restart:prod": "./scripts/prod-macos-control.sh restart",

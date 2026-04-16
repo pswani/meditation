@@ -27,4 +27,5 @@ meditation:
     media:
       root: ${MEDITATION_MEDIA_STORAGE_ROOT:../local-data/media}
       custom-play-subdirectory: custom-plays
+      sound-subdirectory: sounds
       public-path-prefix: /media

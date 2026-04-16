@@ -21,12 +21,12 @@ Single-page React application with route-based screens and feature-oriented modu
 - browser-persisted last-successful snapshots for summary and managed media catalog reads
 - browser-persisted sync queue state for offline-first deferred writes
 - Vite dev `/api` proxy for same-origin frontend/backend local development
-- backend-served `/media/**` paths backed by the configured filesystem media root
+- backend-served `/media/custom-plays/**` and `/media/sounds/**` paths backed by validated child directories under the configured filesystem media root
 - H2 + Flyway backing the backend foundation
 
 ## Recommended production topology
 - serve the frontend production build from a static web server such as nginx
-- reverse-proxy `/api/**` and `/media/**` from that web server to the Spring Boot backend
+- reverse-proxy `/api/**`, `/media/custom-plays/**`, and `/media/sounds/**` from that web server to the Spring Boot backend
 - run the backend on a loopback bind such as `127.0.0.1:8080`
 - keep H2 files and backend media files on the application host filesystem
 - reserve Vite dev and preview servers for local development and verification only
@@ -118,7 +118,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - script-managed timer sounds live under the sibling `sounds/` subdirectory when they are not shipped bundled assets
 - H2 stores relative paths such as `custom-plays/vipassana-sit-20.mp3`
 - API responses expose a web-facing path such as `/media/custom-plays/vipassana-sit-20.mp3`
-- backend resource handling serves `/media/**` from the configured media root
+- backend resource handling serves only the validated `custom-plays/` and `sounds/` child directories beneath the configured media root
 - shipped timer sounds stay in `src/assets/sounds/` and are declared in `src/data/timerSoundCatalog.json` with explicit `bundled` ownership
 - script-added timer sounds are declared in that same catalog with explicit `media` ownership and resolve through `/media/sounds/<filename>`
 
@@ -141,6 +141,10 @@ Single-page React application with route-based screens and feature-oriented modu
 - The shell now distinguishes browser-offline from backend-unreachable states, keeping degraded sync explicit without overstating a full device disconnect.
 - The service worker caches the SPA shell and same-origin runtime assets after a successful visit so the app can reopen offline without introducing a second application runtime.
 - The service worker cache namespace derives from the computed frontend asset version carried on the registration URL, so deploys invalidate stale caches without hand-editing version strings in two files.
+- Recording media caching stays bounded and honest:
+  - whole-file responses are cached only when the response advertises a size within the worker's media-size limit
+  - the worker caps the number of retained recording files
+  - range requests fall back to the network and return an explicit offline failure when no network response is available
 
 ## Current offline write model
 - Implemented backend-backed writes are local-first for:

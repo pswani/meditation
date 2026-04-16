@@ -30,7 +30,9 @@ public class WebConfig implements WebMvcConfigurer {
 
   @Override
   public void addResourceHandlers(ResourceHandlerRegistry registry) {
-    registry.addResourceHandler(mediaStorageProperties.getPublicPathPattern())
-        .addResourceLocations(mediaStorageProperties.getRootResourceLocation());
+    registry.addResourceHandler(mediaStorageProperties.getCustomPlayPublicPathPattern())
+        .addResourceLocations(mediaStorageProperties.getCustomPlayResourceLocation());
+    registry.addResourceHandler(mediaStorageProperties.getSoundPublicPathPattern())
+        .addResourceLocations(mediaStorageProperties.getSoundResourceLocation());
   }
 }

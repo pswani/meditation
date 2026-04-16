@@ -54,4 +54,30 @@ class MediaAssetControllerTest {
         .andExpect(header().string("Content-Type", startsWith("audio/mpeg")))
         .andExpect(content().string("seeded demo audio placeholder"));
   }
+
+  @Test
+  void servesConfiguredSoundFilesThroughPublicMediaPaths() throws Exception {
+    Files.writeString(
+        mediaStorageService.getSoundDirectory().resolve("gong.wav"),
+        "demo sound placeholder",
+        StandardCharsets.UTF_8
+    );
+
+    mockMvc.perform(get("/media/sounds/gong.wav"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("demo sound placeholder"));
+  }
+
+  @Test
+  void doesNotExposeSiblingDirectoriesOutsideConfiguredServedSubtrees() throws Exception {
+    Files.createDirectories(mediaStorageService.getMediaRootDirectory().resolve("private"));
+    Files.writeString(
+        mediaStorageService.getMediaRootDirectory().resolve("private/notes.txt"),
+        "do not expose",
+        StandardCharsets.UTF_8
+    );
+
+    mockMvc.perform(get("/media/private/notes.txt"))
+        .andExpect(status().isNotFound());
+  }
 }
