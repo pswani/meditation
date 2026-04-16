@@ -152,6 +152,10 @@ enum ShellViewModelPresentation {
         return nil
     }
 
+    static func canChangeHistoryMeditationType(for log: SessionLog) -> Bool {
+        log.source == .manual
+    }
+
     static func activeTimerPrimaryText(for activeSession: ActiveTimerSession?, now: Date) -> String {
         guard let activeSession else {
             return "00:00"

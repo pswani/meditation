@@ -208,6 +208,10 @@ final class MeditationNativeUITests: XCTestCase {
 
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.buttons["Manual log"].waitForExistence(timeout: 2))
+        app.buttons["Manual log"].tap()
+        XCTAssertTrue(app.navigationBars["Manual log"].waitForExistence(timeout: 2))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["Change meditation type"].firstMatch.waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["Vipassana"].firstMatch.waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["All statuses"].firstMatch.waitForExistence(timeout: 2))
 

@@ -16,6 +16,7 @@ final class ShellViewModel: ObservableObject {
     @Published private(set) var notificationPermissionState: NotificationPermissionState = .checking
     @Published var timerValidationMessage: String?
     @Published var manualLogValidationMessage: String?
+    @Published var historyFeedbackMessage: String?
     @Published var customPlayValidationMessage: String?
     @Published var playlistValidationMessage: String?
     @Published var sankalpaValidationMessage: String?
@@ -324,11 +325,13 @@ final class ShellViewModel: ObservableObject {
 
     func saveManualLog(_ draft: ManualLogDraft) -> Bool {
         manualLogValidationMessage = nil
+        historyFeedbackMessage = nil
         persistenceMessage = nil
 
         do {
             let log = try TimerFeature.makeManualLog(from: draft)
             insertLogs([log])
+            historyFeedbackMessage = persistenceMessage ?? "Manual log saved."
             return true
         } catch let error as ManualLogValidationError {
             manualLogValidationMessage = error.message
@@ -337,6 +340,33 @@ final class ShellViewModel: ObservableObject {
             manualLogValidationMessage = "The manual log could not be saved."
             return false
         }
+    }
+
+    func canChangeHistoryMeditationType(for log: SessionLog) -> Bool {
+        ShellViewModelPresentation.canChangeHistoryMeditationType(for: log)
+    }
+
+    func updateHistoryMeditationType(for log: SessionLog, to meditationType: MeditationType) -> Bool {
+        historyFeedbackMessage = nil
+        persistenceMessage = nil
+
+        guard canChangeHistoryMeditationType(for: log) else {
+            historyFeedbackMessage = "Meditation type can be changed only for manual logs."
+            return false
+        }
+
+        guard snapshot.recentSessionLogs.contains(where: { $0.id == log.id }) else {
+            historyFeedbackMessage = "That manual log is no longer available."
+            return false
+        }
+
+        var updatedLog = log
+        updatedLog.meditationType = meditationType
+        snapshot.recentSessionLogs = upsert(updatedLog, into: snapshot.recentSessionLogs)
+            .sorted { $0.endedAt > $1.endedAt }
+        persistSnapshot(syncMutations: [.sessionLogUpsert(updatedLog)])
+        historyFeedbackMessage = persistenceMessage ?? "Meditation type updated for the manual log."
+        return true
     }
 
     func saveCustomPlay(_ draft: CustomPlayDraft) -> Bool {

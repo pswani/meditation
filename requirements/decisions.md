@@ -33,6 +33,9 @@
   - keep native timer correctness wall-clock based, with pause bookkeeping derived from timestamps instead of decrement-only counters
   - keep native fixed-duration completion notifications best-effort through `UserNotifications`, while treating the on-screen timer state as the source of truth whenever the app is foregrounded
   - keep native History filters calm and readable on iPhone while still supporting source, status, and meditation-type filtering
+  - keep native History meditation-type corrections narrow and trustworthy:
+    - allow them only for manual logs
+    - keep timer, `custom play`, and playlist history read-only
   - keep native milestone-3 `custom play` media local and intentionally bounded:
     - use truthful recording targets instead of placeholder loops:
       - bundled sample media that really ships in the app for local-only use
@@ -77,6 +80,7 @@
     - reuse the same prompt path for archiving and deleting archived `sankalpa`
     - require confirmation before deleting `custom play` and playlist library items
     - allow permanent `sankalpa` delete only after archive, keeping destructive actions deliberate
+  - keep the native app's user-facing display name as `Meditation` while leaving the internal project, target, and module names as `MeditationNative`
 
 ## State and runtime behavior
 - Keep implemented backend-backed domains local-first with queue-backed replay:

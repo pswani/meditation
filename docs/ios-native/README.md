@@ -23,7 +23,8 @@ Implemented native surfaces today include:
   - missing recordings stay explicit and unavailable instead of silently substituting another sound
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
-- History filters plus manual log entry
+- History filters plus a visible manual-log entry path
+- manual-log-only meditation-type corrections from History so auto-created records stay trustworthy
 - History status filtering plus explicit playlist-run and `custom play` context
 - persisted active-session recovery for timer, `custom play`, and playlist runtime state when the saved session can still be reconstructed truthfully on relaunch
 - direct numeric entry for timer duration, interval minutes, and manual-log duration alongside quick-adjust controls
@@ -138,6 +139,7 @@ Project and scheme:
    - `Settings` -> `Privacy & Security`
    - or `Settings` -> `General` -> `VPN & Device Management`
    depending on your iOS version
+6. The installed home-screen label now presents as `Meditation` even though the internal project and target names remain `MeditationNative`.
 
 ## Build And Test Commands
 

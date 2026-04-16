@@ -125,6 +125,30 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
     }
 
+    func testHistoryMeditationTypeEditingIsLimitedToManualLogs() {
+        let manualLog = SessionLog(
+            meditationType: .ajapa,
+            source: .manual,
+            status: .completed,
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            endedAt: Date(timeIntervalSince1970: 1_700_000_900),
+            completedDurationSeconds: 900
+        )
+        let timerLog = SessionLog(
+            meditationType: .vipassana,
+            source: .timer,
+            status: .completed,
+            startedAt: Date(timeIntervalSince1970: 1_700_001_000),
+            endedAt: Date(timeIntervalSince1970: 1_700_002_500),
+            completedDurationSeconds: 1_500,
+            plannedDurationSeconds: 1_500,
+            timerMode: .fixedDuration
+        )
+
+        XCTAssertTrue(ShellViewModelPresentation.canChangeHistoryMeditationType(for: manualLog))
+        XCTAssertFalse(ShellViewModelPresentation.canChangeHistoryMeditationType(for: timerLog))
+    }
+
     func testSnapshotSupportDerivesLastUsedCustomPlayFromContextAwareLog() {
         let customPlay = CustomPlay(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,

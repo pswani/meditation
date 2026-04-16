@@ -5,9 +5,33 @@ struct HistoryView: View {
     @State private var filter = SessionLogFilter()
     @State private var isPresentingManualLogSheet = false
     @State private var manualLogDraft = ManualLogDraft()
+    @State private var editingMeditationTypeLog: SessionLog?
+    @State private var editedMeditationType: MeditationType = .vipassana
 
     var body: some View {
         List {
+            Section("Actions") {
+                Button(action: presentManualLogSheet) {
+                    HStack {
+                        Label("Manual log", systemImage: "square.and.pencil")
+                        Spacer()
+                    }
+                }
+                .accessibilityIdentifier("historyManualLogButton")
+
+                Text("Add off-app meditation here. Only manual logs can change meditation type later; auto-created history stays read-only.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let historyFeedbackMessage = viewModel.historyFeedbackMessage {
+                Section {
+                    Text(historyFeedbackMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section {
                 Picker("Source", selection: $filter.source) {
                     Text("All sources").tag(SessionSource?.none)
@@ -83,6 +107,14 @@ struct HistoryView: View {
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
+
+                            if viewModel.canChangeHistoryMeditationType(for: log) {
+                                Button("Change meditation type") {
+                                    presentMeditationTypeChange(for: log)
+                                }
+                                .buttonStyle(.borderless)
+                                .font(.footnote.weight(.medium))
+                            }
                         }
                         .padding(.vertical, 6)
                     }
@@ -90,19 +122,6 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Manual log") {
-                    viewModel.manualLogValidationMessage = nil
-                    manualLogDraft = ManualLogDraft(
-                        meditationType: viewModel.snapshot.timerDraft.meditationType,
-                        durationMinutes: max(1, viewModel.snapshot.timerDraft.durationMinutes),
-                        endedAt: Date()
-                    )
-                    isPresentingManualLogSheet = true
-                }
-            }
-        }
         .sheet(isPresented: $isPresentingManualLogSheet) {
             NavigationStack {
                 Form {
@@ -153,6 +172,53 @@ struct HistoryView: View {
                         Button("Save") {
                             if viewModel.saveManualLog(manualLogDraft) {
                                 isPresentingManualLogSheet = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(item: $editingMeditationTypeLog) { log in
+            NavigationStack {
+                Form {
+                    Section("Meditation type") {
+                        Picker("Meditation type", selection: $editedMeditationType) {
+                            ForEach(ReferenceData.meditationTypes, id: \.self) { meditationType in
+                                Text(meditationType.rawValue).tag(meditationType)
+                            }
+                        }
+
+                        Text("Only this manual log changes here. Duration and session time stay unchanged.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Section("Eligible record") {
+                        LabeledContent("Source", value: "Manual log")
+                        Text(timeRangeLabel(for: log))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let historyFeedbackMessage = viewModel.historyFeedbackMessage {
+                        Section {
+                            Text(historyFeedbackMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .navigationTitle("Change meditation type")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            editingMeditationTypeLog = nil
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            if viewModel.updateHistoryMeditationType(for: log, to: editedMeditationType) {
+                                editingMeditationTypeLog = nil
                             }
                         }
                     }
@@ -228,5 +294,22 @@ struct HistoryView: View {
             .padding(.vertical, 4)
             .background(Color(.secondarySystemBackground))
             .clipShape(Capsule())
+    }
+
+    private func presentManualLogSheet() {
+        viewModel.manualLogValidationMessage = nil
+        viewModel.historyFeedbackMessage = nil
+        manualLogDraft = ManualLogDraft(
+            meditationType: viewModel.snapshot.timerDraft.meditationType,
+            durationMinutes: max(1, viewModel.snapshot.timerDraft.durationMinutes),
+            endedAt: Date()
+        )
+        isPresentingManualLogSheet = true
+    }
+
+    private func presentMeditationTypeChange(for log: SessionLog) {
+        viewModel.historyFeedbackMessage = nil
+        editedMeditationType = log.meditationType
+        editingMeditationTypeLog = log
     }
 }

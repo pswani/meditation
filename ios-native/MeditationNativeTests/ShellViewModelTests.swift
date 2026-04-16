@@ -176,6 +176,27 @@ final class ShellViewModelTests: XCTestCase {
         wait(for: [notificationCancelled], timeout: 1)
     }
 
+    func testHistoryMeditationTypeEditUpdatesOnlyManualLogs() throws {
+        let (viewModel, _, _) = try makeViewModel()
+        let manualLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.source == .manual }))
+        let originalTimerLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.source == .timer }))
+
+        XCTAssertTrue(viewModel.updateHistoryMeditationType(for: manualLog, to: .kriya))
+
+        let updatedManualLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.id == manualLog.id }))
+        XCTAssertEqual(updatedManualLog.meditationType, .kriya)
+        XCTAssertEqual(updatedManualLog.startedAt, manualLog.startedAt)
+        XCTAssertEqual(updatedManualLog.endedAt, manualLog.endedAt)
+        XCTAssertEqual(updatedManualLog.completedDurationSeconds, manualLog.completedDurationSeconds)
+        XCTAssertEqual(viewModel.historyFeedbackMessage, "Meditation type updated for the manual log.")
+
+        XCTAssertFalse(viewModel.updateHistoryMeditationType(for: originalTimerLog, to: .sahaj))
+
+        let unchangedTimerLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.id == originalTimerLog.id }))
+        XCTAssertEqual(unchangedTimerLog.meditationType, originalTimerLog.meditationType)
+        XCTAssertEqual(viewModel.historyFeedbackMessage, "Meditation type can be changed only for manual logs.")
+    }
+
     func testSharedPromptSupportsArchiveDeleteAndArchivedOnlyGuard() throws {
         let (viewModel, _, _) = try makeViewModel()
 
