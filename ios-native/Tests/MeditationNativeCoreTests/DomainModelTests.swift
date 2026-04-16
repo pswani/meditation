@@ -1,6 +1,10 @@
 import Foundation
 import Testing
+#if canImport(MeditationNativeCore)
 @testable import MeditationNativeCore
+#else
+@testable import MeditationNative
+#endif
 
 @Test func meditationTypesMatchProductVocabulary() throws {
     #expect(ReferenceData.meditationTypes.map(\.rawValue) == GeneratedSyncContract.meditationTypes)

@@ -148,8 +148,10 @@ Use an installed simulator destination on your machine. Example shape:
 ```bash
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" build
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" build-for-testing
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" test
+xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" -parallel-testing-enabled NO test
 ```
+
+Use `-parallel-testing-enabled NO` for the full simulator suite when you want the UI tests to run serially against one simulator instance.
 
 If you do not know the exact simulator name, list available destinations in Xcode or with:
 

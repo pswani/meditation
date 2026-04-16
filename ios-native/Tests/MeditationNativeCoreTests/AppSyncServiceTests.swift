@@ -1,6 +1,10 @@
 import Foundation
 import XCTest
+#if canImport(MeditationNativeCore)
 @testable import MeditationNativeCore
+#else
+@testable import MeditationNative
+#endif
 
 final class AppSyncServiceTests: XCTestCase {
     override func setUp() {

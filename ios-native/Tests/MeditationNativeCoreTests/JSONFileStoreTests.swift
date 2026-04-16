@@ -1,6 +1,10 @@
 import Foundation
 import Testing
+#if canImport(MeditationNativeCore)
 @testable import MeditationNativeCore
+#else
+@testable import MeditationNative
+#endif
 
 @Test func jsonFileStoreRoundTripsSnapshot() throws {
     let tempDirectory = FileManager.default.temporaryDirectory

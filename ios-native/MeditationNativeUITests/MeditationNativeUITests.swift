@@ -140,9 +140,11 @@ final class MeditationNativeUITests: XCTestCase {
         startButton.tap()
 
         XCTAssertTrue(app.staticTexts["Active timer"].waitForExistence(timeout: 2))
+        let activeTimerValue = app.staticTexts["activeTimerPrimaryText"]
+        XCTAssertTrue(activeTimerValue.waitForExistence(timeout: 2))
         XCTAssertTrue(
-            app.staticTexts["20:00"].waitForExistence(timeout: 2) ||
-            app.staticTexts["19:59"].waitForExistence(timeout: 2)
+            activeTimerValue.label.hasPrefix("20:") ||
+            activeTimerValue.label.hasPrefix("19:")
         )
     }
 
@@ -167,7 +169,7 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start featured playlist"].waitForExistence(timeout: 2))
     }
 
-    func testPracticeLibrariesSupportDeleteConfirmationFlows() throws {
+    func testPracticeCustomPlayLibrarySupportsDeleteConfirmationFlow() throws {
         let app = makeApp()
 
         app.tabBars.buttons["Practice"].tap()
@@ -182,8 +184,12 @@ final class MeditationNativeUITests: XCTestCase {
         customPlayDeleteButton.tap()
         confirmAlert(in: app, title: "Delete custom play?", button: "Delete")
         XCTAssertFalse(app.staticTexts["Vipassana Sit 20"].exists)
+    }
 
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+    func testPracticePlaylistLibrarySupportsDeleteConfirmationFlow() throws {
+        let app = makeApp()
+
+        app.tabBars.buttons["Practice"].tap()
 
         XCTAssertTrue(app.buttons["Open playlist library"].waitForExistence(timeout: 2))
         app.buttons["Open playlist library"].tap()

@@ -82,6 +82,20 @@ struct PlaylistLibraryView: View {
             }
         }
         .navigationTitle("Playlists")
+        .alert(
+            viewModel.runtimeSafetyPrompt?.title ?? "",
+            isPresented: runtimeSafetyPromptIsPresented,
+            presenting: viewModel.runtimeSafetyPrompt
+        ) { prompt in
+            Button(prompt.confirmButtonTitle, role: prompt.confirmButtonRole) {
+                viewModel.confirmRuntimeSafetyPrompt()
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelRuntimeSafetyPrompt()
+            }
+        } message: { prompt in
+            Text(prompt.message)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Add") {
@@ -99,6 +113,17 @@ struct PlaylistLibraryView: View {
                 )
             }
         }
+    }
+
+    private var runtimeSafetyPromptIsPresented: Binding<Bool> {
+        Binding(
+            get: { viewModel.runtimeSafetyPrompt != nil },
+            set: { isPresented in
+                if isPresented == false {
+                    viewModel.cancelRuntimeSafetyPrompt()
+                }
+            }
+        )
     }
 }
 

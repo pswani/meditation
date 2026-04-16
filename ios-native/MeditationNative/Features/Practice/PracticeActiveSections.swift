@@ -9,6 +9,7 @@ struct ActiveTimerSection: View {
                 Text(viewModel.activeTimerPrimaryText())
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .accessibilityIdentifier("activeTimerPrimaryText")
 
                 Text(viewModel.activeTimerSecondaryText())
                     .foregroundStyle(.secondary)
