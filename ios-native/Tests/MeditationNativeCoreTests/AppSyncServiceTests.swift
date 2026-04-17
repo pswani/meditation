@@ -608,6 +608,101 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(remoteState.snapshot.customPlays[0].durationSeconds, 65 * 60)
     }
 
+    func testFetchRemoteStateRecoversCustomPlayMediaWhenOneCatalogAssetClearlyMatches() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/settings/timer":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "id": "default",
+                        "timerMode": "fixed",
+                        "durationMinutes": 25,
+                        "lastFixedDurationMinutes": 25,
+                        "meditationType": "Vipassana",
+                        "startSound": "Temple Bell",
+                        "endSound": "Temple Bell",
+                        "intervalEnabled": false,
+                        "intervalMinutes": 0,
+                        "intervalSound": "None",
+                    ]
+                )
+            case "/api/session-logs":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "items": [],
+                        "page": 0,
+                        "size": 0,
+                        "totalItems": 0,
+                        "hasNextPage": false,
+                    ]
+                )
+            case "/api/custom-plays":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        [
+                            "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                            "name": "Ajapa Breath Cycle (15 min)",
+                            "meditationType": "Ajapa",
+                            "durationMinutes": 15,
+                            "startSound": "Temple Bell",
+                            "endSound": "Gong",
+                            "mediaAssetId": NSNull(),
+                            "recordingLabel": "Ajapa Breath Cycle (15 min)",
+                            "favorite": true,
+                            "createdAt": "2026-04-09T12:00:00Z",
+                            "updatedAt": "2026-04-09T12:10:00Z",
+                        ],
+                    ]
+                )
+            case "/api/playlists", "/api/sankalpas":
+                return URLProtocolStub.jsonResponse([])
+            case "/api/summaries":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "overallSummary": [
+                            "totalSessionLogs": 0,
+                            "completedSessionLogs": 0,
+                            "endedEarlySessionLogs": 0,
+                            "totalDurationSeconds": 0,
+                        ],
+                        "byTypeSummary": [],
+                        "bySourceSummary": [],
+                        "byTimeOfDaySummary": [],
+                    ]
+                )
+            case "/api/media/custom-plays":
+                return URLProtocolStub.jsonResponse(
+                    [
+                        [
+                            "id": "media-ajapa-breath-15",
+                            "label": "Ajapa Breath Cycle (15 min)",
+                            "meditationType": "Ajapa",
+                            "filePath": "/media/custom-plays/ajapa-breath-15.mp3",
+                            "relativePath": "custom-plays/ajapa-breath-15.mp3",
+                            "durationSeconds": 900,
+                            "mimeType": "audio/mpeg",
+                            "sizeBytes": 1024,
+                            "updatedAt": "2026-04-09T12:00:00Z",
+                        ],
+                    ]
+                )
+            default:
+                return URLProtocolStub.jsonResponse([:])
+            }
+        }
+
+        let client = makeClient()
+        let remoteState = try await client.fetchRemoteState(
+            localSnapshot: SampleData.snapshot,
+            timeZoneIdentifier: "America/Chicago"
+        )
+
+        XCTAssertEqual(remoteState.snapshot.customPlays.count, 1)
+        XCTAssertEqual(remoteState.snapshot.customPlays[0].linkedMediaIdentifier, "media-ajapa-breath-15")
+        XCTAssertEqual(remoteState.snapshot.customPlays[0].media?.source, .remote)
+        XCTAssertEqual(remoteState.snapshot.customPlays[0].durationSeconds, 900)
+    }
+
     func testApplyMutationSendsQueuedHeaderAndBackendStatusMapping() async throws {
         let sessionLog = SessionLog(
             id: UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!,

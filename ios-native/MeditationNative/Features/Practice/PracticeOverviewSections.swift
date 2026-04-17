@@ -51,7 +51,7 @@ struct FeaturedCustomPlayLibrarySection: View {
                         Text(
                             viewModel.canResolvePlayback(for: featuredCustomPlay.media)
                                 ? "Ready to play with linked recording media on this device."
-                                : "Needs available recording media before it can start."
+                                : "Recording unavailable on this device."
                         )
                             .font(.footnote)
                             .foregroundStyle(.secondary)

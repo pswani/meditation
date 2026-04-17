@@ -694,9 +694,7 @@ private struct BackendCustomPlayResponse: Decodable {
         guard let meditationType = MeditationType(rawValue: meditationType) else {
             throw AppSyncError.invalidResponse("Unsupported custom play meditation type: \(meditationType)")
         }
-        let mediaAsset = mediaAssetId.flatMap { identifier in
-            mediaAssets.first(where: { $0.id == identifier })
-        }
+        let mediaAsset = resolvedMediaAsset(from: mediaAssets, meditationType: meditationType)
         return CustomPlay(
             id: UUID(uuidString: id) ?? UUID(),
             name: name,
@@ -705,10 +703,49 @@ private struct BackendCustomPlayResponse: Decodable {
             startSoundName: TimerSoundCatalog.normalizeSelection(startSound.nilIfNone),
             endSoundName: TimerSoundCatalog.normalizeSelection(endSound.nilIfNone),
             recordingLabel: recordingLabel?.nilIfBlank,
-            linkedMediaIdentifier: mediaAssetId?.nilIfBlank,
+            linkedMediaIdentifier: mediaAssetId?.nilIfBlank ?? mediaAsset?.id,
             media: mediaAsset?.playbackMedia,
             isFavorite: favorite
         )
+    }
+
+    private func resolvedMediaAsset(
+        from mediaAssets: [RemoteMediaAsset],
+        meditationType: MeditationType
+    ) -> RemoteMediaAsset? {
+        if let mediaAssetId {
+            return mediaAssets.first(where: { $0.id == mediaAssetId })
+        }
+
+        let sameMeditationTypeAssets = mediaAssets.filter { $0.meditationType == meditationType }
+        guard sameMeditationTypeAssets.isEmpty == false else {
+            return nil
+        }
+
+        let normalizedName = name.normalizedMediaLookupKey
+        let normalizedRecordingLabel = recordingLabel?.normalizedMediaLookupKey
+        let requestedDurationSeconds = durationMinutes * 60
+
+        if let exactLabelMatch = sameMeditationTypeAssets.onlyMatch(where: {
+            let normalizedLabel = $0.label.normalizedMediaLookupKey
+            return normalizedLabel == normalizedName || normalizedLabel == normalizedRecordingLabel
+        }) {
+            return exactLabelMatch
+        }
+
+        if let exactDurationMatch = sameMeditationTypeAssets.onlyMatch(where: {
+            $0.durationSeconds == requestedDurationSeconds
+        }) {
+            return exactDurationMatch
+        }
+
+        return sameMeditationTypeAssets.onlyMatch(where: {
+            let fileStem = URL(fileURLWithPath: $0.relativePath)
+                .deletingPathExtension()
+                .lastPathComponent
+                .normalizedMediaLookupKey
+            return fileStem == normalizedName || fileStem == normalizedRecordingLabel
+        })
     }
 }
 
@@ -1009,6 +1046,23 @@ private extension RemoteMediaAsset {
             relativePath: relativePath,
             filePath: filePath
         )
+    }
+}
+
+private extension Array {
+    func onlyMatch(where predicate: (Element) -> Bool) -> Element? {
+        let matches = filter(predicate)
+        guard matches.count == 1 else {
+            return nil
+        }
+
+        return matches[0]
+    }
+}
+
+private extension String {
+    var normalizedMediaLookupKey: String {
+        lowercased().filter { $0.isLetter || $0.isNumber }
     }
 }
 

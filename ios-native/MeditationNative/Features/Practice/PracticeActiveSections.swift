@@ -62,7 +62,7 @@ struct ActiveCustomPlaySection: View {
     @ObservedObject var viewModel: ShellViewModel
 
     var body: some View {
-        SectionCard(title: "Active custom play", caption: "The linked recording stays aligned with the current session") {
+        SectionCard(title: "Active custom play", caption: customPlayCaption) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(viewModel.activeCustomPlaySession?.customPlay.name ?? "Custom play")
                     .font(.title3.weight(.semibold))
@@ -111,11 +111,31 @@ struct ActiveCustomPlaySection: View {
                     .tint(.teal)
                 }
 
-                Text("The session timing here follows the saved recording contract. If media is missing later, the app will say so instead of substituting another sound.")
+                Text(customPlayFooter)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var customPlayUsesRecordingPlayback: Bool {
+        guard let customPlay = viewModel.activeCustomPlaySession?.customPlay else {
+            return false
+        }
+
+        return viewModel.canResolvePlayback(for: customPlay.media)
+    }
+
+    private var customPlayCaption: String {
+        customPlayUsesRecordingPlayback
+            ? "The linked recording stays aligned with the current session"
+            : "This session is running with its saved duration and bells only"
+    }
+
+    private var customPlayFooter: String {
+        customPlayUsesRecordingPlayback
+            ? "The session timing here follows the saved recording contract. If media is missing later, the app will say so instead of substituting another sound."
+            : "The recording is unavailable on this device, so this custom play is finishing with its saved timing and bells only."
     }
 }
 

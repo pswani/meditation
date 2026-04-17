@@ -56,37 +56,20 @@ struct CustomPlayLibraryView: View {
                                 }
                             }
 
-                            HStack {
-                                Button("Start") {
-                                    if viewModel.startCustomPlay(customPlay) {
-                                        dismiss()
+                            ViewThatFits(in: .horizontal) {
+                                customPlayActionRow(customPlay)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        startButton(for: customPlay)
+                                        applyButton(for: customPlay)
+                                    }
+
+                                    HStack {
+                                        editButton(for: customPlay)
+                                        favoriteButton(for: customPlay)
+                                        deleteButton(for: customPlay)
                                     }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.teal)
-                                .disabled(viewModel.canStartCustomPlay(customPlay) == false)
-
-                                Button("Apply to timer") {
-                                    viewModel.applyCustomPlayToTimer(customPlay)
-                                }
-                                .buttonStyle(.bordered)
-
-                                Button("Edit") {
-                                    viewModel.customPlayValidationMessage = nil
-                                    draft = CustomPlayFeature.makeDraft(from: customPlay)
-                                    isPresentingEditor = true
-                                }
-                                .buttonStyle(.bordered)
-
-                                Button(customPlay.isFavorite ? "Unfavorite" : "Favorite") {
-                                    viewModel.toggleFavorite(for: customPlay)
-                                }
-                                .buttonStyle(.bordered)
-
-                                Button("Delete", role: .destructive) {
-                                    viewModel.requestDeleteCustomPlayConfirmation(customPlay)
-                                }
-                                .buttonStyle(.bordered)
                             }
                             .font(.footnote)
                         }
@@ -259,6 +242,65 @@ struct CustomPlayEditorView: View {
                 }
             }
         )
+    }
+}
+
+private extension CustomPlayLibraryView {
+    @ViewBuilder
+    func customPlayActionRow(_ customPlay: CustomPlay) -> some View {
+        HStack {
+            startButton(for: customPlay)
+            applyButton(for: customPlay)
+            editButton(for: customPlay)
+            favoriteButton(for: customPlay)
+            deleteButton(for: customPlay)
+        }
+    }
+
+    @ViewBuilder
+    func startButton(for customPlay: CustomPlay) -> some View {
+        Button("Start") {
+            if viewModel.startCustomPlay(customPlay) {
+                dismiss()
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.teal)
+        .disabled(viewModel.canStartCustomPlay(customPlay) == false)
+    }
+
+    @ViewBuilder
+    func applyButton(for customPlay: CustomPlay) -> some View {
+        Button("Apply to timer") {
+            viewModel.applyCustomPlayToTimer(customPlay)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    @ViewBuilder
+    func editButton(for customPlay: CustomPlay) -> some View {
+        Button("Edit") {
+            viewModel.customPlayValidationMessage = nil
+            draft = CustomPlayFeature.makeDraft(from: customPlay)
+            isPresentingEditor = true
+        }
+        .buttonStyle(.bordered)
+    }
+
+    @ViewBuilder
+    func favoriteButton(for customPlay: CustomPlay) -> some View {
+        Button(customPlay.isFavorite ? "Unfavorite" : "Favorite") {
+            viewModel.toggleFavorite(for: customPlay)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    @ViewBuilder
+    func deleteButton(for customPlay: CustomPlay) -> some View {
+        Button("Delete", role: .destructive) {
+            viewModel.requestDeleteCustomPlayConfirmation(customPlay)
+        }
+        .buttonStyle(.bordered)
     }
 }
 

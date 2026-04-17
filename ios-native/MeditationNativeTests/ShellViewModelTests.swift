@@ -135,11 +135,43 @@ final class ShellViewModelTests: XCTestCase {
         let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
 
         XCTAssertFalse(viewModel.canResolvePlayback(for: customPlay.media))
-        XCTAssertFalse(viewModel.canStartCustomPlay(customPlay))
+        XCTAssertTrue(viewModel.canStartCustomPlay(customPlay))
         XCTAssertEqual(
             viewModel.customPlayStartSupportMessage(for: customPlay),
-            "Needs available recording media before it can start."
+            "Recording unavailable on this device. Start still runs the saved duration and bells."
         )
+    }
+
+    func testCustomPlayWithoutResolvableMediaCanStillStartWithBellsOnlyFallback() throws {
+        var snapshot = SampleData.snapshot
+        let unavailableCustomPlay = CustomPlay(
+            name: "Unavailable Recording",
+            meditationType: .vipassana,
+            durationSeconds: 600,
+            linkedMediaIdentifier: "remote-only",
+            media: .remote(
+                id: "remote-only",
+                label: "Unavailable Recording",
+                relativePath: "custom-plays/unavailable.mp3",
+                filePath: ""
+            ),
+            isFavorite: true
+        )
+        snapshot.customPlays = [unavailableCustomPlay]
+
+        let (viewModel, notificationScheduler, audioPlayer, _) = try makeViewModel(
+            snapshot: snapshot,
+            environment: .localOnly
+        )
+
+        XCTAssertTrue(viewModel.startCustomPlay(unavailableCustomPlay))
+        XCTAssertEqual(viewModel.activeCustomPlaySession?.customPlay.id, unavailableCustomPlay.id)
+        XCTAssertTrue(audioPlayer.startedMediaAssets.isEmpty)
+        XCTAssertEqual(
+            viewModel.practiceRuntimeMessage,
+            "Recording unavailable on this device. This custom play is running with its saved duration and bells only."
+        )
+        XCTAssertEqual(notificationScheduler.scheduledEndSoundNames.last!, unavailableCustomPlay.endSoundName)
     }
 
     func testPlaybackAudioSessionPolicyMixesWithOtherAudio() {
@@ -281,6 +313,24 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
         XCTAssertEqual(viewModel.recentSessionLogs.first?.source, .timer)
         XCTAssertEqual(viewModel.recentSessionLogs.first?.status, .completed)
+        while notificationScheduler.cancelCount < 1 {
+            await Task.yield()
+        }
+        XCTAssertGreaterThanOrEqual(notificationScheduler.cancelCount, 1)
+    }
+
+    func testCustomPlayAudioCompletionFinishesPlaybackWithoutForegroundClockTick() async throws {
+        let customPlay = try XCTUnwrap(SampleData.snapshot.customPlays.first)
+        let (viewModel, notificationScheduler, audioPlayer, _) = try makeViewModel()
+        let existingLogCount = viewModel.recentSessionLogs.count
+
+        XCTAssertTrue(viewModel.startCustomPlay(customPlay))
+
+        audioPlayer.firePlaybackCompletion()
+
+        XCTAssertNil(viewModel.activeCustomPlaySession)
+        XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
+        XCTAssertEqual(viewModel.recentSessionLogs.first?.source, .customPlay)
         while notificationScheduler.cancelCount < 1 {
             await Task.yield()
         }
@@ -674,6 +724,7 @@ private final class RecordingTimerSoundPlayer: TimerSoundPlaying {
 
 @MainActor
 private final class RecordingAudioPlayer: CustomPlayAudioControlling {
+    var onPlaybackCompletion: (@MainActor @Sendable () -> Void)?
     private(set) var startedMediaAssets: [CustomPlayMedia] = []
     private(set) var startedOffsets: [TimeInterval] = []
     private(set) var pauseCount = 0
@@ -695,6 +746,10 @@ private final class RecordingAudioPlayer: CustomPlayAudioControlling {
 
     func stopPlayback() {
         stopCount += 1
+    }
+
+    func firePlaybackCompletion() {
+        onPlaybackCompletion?()
     }
 }
 

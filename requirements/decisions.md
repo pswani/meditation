@@ -40,7 +40,7 @@
     - use truthful recording targets instead of placeholder loops:
       - bundled sample media that really ships in the app for local-only use
       - backend-linked media metadata when sync is configured
-    - keep saved `custom play` media metadata optional so older local snapshots still decode and surface calm “needs media” guidance
+    - keep saved `custom play` media metadata optional so older local snapshots still decode and surface calm unavailable-media guidance, while still allowing standalone runs to fall back to saved timing plus bells only
   - keep native `custom play` parity metadata local-first and optional where possible:
     - carry optional start and end sounds directly on the saved `custom play`
     - carry an optional recording label or session note for calm history/context display
@@ -153,6 +153,7 @@
   - legacy native or synced values normalize through the same `Soft Chime` -> `Temple Bell` and `Wood Block` -> `Gong` mapping
   - activate an `AVAudioSession` playback category before timer-cue and recording-backed playback so meditation audio is not muted by the iPhone silent switch
   - keep that native playback session on `.playback` with `.mixWithOthers` so timer cues and recording-backed sessions can sound without pausing another audio app
+  - declare native background audio for recording-backed playback so standalone `custom play` sessions can remain truthful while the phone is locked when iOS allows that playback to continue
   - when a fixed timer is within roughly the last 25 seconds and the scene turns inactive or backgrounded, arm a narrow background-task bridge so the selected end bell can still fire if iOS keeps the app runnable through completion
   - keep fixed-timer notification fallback aligned with the selected bundled end bell when one exists
   - during near-end bridge coverage, delay the notification fallback slightly so the app-driven bell has a truthful chance to finish first without routinely producing duplicate bells
@@ -182,7 +183,9 @@
 - Keep native iOS `custom play` and linked-playlist recording playback honest:
   - bundled sample media should only be offered when the actual recording ships in the app
   - backend `/api/media/custom-plays` metadata should map to real remote playback URLs rather than meditation-type placeholder loops
-  - missing recordings should fail calmly with explicit guidance instead of substituting another sound
+  - recover one clear media-catalog match for older backend `custom play` records that omit `mediaAssetId`, but do not guess when multiple matches fit
+  - standalone `custom play` runs may still proceed with their saved duration plus start or end bells when the recording is unavailable on the device
+  - linked-playlist validation should still fail calmly with explicit guidance instead of substituting another recording
 - Keep playlist runs modeled as a runtime snapshot instead of reading mutable playlist records live during playback:
   - each run stores resolved item titles, durations, and any linked `custom play` media metadata at launch time
   - optional small gaps are stored at the playlist level and replayed as explicit runtime segments

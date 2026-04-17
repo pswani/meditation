@@ -103,6 +103,9 @@ final class ShellViewModel: ObservableObject {
         }
 
         self.environment = repository.environment
+        self.audioPlayer.onPlaybackCompletion = { [weak self] in
+            self?.handleAudioPlaybackCompletion()
+        }
         restorePersistedActiveRuntimeIfNeeded()
 
         if environment.requiresBackend {
@@ -508,39 +511,21 @@ final class ShellViewModel: ObservableObject {
             return false
         }
 
-        guard canResolvePlayback(for: customPlay.media) else {
-            practiceRuntimeMessage = "This custom play needs an available recording before it can start."
-            return false
-        }
-
-        guard let media = customPlay.media else {
-            practiceRuntimeMessage = "This custom play needs an available recording before it can start."
-            return false
-        }
-
-        do {
-            try audioPlayer.startPlayback(for: media, environment: environment, at: 0)
-            activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
-            soundPlayer.playSound(named: customPlay.startSoundName)
-            practiceRuntimeMessage = nil
-            recordLastUsedPracticeTarget(
-                LastUsedPracticeTarget(
-                    kind: .customPlay,
-                    title: customPlay.name,
-                    meditationType: customPlay.meditationType,
-                    customPlayID: customPlay.id,
-                    updatedAt: Date()
-                )
+        practiceRuntimeMessage = startCustomPlayPlaybackIfAvailable(for: customPlay)
+        activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
+        soundPlayer.playSound(named: customPlay.startSoundName)
+        recordLastUsedPracticeTarget(
+            LastUsedPracticeTarget(
+                kind: .customPlay,
+                title: customPlay.name,
+                meditationType: customPlay.meditationType,
+                customPlayID: customPlay.id,
+                updatedAt: Date()
             )
-            startClock()
-            return true
-        } catch let error as LocalAudioPlaybackError {
-            practiceRuntimeMessage = error.message
-        } catch {
-            practiceRuntimeMessage = "The custom play could not start right now."
-        }
-
-        return false
+        )
+        startClock()
+        rescheduleCustomPlayCompletionNotificationIfNeeded()
+        return true
     }
 
     func pauseCustomPlay() {
@@ -551,6 +536,9 @@ final class ShellViewModel: ObservableObject {
         activeCustomPlaySession.pause(at: now)
         self.activeCustomPlaySession = activeCustomPlaySession
         audioPlayer.pausePlayback()
+        Task {
+            await notificationScheduler.cancelTimerCompletionNotification()
+        }
         persistSnapshot()
     }
 
@@ -561,10 +549,13 @@ final class ShellViewModel: ObservableObject {
 
         let resumedAt = Date()
         do {
-            try resumeCustomPlayAudioIfNeeded(for: activeCustomPlaySession, at: resumedAt)
+            let resumedWithoutRecording = try resumeCustomPlayAudioIfNeeded(for: activeCustomPlaySession, at: resumedAt)
             activeCustomPlaySession.resume(at: resumedAt)
             self.activeCustomPlaySession = activeCustomPlaySession
-            practiceRuntimeMessage = nil
+            practiceRuntimeMessage = resumedWithoutRecording
+                ? "Recording unavailable on this device. This custom play resumed with its saved duration and bells only."
+                : nil
+            rescheduleCustomPlayCompletionNotificationIfNeeded()
             persistSnapshot()
         } catch let error as LocalAudioPlaybackError {
             practiceRuntimeMessage = error.message
@@ -853,6 +844,7 @@ final class ShellViewModel: ObservableObject {
             now = Date()
             handleClockTick(now)
             rescheduleTimerNotificationIfNeeded()
+            rescheduleCustomPlayCompletionNotificationIfNeeded()
             Task {
                 await refreshNotificationPermissionState()
             }
@@ -988,6 +980,16 @@ final class ShellViewModel: ObservableObject {
         }
     }
 
+    private func handleAudioPlaybackCompletion() {
+        if let activeCustomPlaySession,
+           activeCustomPlaySession.isPaused == false {
+            finishCustomPlay(status: .completed, endedAt: customPlayTargetEndAt(activeCustomPlaySession))
+            return
+        }
+
+        handleClockTick(Date())
+    }
+
     private func finishTimer(status: SessionStatus, endedAt: Date) {
         guard let activeSession else {
             return
@@ -1016,6 +1018,11 @@ final class ShellViewModel: ObservableObject {
         soundPlayer.playSound(named: activeCustomPlaySession.customPlay.endSoundName)
         self.activeCustomPlaySession = nil
         insertLogs([log])
+
+        Task {
+            await notificationScheduler.cancelTimerCompletionNotification()
+        }
+
         stopClockIfIdle()
     }
 
@@ -1185,6 +1192,22 @@ final class ShellViewModel: ObservableObject {
         }
     }
 
+    private func rescheduleCustomPlayCompletionNotificationIfNeeded() {
+        guard let activeCustomPlaySession,
+              activeCustomPlaySession.isPaused == false
+        else {
+            return
+        }
+
+        Task {
+            await notificationScheduler.scheduleTimerCompletionNotification(
+                at: customPlayTargetEndAt(activeCustomPlaySession),
+                meditationType: activeCustomPlaySession.customPlay.meditationType,
+                endSoundName: activeCustomPlaySession.customPlay.endSoundName
+            )
+        }
+    }
+
     private func prepareTimerForBackgroundTransition() {
         if armTimerCompletionBridgeIfNeeded() {
             rescheduleTimerNotificationIfNeeded(coordination: .bridgeBackup)
@@ -1284,6 +1307,26 @@ final class ShellViewModel: ObservableObject {
         }
     }
 
+    private func startCustomPlayPlaybackIfAvailable(
+        for customPlay: CustomPlay,
+        at offsetSeconds: TimeInterval = 0
+    ) -> String? {
+        guard let media = customPlay.media,
+              canResolvePlayback(for: media)
+        else {
+            audioPlayer.stopPlayback()
+            return "Recording unavailable on this device. This custom play is running with its saved duration and bells only."
+        }
+
+        do {
+            try audioPlayer.startPlayback(for: media, environment: environment, at: offsetSeconds)
+            return nil
+        } catch {
+            audioPlayer.stopPlayback()
+            return "Recording audio could not start, so this custom play is running with its saved duration and bells only."
+        }
+    }
+
     private func customPlayTargetEndAt(_ session: ActiveCustomPlaySession) -> Date {
         session.startedAt
             .addingTimeInterval(TimeInterval(session.customPlay.durationSeconds))
@@ -1361,16 +1404,6 @@ final class ShellViewModel: ObservableObject {
     }
 
     private func restoreCustomPlaySession(_ session: ActiveCustomPlaySession, at currentDate: Date) {
-        guard let media = session.customPlay.media,
-              canResolvePlayback(for: media)
-        else {
-            activeCustomPlaySession = nil
-            snapshot.activeRuntime = nil
-            practiceRuntimeMessage = "The previous custom play could not be restored because its recording is unavailable on this device."
-            persistSnapshot()
-            return
-        }
-
         activeCustomPlaySession = session
 
         if session.isPaused == false,
@@ -1380,27 +1413,25 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        var restoreMessage: String?
         if session.isPaused == false {
-            do {
-                try audioPlayer.startPlayback(
-                    for: media,
-                    environment: environment,
-                    at: TimeInterval(session.elapsedSeconds(at: currentDate))
-                )
-            } catch let error as LocalAudioPlaybackError {
-                activeCustomPlaySession = nil
-                practiceRuntimeMessage = error.message
-                persistSnapshot()
-                return
-            } catch {
-                activeCustomPlaySession = nil
-                practiceRuntimeMessage = "The previous custom play could not be restored right now."
-                persistSnapshot()
-                return
-            }
+            restoreMessage = startCustomPlayPlaybackIfAvailable(
+                for: session.customPlay,
+                at: TimeInterval(session.elapsedSeconds(at: currentDate))
+            )
+        }
+
+        if let restoreMessage {
+            practiceRuntimeMessage = restoreMessage.replacingOccurrences(
+                of: "This custom play is running",
+                with: "The previous custom play resumed"
+            )
+        } else {
+            practiceRuntimeMessage = nil
         }
 
         startClock()
+        rescheduleCustomPlayCompletionNotificationIfNeeded()
         persistSnapshot()
     }
 
@@ -1470,25 +1501,40 @@ final class ShellViewModel: ObservableObject {
         audioPlayer.stopPlayback()
         self.activeCustomPlaySession = nil
         insertLogs([log])
+
+        Task {
+            await notificationScheduler.cancelTimerCompletionNotification()
+        }
+
         stopClockIfIdle()
     }
 
     private func resumeCustomPlayAudioIfNeeded(
         for session: ActiveCustomPlaySession,
         at date: Date
-    ) throws {
+    ) throws -> Bool {
+        guard let media = session.customPlay.media,
+              canResolvePlayback(for: media)
+        else {
+            audioPlayer.stopPlayback()
+            return true
+        }
+
         do {
             try audioPlayer.resumePlayback()
+            return false
         } catch LocalAudioPlaybackError.audioSetupFailed {
-            guard let media = session.customPlay.media else {
-                throw LocalAudioPlaybackError.recordingUnavailable
+            do {
+                try audioPlayer.startPlayback(
+                    for: media,
+                    environment: environment,
+                    at: TimeInterval(session.elapsedSeconds(at: date))
+                )
+                return false
+            } catch {
+                audioPlayer.stopPlayback()
+                return true
             }
-
-            try audioPlayer.startPlayback(
-                for: media,
-                environment: environment,
-                at: TimeInterval(session.elapsedSeconds(at: date))
-            )
         }
     }
 

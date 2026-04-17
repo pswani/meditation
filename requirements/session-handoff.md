@@ -42,6 +42,9 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-lock-screen-end-bell-full-feature.md`
   - `docs/review-ios-native-lock-screen-end-bell-full-feature.md`
   - `docs/test-ios-native-lock-screen-end-bell-full-feature.md`
+- Native iOS custom-play start and lock-screen defect artifacts completed on 2026-04-17:
+  - `docs/execplan-ios-native-custom-play-start-and-lock-screen-defects-feature.md`
+  - `docs/test-ios-native-custom-play-start-and-lock-screen-defects-feature.md`
 - Sankalpa full parity artifacts completed on 2026-04-17:
   - `docs/execplan-sankalpa-full-parity-feature.md`
   - `docs/review-sankalpa-full-parity-feature.md`
@@ -249,6 +252,11 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - selected-bell notification fallback for fixed timers when the bundled cue is available, with a short delayed backup schedule during near-end bridge coverage to reduce duplicate-bell risk
   - continued fallback to local-notification sound and foreground catch-up for longer lock-screen spans, instead of overclaiming guaranteed app-driven bell playback after suspension
   - focused app-target XCTest coverage for selected-bell fallback, near-end inactive or background bridge coordination, and duplicate-completion protection
+- Native iOS custom-play start and lock-screen fixes on 2026-04-17 now add:
+  - standalone Home favorites and Practice `custom play` starts that stay available when recording media is unavailable on the device, running the saved duration and bells only with explicit calm guidance
+  - a responsive Practice `custom play` library action layout that keeps `Start` and `Apply to timer` visible on narrow iPhone widths
+  - legacy backend `custom play` media recovery when one clear `/api/media/custom-plays` catalog match exists even though the synced record omits `mediaAssetId`
+  - background-audio-backed `custom play` playback plus completion callbacks and reused notification fallback so a locked-phone finish can still trigger the saved end bell truthfully instead of depending only on a foreground clock tick
 - Native iOS Home and Practice navigation defect fixes on 2026-04-16 now add:
   - one clear navigation title on the Home and Practice tab roots instead of duplicate in-content headings plus navigation titles
   - shared `custom play` startability rules so Home favorites and Practice `custom play` surfaces stay aligned about when locally available media can start
@@ -651,6 +659,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - A browser-level offline service-worker smoke on the installed app origin is still worth doing; this bundle validated registration through unit tests and built-artifact inspection because the repo does not define a dedicated preview script.
 - Native iOS timer-history still needs physical iPhone validation for notification permission prompts, completion delivery timing, and background or foreground transitions around fixed-duration completion.
 - Native iOS active-session relaunch recovery now exists, but it still needs concrete simulator or physical-iPhone validation for audio-backed sessions, background completion, and notification timing.
+- Native iOS `custom play` start and lock-screen fixes still need physical iPhone validation for bells-only favorite starts, locked-phone end-bell timing, and competing-audio behavior while another app is already playing sound.
 - Synced summary-by-source rows still reflect the backend’s broader `auto log` versus `manual log` vocabulary, so remote summary labels cannot yet distinguish timer, `custom play`, and playlist runs until the backend exposes richer source categories.
 
 ## Recommended next slice

@@ -110,7 +110,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
             )
         )
 
-        XCTAssertFalse(
+        XCTAssertTrue(
             ShellViewModelPresentation.canStartCustomPlay(
                 canResolvePlayback: false,
                 hasActivePracticeRuntime: false
@@ -121,7 +121,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
                 canResolvePlayback: false,
                 hasActivePracticeRuntime: false
             ),
-            "Needs available recording media before it can start."
+            "Recording unavailable on this device. Start still runs the saved duration and bells."
         )
     }
 

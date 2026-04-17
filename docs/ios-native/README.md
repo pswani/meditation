@@ -20,10 +20,13 @@ Implemented native surfaces today include:
 - native playback audio mixing that keeps timer cues and recording-backed sessions audible while another audio app continues playing
 - a near-end fixed-timer background bridge that can preserve the selected end bell for the last few locked-screen seconds, while longer background spans still fall back to notification sound or foreground catch-up
 - selected-bell notification fallback for fixed timers when the bundled `Temple Bell` or `Gong` cue is available, with a short backup delay during near-end lock-screen transitions to reduce duplicate bell risk
+- background-audio-backed `custom play` completion that keeps recording playback truthful under lock when iOS allows it, then finishes with the saved end bell or notification fallback instead of depending only on foreground clock ticks
+- Home favorites and Practice `custom play` starts that remain available even when the recording is unavailable on the device, running the saved duration and bells with explicit calm guidance instead of disabling the primary action
 - truthful `custom play` and linked-playlist recording playback:
   - one bundled sample recording ships with the app for local-only use
   - synced backend media metadata now maps to real remote recording URLs instead of placeholder loops
-  - missing recordings stay explicit and unavailable instead of silently substituting another sound
+  - legacy synced `custom play` records can recover one clear media-catalog match even when the backend omits `mediaAssetId`
+  - standalone `custom play` runs stay explicit about missing recordings and fall back to saved timing plus bells only instead of silently substituting another sound
 - explicit `session log` creation for standalone `custom play` runs and per-item playlist outcomes
 - automatic local `session log` creation from timer outcomes
 - History filters plus a visible manual-log entry path
@@ -177,6 +180,8 @@ This validates the shared `MeditationNativeCore` package on a machine where the 
 Physical iPhone or concrete simulator verification is still recommended for:
 - notification permission prompts
 - fixed-duration completion notifications and near-end lock-screen end-bell behavior
+- Home favorite and Practice `custom play` starts when synced media is unavailable on the device
+- standalone `custom play` completion bells while the phone is locked, including fallback behavior when another audio app is already playing
 - near-end app-driven bell versus delayed notification fallback timing on a locked iPhone
 - background or foreground transitions around timer completion
 - competing-audio mixing behavior for timer cues and recording-backed playback
@@ -273,8 +278,10 @@ There is no in-app destructive wipe for the native local snapshot yet. To clear 
 - Native `custom play` media is now truthful rather than placeholder-backed:
   - local-only playback uses the bundled `Vipassana Sit (20 min)` sample recording when selected
   - synced backend media metadata maps to its real `/media/custom-plays/...` playback path
-  - if no playable recording exists on the device, the app shows calm unavailable-media guidance instead of faking playback
+  - if no playable recording exists on the device, standalone `custom play` starts still run the saved duration and bells with calm unavailable-media guidance instead of faking playback
+  - legacy backend records whose `mediaAssetId` is missing can still recover playback when one clear catalog match exists
 - The native Practice custom-play library includes an explicit `Apply to timer` action that copies the saved `custom play` duration, meditation type, and sounds into the timer defaults.
+- The native Practice custom-play library now lets the primary `Start` and `Apply to timer` actions wrap onto a second line on narrow iPhones instead of squeezing them out of view.
 - Settings timer defaults now use a screen-local draft with explicit `Save` and `Reset` actions, while Practice still behaves like the next-session setup surface.
 - Native summary remains derived from local `session log` history instead of introducing a second stored summary source of truth.
 - `sankalpa` stays local-first with archive or restore support while optional backend sync remains intentionally additive.

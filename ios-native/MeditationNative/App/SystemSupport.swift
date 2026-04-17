@@ -286,6 +286,7 @@ enum LocalAudioPlaybackError: Error {
 
 @MainActor
 protocol CustomPlayAudioControlling: AnyObject {
+    var onPlaybackCompletion: (@MainActor @Sendable () -> Void)? { get set }
     func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval) throws
     func pausePlayback()
     func resumePlayback() throws
@@ -294,7 +295,10 @@ protocol CustomPlayAudioControlling: AnyObject {
 
 @MainActor
 final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
+    var onPlaybackCompletion: (@MainActor @Sendable () -> Void)?
+
     private var player: AVPlayer?
+    private var playbackCompletionObserver: NSObjectProtocol?
 
     func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval = 0) throws {
         stopPlayback()
@@ -305,6 +309,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 
             let player = AVPlayer(url: url)
             player.automaticallyWaitsToMinimizeStalling = true
+            attachPlaybackCompletionObserver(to: player.currentItem)
             let startTime = max(0, offsetSeconds)
             if startTime > 0 {
                 let seekTime = CMTime(seconds: startTime, preferredTimescale: 600)
@@ -333,8 +338,35 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
     }
 
     func stopPlayback() {
+        detachPlaybackCompletionObserver()
         player?.pause()
         player = nil
+    }
+
+    private func attachPlaybackCompletionObserver(to item: AVPlayerItem?) {
+        detachPlaybackCompletionObserver()
+        guard let item else {
+            return
+        }
+
+        playbackCompletionObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.onPlaybackCompletion?()
+            }
+        }
+    }
+
+    private func detachPlaybackCompletionObserver() {
+        guard let playbackCompletionObserver else {
+            return
+        }
+
+        NotificationCenter.default.removeObserver(playbackCompletionObserver)
+        self.playbackCompletionObserver = nil
     }
 
     private func resolvePlaybackURL(

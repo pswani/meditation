@@ -137,18 +137,22 @@ enum ShellViewModelPresentation {
         canResolvePlayback: Bool,
         hasActivePracticeRuntime: Bool
     ) -> Bool {
-        canResolvePlayback && hasActivePracticeRuntime == false
+        _ = canResolvePlayback
+        return hasActivePracticeRuntime == false
     }
 
     static func customPlayStartSupportMessage(
         canResolvePlayback: Bool,
         hasActivePracticeRuntime: Bool
     ) -> String? {
-        if canResolvePlayback == false {
-            return "Needs available recording media before it can start."
+        if hasActivePracticeRuntime {
+            return nil
         }
 
-        _ = hasActivePracticeRuntime
+        if canResolvePlayback == false {
+            return "Recording unavailable on this device. Start still runs the saved duration and bells."
+        }
+
         return nil
     }
 
