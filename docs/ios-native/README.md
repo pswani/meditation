@@ -17,6 +17,8 @@ Implemented native surfaces today include:
 - `Apply to timer` from the custom-play library so saved playback settings can seed timer defaults
 - playlist creation, editing, reordering, favorite handling, and ordered runtime
 - web-aligned timer sound choices and bundled timer cue playback using the shared `Temple Bell` and `Gong` audio files
+- native playback audio mixing that keeps timer cues and recording-backed sessions audible while another audio app continues playing
+- a near-end fixed-timer background bridge that can preserve the selected end bell for the last few locked-screen seconds, while longer background spans still fall back to notification sound or foreground catch-up
 - truthful `custom play` and linked-playlist recording playback:
   - one bundled sample recording ships with the app for local-only use
   - synced backend media metadata now maps to real remote recording URLs instead of placeholder loops
@@ -173,8 +175,9 @@ This validates the shared `MeditationNativeCore` package on a machine where the 
 
 Physical iPhone or concrete simulator verification is still recommended for:
 - notification permission prompts
-- fixed-duration completion notifications
+- fixed-duration completion notifications and near-end lock-screen end-bell behavior
 - background or foreground transitions around timer completion
+- competing-audio mixing behavior for timer cues and recording-backed playback
 - active-session relaunch recovery for timer, `custom play`, and playlist
 - bundled timer cue playback for `Temple Bell` and `Gong`
 - bundled-sample and backend-linked recording playback for `custom play` and playlist-linked items

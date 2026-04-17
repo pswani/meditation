@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class ShellViewModelTests: XCTestCase {
     func testHomeShortcutStateStaysCompactAndSorted() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
 
         XCTAssertEqual(viewModel.homeQuickStartSummary, "25 min fixed-duration • Vipassana")
         XCTAssertEqual(viewModel.favoriteCustomPlaysForHome.map(\.name), ["Vipassana Sit 20"])
@@ -33,7 +33,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
 
-        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -56,7 +56,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
         )
 
-        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -75,7 +75,7 @@ final class ShellViewModelTests: XCTestCase {
             updatedAt: Date(timeIntervalSince1970: 1_700_000_200)
         )
 
-        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
 
         viewModel.startLastUsedPractice()
 
@@ -84,7 +84,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testApplyCustomPlayToTimerCopiesTheParityMetadata() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
         let customPlay = CustomPlay(
             name: "Morning Focus",
             meditationType: .ajapa,
@@ -105,7 +105,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testLocalOnlyBundledFavoriteCustomPlayRemainsStartable() throws {
-        let (viewModel, _, _) = try makeViewModel(environment: .localOnly)
+        let (viewModel, _, _, _) = try makeViewModel(environment: .localOnly)
         let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
 
         XCTAssertTrue(viewModel.canResolvePlayback(for: customPlay.media))
@@ -131,7 +131,7 @@ final class ShellViewModelTests: XCTestCase {
         )
         snapshot.customPlays = [unavailableCustomPlay]
 
-        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot, environment: .localOnly)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot, environment: .localOnly)
         let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
 
         XCTAssertFalse(viewModel.canResolvePlayback(for: customPlay.media))
@@ -142,8 +142,14 @@ final class ShellViewModelTests: XCTestCase {
         )
     }
 
+    func testPlaybackAudioSessionPolicyMixesWithOtherAudio() {
+        XCTAssertEqual(PlaybackAudioSessionSupport.category, .playback)
+        XCTAssertEqual(PlaybackAudioSessionSupport.mode, .default)
+        XCTAssertTrue(PlaybackAudioSessionSupport.options.contains(.mixWithOthers))
+    }
+
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
-        let (viewModel, notificationScheduler, _) = try makeViewModel()
+        let (viewModel, notificationScheduler, _, _) = try makeViewModel()
         let existingLogCount = viewModel.recentSessionLogs.count
 
         viewModel.startTimer()
@@ -176,8 +182,70 @@ final class ShellViewModelTests: XCTestCase {
         wait(for: [notificationCancelled], timeout: 1)
     }
 
+    func testBackgroundSceneArmsBridgeOnlyWhenFixedTimerIsNearCompletion() throws {
+        let nearEndSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(
+                mode: .fixedDuration,
+                durationMinutes: 1,
+                meditationType: .vipassana,
+                endSoundName: TimerSoundOption.templeBell.rawValue
+            ),
+            now: Date().addingTimeInterval(-40)
+        )
+        var nearEndSnapshot = SampleData.snapshot
+        nearEndSnapshot.activeRuntime = ActivePracticeSnapshot(timerSession: nearEndSession)
+
+        let (nearEndViewModel, _, _, nearEndBridge) = try makeViewModel(snapshot: nearEndSnapshot)
+        nearEndViewModel.handleScenePhaseChange(to: .background)
+
+        XCTAssertEqual(nearEndBridge.armedTargetDates.count, 1)
+
+        let longRunningSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(
+                mode: .fixedDuration,
+                durationMinutes: 5,
+                meditationType: .vipassana,
+                endSoundName: TimerSoundOption.templeBell.rawValue
+            ),
+            now: Date()
+        )
+        var longRunningSnapshot = SampleData.snapshot
+        longRunningSnapshot.activeRuntime = ActivePracticeSnapshot(timerSession: longRunningSession)
+
+        let (longRunningViewModel, _, _, longRunningBridge) = try makeViewModel(snapshot: longRunningSnapshot)
+        longRunningViewModel.handleScenePhaseChange(to: .background)
+
+        XCTAssertTrue(longRunningBridge.armedTargetDates.isEmpty)
+    }
+
+    func testBackgroundTimerCompletionBridgeFinishesFixedTimer() async throws {
+        let activeSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(
+                mode: .fixedDuration,
+                durationMinutes: 1,
+                meditationType: .vipassana,
+                endSoundName: TimerSoundOption.templeBell.rawValue
+            ),
+            now: Date().addingTimeInterval(-45)
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: activeSession)
+
+        let (viewModel, notificationScheduler, _, bridge) = try makeViewModel(snapshot: snapshot)
+        let existingLogCount = viewModel.recentSessionLogs.count
+
+        viewModel.handleScenePhaseChange(to: .background)
+        await bridge.fire()
+
+        XCTAssertNil(viewModel.activeSession)
+        XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
+        XCTAssertEqual(viewModel.recentSessionLogs.first?.source, .timer)
+        XCTAssertEqual(viewModel.recentSessionLogs.first?.status, .completed)
+        XCTAssertGreaterThanOrEqual(notificationScheduler.cancelCount, 1)
+    }
+
     func testHistoryMeditationTypeEditUpdatesOnlyManualLogs() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
         let manualLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.source == .manual }))
         let originalTimerLog = try XCTUnwrap(viewModel.recentSessionLogs.first(where: { $0.source == .timer }))
 
@@ -198,7 +266,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testSharedPromptSupportsArchiveDeleteAndArchivedOnlyGuard() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
 
         let activeSankalpa = try XCTUnwrap(viewModel.sankalpaProgressGroups.active.first?.goal)
         viewModel.requestArchiveSankalpaConfirmation(activeSankalpa)
@@ -230,7 +298,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testLibraryDeletesRequireConfirmationBeforeRemoval() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
 
         let customPlay = try XCTUnwrap(viewModel.customPlays.first)
         viewModel.requestDeleteCustomPlayConfirmation(customPlay)
@@ -252,7 +320,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testSaveTimerDefaultsPersistsOnlyWhenCalledExplicitly() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
         let updatedDraft = TimerSettingsDraft(
             mode: .fixedDuration,
             durationMinutes: 18,
@@ -269,7 +337,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testSaveTimerDefaultsRejectsInvalidTimerDraft() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
         let invalidDraft = TimerSettingsDraft(
             mode: .fixedDuration,
             durationMinutes: 0,
@@ -287,7 +355,7 @@ final class ShellViewModelTests: XCTestCase {
 
     func testSaveBackendConfigurationUpdatesEnvironmentAndStartsConfiguredSync() throws {
         let syncClientFactory = RecordingSyncClientFactory()
-        let (viewModel, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+        let (viewModel, _, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
 
         let saved = viewModel.saveBackendConfiguration(
             profileName: "Phone Sync",
@@ -312,7 +380,7 @@ final class ShellViewModelTests: XCTestCase {
     }
 
     func testSaveBackendConfigurationRejectsInvalidURL() throws {
-        let (viewModel, _, _) = try makeViewModel()
+        let (viewModel, _, _, _) = try makeViewModel()
 
         let saved = viewModel.saveBackendConfiguration(
             profileName: "Phone Sync",
@@ -329,7 +397,7 @@ final class ShellViewModelTests: XCTestCase {
 
     func testClearBackendConfigurationReturnsToLocalOnlyMode() throws {
         let syncClientFactory = RecordingSyncClientFactory()
-        let (viewModel, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+        let (viewModel, _, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
         _ = viewModel.saveBackendConfiguration(
             profileName: "Phone Sync",
             apiBaseURLString: "http://192.168.1.12:8080"
@@ -349,7 +417,7 @@ final class ShellViewModelTests: XCTestCase {
         let invalidSourceClient = StubAppSyncClient(
             fetchError: .invalidResponse("Unsupported session log source: auto log")
         )
-        let (viewModel, _, _) = try makeViewModel(
+        let (viewModel, _, _, _) = try makeViewModel(
             environment: AppEnvironment(
                 profileName: "Phone Sync",
                 apiBaseURL: URL(string: "http://prashants-mac-mini.local"),
@@ -382,7 +450,7 @@ final class ShellViewModelTests: XCTestCase {
             )
         )
 
-        let (viewModel, _, audioPlayer) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, audioPlayer, _) = try makeViewModel(snapshot: snapshot)
 
         XCTAssertEqual(viewModel.activeCustomPlaySession?.customPlay.id, customPlay.id)
         XCTAssertEqual(audioPlayer.startedMediaAssets.first?.id, customPlay.media?.id)
@@ -400,7 +468,7 @@ final class ShellViewModelTests: XCTestCase {
         activeSession.pause(at: startDate.addingTimeInterval(240))
         snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: activeSession)
 
-        let (viewModel, _, _) = try makeViewModel(snapshot: snapshot)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
 
         XCTAssertTrue(viewModel.activeSession?.isPaused == true)
         XCTAssertEqual(viewModel.snapshot.activeRuntime?.timerSession?.id, activeSession.id)
@@ -410,7 +478,7 @@ final class ShellViewModelTests: XCTestCase {
         snapshot: AppSnapshot = SampleData.snapshot,
         environment: AppEnvironment = .localOnly,
         syncClientFactory: @escaping @Sendable (URL) -> AppSyncClient = { _ in StubAppSyncClient() }
-    ) throws -> (ShellViewModel, StubNotificationScheduler, RecordingAudioPlayer) {
+    ) throws -> (ShellViewModel, StubNotificationScheduler, RecordingAudioPlayer, StubTimerCompletionBridge) {
         let tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let storeURL = tempDirectory.appendingPathComponent("snapshot.json")
@@ -421,6 +489,7 @@ final class ShellViewModelTests: XCTestCase {
         let notificationScheduler = StubNotificationScheduler()
         let soundPlayer = RecordingTimerSoundPlayer()
         let audioPlayer = RecordingAudioPlayer()
+        let timerCompletionBridge = StubTimerCompletionBridge()
 
         let repository = LocalAppSnapshotRepository(
             store: store,
@@ -435,12 +504,13 @@ final class ShellViewModelTests: XCTestCase {
             repository: repository,
             syncRepository: syncRepository,
             notificationScheduler: notificationScheduler,
+            timerCompletionBridge: timerCompletionBridge,
             soundPlayer: soundPlayer,
             audioPlayer: audioPlayer,
             syncClientFactory: syncClientFactory
         )
 
-        return (viewModel, notificationScheduler, audioPlayer)
+        return (viewModel, notificationScheduler, audioPlayer, timerCompletionBridge)
     }
 }
 
@@ -496,6 +566,8 @@ private struct StubAppSyncClient: AppSyncClient {
 
 private final class StubNotificationScheduler: NotificationScheduling, @unchecked Sendable {
     private(set) var cancelCount = 0
+    private(set) var scheduledDates: [Date] = []
+    private(set) var scheduledMeditationTypes: [MeditationType] = []
 
     func authorizationState() async -> NotificationPermissionState {
         .authorized
@@ -509,6 +581,8 @@ private final class StubNotificationScheduler: NotificationScheduling, @unchecke
         at date: Date,
         meditationType: MeditationType
     ) async {
+        scheduledDates.append(date)
+        scheduledMeditationTypes.append(meditationType)
     }
 
     func cancelTimerCompletionNotification() async {
@@ -548,5 +622,37 @@ private final class RecordingAudioPlayer: CustomPlayAudioControlling {
 
     func stopPlayback() {
         stopCount += 1
+    }
+}
+
+@MainActor
+private final class StubTimerCompletionBridge: TimerCompletionBridging {
+    private(set) var armedTargetDates: [Date] = []
+    private(set) var cancelCount = 0
+    private var onBridgeFire: (@MainActor @Sendable (Date) -> Void)?
+
+    func armTimerCompletionBridge(
+        targetEndAt: Date,
+        onBridgeFire: @escaping @MainActor @Sendable (Date) -> Void
+    ) {
+        armedTargetDates.append(targetEndAt)
+        self.onBridgeFire = onBridgeFire
+    }
+
+    func cancelTimerCompletionBridge() {
+        cancelCount += 1
+        onBridgeFire = nil
+    }
+
+    func fire() async {
+        guard let targetEndAt = armedTargetDates.last,
+              let onBridgeFire
+        else {
+            return
+        }
+
+        await MainActor.run {
+            onBridgeFire(targetEndAt)
+        }
     }
 }

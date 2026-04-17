@@ -56,7 +56,7 @@ struct ShellRootView: View {
             await viewModel.refreshNotificationPermissionState()
         }
         .onChange(of: scenePhase) { _, newValue in
-            viewModel.handleScenePhaseChange(isActive: newValue == .active)
+            viewModel.handleScenePhaseChange(to: newValue)
         }
     }
 }

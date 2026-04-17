@@ -31,6 +31,7 @@ final class ShellViewModel: ObservableObject {
     private let repository: LocalAppSnapshotRepository
     private let syncRepository: LocalAppSyncStateRepository
     private let notificationScheduler: NotificationScheduling
+    private let timerCompletionBridge: TimerCompletionBridging
     private let soundPlayer: TimerSoundPlaying
     private let audioPlayer: CustomPlayAudioControlling
     private var clockCancellable: AnyCancellable?
@@ -47,6 +48,7 @@ final class ShellViewModel: ObservableObject {
             environment: AppEnvironment.from()
         ),
         notificationScheduler: NotificationScheduling = LiveNotificationScheduler(),
+        timerCompletionBridge: TimerCompletionBridging? = nil,
         soundPlayer: TimerSoundPlaying? = nil,
         audioPlayer: CustomPlayAudioControlling? = nil,
         syncClient: AppSyncClient? = nil,
@@ -55,6 +57,7 @@ final class ShellViewModel: ObservableObject {
         self.repository = repository
         self.syncRepository = syncRepository
         self.notificationScheduler = notificationScheduler
+        self.timerCompletionBridge = timerCompletionBridge ?? LiveTimerCompletionBridge()
         self.soundPlayer = soundPlayer ?? SystemSoundPlayer()
         self.audioPlayer = audioPlayer ?? BundledCustomPlayAudioPlayer()
         self.syncClientFactory = syncClientFactory
@@ -288,6 +291,7 @@ final class ShellViewModel: ObservableObject {
         activeSession.pause(at: now)
         self.activeSession = activeSession
         persistSnapshot()
+        timerCompletionBridge.cancelTimerCompletionBridge()
         Task {
             await notificationScheduler.cancelTimerCompletionNotification()
         }
@@ -828,8 +832,10 @@ final class ShellViewModel: ObservableObject {
         runtimeSafetyPrompt = nil
     }
 
-    func handleScenePhaseChange(isActive: Bool) {
-        if isActive {
+    func handleScenePhaseChange(to phase: ScenePhase) {
+        switch phase {
+        case .active:
+            timerCompletionBridge.cancelTimerCompletionBridge()
             now = Date()
             handleClockTick(now)
             Task {
@@ -838,6 +844,12 @@ final class ShellViewModel: ObservableObject {
             if environment.requiresBackend {
                 scheduleSync()
             }
+        case .background:
+            armTimerCompletionBridgeIfNeeded()
+        case .inactive:
+            break
+        @unknown default:
+            break
         }
     }
 
@@ -966,6 +978,7 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        timerCompletionBridge.cancelTimerCompletionBridge()
         let log = activeSession.makeSessionLog(status: status, endedAt: endedAt)
         soundPlayer.playSound(named: activeSession.configuration.endSoundName)
         self.activeSession = nil
@@ -1152,6 +1165,33 @@ final class ShellViewModel: ObservableObject {
                 meditationType: activeSession.configuration.meditationType
             )
         }
+    }
+
+    private func armTimerCompletionBridgeIfNeeded() {
+        guard let activeSession,
+              activeSession.isPaused == false,
+              activeSession.configuration.mode == .fixedDuration,
+              let targetEndAt = activeSession.targetEndAt()
+        else {
+            timerCompletionBridge.cancelTimerCompletionBridge()
+            return
+        }
+
+        timerCompletionBridge.armTimerCompletionBridge(targetEndAt: targetEndAt) { [weak self] bridgedEndAt in
+            self?.finishTimerFromBackgroundBridgeIfNeeded(endedAt: bridgedEndAt)
+        }
+    }
+
+    private func finishTimerFromBackgroundBridgeIfNeeded(endedAt: Date) {
+        guard let activeSession,
+              activeSession.isPaused == false,
+              activeSession.configuration.mode == .fixedDuration,
+              activeSession.remainingSeconds(at: endedAt) == 0
+        else {
+            return
+        }
+
+        finishTimer(status: .completed, endedAt: activeSession.targetEndAt() ?? endedAt)
     }
 
     private func syncPlaylistAudio() throws {
@@ -1377,6 +1417,7 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        timerCompletionBridge.cancelTimerCompletionBridge()
         let log = activeSession.makeSessionLog(status: .completed, endedAt: endedAt)
         self.activeSession = nil
         insertLogs([log])
