@@ -51,7 +51,7 @@ struct ActiveTimerSection: View {
 
     private var timerCaption: String {
         if viewModel.activeSession?.configuration.mode == .fixedDuration {
-            return "Notifications can support fixed-session completion when permission is granted, but the timer display here remains the source of truth while the app is open."
+            return "While this screen stays open, the timer display and selected end bell are the source of truth. If iOS locks the app near completion, the app will try to finish with the same bell; longer lock-screen spans can still fall back to notification sound or foreground catch-up."
         }
 
         return "Open-ended sessions log the actual practiced duration when you choose to end the sit."
