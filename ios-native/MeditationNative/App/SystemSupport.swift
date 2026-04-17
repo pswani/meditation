@@ -56,6 +56,15 @@ protocol NotificationScheduling: Sendable {
     func cancelTimerCompletionNotification() async
 }
 
+@MainActor
+protocol TimerCompletionBridging: AnyObject {
+    func armTimerCompletionBridge(
+        targetEndAt: Date,
+        onBridgeFire: @escaping @MainActor @Sendable (Date) -> Void
+    )
+    func cancelTimerCompletionBridge()
+}
+
 struct LiveNotificationScheduler: NotificationScheduling {
     private let center = UNUserNotificationCenter.current()
     private let requestIdentifier = "meditation-native-timer-completion"
@@ -118,6 +127,89 @@ struct LiveNotificationScheduler: NotificationScheduling {
                 continuation.resume(returning: settings)
             }
         }
+    }
+}
+
+@MainActor
+final class LiveTimerCompletionBridge: TimerCompletionBridging {
+    static let maxLeadTime: TimeInterval = 25
+
+    private let application: UIApplication
+    private let nowProvider: @Sendable () -> Date
+    private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+    private var pendingBridgeTask: Task<Void, Never>?
+
+    init(
+        application: UIApplication,
+        nowProvider: @escaping @Sendable () -> Date
+    ) {
+        self.application = application
+        self.nowProvider = nowProvider
+    }
+
+    convenience init() {
+        self.init(
+            application: .shared,
+            nowProvider: { Date() }
+        )
+    }
+
+    deinit {
+        let application = application
+        let backgroundTaskIdentifier = backgroundTaskIdentifier
+        pendingBridgeTask?.cancel()
+        if backgroundTaskIdentifier != .invalid {
+            application.endBackgroundTask(backgroundTaskIdentifier)
+        }
+    }
+
+    func armTimerCompletionBridge(
+        targetEndAt: Date,
+        onBridgeFire: @escaping @MainActor @Sendable (Date) -> Void
+    ) {
+        cancelTimerCompletionBridge()
+
+        let remainingSeconds = targetEndAt.timeIntervalSince(nowProvider())
+        guard remainingSeconds > 0, remainingSeconds <= Self.maxLeadTime else {
+            return
+        }
+
+        backgroundTaskIdentifier = application.beginBackgroundTask(
+            withName: "meditation-native-timer-completion"
+        ) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.cancelTimerCompletionBridge()
+            }
+        }
+
+        pendingBridgeTask = Task { [weak self] in
+            if remainingSeconds > 0 {
+                try? await Task.sleep(
+                    nanoseconds: UInt64(remainingSeconds * 1_000_000_000)
+                )
+            }
+
+            guard Task.isCancelled == false else {
+                return
+            }
+
+            await MainActor.run {
+                onBridgeFire(targetEndAt)
+                self?.cancelTimerCompletionBridge()
+            }
+        }
+    }
+
+    func cancelTimerCompletionBridge() {
+        pendingBridgeTask?.cancel()
+        pendingBridgeTask = nil
+
+        guard backgroundTaskIdentifier != .invalid else {
+            return
+        }
+
+        application.endBackgroundTask(backgroundTaskIdentifier)
+        backgroundTaskIdentifier = .invalid
     }
 }
 
@@ -289,9 +381,13 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 }
 
 enum PlaybackAudioSessionSupport {
+    static let category: AVAudioSession.Category = .playback
+    static let mode: AVAudioSession.Mode = .default
+    static let options: AVAudioSession.CategoryOptions = [.mixWithOthers]
+
     static func activatePlaybackSession() throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playback, mode: .default)
+        try session.setCategory(category, mode: mode, options: options)
         try session.setActive(true)
     }
 }

@@ -4,7 +4,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `ios-native-history-goals-build-branding-defects-feature-bundle-with-branching` completed on 2026-04-16; manual simulator or device confirmation of the Goals single-title layout, the History manual-log and meditation-type-change path, and the installed app label is still recommended
+- Active bundle: `ios-native-lock-screen-audio-mixing-feature-bundle-with-branching` completed on 2026-04-16; physical-iPhone confirmation of near-end lock-screen end-bell behavior plus competing-audio mixing for timer cues and `custom play` playback is still recommended
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -208,6 +208,11 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - fresh native installs now bootstrap to the Mac Mini backend profile at `http://192.168.68.78`, while `Settings -> Clear` still suppresses that default and returns the app to durable local-only mode
   - generated Info.plist support for local-network ATS access and a user-facing local-network permission reason during physical-device LAN testing
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
+- Native iOS lock-screen audio mixing now adds:
+  - a deliberate native playback-audio-session policy using `.playback` with `.mixWithOthers`, so timer cues and recording-backed sessions can sound without automatically pausing another audio app
+  - a narrow fixed-timer background bridge that arms only when the app backgrounds within roughly the last 25 seconds before completion, giving the selected end bell a truthful chance to fire before suspension
+  - continued fallback to local-notification sound and foreground catch-up for longer lock-screen spans, instead of overclaiming guaranteed app-driven bell playback after suspension
+  - focused app-target XCTest coverage for the mixing policy plus the near-end background-bridge arming and completion path
 - Native iOS Home and Practice navigation defect fixes on 2026-04-16 now add:
   - one clear navigation title on the Home and Practice tab roots instead of duplicate in-content headings plus navigation titles
   - shared `custom play` startability rules so Home favorites and Practice `custom play` surfaces stay aligned about when locally available media can start
@@ -268,6 +273,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-ios-native-runtime-ux-resilience-feature.md`
 - Implementation planning: `docs/execplan-ios-native-low-risk-cleanup-feature.md`
 - Implementation planning: `docs/execplan-ios-native-runtime-device-defects-feature.md`
+- Implementation planning: `docs/execplan-ios-native-lock-screen-audio-mixing-feature.md`
 - Review artifact: `docs/review-custom-play-media-library.md`
 - Review artifact: `docs/review-ios-safari-real-device-qa.md`
 - Review artifact: `docs/review-ios-safari-ux-hardening.md`
@@ -297,6 +303,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-ios-native-runtime-ux-resilience-feature.md`
 - Review artifact: `docs/review-ios-native-low-risk-cleanup-feature.md`
 - Review artifact: `docs/review-ios-native-runtime-device-defects-feature.md`
+- Review artifact: `docs/review-ios-native-lock-screen-audio-mixing-feature.md`
 - Verification report: `docs/test-custom-play-media-library.md`
 - Verification report: `docs/test-ios-safari-real-device-qa.md`
 - Verification report: `docs/test-ios-safari-ux-hardening.md`
@@ -325,6 +332,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-ios-native-runtime-ux-resilience-feature.md`
 - Verification report: `docs/test-ios-native-low-risk-cleanup-feature.md`
 - Verification report: `docs/test-ios-native-runtime-device-defects-feature.md`
+- Verification report: `docs/test-ios-native-lock-screen-audio-mixing-feature.md`
 - Native iOS planning: `prompts/ios-native-app-phased-plan.md`
 - Native iOS usage guide: `prompts/ios-native-app-step-by-step.md`
 - Native iOS setup guide: `docs/ios-native/README.md`
