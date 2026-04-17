@@ -13,6 +13,8 @@ coverage/
 *.tsbuildinfo
 .cache/
 backend/target/
+.build
+**/.build
 
 # --------------------------------------------------
 # Environment files
