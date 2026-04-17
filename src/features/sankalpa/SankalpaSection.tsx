@@ -1,6 +1,7 @@
 import { ObservanceTracker } from './ObservanceTracker';
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import { describeSankalpa, filterDetail, progressDetail, remainingDetail } from './sankalpaPageHelpers';
+import { isRecurringCadenceGoal } from '../../utils/sankalpa';
 
 interface SankalpaSectionProps {
   readonly title: string;
@@ -63,6 +64,18 @@ export function SankalpaSection({
               <p className="section-subtitle">
                 Progress: {progressDetail(progress)} · {remainingDetail(progress)}
               </p>
+              {isRecurringCadenceGoal(progress.goal) ? (
+                <div className="sankalpa-week-pills" aria-label="Recurring week progress">
+                  {progress.recurringWeeks.map((week) => (
+                    <span
+                      key={`${progress.goal.id}-week-${week.weekIndex}`}
+                      className={`pill ${week.status === 'met' ? 'ok' : week.status === 'missed' ? 'warn' : 'active'}`}
+                    >
+                      W{week.weekIndex} {week.qualifyingDayCount}/{week.requiredQualifyingDayCount}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               {progress.goal.goalType === 'observance-based' ? (
                 <ObservanceTracker
                   progress={progress}

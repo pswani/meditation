@@ -6,6 +6,8 @@ export type SankalpaGoalType = 'duration-based' | 'session-count-based' | 'obser
 export type SankalpaStatus = 'active' | 'completed' | 'expired' | 'archived';
 export type SankalpaObservanceRecordStatus = 'observed' | 'missed';
 export type SankalpaObservanceDayStatus = SankalpaObservanceRecordStatus | 'pending';
+export type SankalpaCadenceMode = 'cumulative' | 'weekly';
+export type SankalpaRecurringWeekStatus = 'met' | 'active' | 'missed' | 'upcoming';
 
 export interface SankalpaObservanceRecord {
   readonly date: string;
@@ -18,11 +20,21 @@ export interface SankalpaObservanceDay {
   readonly isFuture: boolean;
 }
 
+export interface SankalpaRecurringWeekProgress {
+  readonly weekIndex: number;
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly qualifyingDayCount: number;
+  readonly requiredQualifyingDayCount: number;
+  readonly status: SankalpaRecurringWeekStatus;
+}
+
 export interface SankalpaGoal {
   readonly id: string;
   readonly goalType: SankalpaGoalType;
   readonly targetValue: number;
   readonly days: number;
+  readonly qualifyingDaysPerWeek?: number;
   readonly meditationType?: MeditationType;
   readonly timeOfDayBucket?: TimeOfDayBucket;
   readonly observanceLabel?: string;
@@ -33,8 +45,11 @@ export interface SankalpaGoal {
 
 export interface SankalpaDraft {
   goalType: SankalpaGoalType | '';
+  cadenceMode: SankalpaCadenceMode;
   targetValue: number;
   days: number;
+  weeks: number;
+  qualifyingDaysPerWeek: number;
   meditationType: MeditationType | '';
   timeOfDayBucket: TimeOfDayBucket | '';
   observanceLabel: string;
@@ -46,6 +61,8 @@ export interface SankalpaValidationResult {
     goalType?: string;
     targetValue?: string;
     days?: string;
+    weeks?: string;
+    qualifyingDaysPerWeek?: string;
     observanceLabel?: string;
   };
 }
@@ -58,6 +75,9 @@ export interface SankalpaProgress {
   readonly matchedDurationSeconds: number;
   readonly targetSessionCount: number;
   readonly targetDurationSeconds: number;
+  readonly metRecurringWeekCount: number;
+  readonly targetRecurringWeekCount: number;
+  readonly recurringWeeks: SankalpaRecurringWeekProgress[];
   readonly matchedObservanceCount: number;
   readonly missedObservanceCount: number;
   readonly pendingObservanceCount: number;

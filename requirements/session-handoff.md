@@ -4,7 +4,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `web-manual-log-open-ended-feature-bundle-with-branching` completed on 2026-04-16; History manual logging now supports `open-ended` entries across local, queued, and backend-backed paths
+- Active bundle: `sankalpa-threshold-frequency-goals-feature-bundle-with-branching` completed on 2026-04-16; meditation-derived `sankalpa` goals now support optional recurring weekly cadence with qualifying daily thresholds and weekly frequency targets across web, local storage, sync, and backend persistence
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -25,6 +25,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-web-manual-log-open-ended-feature.md`
   - `docs/review-web-manual-log-open-ended-feature.md`
   - `docs/test-web-manual-log-open-ended-feature.md`
+- Sankalpa recurring-cadence artifacts completed on 2026-04-16:
+  - `docs/execplan-sankalpa-threshold-frequency-goals-feature.md`
+  - `docs/review-sankalpa-threshold-frequency-goals-feature.md`
+  - `docs/test-sankalpa-threshold-frequency-goals-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -106,6 +110,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - summary views with backend-backed and local fallback behavior
   - offline app-shell reopening with bounded runtime caching for same-origin assets and on-demand recording media
   - sankalpa create, edit, archive, unarchive, and archived-only delete flows with backend-backed archived-state persistence and stale-delete recovery
+  - meditation-derived `sankalpa` goals that can now use either cumulative window totals or recurring weekly cadence with a per-day threshold, qualifying days per week, and per-week progress evidence on Goals and Home
   - `observance-based` sankalpas with manual per-date observed or missed check-ins for disciplines the app cannot infer from meditation data
   - smaller runtime and persistence internals through `timerProviderHelpers`, `useTimerSyncEffects`, and domain-specific modules under `src/utils/storage/`
   - repository-backed summary and `sankalpa` aggregation hot paths with explicit filtered-summary and filtered-or-paged `session log` contracts
@@ -268,6 +273,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implementation planning: `docs/execplan-sankalpa-edit-archive-feature.md`
 - Implementation planning: `docs/execplan-sankalpa-delete-unarchive-feature.md`
 - Implementation planning: `docs/execplan-observance-sankalpa-feature.md`
+- Implementation planning: `docs/execplan-sankalpa-threshold-frequency-goals-feature.md`
 - Implementation planning: `docs/execplan-ios-native-foundation-feature.md`
 - Implementation planning: `docs/execplan-ios-native-timer-history-feature.md`
 - Implementation planning: `docs/execplan-ios-native-custom-play-playlist-feature.md`
@@ -291,6 +297,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Review artifact: `docs/review-sankalpa-delete-unarchive-feature.md`
 - Review artifact: `docs/review-sankalpa-edit-archive-feature.md`
 - Review artifact: `docs/review-observance-sankalpa-feature.md`
+- Review artifact: `docs/review-sankalpa-threshold-frequency-goals-feature.md`
 - Review artifact: `docs/review-ios-lock-screen-end-bell-mitigation.md`
 - Review artifact: `docs/review-media-surface-and-ci-hardening-feature.md`
 - Verification report: `docs/test-media-surface-and-ci-hardening-feature.md`
@@ -320,6 +327,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Verification report: `docs/test-screen-decomposition-hardening-feature.md`
 - Verification report: `docs/test-sankalpa-delete-unarchive-feature.md`
 - Verification report: `docs/test-observance-sankalpa-feature.md`
+- Verification report: `docs/test-sankalpa-threshold-frequency-goals-feature.md`
 - Verification planning: `docs/ios-safari-real-device-qa-checklist.md`
 - Verification planning: `docs/execplan-sankalpa-edit-archive-test.md`
 - Verification report: `docs/test-sankalpa-edit-archive-feature.md`
@@ -351,6 +359,21 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- Sankalpa recurring-cadence implementation verified on 2026-04-16:
+  - `npm run typecheck` passed
+  - `npm run lint` passed
+  - `npm run test` passed with 47 files and 338 tests
+  - `npm run build` passed
+  - `mvn -Dmaven.repo.local=../local-data/m2 verify` in `backend/` passed with 58 backend tests
+  - focused automated coverage confirms:
+    - recurring duration-based goal creation, normalization, and progress math
+    - recurring session-count goal normalization and progress math
+    - archived, completed, and expired recurring-goal state derivation
+    - backend validation, migration-backed persistence, and response mapping for cadence fields
+  - manual browser QA was not run during this bundle, so local-date boundary behavior and small-screen wrapping remain the main residual UI risk
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the sankalpa recurring-cadence slice
+
 - Native iOS Settings backend-configuration follow-up verified on 2026-04-11:
   - `SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache swift test --package-path ios-native` passed
   - `xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meditation-ios-settings-backend-config CODE_SIGNING_ALLOWED=NO build` passed

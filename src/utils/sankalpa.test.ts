@@ -43,10 +43,14 @@ describe('sankalpa helpers', () => {
   it('validates positive target and days', () => {
     const result = validateSankalpaDraft({
       goalType: '',
+      cadenceMode: 'cumulative',
       targetValue: 0,
       days: 0,
+      weeks: 1,
+      qualifyingDaysPerWeek: 5,
       meditationType: '',
       timeOfDayBucket: '',
+      observanceLabel: '',
     });
 
     expect(result.isValid).toBe(false);
@@ -58,10 +62,14 @@ describe('sankalpa helpers', () => {
   it('requires whole-number session-count targets and whole-number days', () => {
     const result = validateSankalpaDraft({
       goalType: 'session-count-based',
+      cadenceMode: 'cumulative',
       targetValue: 2.5,
       days: 7.5,
+      weeks: 1,
+      qualifyingDaysPerWeek: 5,
       meditationType: '',
       timeOfDayBucket: '',
+      observanceLabel: '',
     });
 
     expect(result.isValid).toBe(false);
@@ -72,8 +80,11 @@ describe('sankalpa helpers', () => {
   it('requires an observance label for observance-based sankalpas', () => {
     const result = validateSankalpaDraft({
       goalType: 'observance-based',
+      cadenceMode: 'cumulative',
       targetValue: 7,
       days: 7,
+      weeks: 1,
+      qualifyingDaysPerWeek: 5,
       meditationType: '',
       timeOfDayBucket: '',
       observanceLabel: '',
@@ -87,8 +98,11 @@ describe('sankalpa helpers', () => {
     const goal = createSankalpaGoal(
       {
         goalType: 'observance-based',
+        cadenceMode: 'cumulative',
         targetValue: 99,
         days: 5,
+        weeks: 1,
+        qualifyingDaysPerWeek: 5,
         meditationType: '',
         timeOfDayBucket: '',
         observanceLabel: 'Brahmacharya',
@@ -100,6 +114,40 @@ describe('sankalpa helpers', () => {
     expect(goal.targetValue).toBe(5);
     expect(goal.observanceLabel).toBe('Brahmacharya');
     expect(goal.observanceRecords).toEqual([]);
+  });
+
+  it('derives recurring weekly cadence progress from qualifying days', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-recurring-duration',
+      goalType: 'duration-based',
+      targetValue: 15,
+      days: 14,
+      qualifyingDaysPerWeek: 5,
+      meditationType: 'Tratak',
+      createdAt: localIso(2026, 2, 16, 8, 0),
+    };
+
+    const logs = [
+      createSessionLog({ id: 'w1d1', meditationType: 'Tratak', endedAt: localIso(2026, 2, 16, 8, 30), completedDurationSeconds: 900 }),
+      createSessionLog({ id: 'w1d2', meditationType: 'Tratak', endedAt: localIso(2026, 2, 17, 8, 30), completedDurationSeconds: 1200 }),
+      createSessionLog({ id: 'w1d3', meditationType: 'Tratak', endedAt: localIso(2026, 2, 18, 8, 30), completedDurationSeconds: 960 }),
+      createSessionLog({ id: 'w1d4', meditationType: 'Tratak', endedAt: localIso(2026, 2, 19, 8, 30), completedDurationSeconds: 1200 }),
+      createSessionLog({ id: 'w1d5', meditationType: 'Tratak', endedAt: localIso(2026, 2, 20, 8, 30), completedDurationSeconds: 960 }),
+      createSessionLog({ id: 'w2d1', meditationType: 'Tratak', endedAt: localIso(2026, 2, 23, 8, 30), completedDurationSeconds: 900 }),
+      createSessionLog({ id: 'w2d2', meditationType: 'Tratak', endedAt: localIso(2026, 2, 24, 8, 30), completedDurationSeconds: 900 }),
+      createSessionLog({ id: 'w2d3', meditationType: 'Tratak', endedAt: localIso(2026, 2, 25, 8, 30), completedDurationSeconds: 600 }),
+    ];
+
+    const progress = deriveSankalpaProgress(goal, logs, new Date(localIso(2026, 2, 25, 12, 0)));
+
+    expect(progress.metRecurringWeekCount).toBe(1);
+    expect(progress.targetRecurringWeekCount).toBe(2);
+    expect(progress.recurringWeeks).toEqual([
+      expect.objectContaining({ weekIndex: 1, qualifyingDayCount: 5, requiredQualifyingDayCount: 5, status: 'met' }),
+      expect.objectContaining({ weekIndex: 2, qualifyingDayCount: 2, requiredQualifyingDayCount: 5, status: 'active' }),
+    ]);
+    expect(progress.progressRatio).toBe(0.5);
+    expect(progress.status).toBe('active');
   });
 
   it('counts matching session logs for session-count-based sankalpa with optional filters', () => {

@@ -65,6 +65,7 @@ describe('sankalpa api boundary', () => {
           goalType: 'session-count-based',
           targetValue: 5,
           days: 10,
+          qualifyingDaysPerWeek: undefined,
           meditationType: 'Vipassana',
           timeOfDayBucket: 'morning',
           observanceLabel: undefined,
@@ -78,6 +79,9 @@ describe('sankalpa api boundary', () => {
         matchedDurationSeconds: 1800,
         targetSessionCount: 5,
         targetDurationSeconds: 0,
+        metRecurringWeekCount: 0,
+        targetRecurringWeekCount: 0,
+        recurringWeeks: [],
         matchedObservanceCount: 0,
         missedObservanceCount: 0,
         pendingObservanceCount: 0,
@@ -135,6 +139,9 @@ describe('sankalpa api boundary', () => {
         archived: true,
       },
       targetDurationSeconds: 750,
+      metRecurringWeekCount: 0,
+      targetRecurringWeekCount: 0,
+      recurringWeeks: [],
     });
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/sankalpas/goal-1?timeZone=America%2FChicago',
@@ -213,6 +220,7 @@ describe('sankalpa api boundary', () => {
           goalType: 'duration-based',
           targetValue: 12.5,
           days: 7,
+          qualifyingDaysPerWeek: undefined,
           meditationType: undefined,
           timeOfDayBucket: undefined,
           observanceLabel: undefined,
@@ -226,6 +234,9 @@ describe('sankalpa api boundary', () => {
         matchedDurationSeconds: 0,
         targetSessionCount: 0,
         targetDurationSeconds: 750,
+        metRecurringWeekCount: 0,
+        targetRecurringWeekCount: 0,
+        recurringWeeks: [],
         matchedObservanceCount: 0,
         missedObservanceCount: 0,
         pendingObservanceCount: 0,
@@ -285,6 +296,7 @@ describe('sankalpa api boundary', () => {
           goalType: 'observance-based',
           targetValue: 3,
           days: 3,
+          qualifyingDaysPerWeek: undefined,
           meditationType: undefined,
           timeOfDayBucket: undefined,
           observanceLabel: 'Meal before 7 PM',
@@ -301,6 +313,9 @@ describe('sankalpa api boundary', () => {
         matchedDurationSeconds: 0,
         targetSessionCount: 0,
         targetDurationSeconds: 0,
+        metRecurringWeekCount: 0,
+        targetRecurringWeekCount: 0,
+        recurringWeeks: [],
         matchedObservanceCount: 1,
         missedObservanceCount: 1,
         pendingObservanceCount: 1,
@@ -311,6 +326,79 @@ describe('sankalpa api boundary', () => {
           { date: '2026-04-07', status: 'pending', isFuture: false },
         ],
         progressRatio: 1 / 3,
+      },
+    ]);
+  });
+
+  it('normalizes recurring cadence sankalpas from the api', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            goal: {
+              id: 'goal-recurring',
+              goalType: 'duration-based',
+              targetValue: 15,
+              days: 28,
+              qualifyingDaysPerWeek: 5,
+              meditationType: 'Tratak',
+              createdAt: '2026-04-05T12:00:00.000Z',
+              archived: false,
+            },
+            status: 'active',
+            deadlineAt: '2026-05-02T23:59:59.999Z',
+            matchedSessionCount: 12,
+            matchedDurationSeconds: 10800,
+            targetSessionCount: 0,
+            targetDurationSeconds: 0,
+            metRecurringWeekCount: 2,
+            targetRecurringWeekCount: 4,
+            recurringWeeks: [
+              { weekIndex: 1, startDate: '2026-04-05', endDate: '2026-04-11', qualifyingDayCount: 5, requiredQualifyingDayCount: 5, status: 'met' },
+              { weekIndex: 2, startDate: '2026-04-12', endDate: '2026-04-18', qualifyingDayCount: 4, requiredQualifyingDayCount: 5, status: 'active' },
+            ],
+            progressRatio: 0.5,
+          },
+        ],
+      })
+    );
+
+    await expect(listSankalpaProgressFromApi()).resolves.toEqual([
+      {
+        goal: {
+          id: 'goal-recurring',
+          goalType: 'duration-based',
+          targetValue: 15,
+          days: 28,
+          qualifyingDaysPerWeek: 5,
+          meditationType: 'Tratak',
+          timeOfDayBucket: undefined,
+          observanceLabel: undefined,
+          observanceRecords: undefined,
+          createdAt: '2026-04-05T12:00:00.000Z',
+          archived: false,
+        },
+        status: 'active',
+        deadlineAt: '2026-05-02T23:59:59.999Z',
+        matchedSessionCount: 12,
+        matchedDurationSeconds: 10800,
+        targetSessionCount: 0,
+        targetDurationSeconds: 0,
+        metRecurringWeekCount: 2,
+        targetRecurringWeekCount: 4,
+        recurringWeeks: [
+          { weekIndex: 1, startDate: '2026-04-05', endDate: '2026-04-11', qualifyingDayCount: 5, requiredQualifyingDayCount: 5, status: 'met' },
+          { weekIndex: 2, startDate: '2026-04-12', endDate: '2026-04-18', qualifyingDayCount: 4, requiredQualifyingDayCount: 5, status: 'active' },
+        ],
+        matchedObservanceCount: 0,
+        missedObservanceCount: 0,
+        pendingObservanceCount: 0,
+        targetObservanceCount: 0,
+        observanceDays: [],
+        progressRatio: 0.5,
       },
     ]);
   });

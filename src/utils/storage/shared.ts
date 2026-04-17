@@ -483,6 +483,8 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
   }
 
   const candidate = value as Record<string, unknown>;
+  const qualifyingDaysPerWeek =
+    typeof candidate.qualifyingDaysPerWeek === 'number' ? candidate.qualifyingDaysPerWeek : null;
   const observanceRecords =
     Array.isArray(candidate.observanceRecords)
       ? candidate.observanceRecords
@@ -510,6 +512,12 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     typeof candidate.days !== 'number' ||
     !Number.isInteger(candidate.days) ||
     candidate.days <= 0 ||
+    (typeof candidate.qualifyingDaysPerWeek !== 'undefined' &&
+      candidate.qualifyingDaysPerWeek !== null &&
+      (qualifyingDaysPerWeek === null ||
+        !Number.isInteger(qualifyingDaysPerWeek) ||
+        qualifyingDaysPerWeek <= 0 ||
+        qualifyingDaysPerWeek > 7)) ||
     !isValidIsoDate(candidate.createdAt) ||
     (typeof candidate.observanceLabel !== 'undefined' && typeof candidate.observanceLabel !== 'string') ||
     (typeof candidate.archived !== 'undefined' && typeof candidate.archived !== 'boolean')
@@ -544,10 +552,19 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     if (
       typeof candidate.observanceLabel !== 'string' ||
       candidate.observanceLabel.trim().length === 0 ||
-      candidate.targetValue !== candidate.days
+      candidate.targetValue !== candidate.days ||
+      typeof candidate.qualifyingDaysPerWeek !== 'undefined'
     ) {
       return null;
     }
+  }
+
+  if (
+    candidate.goalType !== 'observance-based' &&
+    qualifyingDaysPerWeek !== null &&
+    candidate.days % 7 !== 0
+  ) {
+    return null;
   }
 
   return {
@@ -555,6 +572,7 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     goalType: candidate.goalType,
     targetValue: candidate.targetValue,
     days: candidate.days,
+    qualifyingDaysPerWeek: qualifyingDaysPerWeek ?? undefined,
     meditationType:
       typeof candidate.meditationType === 'string' && candidate.meditationType !== '' ? candidate.meditationType : undefined,
     timeOfDayBucket:

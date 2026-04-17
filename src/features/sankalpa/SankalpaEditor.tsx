@@ -30,13 +30,16 @@ export function SankalpaEditor({
   onChangeDraft,
   onClearSaveMessage,
 }: SankalpaEditorProps) {
+  const observanceGoal = isObservanceGoalType(draft.goalType);
+  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
+
   return (
     <section className="sankalpa-panel">
       <h3 className="section-title">{editingGoalId ? 'Edit Sankalpa' : 'Create Sankalpa'}</h3>
       <p className="section-subtitle">
         {editingGoalId
           ? 'Editing keeps this sankalpa in its existing goal window, so progress and deadline stay anchored to the original creation date.'
-          : 'Meditation-based goals count matching session logs. Observance goals use manual per-date check-ins for observances the app cannot infer automatically.'}
+          : 'Meditation-based goals can track either a total target or a recurring weekly cadence. Observance goals use manual per-date check-ins for observances the app cannot infer automatically.'}
       </p>
 
       {saveMessage ? (
@@ -58,7 +61,15 @@ export function SankalpaEditor({
               onChangeDraft((current) => ({
                 ...current,
                 goalType: nextGoalType,
-                targetValue: nextGoalType === 'observance-based' ? current.days : current.targetValue,
+                cadenceMode: nextGoalType === 'observance-based' ? 'cumulative' : current.cadenceMode,
+                targetValue:
+                  nextGoalType === 'observance-based'
+                    ? current.days
+                    : current.goalType === 'observance-based'
+                      ? nextGoalType === 'duration-based'
+                        ? 15
+                        : 1
+                      : current.targetValue,
                 meditationType: nextGoalType === 'observance-based' ? '' : current.meditationType,
                 timeOfDayBucket: nextGoalType === 'observance-based' ? '' : current.timeOfDayBucket,
               }));
@@ -71,7 +82,7 @@ export function SankalpaEditor({
           {errors.goalType ? <small className="error-text">{errors.goalType}</small> : null}
         </label>
 
-        {draft.goalType === 'observance-based' ? (
+        {observanceGoal ? (
           <label>
             <span>Observance</span>
             <input
@@ -89,51 +100,135 @@ export function SankalpaEditor({
             {errors.observanceLabel ? <small className="error-text">{errors.observanceLabel}</small> : null}
           </label>
         ) : (
+          <>
+            <label>
+              <span>Tracking style</span>
+              <select
+                value={draft.cadenceMode}
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  const nextCadenceMode = event.target.value as SankalpaDraft['cadenceMode'];
+                  onChangeDraft((current) => ({
+                    ...current,
+                    cadenceMode: nextCadenceMode,
+                    targetValue:
+                      nextCadenceMode === 'weekly'
+                        ? current.goalType === 'duration-based'
+                          ? 15
+                          : 1
+                        : current.goalType === 'duration-based'
+                          ? Math.max(current.targetValue, 30)
+                          : Math.max(current.targetValue, 3),
+                  }));
+                }}
+              >
+                <option value="cumulative">Total within window</option>
+                <option value="weekly">Recurring weekly cadence</option>
+              </select>
+            </label>
+
+            <label>
+              <span>
+                {recurringCadence
+                  ? draft.goalType === 'duration-based'
+                    ? 'Daily qualifying duration (minutes)'
+                    : 'Daily qualifying session logs'
+                  : draft.goalType === 'duration-based'
+                    ? 'Target duration (minutes)'
+                    : 'Target session logs'}
+              </span>
+              <input
+                type="number"
+                min={1}
+                step={draft.goalType === 'session-count-based' ? 1 : 0.5}
+                value={draft.targetValue}
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  onChangeDraft((current) => ({
+                    ...current,
+                    targetValue: Number(event.target.value),
+                  }));
+                }}
+              />
+              {errors.targetValue ? <small className="error-text">{errors.targetValue}</small> : null}
+            </label>
+          </>
+        )}
+
+        {observanceGoal || draft.cadenceMode === 'cumulative' ? (
           <label>
-            <span>{draft.goalType === 'duration-based' ? 'Target duration (minutes)' : 'Target session logs'}</span>
+            <span>Days</span>
             <input
               type="number"
               min={1}
-              step={draft.goalType === 'session-count-based' ? 1 : 0.5}
-              value={draft.targetValue}
+              step={1}
+              value={draft.days}
               onChange={(event) => {
                 onClearSaveMessage();
                 onChangeDraft((current) => ({
                   ...current,
-                  targetValue: Number(event.target.value),
+                  days: Number(event.target.value),
+                  targetValue: isObservanceGoalType(current.goalType) ? Number(event.target.value) : current.targetValue,
                 }));
               }}
             />
-            {errors.targetValue ? <small className="error-text">{errors.targetValue}</small> : null}
+            {errors.days ? <small className="error-text">{errors.days}</small> : null}
           </label>
+        ) : (
+          <>
+            <label>
+              <span>Qualifying days per week</span>
+              <input
+                type="number"
+                min={1}
+                max={7}
+                step={1}
+                value={draft.qualifyingDaysPerWeek}
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  onChangeDraft((current) => ({
+                    ...current,
+                    qualifyingDaysPerWeek: Number(event.target.value),
+                  }));
+                }}
+              />
+              {errors.qualifyingDaysPerWeek ? <small className="error-text">{errors.qualifyingDaysPerWeek}</small> : null}
+            </label>
+
+            <label>
+              <span>Weeks</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={draft.weeks}
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  onChangeDraft((current) => ({
+                    ...current,
+                    weeks: Number(event.target.value),
+                  }));
+                }}
+              />
+              {errors.weeks ? <small className="error-text">{errors.weeks}</small> : null}
+            </label>
+          </>
         )}
 
-        <label>
-          <span>Days</span>
-          <input
-            type="number"
-            min={1}
-            step={1}
-            value={draft.days}
-            onChange={(event) => {
-              onClearSaveMessage();
-              onChangeDraft((current) => ({
-                ...current,
-                days: Number(event.target.value),
-                targetValue: isObservanceGoalType(current.goalType) ? Number(event.target.value) : current.targetValue,
-              }));
-            }}
-          />
-          {errors.days ? <small className="error-text">{errors.days}</small> : null}
-        </label>
-
-        {draft.goalType === 'observance-based' ? (
+        {observanceGoal ? (
           <div className="empty-state">
             <p>Each date in this window will appear in the sankalpa card for manual check-ins.</p>
             <p>The goal completes when every scheduled date is marked as observed.</p>
           </div>
         ) : (
           <>
+            {recurringCadence ? (
+              <div className="empty-state">
+                <p>Each week counts only when enough local dates meet the qualifying threshold.</p>
+                <p>This keeps recurring sankalpas focused on steady discipline rather than raw totals alone.</p>
+              </div>
+            ) : null}
+
             <label>
               <span>Meditation type filter (optional)</span>
               <select

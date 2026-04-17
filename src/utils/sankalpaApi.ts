@@ -19,6 +19,7 @@ interface SankalpaGoalApiResponse {
   readonly goalType: SankalpaGoal['goalType'];
   readonly targetValue: number;
   readonly days: number;
+  readonly qualifyingDaysPerWeek?: number | null;
   readonly meditationType?: SankalpaGoal['meditationType'] | null;
   readonly timeOfDayBucket?: TimeOfDayBucket | null;
   readonly observanceLabel?: string | null;
@@ -46,6 +47,9 @@ interface SankalpaProgressApiResponse {
   readonly matchedDurationSeconds: number;
   readonly targetSessionCount: number;
   readonly targetDurationSeconds: number;
+  readonly metRecurringWeekCount?: number;
+  readonly targetRecurringWeekCount?: number;
+  readonly recurringWeeks?: SankalpaProgress['recurringWeeks'] | null;
   readonly matchedObservanceCount?: number;
   readonly missedObservanceCount?: number;
   readonly pendingObservanceCount?: number;
@@ -115,7 +119,10 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
   }
 
   const candidate = value as Record<string, unknown>;
-  return (
+  const qualifyingDaysPerWeek =
+    typeof candidate.qualifyingDaysPerWeek === 'number' ? candidate.qualifyingDaysPerWeek : null;
+  const days = typeof candidate.days === 'number' ? candidate.days : null;
+  const hasValidBaseShape = (
     typeof candidate.id === 'string' &&
     goalTypes.has(candidate.goalType as string) &&
     typeof candidate.targetValue === 'number' &&
@@ -124,6 +131,12 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     typeof candidate.days === 'number' &&
     Number.isInteger(candidate.days) &&
     candidate.days > 0 &&
+    (typeof candidate.qualifyingDaysPerWeek === 'undefined' ||
+      candidate.qualifyingDaysPerWeek === null ||
+      (qualifyingDaysPerWeek !== null &&
+        Number.isInteger(qualifyingDaysPerWeek) &&
+        qualifyingDaysPerWeek > 0 &&
+        qualifyingDaysPerWeek <= 7)) &&
     (typeof candidate.meditationType === 'undefined' ||
       candidate.meditationType === null ||
       isMeditationType(candidate.meditationType)) &&
@@ -139,6 +152,25 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     isValidIsoDate(candidate.createdAt) &&
     (typeof candidate.archived === 'undefined' || typeof candidate.archived === 'boolean')
   );
+
+  if (!hasValidBaseShape) {
+    return false;
+  }
+
+  if (candidate.goalType === 'observance-based' && qualifyingDaysPerWeek !== null) {
+    return false;
+  }
+
+  if (
+    candidate.goalType !== 'observance-based' &&
+    qualifyingDaysPerWeek !== null &&
+    days !== null &&
+    days % 7 !== 0
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function isValidProgressPayload(value: unknown): value is SankalpaProgressApiResponse {
@@ -155,6 +187,20 @@ function isValidProgressPayload(value: unknown): value is SankalpaProgressApiRes
     typeof candidate.matchedDurationSeconds === 'number' &&
     typeof candidate.targetSessionCount === 'number' &&
     typeof candidate.targetDurationSeconds === 'number' &&
+    (typeof candidate.metRecurringWeekCount === 'undefined' || typeof candidate.metRecurringWeekCount === 'number') &&
+    (typeof candidate.targetRecurringWeekCount === 'undefined' || typeof candidate.targetRecurringWeekCount === 'number') &&
+    (typeof candidate.recurringWeeks === 'undefined' ||
+      candidate.recurringWeeks === null ||
+      (Array.isArray(candidate.recurringWeeks) &&
+        candidate.recurringWeeks.every(
+          (entry) =>
+            typeof entry.weekIndex === 'number' &&
+            typeof entry.startDate === 'string' &&
+            typeof entry.endDate === 'string' &&
+            typeof entry.qualifyingDayCount === 'number' &&
+            typeof entry.requiredQualifyingDayCount === 'number' &&
+            (entry.status === 'met' || entry.status === 'active' || entry.status === 'missed' || entry.status === 'upcoming')
+        ))) &&
     (typeof candidate.matchedObservanceCount === 'undefined' || typeof candidate.matchedObservanceCount === 'number') &&
     (typeof candidate.missedObservanceCount === 'undefined' || typeof candidate.missedObservanceCount === 'number') &&
     (typeof candidate.pendingObservanceCount === 'undefined' || typeof candidate.pendingObservanceCount === 'number') &&
@@ -172,6 +218,7 @@ function normalizeGoalPayload(payload: SankalpaGoalApiResponse): SankalpaGoal {
     goalType: payload.goalType,
     targetValue: payload.targetValue,
     days: payload.days,
+    qualifyingDaysPerWeek: payload.qualifyingDaysPerWeek ?? undefined,
     meditationType: payload.meditationType ?? undefined,
     timeOfDayBucket: payload.timeOfDayBucket ?? undefined,
     observanceLabel: payload.observanceLabel?.trim() || undefined,
@@ -198,6 +245,17 @@ function normalizeProgressPayload(payload: unknown): SankalpaProgress {
     matchedDurationSeconds: payload.matchedDurationSeconds,
     targetSessionCount: payload.targetSessionCount,
     targetDurationSeconds: payload.targetDurationSeconds,
+    metRecurringWeekCount: payload.metRecurringWeekCount ?? 0,
+    targetRecurringWeekCount: payload.targetRecurringWeekCount ?? 0,
+    recurringWeeks:
+      payload.recurringWeeks?.map((week) => ({
+        weekIndex: week.weekIndex,
+        startDate: week.startDate,
+        endDate: week.endDate,
+        qualifyingDayCount: week.qualifyingDayCount,
+        requiredQualifyingDayCount: week.requiredQualifyingDayCount,
+        status: week.status,
+      })) ?? [],
     matchedObservanceCount: payload.matchedObservanceCount ?? 0,
     missedObservanceCount: payload.missedObservanceCount ?? 0,
     pendingObservanceCount: payload.pendingObservanceCount ?? 0,

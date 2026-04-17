@@ -209,6 +209,11 @@
   - archived goals can be restored by clearing the persisted `archived` flag and reusing the existing derived `active` / `completed` / `expired` status rules
   - permanent delete is restricted to already archived goals so destructive actions stay deliberate
   - queue-backed `sankalpa` deletes use the same stale-mutation protection as other backend-backed collections and restore the current backend state when an older queued delete loses reconciliation
+- Keep meditation-derived `sankalpa` goals additive rather than inventing a second goal product:
+  - preserve the existing `duration-based` and `session-count-based` goal types for both cumulative and recurring goal shapes
+  - opt recurring weekly cadence in through an optional `qualifyingDaysPerWeek` field instead of a new top-level goal type
+  - reuse `targetValue` as the per-day qualifying threshold in cadence mode while keeping `days` as the persisted whole-window length in whole weeks
+  - derive recurring progress from local-date grouped matching `session log` data and expose per-week evidence so Goals and Home stay calm but trustworthy
 - Keep non-meditation discipline tracking inside `sankalpa` rather than creating a second habit system:
   - add an `observance-based` goal type
   - require an observance label

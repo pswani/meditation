@@ -591,6 +591,12 @@ button:disabled {
   background: var(--accent);
 }
 
+.sankalpa-week-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .home-summary-grid {
   display: grid;
   gap: 0.7rem;

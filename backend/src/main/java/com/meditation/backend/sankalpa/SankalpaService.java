@@ -28,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class SankalpaService {
 
   private static final long DAY_SECONDS = 24L * 60L * 60L;
+  private static final int DAYS_PER_WEEK = 7;
 
   private final SankalpaGoalRepository sankalpaGoalRepository;
   private final SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository;
@@ -84,6 +85,7 @@ public class SankalpaService {
             request.goalType(),
             request.targetValue(),
             request.days(),
+            request.qualifyingDaysPerWeek(),
             normalizeOptionalText(request.meditationType()),
             normalizeOptionalText(request.timeOfDayBucket()),
             normalizeOptionalText(request.observanceLabel()),
@@ -99,6 +101,7 @@ public class SankalpaService {
             request.goalType(),
             request.targetValue().stripTrailingZeros(),
             request.days(),
+            request.qualifyingDaysPerWeek(),
             normalizeOptionalText(request.meditationType()),
             normalizeOptionalText(request.timeOfDayBucket()),
             normalizeOptionalText(request.observanceLabel()),
@@ -192,26 +195,29 @@ public class SankalpaService {
       ZoneId zoneId
   ) {
     SankalpaMatchTotals matchTotals = loadMatchTotals(goal, observanceEntries, zoneId);
+    boolean recurringCadenceGoal = isRecurringCadenceGoal(goal);
     int matchedSessionCount = matchTotals.matchedSessionCount();
     int matchedDurationSeconds = matchTotals.matchedDurationSeconds();
-    int targetDurationSeconds = "duration-based".equals(goal.getGoalType())
+    int targetDurationSeconds = "duration-based".equals(goal.getGoalType()) && !recurringCadenceGoal
         ? goal.getTargetValue().multiply(BigDecimal.valueOf(60)).setScale(0, RoundingMode.HALF_UP).intValueExact()
         : 0;
-    int targetSessionCount = "session-count-based".equals(goal.getGoalType()) ? goal.getTargetValue().intValueExact() : 0;
+    int targetSessionCount = "session-count-based".equals(goal.getGoalType()) && !recurringCadenceGoal ? goal.getTargetValue().intValueExact() : 0;
     int targetObservanceCount = "observance-based".equals(goal.getGoalType()) ? goal.getTargetValue().intValueExact() : 0;
     int targetValue = "duration-based".equals(goal.getGoalType())
-        ? targetDurationSeconds
+        ? recurringCadenceGoal ? matchTotals.targetRecurringWeekCount() : targetDurationSeconds
         : "session-count-based".equals(goal.getGoalType())
-          ? targetSessionCount
+          ? recurringCadenceGoal ? matchTotals.targetRecurringWeekCount() : targetSessionCount
           : targetObservanceCount;
     int progressValue = "duration-based".equals(goal.getGoalType())
-        ? matchedDurationSeconds
+        ? recurringCadenceGoal ? matchTotals.metRecurringWeekCount() : matchedDurationSeconds
         : "session-count-based".equals(goal.getGoalType())
-          ? matchedSessionCount
+          ? recurringCadenceGoal ? matchTotals.metRecurringWeekCount() : matchedSessionCount
           : matchTotals.matchedObservanceCount();
     Instant deadlineAt = "observance-based".equals(goal.getGoalType())
         ? deriveObservanceDeadline(goal, zoneId)
-        : goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
+        : recurringCadenceGoal
+          ? deriveRecurringGoalDeadline(goal, zoneId)
+          : goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
 
     String status;
     if (goal.isArchived()) {
@@ -232,6 +238,9 @@ public class SankalpaService {
         matchedDurationSeconds,
         targetSessionCount,
         targetDurationSeconds,
+        matchTotals.metRecurringWeekCount(),
+        matchTotals.targetRecurringWeekCount(),
+        matchTotals.recurringWeeks(),
         matchTotals.matchedObservanceCount(),
         matchTotals.missedObservanceCount(),
         matchTotals.pendingObservanceCount(),
@@ -250,6 +259,7 @@ public class SankalpaService {
         entity.getGoalType(),
         entity.getTargetValue().doubleValue(),
         entity.getDays(),
+        entity.getQualifyingDaysPerWeek(),
         entity.getMeditationTypeCode(),
         entity.getTimeOfDayBucket(),
         entity.getObservanceLabel(),
@@ -271,32 +281,22 @@ public class SankalpaService {
     }
 
     Instant startAt = goal.getCreatedAt();
-    Instant deadlineAt = goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
+    Instant deadlineAt = isRecurringCadenceGoal(goal)
+        ? deriveRecurringGoalDeadline(goal, zoneId)
+        : goal.getCreatedAt().plusSeconds(goal.getDays() * DAY_SECONDS);
     String meditationType = goal.getMeditationTypeCode();
 
-    if (goal.getTimeOfDayBucket() == null) {
-      SessionLogRepository.SessionLogAggregateView aggregate = sessionLogRepository.summarizeForGoalWindow(startAt, deadlineAt, meditationType);
-      return new SankalpaMatchTotals(
-          Math.toIntExact(aggregate.getSessionLogCount()),
-          Math.toIntExact(aggregate.getTotalDurationSeconds()),
-          0,
-          0,
-          0,
-          List.of()
-      );
+    List<SessionLogRepository.SessionLogTimeSliceView> matchingSlices = loadMatchingTimeSlices(goal, startAt, deadlineAt, meditationType, zoneId);
+    int matchedSessionCount = matchingSlices.size();
+    int matchedDurationSeconds = matchingSlices.stream()
+        .mapToInt(SessionLogRepository.SessionLogTimeSliceView::getCompletedDurationSeconds)
+        .sum();
+
+    if (!isRecurringCadenceGoal(goal)) {
+      return new SankalpaMatchTotals(matchedSessionCount, matchedDurationSeconds, 0, 0, 0, List.of(), 0, 0, List.of());
     }
 
-    int matchedSessionCount = 0;
-    int matchedDurationSeconds = 0;
-    for (SessionLogRepository.SessionLogTimeSliceView entry : sessionLogRepository.findTimeSlices(startAt, deadlineAt, meditationType, null)) {
-      if (!goal.getTimeOfDayBucket().equals(ReferenceData.resolveTimeOfDayBucket(entry.getEndedAt(), zoneId))) {
-        continue;
-      }
-      matchedSessionCount += 1;
-      matchedDurationSeconds += entry.getCompletedDurationSeconds();
-    }
-
-    return new SankalpaMatchTotals(matchedSessionCount, matchedDurationSeconds, 0, 0, 0, List.of());
+    return loadRecurringCadenceMatchTotals(goal, matchingSlices, zoneId, matchedSessionCount, matchedDurationSeconds);
   }
 
   private SankalpaMatchTotals loadObservanceMatchTotals(
@@ -343,13 +343,112 @@ public class SankalpaService {
         matchedObservanceCount,
         missedObservanceCount,
         pendingObservanceCount,
-        observanceDays
+        observanceDays,
+        0,
+        0,
+        List.of()
     );
   }
 
   private Instant deriveObservanceDeadline(SankalpaGoalEntity goal, ZoneId zoneId) {
     LocalDate startDate = goal.getCreatedAt().atZone(zoneId).toLocalDate();
     return startDate.plusDays(Math.max(0, goal.getDays() - 1)).atTime(LocalTime.MAX).atZone(zoneId).toInstant();
+  }
+
+  private Instant deriveRecurringGoalDeadline(SankalpaGoalEntity goal, ZoneId zoneId) {
+    LocalDate startDate = goal.getCreatedAt().atZone(zoneId).toLocalDate();
+    return startDate.plusDays(Math.max(0, goal.getDays() - 1)).atTime(LocalTime.MAX).atZone(zoneId).toInstant();
+  }
+
+  private boolean isRecurringCadenceGoal(SankalpaGoalEntity goal) {
+    return !"observance-based".equals(goal.getGoalType()) && goal.getQualifyingDaysPerWeek() != null;
+  }
+
+  private List<SessionLogRepository.SessionLogTimeSliceView> loadMatchingTimeSlices(
+      SankalpaGoalEntity goal,
+      Instant startAt,
+      Instant deadlineAt,
+      String meditationType,
+      ZoneId zoneId
+  ) {
+    if (goal.getTimeOfDayBucket() == null) {
+      return sessionLogRepository.findTimeSlices(startAt, deadlineAt, meditationType, null);
+    }
+
+    return sessionLogRepository.findTimeSlices(startAt, deadlineAt, meditationType, null).stream()
+        .filter((entry) -> goal.getTimeOfDayBucket().equals(ReferenceData.resolveTimeOfDayBucket(entry.getEndedAt(), zoneId)))
+        .toList();
+  }
+
+  private SankalpaMatchTotals loadRecurringCadenceMatchTotals(
+      SankalpaGoalEntity goal,
+      List<SessionLogRepository.SessionLogTimeSliceView> matchingSlices,
+      ZoneId zoneId,
+      int matchedSessionCount,
+      int matchedDurationSeconds
+  ) {
+    Map<LocalDate, Integer> dailyValueByDate = new LinkedHashMap<>();
+    for (SessionLogRepository.SessionLogTimeSliceView entry : matchingSlices) {
+      LocalDate localDate = entry.getEndedAt().atZone(zoneId).toLocalDate();
+      int increment = "duration-based".equals(goal.getGoalType()) ? entry.getCompletedDurationSeconds() : 1;
+      dailyValueByDate.merge(localDate, increment, Integer::sum);
+    }
+
+    LocalDate startDate = goal.getCreatedAt().atZone(zoneId).toLocalDate();
+    LocalDate today = Instant.now().atZone(zoneId).toLocalDate();
+    int targetRecurringWeekCount = Math.max(1, goal.getDays() / DAYS_PER_WEEK);
+    int threshold = "duration-based".equals(goal.getGoalType())
+        ? goal.getTargetValue().multiply(BigDecimal.valueOf(60)).setScale(0, RoundingMode.HALF_UP).intValueExact()
+        : goal.getTargetValue().intValueExact();
+    int metRecurringWeekCount = 0;
+    List<SankalpaRecurringWeekResponse> recurringWeeks = new java.util.ArrayList<>();
+
+    for (int weekIndex = 0; weekIndex < targetRecurringWeekCount; weekIndex += 1) {
+      LocalDate weekStart = startDate.plusDays((long) weekIndex * DAYS_PER_WEEK);
+      LocalDate weekEnd = weekStart.plusDays(DAYS_PER_WEEK - 1L);
+      int qualifyingDayCount = 0;
+
+      for (int dayOffset = 0; dayOffset < DAYS_PER_WEEK; dayOffset += 1) {
+        LocalDate currentDate = weekStart.plusDays(dayOffset);
+        int dailyValue = dailyValueByDate.getOrDefault(currentDate, 0);
+        if (dailyValue >= threshold) {
+          qualifyingDayCount += 1;
+        }
+      }
+
+      String status;
+      if (qualifyingDayCount >= goal.getQualifyingDaysPerWeek()) {
+        status = "met";
+        metRecurringWeekCount += 1;
+      } else if (today.isAfter(weekEnd)) {
+        status = "missed";
+      } else if (today.isBefore(weekStart)) {
+        status = "upcoming";
+      } else {
+        status = "active";
+      }
+
+      recurringWeeks.add(new SankalpaRecurringWeekResponse(
+          weekIndex + 1,
+          weekStart.toString(),
+          weekEnd.toString(),
+          qualifyingDayCount,
+          goal.getQualifyingDaysPerWeek(),
+          status
+      ));
+    }
+
+    return new SankalpaMatchTotals(
+        matchedSessionCount,
+        matchedDurationSeconds,
+        0,
+        0,
+        0,
+        List.of(),
+        metRecurringWeekCount,
+        targetRecurringWeekCount,
+        recurringWeeks
+    );
   }
 
   private ZoneId parseZoneId(String value) {
@@ -408,6 +507,10 @@ public class SankalpaService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals cannot include a time-of-day filter.");
       }
 
+      if (request.qualifyingDaysPerWeek() != null) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals cannot include a weekly cadence target.");
+      }
+
       validateObservanceRecords(request.observanceRecords(), createdAt, request.days(), zoneId);
       return;
     }
@@ -415,6 +518,16 @@ public class SankalpaService {
     if ("session-count-based".equals(request.goalType())
         && request.targetValue().stripTrailingZeros().scale() > 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target session logs must be a whole number.");
+    }
+
+    if (request.qualifyingDaysPerWeek() != null) {
+      if (request.qualifyingDaysPerWeek() <= 0 || request.qualifyingDaysPerWeek() > DAYS_PER_WEEK) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Qualifying days per week must be between 1 and 7.");
+      }
+
+      if (request.days() % DAYS_PER_WEEK != 0) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Weekly cadence goals must use a whole number of weeks.");
+      }
     }
 
     if (request.meditationType() != null
@@ -512,7 +625,10 @@ public class SankalpaService {
       int matchedObservanceCount,
       int missedObservanceCount,
       int pendingObservanceCount,
-      List<SankalpaObservanceDayResponse> observanceDays
+      List<SankalpaObservanceDayResponse> observanceDays,
+      int metRecurringWeekCount,
+      int targetRecurringWeekCount,
+      List<SankalpaRecurringWeekResponse> recurringWeeks
   ) {
   }
 }
