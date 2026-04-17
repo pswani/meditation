@@ -4,7 +4,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `ios-native-lock-screen-audio-mixing-feature-bundle-with-branching` completed on 2026-04-16; physical-iPhone confirmation of near-end lock-screen end-bell behavior plus competing-audio mixing for timer cues and `custom play` playback is still recommended
+- Active bundle: `web-manual-log-open-ended-feature-bundle-with-branching` completed on 2026-04-16; History manual logging now supports `open-ended` entries across local, queued, and backend-backed paths
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -21,6 +21,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `prompts/web-manual-log-open-ended-feature-bundle-with-branching/`
   - `prompts/sankalpa-threshold-frequency-goals-feature-bundle-with-branching/`
   - `prompts/backend-test-h2-isolation-feature-bundle-with-branching/`
+- Web manual-log open-ended artifacts completed on 2026-04-16:
+  - `docs/execplan-web-manual-log-open-ended-feature.md`
+  - `docs/review-web-manual-log-open-ended-feature.md`
+  - `docs/test-web-manual-log-open-ended-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -93,6 +97,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - clearer README separation between portable contributor verification and macOS-only production install or release flows
 - Implemented vertical slices now include:
   - timer setup, active runtime, sounds, and session logging
+  - History manual-log creation for both fixed-duration and `open-ended` sessions, with truthful `Planned: Open-ended` history copy and badge presentation
   - dedicated prerecorded `custom play` runtime with persisted recovery
   - managed custom-play media library foundations with backend metadata, frontend fallback metadata, and clearer Practice-screen selection states
   - playlist runtime with linked `custom play` audio, optional small gaps, and per-item logging

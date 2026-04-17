@@ -191,6 +191,10 @@
   - support optional filters for date range, meditation type, and source
   - support optional paged reads with explicit envelope metadata
   - preserve an unpaged compatibility path while existing consumers migrate
+- Keep the dedicated manual-log create contract aligned with the broader `session log` model:
+  - accept `timerMode` so manual entries can truthfully represent `fixed` versus `open-ended` practice
+  - continue defaulting omitted manual-log timer mode to `fixed` for compatibility with older callers
+  - keep manual-log duration input as actual completed duration in both modes, with `open-ended` entries storing no planned duration
 - Keep the shared frontend API client responsible for explicit timeout and cancellation behavior rather than scattering ad hoc abort logic across features.
 - Keep `sankalpa` edits id-stable:
   - preserve `id` and `createdAt` when editing goal fields so progress and deadline windows stay anchored to the original goal

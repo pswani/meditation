@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SyncStatusProvider } from '../features/sync/SyncStatusProvider';
@@ -96,6 +96,10 @@ describe('HistoryPage UX', () => {
           });
         }
 
+        if (url.includes('/api/session-logs/') && method === 'PUT') {
+          return createJsonResponse(200, typeof init?.body === 'string' ? JSON.parse(init.body) : {});
+        }
+
         return createJsonResponse(404, { message: `Unhandled test fetch for ${method} ${url}` });
       })
     );
@@ -130,6 +134,37 @@ describe('HistoryPage UX', () => {
 
     fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '25' } });
     expect(screen.queryByText(/manual log saved to history/i)).not.toBeInTheDocument();
+  });
+
+  it('lets manual logs be saved as open-ended sessions with calm history copy', async () => {
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /open-ended/i }));
+
+    expect(screen.getByText(/history will show this entry as open-ended/i)).toBeInTheDocument();
+    expect(screen.getByText(/when the open-ended session ended/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Vipassana' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText(/session timestamp/i), { target: { value: '2026-03-26T07:18' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    const historyItem = screen.getByText(/planned: open-ended/i).closest('.history-item');
+    expect(historyItem).not.toBeNull();
+    expect(within(historyItem as HTMLElement).getByText(/^open-ended$/i)).toBeInTheDocument();
+    expect(within(historyItem as HTMLElement).getByText(/planned: open-ended/i)).toBeInTheDocument();
+    expect(within(historyItem as HTMLElement).getByText(/completed: 18 min/i)).toBeInTheDocument();
   });
 
   it('prioritizes recent logs and keeps manual log collapsed when logs exist', () => {

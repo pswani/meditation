@@ -1,7 +1,9 @@
 import type { SessionLog } from '../types/sessionLog';
 import type { MeditationType } from '../types/timer';
+import type { TimerMode } from '../types/timer';
 
 export interface ManualLogInput {
+  timerMode: TimerMode;
   durationMinutes: number;
   meditationType: MeditationType | '';
   sessionTimestamp: string;
@@ -22,6 +24,7 @@ export interface ManualLogSaveResult extends ManualLogValidationResult {
 }
 
 export interface ManualLogCreateRequest {
+  readonly timerMode: TimerMode;
   readonly durationMinutes: number;
   readonly meditationType: MeditationType;
   readonly sessionTimestamp: string;
@@ -75,6 +78,7 @@ export function buildManualLogCreateRequest(input: ManualLogInput): ManualLogCre
   }
 
   return {
+    timerMode: input.timerMode,
     durationMinutes: input.durationMinutes,
     meditationType: input.meditationType,
     sessionTimestamp: new Date(sessionTimestampMs).toISOString(),
@@ -92,8 +96,8 @@ export function buildManualLogEntry(input: ManualLogInput, now: Date): SessionLo
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
     meditationType: request.meditationType,
-    timerMode: 'fixed',
-    intendedDurationSeconds: durationSeconds,
+    timerMode: request.timerMode,
+    intendedDurationSeconds: request.timerMode === 'open-ended' ? null : durationSeconds,
     completedDurationSeconds: durationSeconds,
     status: 'completed',
     source: 'manual log',
