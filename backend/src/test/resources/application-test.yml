@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:meditation-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:meditation-test-${random.uuid};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -10,5 +10,6 @@ spring:
 
 meditation:
   backend:
+    test-runtime-root: ${java.io.tmpdir}/meditation-backend-test/${random.uuid}
     media:
-      root: ${java.io.tmpdir}/meditation-backend-test/media
+      root: ${meditation.backend.test-runtime-root}/media

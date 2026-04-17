@@ -324,7 +324,8 @@ Current backend persistence foundation includes:
 - `backend/src/main/resources/application.yml`
 - Flyway migrations in `backend/src/main/resources/db/migration/`
 - a file-backed H2 datasource for local development
-- an in-memory H2 datasource for tests
+- an isolated in-memory H2 datasource for tests, with a unique test database name per Spring context
+- a disposable temp media root for backend Spring tests so verification does not reuse `local-data/media`
 
 This is now an early feature slice:
 
@@ -411,6 +412,7 @@ The repo also exposes one broader convenience wrapper:
 ```
 
 That quality gate runs the frontend checks, backend Maven verify, and a temporary backend health smoke check.
+The smoke backend uses disposable runtime, H2, and media directories under the system temp root, so the automated verify flow does not touch `local-data/h2`.
 
 Visible CI and hygiene enforcement now use the same repo surfaces:
 
@@ -1040,6 +1042,8 @@ mvn -Dmaven.repo.local=../local-data/m2 test
 mvn -Dmaven.repo.local=../local-data/m2 verify
 ```
 
+Backend Spring tests run with the `test` profile, which uses isolated in-memory H2 plus a disposable temp media root by default rather than the file-backed `local-data/h2` runtime.
+
 ### Unit and integration tests
 
 The repo uses Vitest for both unit-style and App-level integration tests.
@@ -1116,15 +1120,16 @@ You can verify backend reachability in this workspace now, plus the frontend med
 Current verification split:
 
 1. For the portable contributor quality gate, run `./scripts/pipeline.sh verify` and use the direct API checks above when you already have a backend running.
-2. Use the following end-to-end connectivity path only for the macOS production-style install flow.
-3. Run `./scripts/pipeline.sh release`.
-4. Open `http://127.0.0.1:8080/api/health`.
-5. Open `http://127.0.0.1:8080/api/media/custom-plays`.
-6. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
-7. Open the installed app through nginx.
-8. In the app, start a short timer with `Temple Bell` and `Gong`, then confirm sounds fire once at start, each interval milestone, and session end without a CORS dependency.
-9. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
-10. Save a custom play or session log and confirm it persists across a clean service restart.
+2. `./scripts/pipeline.sh verify` prints the disposable runtime, H2, and media directories it created for the smoke backend so you can confirm the automated flow stayed off the persistent runtime paths.
+3. Use the following end-to-end connectivity path only for the macOS production-style install flow.
+4. Run `./scripts/pipeline.sh release`.
+5. Open `http://127.0.0.1:8080/api/health`.
+6. Open `http://127.0.0.1:8080/api/media/custom-plays`.
+7. Open `http://127.0.0.1:8080/media/custom-plays/vipassana-sit-20.mp3` when a matching file exists under the backend media root.
+8. Open the installed app through nginx.
+9. In the app, start a short timer with `Temple Bell` and `Gong`, then confirm sounds fire once at start, each interval milestone, and session end without a CORS dependency.
+10. In the app, open `Practice` -> `Show Tools` -> `Custom Plays` and confirm media options load with the backend running.
+11. Save a custom play or session log and confirm it persists across a clean service restart.
 
 ## Build And Deployment
 

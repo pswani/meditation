@@ -241,6 +241,9 @@
   - `./scripts/prod-release.sh` is the golden workflow for build, package, install, and restart
   - `./scripts/pipeline.sh` is the preferred operator-facing wrapper for `verify`, `build`, `package`, and `release` so day-to-day usage has one clear command surface
   - `./scripts/pipeline.sh verify` should remain the single repeatable quality gate covering frontend checks, backend `mvn verify`, and a temporary backend health smoke check
+  - automated verification should not touch the persistent `local-data/h2` runtime:
+    - backend Spring tests use isolated in-memory H2 plus disposable temp media roots
+    - the `./scripts/pipeline.sh verify` smoke backend uses disposable runtime, H2, and media directories
   - GitHub Actions should call that same repo verification entrypoint for web and backend checks instead of maintaining a second shadow command sequence
   - the supported frontend runtime shape is same-origin static files behind `nginx`, not a dev or preview server
   - destructive H2 resets are now operator-managed through the configured runtime directory, not a repo helper script
