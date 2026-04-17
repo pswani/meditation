@@ -27,6 +27,7 @@ function getDefaultTimestamp(): string {
 }
 
 const initialManualLog: ManualLogInput = {
+  timerMode: 'fixed',
   durationMinutes: 20,
   meditationType: '',
   sessionTimestamp: getDefaultTimestamp(),
@@ -100,6 +101,7 @@ export default function HistoryPage() {
     ? 'manual-log-meditation-type-error'
     : 'manual-log-meditation-type-hint';
   const manualTimestampMessageId = errors.sessionTimestamp ? 'manual-log-timestamp-error' : 'manual-log-timestamp-hint';
+  const isOpenEndedManualLog = manualLog.timerMode === 'open-ended';
 
   const filteredLogs = useMemo(
     () =>
@@ -286,6 +288,48 @@ export default function HistoryPage() {
               </div>
             ) : null}
             <form className="form-grid" onSubmit={submitManualLog}>
+              <section className="timer-mode-panel" aria-label="Manual log mode">
+                <label className={`timer-mode-option ${manualLog.timerMode === 'fixed' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="manual-log-mode"
+                    checked={manualLog.timerMode === 'fixed'}
+                    onChange={() => {
+                      setSaveSuccessMessage(null);
+                      setSaveErrorMessage(null);
+                      setManualLog((current) => ({
+                        ...current,
+                        timerMode: 'fixed',
+                      }));
+                    }}
+                  />
+                  <span className="timer-mode-copy">
+                    <strong>Fixed Duration</strong>
+                    <small>Save this as a session that had a planned end time.</small>
+                  </span>
+                </label>
+
+                <label className={`timer-mode-option ${manualLog.timerMode === 'open-ended' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="manual-log-mode"
+                    checked={manualLog.timerMode === 'open-ended'}
+                    onChange={() => {
+                      setSaveSuccessMessage(null);
+                      setSaveErrorMessage(null);
+                      setManualLog((current) => ({
+                        ...current,
+                        timerMode: 'open-ended',
+                      }));
+                    }}
+                  />
+                  <span className="timer-mode-copy">
+                    <strong>Open-Ended</strong>
+                    <small>Save this as a session that ended when you chose to stop, without a planned finish time.</small>
+                  </span>
+                </label>
+              </section>
+
               <label>
                 <span>Duration (minutes)</span>
                 <input
@@ -309,7 +353,9 @@ export default function HistoryPage() {
                   </small>
                 ) : (
                   <small id={manualDurationMessageId} className="hint-text">
-                    Enter the full session duration in minutes.
+                    {isOpenEndedManualLog
+                      ? 'Enter the completed duration. History will show this entry as open-ended.'
+                      : 'Enter the full session duration in minutes.'}
                   </small>
                 )}
               </label>
@@ -369,10 +415,21 @@ export default function HistoryPage() {
                   </small>
                 ) : (
                   <small id={manualTimestampMessageId} className="hint-text">
-                    Use your local date and time when the session ended.
+                    {isOpenEndedManualLog
+                      ? 'Use your local date and time when the open-ended session ended.'
+                      : 'Use your local date and time when the session ended.'}
                   </small>
                 )}
               </label>
+
+              {isOpenEndedManualLog ? (
+                <div className="mode-hint-card">
+                  <strong>Open-ended manual log</strong>
+                  <p className="section-subtitle">
+                    The saved history entry will show the completed duration, an open-ended badge, and `Planned: Open-ended`.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="timer-actions">
                 <button type="submit" disabled={isSavingManualLog}>

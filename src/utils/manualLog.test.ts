@@ -4,6 +4,7 @@ import { buildManualLogCreateRequest, buildManualLogEntry, validateManualLogInpu
 describe('manual log helpers', () => {
   it('validates required manual log fields', () => {
     const result = validateManualLogInput({
+      timerMode: 'fixed',
       durationMinutes: 0,
       meditationType: '',
       sessionTimestamp: '',
@@ -17,6 +18,7 @@ describe('manual log helpers', () => {
 
   it('rejects malformed session timestamp values', () => {
     const result = validateManualLogInput({
+      timerMode: 'fixed',
       durationMinutes: 20,
       meditationType: 'Vipassana',
       sessionTimestamp: 'not-a-timestamp',
@@ -29,6 +31,7 @@ describe('manual log helpers', () => {
   it('rejects future session timestamp values', () => {
     const result = validateManualLogInput(
       {
+        timerMode: 'fixed',
         durationMinutes: 20,
         meditationType: 'Vipassana',
         sessionTimestamp: '2026-03-24T12:01',
@@ -43,6 +46,7 @@ describe('manual log helpers', () => {
   it('accepts session timestamp equal to now', () => {
     const result = validateManualLogInput(
       {
+        timerMode: 'fixed',
         durationMinutes: 15,
         meditationType: 'Ajapa',
         sessionTimestamp: '2026-03-24T12:00:00.000Z',
@@ -56,11 +60,13 @@ describe('manual log helpers', () => {
 
   it('builds a backend create request using ISO session timestamp semantics', () => {
     const request = buildManualLogCreateRequest({
+      timerMode: 'fixed',
       durationMinutes: 25,
       meditationType: 'Vipassana',
       sessionTimestamp: '2026-03-23T07:00',
     });
 
+    expect(request.timerMode).toBe('fixed');
     expect(request.durationMinutes).toBe(25);
     expect(request.meditationType).toBe('Vipassana');
     expect(request.sessionTimestamp).toBe(new Date('2026-03-23T07:00').toISOString());
@@ -69,6 +75,7 @@ describe('manual log helpers', () => {
   it('builds a manual log entry using session end timestamp semantics', () => {
     const log = buildManualLogEntry(
       {
+        timerMode: 'fixed',
         durationMinutes: 30,
         meditationType: 'Tratak',
         sessionTimestamp: '2026-03-23T07:00',
@@ -83,10 +90,27 @@ describe('manual log helpers', () => {
     expect(log.startedAt).toBe(new Date('2026-03-23T06:30').toISOString());
   });
 
+  it('builds an open-ended manual log entry without a planned duration', () => {
+    const log = buildManualLogEntry(
+      {
+        timerMode: 'open-ended',
+        durationMinutes: 18,
+        meditationType: 'Vipassana',
+        sessionTimestamp: '2026-03-23T07:00',
+      },
+      new Date('2026-03-23T10:00:00.000Z')
+    );
+
+    expect(log.timerMode).toBe('open-ended');
+    expect(log.intendedDurationSeconds).toBeNull();
+    expect(log.completedDurationSeconds).toBe(1080);
+  });
+
   it('throws for invalid manual timestamp when building log entry', () => {
     expect(() =>
       buildManualLogEntry(
         {
+          timerMode: 'fixed',
           durationMinutes: 20,
           meditationType: 'Vipassana',
           sessionTimestamp: 'invalid-time',
@@ -99,6 +123,7 @@ describe('manual log helpers', () => {
   it('throws when building a backend create request without a meditation type', () => {
     expect(() =>
       buildManualLogCreateRequest({
+        timerMode: 'fixed',
         durationMinutes: 20,
         meditationType: '',
         sessionTimestamp: '2026-03-23T07:00',

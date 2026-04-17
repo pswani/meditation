@@ -1379,6 +1379,42 @@ describe('App shell', () => {
     expect(screen.getAllByText(/^Ajapa$/i).length).toBeGreaterThan(0);
   });
 
+  it('syncs an open-ended manual log to backend history and rehydrates the open-ended badge', async () => {
+    const { fetchMock, store } = createStatefulBackendFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await flushBackendHydration();
+    fireEvent.click(screen.getByRole('radio', { name: /open-ended/i }));
+    fireEvent.change(screen.getByLabelText(/meditation type/i), { target: { value: 'Ajapa' } });
+    fireEvent.change(screen.getByLabelText(/duration \(minutes\)/i), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText(/session timestamp/i), { target: { value: '2026-03-30T07:18' } });
+    fireEvent.click(screen.getByRole('button', { name: /save manual log/i }));
+
+    expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
+    await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
+    expect(store.sessionLogs[0]?.timerMode).toBe('open-ended');
+    expect(store.sessionLogs[0]?.intendedDurationSeconds).toBeNull();
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
+    const historyItem = screen.getByText(/planned: open-ended/i).closest('.history-item');
+    expect(historyItem).not.toBeNull();
+    expect(within(historyItem as HTMLElement).getByText(/^open-ended$/i)).toBeInTheDocument();
+    expect(within(historyItem as HTMLElement).getByText(/planned: open-ended/i)).toBeInTheDocument();
+  });
+
   it('feeds a backend manual log into summary and sankalpa progress on the Sankalpa screen, including a fresh mount', async () => {
     const { fetchMock, store } = createStatefulBackendFetchMock({
       sankalpas: [

@@ -126,6 +126,7 @@ class SessionLogControllerTest {
             .contentType(APPLICATION_JSON)
             .content("""
                 {
+                  "timerMode": "fixed",
                   "durationMinutes": 12,
                   "meditationType": "Ajapa",
                   "sessionTimestamp": "2026-03-26T11:12:00Z"
@@ -140,10 +141,47 @@ class SessionLogControllerTest {
         .andExpect(jsonPath("$.startedAt").value("2026-03-26T11:00:00Z"))
         .andExpect(jsonPath("$.endedAt").value("2026-03-26T11:12:00Z"));
 
+    mockMvc.perform(post("/api/session-logs/manual")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "timerMode": "open-ended",
+                  "durationMinutes": 18,
+                  "meditationType": "Vipassana",
+                  "sessionTimestamp": "2026-03-26T12:18:00Z"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.source").value("manual log"))
+        .andExpect(jsonPath("$.status").value("completed"))
+        .andExpect(jsonPath("$.timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.intendedDurationSeconds").isEmpty())
+        .andExpect(jsonPath("$.completedDurationSeconds").value(1080))
+        .andExpect(jsonPath("$.startedAt").value("2026-03-26T12:00:00Z"))
+        .andExpect(jsonPath("$.endedAt").value("2026-03-26T12:18:00Z"));
+
     mockMvc.perform(get("/api/session-logs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.items", hasSize(1)))
-        .andExpect(jsonPath("$.items[0].source").value("manual log"));
+        .andExpect(jsonPath("$.items", hasSize(2)))
+        .andExpect(jsonPath("$.items[0].timerMode").value("open-ended"))
+        .andExpect(jsonPath("$.items[1].source").value("manual log"));
+  }
+
+  @Test
+  void defaultsManualSessionLogsToFixedWhenTimerModeIsOmitted() throws Exception {
+    mockMvc.perform(post("/api/session-logs/manual")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "durationMinutes": 10,
+                  "meditationType": "Ajapa",
+                  "sessionTimestamp": "2026-03-26T10:10:00Z"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.timerMode").value("fixed"))
+        .andExpect(jsonPath("$.intendedDurationSeconds").value(600))
+        .andExpect(jsonPath("$.completedDurationSeconds").value(600));
   }
 
   @Test

@@ -140,7 +140,8 @@ describe('session log api boundary', () => {
         startedAt: '2026-03-26T11:00:00.000Z',
         endedAt: '2026-03-26T11:20:00.000Z',
         meditationType: 'Vipassana',
-        intendedDurationSeconds: 1200,
+        timerMode: 'open-ended',
+        intendedDurationSeconds: null,
         completedDurationSeconds: 1200,
         status: 'completed',
         source: 'manual log',
@@ -155,6 +156,7 @@ describe('session log api boundary', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const saved = await createManualSessionLogInApi({
+      timerMode: 'open-ended',
       durationMinutes: 20,
       meditationType: 'Vipassana',
       sessionTimestamp: '2026-03-26T11:20:00.000Z',
@@ -164,6 +166,7 @@ describe('session log api boundary', () => {
     expect(buildManualSessionLogCreateUrl()).toBe('/api/session-logs/manual');
     expect(saved.id).toBe('manual-log-1');
     expect(saved.source).toBe('manual log');
+    expect(saved.timerMode).toBe('open-ended');
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/session-logs/manual',
       expect.objectContaining({

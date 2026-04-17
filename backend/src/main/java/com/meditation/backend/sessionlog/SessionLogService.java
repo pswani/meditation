@@ -73,6 +73,7 @@ public class SessionLogService {
 
   public SessionLogResponse createManualSessionLog(ManualSessionLogCreateRequest request) {
     validateManualCreateRequest(request);
+    String timerMode = normalizeManualTimerMode(request.timerMode());
 
     Instant endedAt = parseTimestamp(request.sessionTimestamp(), "Session timestamp must be a valid ISO timestamp.");
     if (endedAt.isAfter(Instant.now())) {
@@ -90,10 +91,10 @@ public class SessionLogService {
         "manual log",
         "completed",
         request.meditationType(),
-        "fixed",
+        timerMode,
         endedAt.minusSeconds(durationSeconds),
         endedAt,
-        durationSeconds,
+        "open-ended".equals(timerMode) ? null : durationSeconds,
         durationSeconds,
         "None",
         "None",
@@ -211,6 +212,10 @@ public class SessionLogService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duration must be greater than 0.");
     }
 
+    if (!ReferenceData.isTimerMode(normalizeManualTimerMode(request.timerMode()))) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timer mode is invalid.");
+    }
+
     if (!ReferenceData.isMeditationType(request.meditationType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type is invalid.");
     }
@@ -325,6 +330,14 @@ public class SessionLogService {
     } catch (DateTimeParseException exception) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
     }
+  }
+
+  private String normalizeManualTimerMode(String value) {
+    if (value == null || value.isBlank()) {
+      return "fixed";
+    }
+
+    return value;
   }
 
   private String normalizeOptionalText(String value) {
