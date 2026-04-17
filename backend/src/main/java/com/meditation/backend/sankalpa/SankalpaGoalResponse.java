@@ -7,6 +7,7 @@ public record SankalpaGoalResponse(
     String goalType,
     double targetValue,
     int days,
+    Integer qualifyingDaysPerWeek,
     String meditationType,
     String timeOfDayBucket,
     String observanceLabel,

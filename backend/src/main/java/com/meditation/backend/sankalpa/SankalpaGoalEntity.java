@@ -24,6 +24,9 @@ public class SankalpaGoalEntity {
   @Column(name = "days", nullable = false)
   private int days;
 
+  @Column(name = "qualifying_days_per_week")
+  private Integer qualifyingDaysPerWeek;
+
   @Column(name = "meditation_type_code", length = 32)
   private String meditationTypeCode;
 
@@ -53,6 +56,7 @@ public class SankalpaGoalEntity {
       String goalType,
       BigDecimal targetValue,
       int days,
+      Integer qualifyingDaysPerWeek,
       String meditationTypeCode,
       String timeOfDayBucket,
       String observanceLabel,
@@ -65,6 +69,7 @@ public class SankalpaGoalEntity {
     this.goalType = goalType;
     this.targetValue = targetValue;
     this.days = days;
+    this.qualifyingDaysPerWeek = qualifyingDaysPerWeek;
     this.meditationTypeCode = meditationTypeCode;
     this.timeOfDayBucket = timeOfDayBucket;
     this.observanceLabel = observanceLabel;
@@ -88,6 +93,10 @@ public class SankalpaGoalEntity {
 
   public int getDays() {
     return days;
+  }
+
+  public Integer getQualifyingDaysPerWeek() {
+    return qualifyingDaysPerWeek;
   }
 
   public String getMeditationTypeCode() {
@@ -122,6 +131,7 @@ public class SankalpaGoalEntity {
     this.goalType = request.goalType();
     this.targetValue = request.targetValue();
     this.days = request.days();
+    this.qualifyingDaysPerWeek = request.qualifyingDaysPerWeek();
     this.meditationTypeCode = request.meditationType();
     this.timeOfDayBucket = request.timeOfDayBucket();
     this.observanceLabel = request.observanceLabel();

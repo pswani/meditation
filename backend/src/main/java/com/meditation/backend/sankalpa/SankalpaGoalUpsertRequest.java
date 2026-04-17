@@ -8,6 +8,7 @@ public record SankalpaGoalUpsertRequest(
     String goalType,
     BigDecimal targetValue,
     int days,
+    Integer qualifyingDaysPerWeek,
     String meditationType,
     String timeOfDayBucket,
     String observanceLabel,

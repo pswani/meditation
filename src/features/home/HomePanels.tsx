@@ -4,7 +4,7 @@ import type { Playlist } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaProgress } from '../../types/sankalpa';
 import { formatDurationLabel } from '../../utils/sessionLog';
-import { getSankalpaGoalTypeLabel } from '../../utils/sankalpa';
+import { describeSankalpa, progressDetail } from '../sankalpa/sankalpaPageHelpers';
 import { describeLastUsedMeditation } from './homePageHelpers';
 
 interface QuickStartPanelProps {
@@ -122,7 +122,7 @@ export function HomeTodayAndSankalpaPanels({
               <strong>
                 {topActiveSankalpa.goal.goalType === 'observance-based'
                   ? topActiveSankalpa.goal.observanceLabel
-                  : getSankalpaGoalTypeLabel(topActiveSankalpa.goal.goalType)}
+                  : describeSankalpa(topActiveSankalpa.goal)}
               </strong>
               <span className="pill active">{topActiveSankalpa.status}</span>
             </div>
@@ -130,23 +130,12 @@ export function HomeTodayAndSankalpaPanels({
               Deadline: {new Date(topActiveSankalpa.deadlineAt).toLocaleDateString()} · Target:{' '}
               {topActiveSankalpa.goal.goalType === 'observance-based'
                 ? `${topActiveSankalpa.targetObservanceCount} observed dates`
-                : `${topActiveSankalpa.goal.targetValue} ${
-                    topActiveSankalpa.goal.goalType === 'duration-based' ? 'min' : 'session logs'
-                  }`}
+                : describeSankalpa(topActiveSankalpa.goal)}
             </p>
             <div className="sankalpa-progress-track" aria-hidden="true">
               <span className="sankalpa-progress-fill" style={{ width: `${Math.min(100, topActiveSankalpa.progressRatio * 100)}%` }} />
             </div>
-            <p className="section-subtitle">
-              Progress:{' '}
-              {topActiveSankalpa.goal.goalType === 'observance-based'
-                ? `${topActiveSankalpa.matchedObservanceCount} / ${topActiveSankalpa.targetObservanceCount} observed dates`
-                : topActiveSankalpa.goal.goalType === 'duration-based'
-                ? `${formatDurationLabel(topActiveSankalpa.matchedDurationSeconds)} / ${formatDurationLabel(
-                    topActiveSankalpa.targetDurationSeconds
-                  )}`
-                : `${topActiveSankalpa.matchedSessionCount} / ${topActiveSankalpa.targetSessionCount} session logs`}
-            </p>
+            <p className="section-subtitle">Progress: {progressDetail(topActiveSankalpa)}</p>
           </>
         ) : (
           <div className="empty-state">

@@ -7,6 +7,7 @@ import type {
   SankalpaObservanceRecord,
   SankalpaObservanceRecordStatus,
   SankalpaProgress,
+  SankalpaRecurringWeekProgress,
   SankalpaStatus,
   SankalpaValidationResult,
   TimeOfDayBucket,
@@ -15,6 +16,7 @@ import type {
 export { timeOfDayBuckets } from '../types/referenceData';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DAYS_PER_WEEK = 7;
 const OBSERVANCE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const timeOfDayBucketLabels: Record<TimeOfDayBucket, string> = {
@@ -60,7 +62,15 @@ function endOfLocalDay(date: Date): Date {
 }
 
 function addLocalDays(date: Date, offsetDays: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + offsetDays, date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds());
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + offsetDays,
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds()
+  );
 }
 
 function parseObservanceDate(date: string): Date | null {
@@ -94,6 +104,18 @@ function isValidObservanceDate(date: string): boolean {
 
 export function isObservanceGoalType(goalType: SankalpaGoalType | '' | undefined): goalType is 'observance-based' {
   return goalType === 'observance-based';
+}
+
+export function isRecurringCadenceGoal(goal: Pick<SankalpaGoal, 'goalType' | 'qualifyingDaysPerWeek'>): boolean {
+  return !isObservanceGoalType(goal.goalType) && Number.isInteger(goal.qualifyingDaysPerWeek) && (goal.qualifyingDaysPerWeek ?? 0) > 0;
+}
+
+export function getSankalpaCadenceWeeks(goal: Pick<SankalpaGoal, 'days' | 'goalType' | 'qualifyingDaysPerWeek'>): number | null {
+  if (!isRecurringCadenceGoal(goal)) {
+    return null;
+  }
+
+  return Math.max(1, Math.round(goal.days / DAYS_PER_WEEK));
 }
 
 export function normalizeObservanceRecords(
@@ -158,11 +180,95 @@ function deriveObservanceWindow(goal: SankalpaGoal, now: Date) {
   };
 }
 
+function deriveRecurringDeadlineAt(goal: SankalpaGoal): string {
+  const startDate = startOfLocalDay(new Date(goal.createdAt));
+  return endOfLocalDay(addLocalDays(startDate, Math.max(0, goal.days - 1))).toISOString();
+}
+
+function deriveRecurringWeeks(
+  goal: SankalpaGoal,
+  matchingSessionLogs: readonly SessionLog[],
+  now: Date
+): {
+  recurringWeeks: SankalpaRecurringWeekProgress[];
+  metRecurringWeekCount: number;
+  targetRecurringWeekCount: number;
+} {
+  const startDate = startOfLocalDay(new Date(goal.createdAt));
+  const threshold = goal.targetValue;
+  const qualifyingDaysPerWeek = goal.qualifyingDaysPerWeek ?? 0;
+  const targetRecurringWeekCount = Math.max(1, Math.round(goal.days / DAYS_PER_WEEK));
+  const dailyValueByDate = new Map<string, number>();
+  const todayKey = formatLocalDate(startOfLocalDay(now));
+
+  for (const sessionLog of matchingSessionLogs) {
+    const dateKey = formatLocalDate(new Date(sessionLog.endedAt));
+    const currentValue = dailyValueByDate.get(dateKey) ?? 0;
+    dailyValueByDate.set(
+      dateKey,
+      currentValue + (goal.goalType === 'duration-based' ? sessionLog.completedDurationSeconds : 1)
+    );
+  }
+
+  let metRecurringWeekCount = 0;
+  const recurringWeeks: SankalpaRecurringWeekProgress[] = Array.from({ length: targetRecurringWeekCount }, (_, weekIndex) => {
+    const weekStartDate = addLocalDays(startDate, weekIndex * DAYS_PER_WEEK);
+    const weekEndDate = addLocalDays(weekStartDate, DAYS_PER_WEEK - 1);
+    let qualifyingDayCount = 0;
+
+    for (let dayOffset = 0; dayOffset < DAYS_PER_WEEK; dayOffset += 1) {
+      const dayKey = formatLocalDate(addLocalDays(weekStartDate, dayOffset));
+      const dailyValue = dailyValueByDate.get(dayKey) ?? 0;
+      const qualifies =
+        goal.goalType === 'duration-based'
+          ? dailyValue >= Math.round(threshold * 60)
+          : dailyValue >= threshold;
+
+      if (qualifies) {
+        qualifyingDayCount += 1;
+      }
+    }
+
+    const weekStartKey = formatLocalDate(weekStartDate);
+    const weekEndKey = formatLocalDate(weekEndDate);
+    const status: SankalpaRecurringWeekProgress['status'] =
+      qualifyingDayCount >= qualifyingDaysPerWeek
+        ? 'met'
+        : todayKey > weekEndKey
+          ? 'missed'
+          : todayKey < weekStartKey
+            ? 'upcoming'
+            : 'active';
+
+    if (status === 'met') {
+      metRecurringWeekCount += 1;
+    }
+
+    return {
+      weekIndex: weekIndex + 1,
+      startDate: weekStartKey,
+      endDate: weekEndKey,
+      qualifyingDayCount,
+      requiredQualifyingDayCount: qualifyingDaysPerWeek,
+      status,
+    };
+  });
+
+  return {
+    recurringWeeks,
+    metRecurringWeekCount,
+    targetRecurringWeekCount,
+  };
+}
+
 export function createInitialSankalpaDraft(): SankalpaDraft {
   return {
     goalType: 'duration-based',
+    cadenceMode: 'cumulative',
     targetValue: 120,
     days: 7,
+    weeks: 1,
+    qualifyingDaysPerWeek: 5,
     meditationType: '',
     timeOfDayBucket: '',
     observanceLabel: '',
@@ -178,6 +284,8 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
     goalType?: string;
     targetValue?: string;
     days?: string;
+    weeks?: string;
+    qualifyingDaysPerWeek?: string;
     observanceLabel?: string;
   } = {};
 
@@ -185,22 +293,46 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
     errors.goalType = 'Goal type is required.';
   }
 
-  if (!Number.isFinite(draft.days) || draft.days <= 0) {
-    errors.days = 'Days must be greater than 0.';
-  }
-  if (Number.isFinite(draft.days) && !Number.isInteger(draft.days)) {
-    errors.days = 'Days must be a whole number.';
-  }
-
   if (isObservanceGoalType(draft.goalType)) {
+    if (!Number.isFinite(draft.days) || draft.days <= 0) {
+      errors.days = 'Days must be greater than 0.';
+    } else if (!Number.isInteger(draft.days)) {
+      errors.days = 'Days must be a whole number.';
+    }
+
     if (!draft.observanceLabel.trim()) {
       errors.observanceLabel = 'Observance is required.';
     }
+  } else if (draft.cadenceMode === 'weekly') {
+    if (!Number.isFinite(draft.targetValue) || draft.targetValue <= 0) {
+      errors.targetValue = 'Daily qualifying threshold must be greater than 0.';
+    } else if (draft.goalType === 'session-count-based' && !Number.isInteger(draft.targetValue)) {
+      errors.targetValue = 'Daily qualifying session logs must be a whole number.';
+    }
+
+    if (!Number.isFinite(draft.weeks) || draft.weeks <= 0) {
+      errors.weeks = 'Weeks must be greater than 0.';
+    } else if (!Number.isInteger(draft.weeks)) {
+      errors.weeks = 'Weeks must be a whole number.';
+    }
+
+    if (!Number.isFinite(draft.qualifyingDaysPerWeek) || draft.qualifyingDaysPerWeek <= 0) {
+      errors.qualifyingDaysPerWeek = 'Qualifying days per week must be greater than 0.';
+    } else if (!Number.isInteger(draft.qualifyingDaysPerWeek)) {
+      errors.qualifyingDaysPerWeek = 'Qualifying days per week must be a whole number.';
+    } else if (draft.qualifyingDaysPerWeek > DAYS_PER_WEEK) {
+      errors.qualifyingDaysPerWeek = 'Qualifying days per week cannot exceed 7.';
+    }
   } else {
+    if (!Number.isFinite(draft.days) || draft.days <= 0) {
+      errors.days = 'Days must be greater than 0.';
+    } else if (!Number.isInteger(draft.days)) {
+      errors.days = 'Days must be a whole number.';
+    }
+
     if (!Number.isFinite(draft.targetValue) || draft.targetValue <= 0) {
       errors.targetValue = 'Target value must be greater than 0.';
-    }
-    if (draft.goalType === 'session-count-based' && Number.isFinite(draft.targetValue) && !Number.isInteger(draft.targetValue)) {
+    } else if (draft.goalType === 'session-count-based' && !Number.isInteger(draft.targetValue)) {
       errors.targetValue = 'Target session logs must be a whole number.';
     }
   }
@@ -213,12 +345,14 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
 
 export function createSankalpaGoal(draft: SankalpaDraft, now: Date): SankalpaGoal {
   const observanceGoal = isObservanceGoalType(draft.goalType);
+  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
 
   return {
     id: `sankalpa-${now.getTime()}-${Math.round(Math.random() * 100000)}`,
     goalType: draft.goalType as SankalpaGoal['goalType'],
     targetValue: observanceGoal ? draft.days : draft.targetValue,
-    days: draft.days,
+    days: observanceGoal ? draft.days : recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
+    qualifyingDaysPerWeek: recurringCadence ? draft.qualifyingDaysPerWeek : undefined,
     meditationType: observanceGoal ? undefined : draft.meditationType || undefined,
     timeOfDayBucket: observanceGoal ? undefined : draft.timeOfDayBucket || undefined,
     observanceLabel: observanceGoal ? draft.observanceLabel.trim() : undefined,
@@ -229,10 +363,15 @@ export function createSankalpaGoal(draft: SankalpaDraft, now: Date): SankalpaGoa
 }
 
 export function createSankalpaDraftFromGoal(goal: SankalpaGoal): SankalpaDraft {
+  const recurringCadence = isRecurringCadenceGoal(goal);
+
   return {
     goalType: goal.goalType,
+    cadenceMode: recurringCadence ? 'weekly' : 'cumulative',
     targetValue: goal.goalType === 'observance-based' ? goal.days : goal.targetValue,
     days: goal.days,
+    weeks: recurringCadence ? Math.max(1, Math.round(goal.days / DAYS_PER_WEEK)) : Math.max(1, Math.ceil(goal.days / DAYS_PER_WEEK)),
+    qualifyingDaysPerWeek: goal.qualifyingDaysPerWeek ?? 5,
     meditationType: goal.meditationType ?? '',
     timeOfDayBucket: goal.timeOfDayBucket ?? '',
     observanceLabel: goal.observanceLabel ?? '',
@@ -241,12 +380,14 @@ export function createSankalpaDraftFromGoal(goal: SankalpaGoal): SankalpaDraft {
 
 export function updateSankalpaGoal(existing: SankalpaGoal, draft: SankalpaDraft): SankalpaGoal {
   const observanceGoal = isObservanceGoalType(draft.goalType);
+  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
 
   return {
     ...existing,
     goalType: draft.goalType as SankalpaGoal['goalType'],
     targetValue: observanceGoal ? draft.days : draft.targetValue,
-    days: draft.days,
+    days: observanceGoal ? draft.days : recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
+    qualifyingDaysPerWeek: recurringCadence ? draft.qualifyingDaysPerWeek : undefined,
     meditationType: observanceGoal ? undefined : draft.meditationType || undefined,
     timeOfDayBucket: observanceGoal ? undefined : draft.timeOfDayBucket || undefined,
     observanceLabel: observanceGoal ? draft.observanceLabel.trim() : undefined,
@@ -330,14 +471,24 @@ function sessionLogMatchesFilters(sessionLog: SessionLog, goal: SankalpaGoal): b
   return true;
 }
 
-function sessionLogInGoalWindow(sessionLog: SessionLog, goal: SankalpaGoal): boolean {
+function deriveGoalDeadlineAt(goal: SankalpaGoal, now: Date): string {
+  if (goal.goalType === 'observance-based' || isRecurringCadenceGoal(goal)) {
+    return deriveRecurringDeadlineAt(goal);
+  }
+
+  return new Date(
+    (Number.isNaN(Date.parse(goal.createdAt)) ? now.getTime() : Date.parse(goal.createdAt)) + goal.days * DAY_MS
+  ).toISOString();
+}
+
+function sessionLogInGoalWindow(sessionLog: SessionLog, goal: SankalpaGoal, now: Date): boolean {
   const endedAtMs = Date.parse(sessionLog.endedAt);
   const createdAtMs = Date.parse(goal.createdAt);
   if (Number.isNaN(endedAtMs) || Number.isNaN(createdAtMs)) {
     return false;
   }
 
-  const deadlineMs = createdAtMs + goal.days * DAY_MS;
+  const deadlineMs = Date.parse(deriveGoalDeadlineAt(goal, now));
   return endedAtMs >= createdAtMs && endedAtMs <= deadlineMs;
 }
 
@@ -346,13 +497,22 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
     goal.goalType === 'observance-based'
       ? []
       : sessionLogs.filter(
-          (sessionLog) => sessionLogInGoalWindow(sessionLog, goal) && sessionLogMatchesFilters(sessionLog, goal)
+          (sessionLog) => sessionLogInGoalWindow(sessionLog, goal, now) && sessionLogMatchesFilters(sessionLog, goal)
         );
 
   const matchedSessionCount = matchingSessionLogs.length;
   const matchedDurationSeconds = matchingSessionLogs.reduce((total, sessionLog) => total + sessionLog.completedDurationSeconds, 0);
-  const targetSessionCount = goal.goalType === 'session-count-based' ? goal.targetValue : 0;
-  const targetDurationSeconds = goal.goalType === 'duration-based' ? Math.round(goal.targetValue * 60) : 0;
+  const recurringCadence = isRecurringCadenceGoal(goal);
+  const targetSessionCount = goal.goalType === 'session-count-based' && !recurringCadence ? goal.targetValue : 0;
+  const targetDurationSeconds = goal.goalType === 'duration-based' && !recurringCadence ? Math.round(goal.targetValue * 60) : 0;
+  const recurringWeekSummary =
+    recurringCadence
+      ? deriveRecurringWeeks(goal, matchingSessionLogs, now)
+      : {
+          recurringWeeks: [],
+          metRecurringWeekCount: 0,
+          targetRecurringWeekCount: 0,
+        };
   const {
     observanceDays,
     matchedObservanceCount,
@@ -368,22 +528,28 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
         missedObservanceCount: 0,
         pendingObservanceCount: 0,
         targetObservanceCount: 0,
-        deadlineAt: new Date(
-          (Number.isNaN(Date.parse(goal.createdAt)) ? now.getTime() : Date.parse(goal.createdAt)) + goal.days * DAY_MS
-        ).toISOString(),
+        deadlineAt: deriveGoalDeadlineAt(goal, now),
       };
 
   const targetValue =
     goal.goalType === 'duration-based'
-      ? targetDurationSeconds
+      ? recurringCadence
+        ? recurringWeekSummary.targetRecurringWeekCount
+        : targetDurationSeconds
       : goal.goalType === 'session-count-based'
-        ? targetSessionCount
+        ? recurringCadence
+          ? recurringWeekSummary.targetRecurringWeekCount
+          : targetSessionCount
         : targetObservanceCount;
   const progressValue =
     goal.goalType === 'duration-based'
-      ? matchedDurationSeconds
+      ? recurringCadence
+        ? recurringWeekSummary.metRecurringWeekCount
+        : matchedDurationSeconds
       : goal.goalType === 'session-count-based'
-        ? matchedSessionCount
+        ? recurringCadence
+          ? recurringWeekSummary.metRecurringWeekCount
+          : matchedSessionCount
         : matchedObservanceCount;
 
   const status: SankalpaStatus =
@@ -406,6 +572,9 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
     matchedDurationSeconds,
     targetSessionCount,
     targetDurationSeconds,
+    metRecurringWeekCount: recurringWeekSummary.metRecurringWeekCount,
+    targetRecurringWeekCount: recurringWeekSummary.targetRecurringWeekCount,
+    recurringWeeks: recurringWeekSummary.recurringWeeks,
     matchedObservanceCount,
     missedObservanceCount,
     pendingObservanceCount,

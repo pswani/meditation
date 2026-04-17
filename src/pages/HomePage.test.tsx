@@ -186,7 +186,7 @@ describe('HomePage UX', () => {
 
     await waitForHomePageReady();
     expect(screen.getByRole('heading', { name: /sankalpa snapshot/i })).toBeInTheDocument();
-    expect(screen.getByText(/duration goal/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/180 min in 7 days/i)).not.toHaveLength(0);
     expect(screen.getByText(/progress:/i)).toBeInTheDocument();
     expect(screen.getByText(/morning breath focus/i)).toBeInTheDocument();
     expect(screen.getByText(/evening sequence/i)).toBeInTheDocument();
@@ -809,7 +809,7 @@ describe('HomePage UX', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByText(/duration goal/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/120 min in 7 days/i)).not.toHaveLength(0));
     expect(screen.getByText(/60 min \/ 120 min/i)).toBeInTheDocument();
     expect(screen.queryByText(/no active sankalpa right now/i)).not.toBeInTheDocument();
   });

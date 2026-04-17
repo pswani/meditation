@@ -1,15 +1,34 @@
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import { formatDurationLabel } from '../../utils/sessionLog';
 import { deriveDateRangeFromInputs, type SummaryDateRange } from '../../utils/summary';
-import { timeOfDayBucketLabels } from '../../utils/sankalpa';
+import { getSankalpaCadenceWeeks, isRecurringCadenceGoal, timeOfDayBucketLabels } from '../../utils/sankalpa';
 
 export type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 export type SaveMessageTone = 'ok' | 'warn' | 'error';
 export type SankalpaSaveAction = 'create' | 'edit' | 'archive' | 'unarchive' | 'delete' | 'mark-observance';
 
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+export function describeRecurringCadence(goal: SankalpaGoal): string {
+  const cadenceWeeks = getSankalpaCadenceWeeks(goal) ?? 1;
+  const qualifyingDaysPerWeek = goal.qualifyingDaysPerWeek ?? 0;
+  const thresholdLabel =
+    goal.goalType === 'duration-based'
+      ? `${goal.targetValue} min`
+      : pluralize(goal.targetValue, 'session log');
+
+  return `At least ${thresholdLabel} on ${pluralize(qualifyingDaysPerWeek, 'day')} each week for ${pluralize(cadenceWeeks, 'week')}`;
+}
+
 export function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'observance-based') {
     return `${goal.observanceLabel} for ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+  }
+
+  if (isRecurringCadenceGoal(goal)) {
+    return describeRecurringCadence(goal);
   }
 
   if (goal.goalType === 'duration-based') {
@@ -24,6 +43,10 @@ export function progressDetail(progress: SankalpaProgress): string {
     return `${progress.matchedObservanceCount} / ${progress.targetObservanceCount} observed dates`;
   }
 
+  if (isRecurringCadenceGoal(progress.goal)) {
+    return `${progress.metRecurringWeekCount} / ${progress.targetRecurringWeekCount} weeks met`;
+  }
+
   if (progress.goal.goalType === 'duration-based') {
     return `${formatDurationLabel(progress.matchedDurationSeconds)} / ${formatDurationLabel(progress.targetDurationSeconds)}`;
   }
@@ -34,6 +57,21 @@ export function progressDetail(progress: SankalpaProgress): string {
 export function remainingDetail(progress: SankalpaProgress): string {
   if (progress.goal.goalType === 'observance-based') {
     return `${progress.pendingObservanceCount} pending · ${progress.missedObservanceCount} missed`;
+  }
+
+  if (isRecurringCadenceGoal(progress.goal)) {
+    const activeWeek = progress.recurringWeeks.find((week) => week.status === 'active');
+    const missedWeeks = progress.recurringWeeks.filter((week) => week.status === 'missed').length;
+    if (activeWeek) {
+      return `Current week ${activeWeek.qualifyingDayCount} / ${activeWeek.requiredQualifyingDayCount} qualifying days${missedWeeks > 0 ? ` · ${missedWeeks} missed` : ''}`;
+    }
+
+    const upcomingWeeks = progress.recurringWeeks.filter((week) => week.status === 'upcoming').length;
+    if (upcomingWeeks > 0) {
+      return `${upcomingWeeks} upcoming week${upcomingWeeks === 1 ? '' : 's'}${missedWeeks > 0 ? ` · ${missedWeeks} missed` : ''}`;
+    }
+
+    return `${missedWeeks} missed week${missedWeeks === 1 ? '' : 's'}`;
   }
 
   if (progress.goal.goalType === 'duration-based') {

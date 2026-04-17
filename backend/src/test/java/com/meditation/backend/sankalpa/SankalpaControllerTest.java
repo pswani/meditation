@@ -53,8 +53,8 @@ class SankalpaControllerTest {
   void returnsBackendDerivedProgressAcrossGoalTypes() throws Exception {
     Instant createdAt = localInstant(2026, 3, 20, 6, 0);
     sankalpaGoalRepository.saveAll(List.of(
-        createSankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, "Vipassana", "morning", null, createdAt, createdAt, null, false),
-        createSankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, null, createdAt, createdAt, null, false)
+        createSankalpaGoalEntity("goal-duration", "duration-based", java.math.BigDecimal.valueOf(30), 7, null, "Vipassana", "morning", null, createdAt, createdAt, null, false),
+        createSankalpaGoalEntity("goal-count", "session-count-based", java.math.BigDecimal.valueOf(2), 7, null, null, null, null, createdAt, createdAt, null, false)
     ));
     sessionLogRepository.saveAll(List.of(
         createSessionLog("log-1", "Vipassana", localInstant(2026, 3, 21, 7, 0), 900),
@@ -99,6 +99,48 @@ class SankalpaControllerTest {
   }
 
   @Test
+  void derivesRecurringWeeklyCadenceProgress() throws Exception {
+    Instant createdAt = localInstant(2026, 4, 5, 8, 0);
+    sankalpaGoalRepository.save(
+        createSankalpaGoalEntity(
+            "goal-recurring",
+            "duration-based",
+            java.math.BigDecimal.valueOf(15),
+            14,
+            5,
+            "Tratak",
+            null,
+            null,
+            createdAt,
+            createdAt,
+            null,
+            false
+        )
+    );
+    sessionLogRepository.saveAll(List.of(
+        createSessionLog("log-r1", "Tratak", localInstant(2026, 4, 5, 9, 0), 900),
+        createSessionLog("log-r2", "Tratak", localInstant(2026, 4, 6, 9, 0), 900),
+        createSessionLog("log-r3", "Tratak", localInstant(2026, 4, 7, 9, 0), 900),
+        createSessionLog("log-r4", "Tratak", localInstant(2026, 4, 8, 9, 0), 900),
+        createSessionLog("log-r5", "Tratak", localInstant(2026, 4, 9, 9, 0), 900),
+        createSessionLog("log-r6", "Tratak", localInstant(2026, 4, 12, 9, 0), 900),
+        createSessionLog("log-r7", "Tratak", localInstant(2026, 4, 13, 9, 0), 900)
+    ));
+
+    mockMvc.perform(get("/api/sankalpas")
+            .queryParam("timeZone", ZoneId.systemDefault().getId())
+            .accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].goal.qualifyingDaysPerWeek").value(5))
+        .andExpect(jsonPath("$[0].metRecurringWeekCount").value(1))
+        .andExpect(jsonPath("$[0].targetRecurringWeekCount").value(2))
+        .andExpect(jsonPath("$[0].recurringWeeks[0].status").value("met"))
+        .andExpect(jsonPath("$[0].recurringWeeks[0].qualifyingDayCount").value(5))
+        .andExpect(jsonPath("$[0].targetDurationSeconds").value(0))
+        .andExpect(jsonPath("$[0].status").value("active"));
+  }
+
+  @Test
   void returnsArchivedGoalsWithArchivedStatus() throws Exception {
     sankalpaGoalRepository.save(
         createSankalpaGoalEntity(
@@ -106,6 +148,7 @@ class SankalpaControllerTest {
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
+            null,
             null,
             null,
             null,
@@ -153,6 +196,21 @@ class SankalpaControllerTest {
                 """))
         .andExpect(status().isBadRequest());
 
+    mockMvc.perform(put("/api/sankalpas/goal-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-1",
+                  "goalType": "duration-based",
+                  "targetValue": 15,
+                  "days": 10,
+                  "qualifyingDaysPerWeek": 5,
+                  "createdAt": "2026-03-24T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isBadRequest());
+
     mockMvc.perform(get("/api/sankalpas")
             .queryParam("timeZone", "Mars/Olympus")
             .accept(APPLICATION_JSON))
@@ -182,6 +240,7 @@ class SankalpaControllerTest {
             "session-count-based",
             java.math.BigDecimal.ONE,
             7,
+            null,
             null,
             "morning",
             null,
@@ -213,6 +272,7 @@ class SankalpaControllerTest {
             null,
             null,
             null,
+            null,
             createdAt,
             createdAt.plusSeconds(120),
             null,
@@ -238,6 +298,7 @@ class SankalpaControllerTest {
             null,
             null,
             null,
+            null,
             createdAt,
             createdAt.plusSeconds(120),
             null,
@@ -259,6 +320,7 @@ class SankalpaControllerTest {
             "duration-based",
             java.math.BigDecimal.valueOf(20),
             7,
+            null,
             "Vipassana",
             "morning",
             null,
@@ -377,6 +439,7 @@ class SankalpaControllerTest {
       String goalType,
       java.math.BigDecimal targetValue,
       int days,
+      Integer qualifyingDaysPerWeek,
       String meditationTypeCode,
       String timeOfDayBucket,
       String observanceLabel,
@@ -390,6 +453,7 @@ class SankalpaControllerTest {
         goalType,
         targetValue,
         days,
+        qualifyingDaysPerWeek,
         meditationTypeCode,
         timeOfDayBucket,
         observanceLabel,
