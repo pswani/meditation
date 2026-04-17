@@ -657,6 +657,35 @@ import Testing
     #expect(SankalpaFeature.validateSankalpaDraft(invalidObservanceDraft).contains(.observanceLabelRequired))
 }
 
+@Test func sankalpaWeeklyCadenceValidationRequiresValidThresholdWeeksAndQualifyingDays() throws {
+    let invalidWeeklyDraft = SankalpaDraft(
+        title: "",
+        kind: .durationBased,
+        cadenceMode: .weekly,
+        targetValue: 0,
+        days: 7,
+        weeks: 0,
+        qualifyingDaysPerWeek: 0
+    )
+    let tooManyQualifyingDaysDraft = SankalpaDraft(
+        title: "",
+        kind: .sessionCount,
+        cadenceMode: .weekly,
+        targetValue: 2,
+        days: 7,
+        weeks: 4,
+        qualifyingDaysPerWeek: 8
+    )
+
+    let invalidErrors = SankalpaFeature.validateSankalpaDraft(invalidWeeklyDraft)
+    let tooManyDayErrors = SankalpaFeature.validateSankalpaDraft(tooManyQualifyingDaysDraft)
+
+    #expect(invalidErrors.contains(.targetValueMustBeGreaterThanZero))
+    #expect(invalidErrors.contains(.weeksMustBeGreaterThanZero))
+    #expect(invalidErrors.contains(.qualifyingDaysPerWeekMustBeGreaterThanZero))
+    #expect(tooManyDayErrors.contains(.qualifyingDaysPerWeekMustNotExceedSeven))
+}
+
 @Test func sankalpaProgressCountsDurationAndSessionGoalsWithFilters() throws {
     let now = Date(timeIntervalSince1970: 1_700_000_000)
     let logs = [
@@ -710,6 +739,125 @@ import Testing
     #expect(durationProgress.status == .completed)
     #expect(sessionProgress.matchedSessionCount == 1)
     #expect(sessionProgress.status == .completed)
+}
+
+@Test func recurringSankalpaProgressTracksWeeklyCadenceAcrossStates() throws {
+    let calendar = Calendar(identifier: .gregorian)
+    let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 10, hour: 9)))
+    let activeStart = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 1, hour: 0)))
+    let completedStart = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 20, hour: 0)))
+    let expiredStart = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 6, hour: 0)))
+
+    func makeSessionLog(
+        year: Int,
+        month: Int,
+        day: Int,
+        minuteOffset: Int = 0,
+        durationSeconds: Int,
+        meditationType: MeditationType = .tratak
+    ) -> SessionLog {
+        let start = calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 6, minute: minuteOffset))!
+        return SessionLog(
+            meditationType: meditationType,
+            source: .timer,
+            status: .completed,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(TimeInterval(durationSeconds)),
+            completedDurationSeconds: durationSeconds
+        )
+    }
+
+    let logs = [
+        makeSessionLog(year: 2026, month: 4, day: 1, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 2, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 3, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 4, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 5, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 8, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 9, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 4, day: 10, durationSeconds: 15 * 60),
+        makeSessionLog(year: 2026, month: 3, day: 20, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 20, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 21, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 21, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 22, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 22, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 23, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 23, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 27, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 27, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 28, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 28, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 29, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 29, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 30, minuteOffset: 30, durationSeconds: 10 * 60, meditationType: .ajapa),
+        makeSessionLog(year: 2026, month: 3, day: 6, durationSeconds: 15 * 60, meditationType: .vipassana),
+        makeSessionLog(year: 2026, month: 3, day: 7, durationSeconds: 15 * 60, meditationType: .vipassana),
+        makeSessionLog(year: 2026, month: 3, day: 8, durationSeconds: 15 * 60, meditationType: .vipassana),
+        makeSessionLog(year: 2026, month: 3, day: 9, durationSeconds: 15 * 60, meditationType: .vipassana),
+    ]
+
+    let activeGoal = Sankalpa(
+        title: "Tratak cadence",
+        kind: .durationBased,
+        targetValue: 15,
+        days: 14,
+        qualifyingDaysPerWeek: 5,
+        meditationType: .tratak,
+        createdAt: activeStart
+    )
+    let completedGoal = Sankalpa(
+        title: "Ajapa cadence",
+        kind: .sessionCount,
+        targetValue: 2,
+        days: 14,
+        qualifyingDaysPerWeek: 4,
+        meditationType: .ajapa,
+        createdAt: completedStart
+    )
+    let expiredGoal = Sankalpa(
+        title: "Vipassana cadence",
+        kind: .durationBased,
+        targetValue: 15,
+        days: 14,
+        qualifyingDaysPerWeek: 5,
+        meditationType: .vipassana,
+        createdAt: expiredStart
+    )
+    let archivedGoal = Sankalpa(
+        title: "Archived cadence",
+        kind: .durationBased,
+        targetValue: 15,
+        days: 14,
+        qualifyingDaysPerWeek: 5,
+        meditationType: .tratak,
+        createdAt: activeStart,
+        archived: true
+    )
+
+    let activeProgress = SankalpaFeature.deriveProgress(for: activeGoal, sessionLogs: logs, now: now)
+    let completedProgress = SankalpaFeature.deriveProgress(for: completedGoal, sessionLogs: logs, now: now)
+    let expiredProgress = SankalpaFeature.deriveProgress(for: expiredGoal, sessionLogs: logs, now: now)
+    let archivedProgress = SankalpaFeature.deriveProgress(for: archivedGoal, sessionLogs: logs, now: now)
+
+    #expect(activeProgress.status == .active)
+    #expect(activeProgress.metRecurringWeekCount == 1)
+    #expect(activeProgress.targetRecurringWeekCount == 2)
+    #expect(activeProgress.recurringWeeks.map(\.status) == [.met, .active])
+    #expect(activeProgress.recurringWeeks.last?.qualifyingDayCount == 3)
+
+    #expect(completedProgress.status == .completed)
+    #expect(completedProgress.metRecurringWeekCount == 2)
+    #expect(completedProgress.targetRecurringWeekCount == 2)
+    #expect(completedProgress.recurringWeeks.allSatisfy { $0.status == .met })
+
+    #expect(expiredProgress.status == .expired)
+    #expect(expiredProgress.metRecurringWeekCount == 0)
+    #expect(expiredProgress.recurringWeeks.contains(where: { $0.status == .missed }))
+
+    #expect(archivedProgress.status == .archived)
+    #expect(archivedProgress.targetRecurringWeekCount == 2)
 }
 
 @Test func observanceProgressDerivesPendingObservedMissedAndFutureStates() throws {

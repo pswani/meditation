@@ -137,9 +137,10 @@ final class AppSyncServiceTests: XCTestCase {
                             "goal": [
                                 "id": SampleData.snapshot.sankalpas[0].id.uuidString.lowercased(),
                                 "goalType": "duration-based",
-                                "targetValue": 120,
-                                "days": 7,
-                                "meditationType": "Vipassana",
+                                "targetValue": 15,
+                                "days": 28,
+                                "qualifyingDaysPerWeek": 5,
+                                "meditationType": "Tratak",
                                 "timeOfDayBucket": "morning",
                                 "observanceLabel": NSNull(),
                                 "observanceRecords": [],
@@ -224,8 +225,134 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(remoteState.snapshot.customPlays.first?.media?.filePath, "/media/custom-plays/vipassana-sit-10.mp3")
         XCTAssertEqual(remoteState.snapshot.recentSessionLogs.first?.status, .endedEarly)
         XCTAssertEqual(remoteState.snapshot.recentSessionLogs.first?.source, .customPlay)
-        XCTAssertEqual(remoteState.snapshot.sankalpas.first?.title, "Vipassana goal")
+        XCTAssertEqual(remoteState.snapshot.sankalpas.first?.title, "Tratak goal")
+        XCTAssertEqual(remoteState.snapshot.sankalpas.first?.qualifyingDaysPerWeek, 5)
         XCTAssertFalse(remoteState.snapshot.summary.overallRows.isEmpty)
+    }
+
+    func testApplyMutationSendsRecurringSankalpaFields() async throws {
+        let sankalpa = Sankalpa(
+            id: UUID(uuidString: "33333333-4444-5555-6666-777777777777")!,
+            title: "Tratak cadence",
+            kind: .durationBased,
+            targetValue: 15,
+            days: 28,
+            qualifyingDaysPerWeek: 5,
+            meditationType: .tratak,
+            timeOfDayBucket: .morning,
+            createdAt: Date(timeIntervalSince1970: 1_712_528_400)
+        )
+        let queuedAt = Date(timeIntervalSince1970: 1_712_900_000)
+
+        URLProtocolStub.handler = { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("PUT", "/api/sankalpas/\(sankalpa.id.uuidString.lowercased())"):
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "goal": [
+                            "id": sankalpa.id.uuidString.lowercased(),
+                            "goalType": sankalpa.kind.rawValue,
+                            "targetValue": sankalpa.targetValue,
+                            "days": sankalpa.days,
+                            "qualifyingDaysPerWeek": sankalpa.qualifyingDaysPerWeek as Any,
+                            "meditationType": sankalpa.meditationType?.rawValue as Any,
+                            "timeOfDayBucket": sankalpa.timeOfDayBucket?.rawValue as Any,
+                            "observanceLabel": NSNull(),
+                            "observanceRecords": [],
+                            "createdAt": sankalpa.createdAt.ISO8601Format(),
+                            "archived": false,
+                        ],
+                    ]
+                )
+            case (_, "/api/settings/timer"):
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "id": "default",
+                        "timerMode": "fixed",
+                        "durationMinutes": 20,
+                        "lastFixedDurationMinutes": 20,
+                        "meditationType": "Vipassana",
+                        "startSound": "Temple Bell",
+                        "endSound": "Temple Bell",
+                        "intervalEnabled": false,
+                        "intervalMinutes": 0,
+                        "intervalSound": "None",
+                    ]
+                )
+            case (_, "/api/session-logs"):
+                return URLProtocolStub.jsonResponse(["items": []])
+            case (_, "/api/custom-plays"):
+                return URLProtocolStub.jsonResponse([])
+            case (_, "/api/playlists"):
+                return URLProtocolStub.jsonResponse([])
+            case (_, "/api/sankalpas"):
+                return URLProtocolStub.jsonResponse(
+                    [
+                        [
+                            "goal": [
+                                "id": sankalpa.id.uuidString.lowercased(),
+                                "goalType": sankalpa.kind.rawValue,
+                                "targetValue": sankalpa.targetValue,
+                                "days": sankalpa.days,
+                                "qualifyingDaysPerWeek": sankalpa.qualifyingDaysPerWeek as Any,
+                                "meditationType": sankalpa.meditationType?.rawValue as Any,
+                                "timeOfDayBucket": sankalpa.timeOfDayBucket?.rawValue as Any,
+                                "observanceLabel": NSNull(),
+                                "observanceRecords": [],
+                                "createdAt": sankalpa.createdAt.ISO8601Format(),
+                                "archived": false,
+                            ],
+                        ],
+                    ]
+                )
+            case (_, "/api/summaries"):
+                return URLProtocolStub.jsonResponse(
+                    [
+                        "overallSummary": [
+                            "totalSessionLogs": 0,
+                            "completedSessionLogs": 0,
+                            "endedEarlySessionLogs": 0,
+                            "totalDurationSeconds": 0,
+                            "averageDurationSeconds": 0,
+                            "autoLogs": 0,
+                            "manualLogs": 0,
+                        ],
+                        "byTypeSummary": [],
+                        "bySourceSummary": [],
+                        "byTimeOfDaySummary": [],
+                    ]
+                )
+            case (_, "/api/media/custom-plays"):
+                return URLProtocolStub.jsonResponse([])
+            default:
+                return URLProtocolStub.jsonResponse([:])
+            }
+        }
+
+        let client = makeClient()
+        let remoteState = try await client.applyMutation(
+            .sankalpaUpsert(sankalpa, queuedAt: queuedAt),
+            localSnapshot: SampleData.snapshot,
+            timeZoneIdentifier: "America/Chicago"
+        )
+
+        let putRequest = try XCTUnwrap(
+            URLProtocolStub.requests.first(where: { $0.httpMethod == "PUT" && $0.url?.path.contains("/api/sankalpas/") == true })
+        )
+        XCTAssertEqual(
+            putRequest.value(forHTTPHeaderField: GeneratedSyncContract.syncQueuedAtHeader),
+            queuedAt.ISO8601Format()
+        )
+
+        let bodyData = try XCTUnwrap(putRequest.httpBodyData)
+        let bodyObject = try XCTUnwrap(try JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+        XCTAssertEqual(bodyObject["goalType"] as? String, "duration-based")
+        XCTAssertEqual(bodyObject["targetValue"] as? Int, 15)
+        XCTAssertEqual(bodyObject["days"] as? Int, 28)
+        XCTAssertEqual(bodyObject["qualifyingDaysPerWeek"] as? Int, 5)
+        XCTAssertEqual(bodyObject["meditationType"] as? String, "Tratak")
+        XCTAssertEqual(bodyObject["timeOfDayBucket"] as? String, "morning")
+        XCTAssertEqual(remoteState.snapshot.sankalpas.first?.qualifyingDaysPerWeek, 5)
     }
 
     func testFetchRemoteStateMapsAutoLogWithoutPlaybackContextToTimerSource() async throws {
