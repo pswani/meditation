@@ -65,6 +65,11 @@
     - keep archive as a boolean goal-state mutation rather than inventing a second history entity
     - keep `observance-based` check-ins derived from explicit per-date records with `Pending`, `Observed`, and `Missed` states
     - keep future observance dates locked until their day arrives
+    - keep recurring weekly cadence aligned with the web and backend model by:
+      - persisting an optional `qualifyingDaysPerWeek` field on meditation-derived goals
+      - reusing `targetValue` as the daily qualifying threshold in cadence mode
+      - deriving per-week evidence from local-date-grouped matching `session log` data
+      - showing compact recurring progress on native Goals and Home instead of introducing a second habit-style dashboard
   - keep native milestone-5 sync parity local-first and explicit:
     - reuse the existing backend REST routes instead of introducing a native-only sync endpoint
     - persist queued native mutations, sync timestamps, and connectivity classification in a dedicated `sync-state.json` file beside the foundation snapshot

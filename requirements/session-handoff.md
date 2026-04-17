@@ -4,8 +4,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `ios-native-lock-screen-end-bell-full-feature-bundle-with-branching` completed on 2026-04-17; native fixed-timer lock-screen completion now coordinates near-end inactive/background bridge arming with a short delayed notification fallback, keeps notification sound aligned with the selected bundled end bell when available, and makes the foreground-versus-best-effort lock-screen contract explicit in Practice and Settings
-- Previous bundle: `history-meditation-type-edit-feature-bundle-with-branching` completed on 2026-04-17; History meditation-type correction is now explicitly manual-log-only across web, backend, and native expectations, with a discoverable web edit flow plus backend enforcement that allows idempotent replays and meditation-type-only edits for existing manual logs while rejecting broader saved-history rewrites
+- Active bundle: `sankalpa-full-parity-feature-bundle-with-branching` completed on 2026-04-17; native iPhone `sankalpa` now matches the web/backend recurring-cadence model with qualifying days per week, derived weekly evidence, calm Goals and Home copy, and sync round-trip support for recurring goal fields
+- Previous bundle: `ios-native-lock-screen-end-bell-full-feature-bundle-with-branching` completed on 2026-04-17; native fixed-timer lock-screen completion now coordinates near-end inactive/background bridge arming with a short delayed notification fallback, keeps notification sound aligned with the selected bundled end bell when available, and makes the foreground-versus-best-effort lock-screen contract explicit in Practice and Settings
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -42,6 +42,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-ios-native-lock-screen-end-bell-full-feature.md`
   - `docs/review-ios-native-lock-screen-end-bell-full-feature.md`
   - `docs/test-ios-native-lock-screen-end-bell-full-feature.md`
+- Sankalpa full parity artifacts completed on 2026-04-17:
+  - `docs/execplan-sankalpa-full-parity-feature.md`
+  - `docs/review-sankalpa-full-parity-feature.md`
+  - `docs/test-sankalpa-full-parity-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -195,6 +199,13 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - custom Goals summary date ranges with calm invalid-range guidance
   - by-time-of-day summary rows derived from session-log end times
   - focused core coverage for the new filtering, range, and aggregation helpers
+- Native iOS sankalpa full parity now adds:
+  - recurring weekly cadence editing for meditation-derived duration-based and session-count goals
+  - native persistence and backend sync round-trip for recurring `qualifyingDaysPerWeek` fields
+  - per-week recurring progress evidence with `met`, `active`, `missed`, and `upcoming` week states
+  - native recurring status derivation across active, completed, expired, and archived `sankalpa` goals
+  - calmer iPhone Goals and Home copy for recurring goals, including weekly summary lines and compact week-progress pills
+  - focused native core and sync coverage for recurring validation, progress math, and API payload mapping
 - Native iOS sync parity now adds:
   - backend-backed reads and writes for timer settings, `session log`, `custom play`, playlist, `sankalpa`, and summary hydration when `MEDITATION_IOS_API_BASE_URL` is configured
   - a persisted native sync queue and status snapshot in `MeditationNative/sync-state.json`

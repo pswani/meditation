@@ -560,6 +560,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
     public var kind: SankalpaKind
     public var targetValue: Int
     public var days: Int
+    public var qualifyingDaysPerWeek: Int?
     public var meditationType: MeditationType?
     public var timeOfDayBucket: TimeOfDayBucket?
     public var observanceLabel: String?
@@ -573,6 +574,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
         case kind
         case targetValue
         case days
+        case qualifyingDaysPerWeek
         case meditationType
         case timeOfDayBucket
         case observanceLabel
@@ -587,6 +589,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
         kind: SankalpaKind,
         targetValue: Int,
         days: Int,
+        qualifyingDaysPerWeek: Int? = nil,
         meditationType: MeditationType? = nil,
         timeOfDayBucket: TimeOfDayBucket? = nil,
         observanceLabel: String? = nil,
@@ -599,6 +602,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
         self.kind = kind
         self.targetValue = targetValue
         self.days = days
+        self.qualifyingDaysPerWeek = qualifyingDaysPerWeek
         self.meditationType = meditationType
         self.timeOfDayBucket = timeOfDayBucket
         self.observanceLabel = observanceLabel
@@ -616,6 +620,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
         kind = try container.decode(SankalpaKind.self, forKey: .kind)
         targetValue = try container.decode(Int.self, forKey: .targetValue)
         self.days = days
+        qualifyingDaysPerWeek = try container.decodeIfPresent(Int.self, forKey: .qualifyingDaysPerWeek)
         meditationType = try container.decodeIfPresent(MeditationType.self, forKey: .meditationType)
         timeOfDayBucket = try container.decodeIfPresent(TimeOfDayBucket.self, forKey: .timeOfDayBucket)
         observanceLabel = try container.decodeIfPresent(String.self, forKey: .observanceLabel)
@@ -627,6 +632,7 @@ public struct Sankalpa: Identifiable, Codable, Equatable, Sendable {
             observanceRecords = []
         }
         if kind == .observanceBased {
+            qualifyingDaysPerWeek = nil
             meditationType = nil
             timeOfDayBucket = nil
         }
@@ -676,6 +682,18 @@ public enum SankalpaStatus: String, Codable, CaseIterable, Sendable {
     case archived
 }
 
+public enum SankalpaCadenceMode: String, Codable, CaseIterable, Sendable {
+    case cumulative
+    case weekly
+}
+
+public enum SankalpaRecurringWeekStatus: String, Codable, CaseIterable, Sendable {
+    case met
+    case active
+    case missed
+    case upcoming
+}
+
 public struct SankalpaObservanceRecord: Codable, Equatable, Sendable {
     public var dateKey: String
     public var status: SankalpaObservanceRecordStatus
@@ -702,11 +720,43 @@ public struct SankalpaObservanceDay: Identifiable, Equatable, Sendable {
     }
 }
 
+public struct SankalpaRecurringWeekProgress: Identifiable, Equatable, Sendable {
+    public var id: Int {
+        weekIndex
+    }
+
+    public var weekIndex: Int
+    public var startDateKey: String
+    public var endDateKey: String
+    public var qualifyingDayCount: Int
+    public var requiredQualifyingDayCount: Int
+    public var status: SankalpaRecurringWeekStatus
+
+    public init(
+        weekIndex: Int,
+        startDateKey: String,
+        endDateKey: String,
+        qualifyingDayCount: Int,
+        requiredQualifyingDayCount: Int,
+        status: SankalpaRecurringWeekStatus
+    ) {
+        self.weekIndex = weekIndex
+        self.startDateKey = startDateKey
+        self.endDateKey = endDateKey
+        self.qualifyingDayCount = qualifyingDayCount
+        self.requiredQualifyingDayCount = requiredQualifyingDayCount
+        self.status = status
+    }
+}
+
 public struct SankalpaDraft: Equatable, Sendable {
     public var title: String
     public var kind: SankalpaKind
+    public var cadenceMode: SankalpaCadenceMode
     public var targetValue: Int
     public var days: Int
+    public var weeks: Int
+    public var qualifyingDaysPerWeek: Int
     public var meditationType: MeditationType?
     public var timeOfDayBucket: TimeOfDayBucket?
     public var observanceLabel: String
@@ -714,16 +764,22 @@ public struct SankalpaDraft: Equatable, Sendable {
     public init(
         title: String = "",
         kind: SankalpaKind = .durationBased,
+        cadenceMode: SankalpaCadenceMode = .cumulative,
         targetValue: Int = 120,
         days: Int = 7,
+        weeks: Int = 1,
+        qualifyingDaysPerWeek: Int = 5,
         meditationType: MeditationType? = nil,
         timeOfDayBucket: TimeOfDayBucket? = nil,
         observanceLabel: String = ""
     ) {
         self.title = title
         self.kind = kind
+        self.cadenceMode = cadenceMode
         self.targetValue = targetValue
         self.days = days
+        self.weeks = weeks
+        self.qualifyingDaysPerWeek = qualifyingDaysPerWeek
         self.meditationType = meditationType
         self.timeOfDayBucket = timeOfDayBucket
         self.observanceLabel = observanceLabel
@@ -742,6 +798,9 @@ public struct SankalpaProgress: Identifiable, Equatable, Sendable {
     public var matchedDurationSeconds: Int
     public var targetSessionCount: Int
     public var targetDurationSeconds: Int
+    public var metRecurringWeekCount: Int
+    public var targetRecurringWeekCount: Int
+    public var recurringWeeks: [SankalpaRecurringWeekProgress]
     public var matchedObservanceCount: Int
     public var missedObservanceCount: Int
     public var pendingObservanceCount: Int
@@ -757,6 +816,9 @@ public struct SankalpaProgress: Identifiable, Equatable, Sendable {
         matchedDurationSeconds: Int,
         targetSessionCount: Int,
         targetDurationSeconds: Int,
+        metRecurringWeekCount: Int,
+        targetRecurringWeekCount: Int,
+        recurringWeeks: [SankalpaRecurringWeekProgress],
         matchedObservanceCount: Int,
         missedObservanceCount: Int,
         pendingObservanceCount: Int,
@@ -771,6 +833,9 @@ public struct SankalpaProgress: Identifiable, Equatable, Sendable {
         self.matchedDurationSeconds = matchedDurationSeconds
         self.targetSessionCount = targetSessionCount
         self.targetDurationSeconds = targetDurationSeconds
+        self.metRecurringWeekCount = metRecurringWeekCount
+        self.targetRecurringWeekCount = targetRecurringWeekCount
+        self.recurringWeeks = recurringWeeks
         self.matchedObservanceCount = matchedObservanceCount
         self.missedObservanceCount = missedObservanceCount
         self.pendingObservanceCount = pendingObservanceCount

@@ -98,6 +98,9 @@ public enum PlaylistValidationError: String, Error, Equatable, Sendable {
 public enum SankalpaValidationError: String, Error, Equatable, Sendable {
     case daysMustBeGreaterThanZero
     case targetValueMustBeGreaterThanZero
+    case weeksMustBeGreaterThanZero
+    case qualifyingDaysPerWeekMustBeGreaterThanZero
+    case qualifyingDaysPerWeekMustNotExceedSeven
     case observanceLabelRequired
 
     public var message: String {
@@ -106,11 +109,19 @@ public enum SankalpaValidationError: String, Error, Equatable, Sendable {
             return "Choose more than 0 days."
         case .targetValueMustBeGreaterThanZero:
             return "Choose a target greater than 0."
+        case .weeksMustBeGreaterThanZero:
+            return "Choose at least 1 week."
+        case .qualifyingDaysPerWeekMustBeGreaterThanZero:
+            return "Choose at least 1 qualifying day per week."
+        case .qualifyingDaysPerWeekMustNotExceedSeven:
+            return "Qualifying days per week cannot exceed 7."
         case .observanceLabelRequired:
             return "Enter what you are observing."
         }
     }
 }
+
+private let sankalpaDaysPerWeek = 7
 
 public struct TimerSessionConfiguration: Codable, Equatable, Sendable {
     public var mode: TimerSettingsDraft.Mode
@@ -1174,11 +1185,18 @@ public enum SankalpaFeature {
             return SankalpaDraft()
         }
 
+        let recurringCadence = isRecurringCadenceGoal(sankalpa)
+
         return SankalpaDraft(
             title: sankalpa.title,
             kind: sankalpa.kind,
+            cadenceMode: recurringCadence ? .weekly : .cumulative,
             targetValue: sankalpa.kind == .observanceBased ? sankalpa.days : sankalpa.targetValue,
             days: sankalpa.days,
+            weeks: recurringCadence
+                ? max(1, Int(round(Double(sankalpa.days) / Double(sankalpaDaysPerWeek))))
+                : max(1, Int(ceil(Double(sankalpa.days) / Double(sankalpaDaysPerWeek)))),
+            qualifyingDaysPerWeek: sankalpa.qualifyingDaysPerWeek ?? 5,
             meditationType: sankalpa.meditationType,
             timeOfDayBucket: sankalpa.timeOfDayBucket,
             observanceLabel: sankalpa.observanceLabel ?? ""
@@ -1195,6 +1213,18 @@ public enum SankalpaFeature {
         if draft.kind == .observanceBased {
             if draft.observanceLabel.nilIfBlank == nil {
                 errors.append(.observanceLabelRequired)
+            }
+        } else if draft.cadenceMode == .weekly {
+            if draft.targetValue <= 0 {
+                errors.append(.targetValueMustBeGreaterThanZero)
+            }
+            if draft.weeks <= 0 {
+                errors.append(.weeksMustBeGreaterThanZero)
+            }
+            if draft.qualifyingDaysPerWeek <= 0 {
+                errors.append(.qualifyingDaysPerWeekMustBeGreaterThanZero)
+            } else if draft.qualifyingDaysPerWeek > sankalpaDaysPerWeek {
+                errors.append(.qualifyingDaysPerWeekMustNotExceedSeven)
             }
         } else if draft.targetValue <= 0 {
             errors.append(.targetValueMustBeGreaterThanZero)
@@ -1214,13 +1244,15 @@ public enum SankalpaFeature {
 
         let trimmedObservance = draft.observanceLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         let generatedTitle = makeGeneratedTitle(from: draft)
+        let recurringCadence = draft.kind != .observanceBased && draft.cadenceMode == .weekly
 
         return Sankalpa(
             id: existing?.id ?? UUID(),
             title: draft.title.nilIfBlank ?? generatedTitle,
             kind: draft.kind,
             targetValue: draft.kind == .observanceBased ? draft.days : draft.targetValue,
-            days: draft.days,
+            days: draft.kind == .observanceBased ? draft.days : recurringCadence ? draft.weeks * sankalpaDaysPerWeek : draft.days,
+            qualifyingDaysPerWeek: recurringCadence ? draft.qualifyingDaysPerWeek : nil,
             meditationType: draft.kind == .observanceBased ? nil : draft.meditationType,
             timeOfDayBucket: draft.kind == .observanceBased ? nil : draft.timeOfDayBucket,
             observanceLabel: draft.kind == .observanceBased ? trimmedObservance : nil,
@@ -1296,6 +1328,7 @@ public enum SankalpaFeature {
 
         let matchedSessionCount = matchingSessionLogs.count
         let matchedDurationSeconds = matchingSessionLogs.reduce(0) { $0 + $1.completedDurationSeconds }
+        let recurringCadence = isRecurringCadenceGoal(sankalpa)
 
         let observanceWindow = sankalpa.kind == .observanceBased
             ? deriveObservanceWindow(for: sankalpa, now: now)
@@ -1305,20 +1338,27 @@ public enum SankalpaFeature {
                 missed: 0,
                 pending: 0,
                 target: 0,
-                deadlineAt: sankalpa.createdAt.addingTimeInterval(TimeInterval(sankalpa.days * 24 * 60 * 60))
+                deadlineAt: deriveGoalDeadlineAt(for: sankalpa)
             )
 
-        let targetSessionCount = sankalpa.kind == .sessionCount ? sankalpa.targetValue : 0
-        let targetDurationSeconds = sankalpa.kind == .durationBased ? sankalpa.targetValue * 60 : 0
+        let targetSessionCount = sankalpa.kind == .sessionCount && recurringCadence == false ? sankalpa.targetValue : 0
+        let targetDurationSeconds = sankalpa.kind == .durationBased && recurringCadence == false ? sankalpa.targetValue * 60 : 0
+        let recurringWeekSummary = recurringCadence
+            ? deriveRecurringWeeks(for: sankalpa, matchingSessionLogs: matchingSessionLogs, now: now)
+            : (
+                recurringWeeks: [SankalpaRecurringWeekProgress](),
+                metRecurringWeekCount: 0,
+                targetRecurringWeekCount: 0
+            )
         let targetValue = sankalpa.kind == .durationBased
-            ? targetDurationSeconds
+            ? recurringCadence ? recurringWeekSummary.targetRecurringWeekCount : targetDurationSeconds
             : sankalpa.kind == .sessionCount
-            ? targetSessionCount
+            ? recurringCadence ? recurringWeekSummary.targetRecurringWeekCount : targetSessionCount
             : observanceWindow.target
         let progressValue = sankalpa.kind == .durationBased
-            ? matchedDurationSeconds
+            ? recurringCadence ? recurringWeekSummary.metRecurringWeekCount : matchedDurationSeconds
             : sankalpa.kind == .sessionCount
-            ? matchedSessionCount
+            ? recurringCadence ? recurringWeekSummary.metRecurringWeekCount : matchedSessionCount
             : observanceWindow.matched
 
         let status: SankalpaStatus
@@ -1340,6 +1380,9 @@ public enum SankalpaFeature {
             matchedDurationSeconds: matchedDurationSeconds,
             targetSessionCount: targetSessionCount,
             targetDurationSeconds: targetDurationSeconds,
+            metRecurringWeekCount: recurringWeekSummary.metRecurringWeekCount,
+            targetRecurringWeekCount: recurringWeekSummary.targetRecurringWeekCount,
+            recurringWeeks: recurringWeekSummary.recurringWeeks,
             matchedObservanceCount: observanceWindow.matched,
             missedObservanceCount: observanceWindow.missed,
             pendingObservanceCount: observanceWindow.pending,
@@ -1377,6 +1420,13 @@ public enum SankalpaFeature {
             return draft.observanceLabel.nilIfBlank ?? "Observance sankalpa"
         }
 
+        if draft.cadenceMode == .weekly {
+            let thresholdText = draft.kind == .durationBased
+                ? "\(draft.targetValue) min"
+                : "\(draft.targetValue) session log\(draft.targetValue == 1 ? "" : "s")"
+            return "At least \(thresholdText) on \(pluralized(draft.qualifyingDaysPerWeek, singular: "day")) each week for \(pluralized(draft.weeks, singular: "week"))"
+        }
+
         let targetText = draft.kind == .durationBased
             ? "\(draft.targetValue) min"
             : "\(draft.targetValue) session logs"
@@ -1390,6 +1440,10 @@ public enum SankalpaFeature {
         }
 
         return "\(targetText) in \(draft.days) days · \(filters.joined(separator: " · "))"
+    }
+
+    private static func isRecurringCadenceGoal(_ sankalpa: Sankalpa) -> Bool {
+        sankalpa.kind != .observanceBased && (sankalpa.qualifyingDaysPerWeek ?? 0) > 0
     }
 
     private static func normalize(_ records: [SankalpaObservanceRecord]) -> [SankalpaObservanceRecord] {
@@ -1454,8 +1508,93 @@ public enum SankalpaFeature {
             matched: matchedObservanceCount,
             missed: missedObservanceCount,
             pending: days.count - matchedObservanceCount - missedObservanceCount,
-            target: sankalpa.days,
+            target: sankalpa.targetValue,
             deadlineAt: deadlineAt
+        )
+    }
+
+    private static func deriveGoalDeadlineAt(for sankalpa: Sankalpa) -> Date {
+        if sankalpa.kind == .observanceBased || isRecurringCadenceGoal(sankalpa) {
+            return deriveRecurringDeadlineAt(for: sankalpa)
+        }
+
+        return sankalpa.createdAt.addingTimeInterval(TimeInterval(sankalpa.days * 24 * 60 * 60))
+    }
+
+    private static func deriveRecurringDeadlineAt(for sankalpa: Sankalpa) -> Date {
+        let startDate = Calendar.current.startOfDay(for: sankalpa.createdAt)
+        let lastScheduledDate = Calendar.current.date(byAdding: .day, value: max(0, sankalpa.days - 1), to: startDate) ?? startDate
+        return endOfLocalDay(lastScheduledDate)
+    }
+
+    private static func deriveRecurringWeeks(
+        for sankalpa: Sankalpa,
+        matchingSessionLogs: [SessionLog],
+        now: Date
+    ) -> (
+        recurringWeeks: [SankalpaRecurringWeekProgress],
+        metRecurringWeekCount: Int,
+        targetRecurringWeekCount: Int
+    ) {
+        let startDate = Calendar.current.startOfDay(for: sankalpa.createdAt)
+        let todayKey = localDayKey(for: now)
+        let targetRecurringWeekCount = max(1, Int(round(Double(sankalpa.days) / Double(sankalpaDaysPerWeek))))
+        let qualifyingDaysPerWeek = sankalpa.qualifyingDaysPerWeek ?? 0
+        let threshold = sankalpa.targetValue
+
+        var dailyValueByDate: [String: Int] = [:]
+        for sessionLog in matchingSessionLogs {
+            let dayKey = localDayKey(for: sessionLog.endedAt)
+            let increment = sankalpa.kind == .durationBased ? sessionLog.completedDurationSeconds : 1
+            dailyValueByDate[dayKey, default: 0] += increment
+        }
+
+        var metRecurringWeekCount = 0
+        let recurringWeeks = (0 ..< targetRecurringWeekCount).map { weekIndex in
+            let weekStartDate = Calendar.current.date(byAdding: .day, value: weekIndex * sankalpaDaysPerWeek, to: startDate) ?? startDate
+            let weekEndDate = Calendar.current.date(byAdding: .day, value: sankalpaDaysPerWeek - 1, to: weekStartDate) ?? weekStartDate
+            let weekStartKey = localDayKey(for: weekStartDate)
+            let weekEndKey = localDayKey(for: weekEndDate)
+
+            var qualifyingDayCount = 0
+            for dayOffset in 0 ..< sankalpaDaysPerWeek {
+                let day = Calendar.current.date(byAdding: .day, value: dayOffset, to: weekStartDate) ?? weekStartDate
+                let dayKey = localDayKey(for: day)
+                let dailyValue = dailyValueByDate[dayKey] ?? 0
+                let qualifies = sankalpa.kind == .durationBased
+                    ? dailyValue >= threshold * 60
+                    : dailyValue >= threshold
+                if qualifies {
+                    qualifyingDayCount += 1
+                }
+            }
+
+            let status: SankalpaRecurringWeekStatus
+            if qualifyingDayCount >= qualifyingDaysPerWeek {
+                status = .met
+                metRecurringWeekCount += 1
+            } else if todayKey > weekEndKey {
+                status = .missed
+            } else if todayKey < weekStartKey {
+                status = .upcoming
+            } else {
+                status = .active
+            }
+
+            return SankalpaRecurringWeekProgress(
+                weekIndex: weekIndex + 1,
+                startDateKey: weekStartKey,
+                endDateKey: weekEndKey,
+                qualifyingDayCount: qualifyingDayCount,
+                requiredQualifyingDayCount: qualifyingDaysPerWeek,
+                status: status
+            )
+        }
+
+        return (
+            recurringWeeks: recurringWeeks,
+            metRecurringWeekCount: metRecurringWeekCount,
+            targetRecurringWeekCount: targetRecurringWeekCount
         )
     }
 
@@ -1473,7 +1612,7 @@ public enum SankalpaFeature {
     }
 
     private static func sessionLogInGoalWindow(_ sessionLog: SessionLog, sankalpa: Sankalpa) -> Bool {
-        let deadlineAt = sankalpa.createdAt.addingTimeInterval(TimeInterval(sankalpa.days * 24 * 60 * 60))
+        let deadlineAt = deriveGoalDeadlineAt(for: sankalpa)
         return sessionLog.endedAt >= sankalpa.createdAt && sessionLog.endedAt <= deadlineAt
     }
 }
@@ -1511,6 +1650,10 @@ private func localDayDate(from dateKey: String) -> Date? {
 private func endOfLocalDay(_ date: Date) -> Date {
     let startOfDay = Calendar.current.startOfDay(for: date)
     return Calendar.current.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay) ?? date
+}
+
+private func pluralized(_ value: Int, singular: String) -> String {
+    "\(value) \(singular)\(value == 1 ? "" : "s")"
 }
 
 private func timeOfDayBucketForDate(_ date: Date) -> TimeOfDayBucket {

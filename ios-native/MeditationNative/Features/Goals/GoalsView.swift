@@ -101,9 +101,14 @@ struct GoalsView: View {
                             TextField("Observance", text: $draft.observanceLabel, axis: .vertical)
                                 .lineLimit(2 ... 4)
                         } else {
+                            Picker("Tracking style", selection: $draft.cadenceMode) {
+                                Text("Total within window").tag(SankalpaCadenceMode.cumulative)
+                                Text("Recurring weekly cadence").tag(SankalpaCadenceMode.weekly)
+                            }
+
                             Stepper(value: $draft.targetValue, in: 1 ... 1_440) {
                                 HStack {
-                                    Text(draft.kind == .durationBased ? "Target duration" : "Target session logs")
+                                    Text(targetLabel(for: draft))
                                     Spacer()
                                     Text(targetValueText(for: draft))
                                         .foregroundStyle(.secondary)
@@ -111,12 +116,32 @@ struct GoalsView: View {
                             }
                         }
 
-                        Stepper(value: $draft.days, in: 1 ... 365) {
-                            HStack {
-                                Text("Days")
-                                Spacer()
-                                Text("\(draft.days)")
-                                    .foregroundStyle(.secondary)
+                        if draft.kind == .observanceBased || draft.cadenceMode == .cumulative {
+                            Stepper(value: $draft.days, in: 1 ... 365) {
+                                HStack {
+                                    Text("Days")
+                                    Spacer()
+                                    Text("\(draft.days)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } else {
+                            Stepper(value: $draft.qualifyingDaysPerWeek, in: 1 ... 7) {
+                                HStack {
+                                    Text("Qualifying days per week")
+                                    Spacer()
+                                    Text("\(draft.qualifyingDaysPerWeek)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Stepper(value: $draft.weeks, in: 1 ... 52) {
+                                HStack {
+                                    Text("Weeks")
+                                    Spacer()
+                                    Text("\(draft.weeks)")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
 
@@ -133,6 +158,12 @@ struct GoalsView: View {
                                 ForEach(ReferenceData.timeOfDayBuckets, id: \.self) { bucket in
                                     Text("\(bucket.title) (\(bucket.detail))").tag(Optional(bucket))
                                 }
+                            }
+
+                            if draft.cadenceMode == .weekly {
+                                Text("Each week counts only when enough local dates meet the qualifying threshold.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -330,6 +361,20 @@ struct GoalsView: View {
             Text(remainingDetail(progress))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            if isRecurringCadence(progress.goal) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(progress.recurringWeeks) { week in
+                            Text("W\(week.weekIndex) \(week.qualifyingDayCount)/\(week.requiredQualifyingDayCount)")
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(weekPillBackground(for: week.status))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
             Text("Deadline: \(progress.deadlineAt.formatted(date: .abbreviated, time: .omitted))")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -477,6 +522,14 @@ struct GoalsView: View {
         return "\(draft.targetValue)"
     }
 
+    private func targetLabel(for draft: SankalpaDraft) -> String {
+        if draft.cadenceMode == .weekly {
+            return draft.kind == .durationBased ? "Daily qualifying duration" : "Daily qualifying session logs"
+        }
+
+        return draft.kind == .durationBased ? "Target duration" : "Target session logs"
+    }
+
     private func formatDuration(_ totalSeconds: Int) -> String {
         let totalMinutes = max(0, totalSeconds / 60)
         if totalMinutes >= 60 {
@@ -496,8 +549,14 @@ struct GoalsView: View {
         case .observanceBased:
             return "\(goal.observanceLabel ?? "Observance") for \(goal.days) day\(goal.days == 1 ? "" : "s")"
         case .durationBased:
+            if isRecurringCadence(goal) {
+                return recurringDescription(for: goal)
+            }
             return "\(goal.targetValue) min in \(goal.days) day\(goal.days == 1 ? "" : "s")"
         case .sessionCount:
+            if isRecurringCadence(goal) {
+                return recurringDescription(for: goal)
+            }
             return "\(goal.targetValue) session logs in \(goal.days) day\(goal.days == 1 ? "" : "s")"
         }
     }
@@ -507,8 +566,14 @@ struct GoalsView: View {
         case .observanceBased:
             return "\(progress.matchedObservanceCount) / \(progress.targetObservanceCount) observed dates"
         case .durationBased:
+            if isRecurringCadence(progress.goal) {
+                return "\(progress.metRecurringWeekCount) / \(progress.targetRecurringWeekCount) weeks met"
+            }
             return "\(formatDuration(progress.matchedDurationSeconds)) / \(formatDuration(progress.targetDurationSeconds))"
         case .sessionCount:
+            if isRecurringCadence(progress.goal) {
+                return "\(progress.metRecurringWeekCount) / \(progress.targetRecurringWeekCount) weeks met"
+            }
             return "\(progress.matchedSessionCount) / \(progress.targetSessionCount) session logs"
         }
     }
@@ -518,11 +583,60 @@ struct GoalsView: View {
         case .observanceBased:
             return "\(progress.pendingObservanceCount) pending · \(progress.missedObservanceCount) missed"
         case .durationBased:
+            if isRecurringCadence(progress.goal) {
+                return recurringRemainingDetail(for: progress)
+            }
             let remainingSeconds = max(0, progress.targetDurationSeconds - progress.matchedDurationSeconds)
             return "\(formatDuration(remainingSeconds)) remaining"
         case .sessionCount:
+            if isRecurringCadence(progress.goal) {
+                return recurringRemainingDetail(for: progress)
+            }
             let remainingCount = max(0, progress.targetSessionCount - progress.matchedSessionCount)
             return "\(remainingCount) session logs remaining"
+        }
+    }
+
+    private func recurringDescription(for goal: Sankalpa) -> String {
+        let thresholdText = goal.kind == .durationBased
+            ? "\(goal.targetValue) min"
+            : "\(goal.targetValue) session log\(goal.targetValue == 1 ? "" : "s")"
+        let qualifyingDays = goal.qualifyingDaysPerWeek ?? 0
+        let weeks = max(1, Int(round(Double(goal.days) / 7)))
+        return "At least \(thresholdText) on \(qualifyingDays) day\(qualifyingDays == 1 ? "" : "s") each week for \(weeks) week\(weeks == 1 ? "" : "s")"
+    }
+
+    private func recurringRemainingDetail(for progress: SankalpaProgress) -> String {
+        let missedWeeks = progress.recurringWeeks.filter { $0.status == .missed }.count
+
+        if let activeWeek = progress.recurringWeeks.first(where: { $0.status == .active }) {
+            let missedText = missedWeeks > 0 ? " · \(missedWeeks) missed" : ""
+            return "Current week \(activeWeek.qualifyingDayCount) / \(activeWeek.requiredQualifyingDayCount) qualifying days\(missedText)"
+        }
+
+        let upcomingWeeks = progress.recurringWeeks.filter { $0.status == .upcoming }.count
+        if upcomingWeeks > 0 {
+            let missedText = missedWeeks > 0 ? " · \(missedWeeks) missed" : ""
+            return "\(upcomingWeeks) upcoming week\(upcomingWeeks == 1 ? "" : "s")\(missedText)"
+        }
+
+        return "\(missedWeeks) missed week\(missedWeeks == 1 ? "" : "s")"
+    }
+
+    private func isRecurringCadence(_ goal: Sankalpa) -> Bool {
+        goal.kind != .observanceBased && (goal.qualifyingDaysPerWeek ?? 0) > 0
+    }
+
+    private func weekPillBackground(for status: SankalpaRecurringWeekStatus) -> Color {
+        switch status {
+        case .met:
+            return .teal.opacity(0.18)
+        case .missed:
+            return .orange.opacity(0.18)
+        case .active:
+            return Color(.secondarySystemBackground)
+        case .upcoming:
+            return Color(.tertiarySystemBackground)
         }
     }
 

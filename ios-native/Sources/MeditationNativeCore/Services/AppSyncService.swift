@@ -830,6 +830,7 @@ private struct BackendSankalpaGoalResponse: Decodable {
     var goalType: String
     var targetValue: Double
     var days: Int
+    var qualifyingDaysPerWeek: Int?
     var meditationType: String?
     var timeOfDayBucket: String?
     var observanceLabel: String?
@@ -844,6 +845,7 @@ private struct BackendSankalpaGoalResponse: Decodable {
             kind: try SankalpaKind(rawValue: goalType).unwrap("Unsupported sankalpa kind: \(goalType)"),
             targetValue: Int(targetValue.rounded()),
             days: days,
+            qualifyingDaysPerWeek: qualifyingDaysPerWeek,
             meditationType: meditationType.flatMap(MeditationType.init(rawValue:)),
             timeOfDayBucket: timeOfDayBucket.flatMap(TimeOfDayBucket.init(rawValue:)),
             observanceLabel: observanceLabel?.nilIfBlank,
@@ -881,6 +883,7 @@ private struct BackendSankalpaUpsertRequest: Encodable {
     var goalType: String
     var targetValue: Int
     var days: Int
+    var qualifyingDaysPerWeek: Int?
     var meditationType: String?
     var timeOfDayBucket: String?
     var observanceLabel: String?
@@ -893,6 +896,7 @@ private struct BackendSankalpaUpsertRequest: Encodable {
         goalType = sankalpa.kind.rawValue
         targetValue = sankalpa.targetValue
         days = sankalpa.days
+        qualifyingDaysPerWeek = sankalpa.qualifyingDaysPerWeek
         meditationType = sankalpa.meditationType?.rawValue
         timeOfDayBucket = sankalpa.timeOfDayBucket?.rawValue
         observanceLabel = sankalpa.observanceLabel?.nilIfBlank

@@ -238,6 +238,12 @@ struct HomeView: View {
                     Text(topActiveSankalpa.goal.title)
                         .font(.headline)
 
+                    if isRecurringCadence(topActiveSankalpa.goal) {
+                        Text(recurringDescription(for: topActiveSankalpa.goal))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
                     Text(sankalpaDetail(for: topActiveSankalpa))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -331,8 +337,14 @@ struct HomeView: View {
         case .observanceBased:
             return "\(progress.matchedObservanceCount) of \(progress.targetObservanceCount) observed dates"
         case .durationBased:
+            if isRecurringCadence(progress.goal) {
+                return "\(progress.metRecurringWeekCount) of \(progress.targetRecurringWeekCount) weeks met"
+            }
             return "\(formatDuration(progress.matchedDurationSeconds)) of \(formatDuration(progress.targetDurationSeconds))"
         case .sessionCount:
+            if isRecurringCadence(progress.goal) {
+                return "\(progress.metRecurringWeekCount) of \(progress.targetRecurringWeekCount) weeks met"
+            }
             return "\(progress.matchedSessionCount) of \(progress.targetSessionCount) session logs"
         }
     }
@@ -342,11 +354,46 @@ struct HomeView: View {
         case .observanceBased:
             return "\(progress.pendingObservanceCount) pending · \(progress.missedObservanceCount) missed"
         case .durationBased:
+            if isRecurringCadence(progress.goal) {
+                return recurringRemainingDetail(for: progress)
+            }
             let remainingSeconds = max(0, progress.targetDurationSeconds - progress.matchedDurationSeconds)
             return "\(formatDuration(remainingSeconds)) remaining"
         case .sessionCount:
+            if isRecurringCadence(progress.goal) {
+                return recurringRemainingDetail(for: progress)
+            }
             let remainingCount = max(0, progress.targetSessionCount - progress.matchedSessionCount)
             return "\(remainingCount) session logs remaining"
         }
+    }
+
+    private func recurringDescription(for goal: Sankalpa) -> String {
+        let thresholdText = goal.kind == .durationBased
+            ? "\(goal.targetValue) min"
+            : "\(goal.targetValue) session log\(goal.targetValue == 1 ? "" : "s")"
+        let qualifyingDays = goal.qualifyingDaysPerWeek ?? 0
+        let weeks = max(1, Int(round(Double(goal.days) / 7)))
+        return "At least \(thresholdText) on \(qualifyingDays) day\(qualifyingDays == 1 ? "" : "s") each week for \(weeks) week\(weeks == 1 ? "" : "s")"
+    }
+
+    private func recurringRemainingDetail(for progress: SankalpaProgress) -> String {
+        let missedWeeks = progress.recurringWeeks.filter { $0.status == .missed }.count
+        if let activeWeek = progress.recurringWeeks.first(where: { $0.status == .active }) {
+            let missedText = missedWeeks > 0 ? " · \(missedWeeks) missed" : ""
+            return "Current week \(activeWeek.qualifyingDayCount) / \(activeWeek.requiredQualifyingDayCount) qualifying days\(missedText)"
+        }
+
+        let upcomingWeeks = progress.recurringWeeks.filter { $0.status == .upcoming }.count
+        if upcomingWeeks > 0 {
+            let missedText = missedWeeks > 0 ? " · \(missedWeeks) missed" : ""
+            return "\(upcomingWeeks) upcoming week\(upcomingWeeks == 1 ? "" : "s")\(missedText)"
+        }
+
+        return "\(missedWeeks) missed week\(missedWeeks == 1 ? "" : "s")"
+    }
+
+    private func isRecurringCadence(_ goal: Sankalpa) -> Bool {
+        goal.kind != .observanceBased && (goal.qualifyingDaysPerWeek ?? 0) > 0
     }
 }
