@@ -12,7 +12,9 @@
 - `mvn -Dmaven.repo.local=../local-data/m2 -Dtest=SessionLogControllerTest test` in `backend/`
   - passed with 13 tests
 - `swift test --package-path ios-native`
-  - passed with 45 total native package tests across XCTest and Swift Testing output in this environment
+  - passed with 48 total native package tests in this environment:
+    - 9 XCTest cases
+    - 39 Swift Testing cases
 
 ## Targeted Evidence
 - editable source succeeds:
