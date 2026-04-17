@@ -405,6 +405,11 @@ h2_db_name() {
   printf '%s\n' "${MEDITATION_H2_DB_NAME:-meditation}"
 }
 
+create_temp_dir() {
+  prefix=$1
+  mktemp -d "${TMPDIR:-/tmp}/${prefix}.XXXXXX"
+}
+
 backend_target_dir() {
   dir=$(backend_dir)
 

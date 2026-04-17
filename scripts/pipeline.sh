@@ -60,6 +60,10 @@ cleanup_verify_backend() {
   if [ -n "${verify_h2_dir:-}" ] && [ -d "$verify_h2_dir" ]; then
     rm -rf "$verify_h2_dir"
   fi
+
+  if [ -n "${verify_media_root:-}" ] && [ -d "$verify_media_root" ]; then
+    rm -rf "$verify_media_root"
+  fi
 }
 
 run_backend_smoke_check() {
@@ -76,8 +80,9 @@ run_backend_smoke_check() {
     return 1
   fi
 
-  verify_runtime_dir=$(mktemp -d "${TMPDIR:-/tmp}/meditation-verify-runtime.XXXXXX")
-  verify_h2_dir=$(mktemp -d "${TMPDIR:-/tmp}/meditation-verify-h2.XXXXXX")
+  verify_runtime_dir=$(create_temp_dir meditation-verify-runtime)
+  verify_h2_dir=$(create_temp_dir meditation-verify-h2)
+  verify_media_root=$(create_temp_dir meditation-verify-media)
   verify_backend_host=127.0.0.1
   verify_backend_port=18080
   verify_health_url="http://${verify_backend_host}:${verify_backend_port}/api/health"
@@ -85,12 +90,16 @@ run_backend_smoke_check() {
   verify_backend_pid=""
   trap cleanup_verify_backend EXIT INT TERM
 
+  printf '%s\n' "Backend smoke check using runtime dir $verify_runtime_dir"
+  printf '%s\n' "Backend smoke check using H2 dir $verify_h2_dir"
+  printf '%s\n' "Backend smoke check using media root $verify_media_root"
+
   (
     export MEDITATION_RUNTIME_DIR="$verify_runtime_dir"
     export MEDITATION_H2_DB_DIR="$verify_h2_dir"
     export MEDITATION_BACKEND_BIND_HOST="$verify_backend_host"
     export MEDITATION_BACKEND_PORT="$verify_backend_port"
-    export MEDITATION_MEDIA_STORAGE_ROOT="${MEDITATION_MEDIA_STORAGE_ROOT:-$ROOT_DIR/local-data/media}"
+    export MEDITATION_MEDIA_STORAGE_ROOT="$verify_media_root"
     ensure_component_stopped "backend-verify" "$verify_backend_port" "$verify_health_url"
   )
 
@@ -99,7 +108,7 @@ run_backend_smoke_check() {
     export MEDITATION_H2_DB_DIR="$verify_h2_dir"
     export MEDITATION_BACKEND_BIND_HOST="$verify_backend_host"
     export MEDITATION_BACKEND_PORT="$verify_backend_port"
-    export MEDITATION_MEDIA_STORAGE_ROOT="${MEDITATION_MEDIA_STORAGE_ROOT:-$ROOT_DIR/local-data/media}"
+    export MEDITATION_MEDIA_STORAGE_ROOT="$verify_media_root"
     nohup "$java_command" -jar "$backend_jar" --server.address="$verify_backend_host" --server.port="$verify_backend_port" \
       >"$verify_log_file" 2>&1 &
     printf '%s\n' "$!" > "${verify_runtime_dir}/backend-verify.pid"

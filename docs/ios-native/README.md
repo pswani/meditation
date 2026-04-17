@@ -225,7 +225,8 @@ When you want to verify a real simulator or device against the current backend c
    - `curl -i -s 'http://127.0.0.1:8080/api/summaries?timeZone=America/Chicago'`
    - `curl -i -s 'http://127.0.0.1:8080/api/settings/timer'`
 3. If you want an XCTest pass against a live backend, set `MEDITATION_NATIVE_LIVE_SYNC_BASE_URL` and run the native test target from Xcode when a simulator runtime is healthy.
-4. On physical iPhone, prefer the nginx app origin such as `http://<Mac-Local-Hostname>.local` in Settings. Safari reachability there is a transport check; the app’s sync state and detailed error message tell you whether the next issue is backend contract compatibility instead.
+4. Treat that live backend path as opt-in only. If you point it at a local backend instance, use an explicit non-production runtime such as a disposable `MEDITATION_H2_DB_DIR` instead of the default `local-data/h2` path.
+5. On physical iPhone, prefer the nginx app origin such as `http://<Mac-Local-Hostname>.local` in Settings. Safari reachability there is a transport check; the app’s sync state and detailed error message tell you whether the next issue is backend contract compatibility instead.
 
 ## Environment Configuration Seam
 

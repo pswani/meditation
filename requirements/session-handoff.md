@@ -4,7 +4,8 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 
 ## Repository status
 - Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `sankalpa-threshold-frequency-goals-feature-bundle-with-branching` completed on 2026-04-16; meditation-derived `sankalpa` goals now support optional recurring weekly cadence with qualifying daily thresholds and weekly frequency targets across web, local storage, sync, and backend persistence
+- Active bundle: `backend-test-h2-isolation-feature-bundle-with-branching` completed on 2026-04-17; backend Spring tests now use unique in-memory H2 names plus disposable temp media roots, and `./scripts/pipeline.sh verify` now launches its smoke backend with disposable runtime, H2, and media directories while leaving `local-data/h2` untouched
+- Previous bundle: `sankalpa-threshold-frequency-goals-feature-bundle-with-branching` completed on 2026-04-16; meditation-derived `sankalpa` goals now support optional recurring weekly cadence with qualifying daily thresholds and weekly frequency targets across web, local storage, sync, and backend persistence
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -29,6 +30,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-sankalpa-threshold-frequency-goals-feature.md`
   - `docs/review-sankalpa-threshold-frequency-goals-feature.md`
   - `docs/test-sankalpa-threshold-frequency-goals-feature.md`
+- Backend test-isolation artifacts completed on 2026-04-17:
+  - `docs/execplan-backend-test-h2-isolation-feature.md`
+  - `docs/review-backend-test-h2-isolation-feature.md`
+  - `docs/test-backend-test-h2-isolation-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -599,6 +604,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 ## Remaining known gaps
 - Custom-play media registration is still script-driven; there is still no browser upload/import workflow.
 - Offline reopening still depends on the device having completed at least one successful online visit so the app shell and any needed recording media are already cached.
+- Opt-in live backend checks outside `./scripts/pipeline.sh verify`, such as native live-sync testing, still rely on the caller to point at an explicit non-production backend runtime rather than the persistent `local-data/h2` path.
 - Real-device execution of the new iPhone Safari QA checklist is still pending on actual hardware.
 - Browser-automation coverage for goals-screen responsive archive/delete confirmation behavior is still absent; current confidence comes from unit, component, and backend tests.
 - Browser-automation coverage for observance date check-ins is still absent; current confidence comes from unit, component, and backend tests.
@@ -611,6 +617,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Synced summary-by-source rows still reflect the backend’s broader `auto log` versus `manual log` vocabulary, so remote summary labels cannot yet distinguish timer, `custom play`, and playlist runs until the backend exposes richer source categories.
 
 ## Recommended next slice
+- If further verification hardening is worth the extra guardrail, add a small automated fail-fast around opt-in live backend test paths when they target the default persistent H2 runtime.
 - The requested native iOS parity and decomposition bundle sequence is complete.
 - Recommended next step for the native iOS track: use a concrete simulator or physical iPhone to run the native XCTest suites end to end, then define the next bundle from any real-device findings rather than from a standing parity gap list.
 - Latest targeted verification for the 2026-04-11 sync contract fix:
