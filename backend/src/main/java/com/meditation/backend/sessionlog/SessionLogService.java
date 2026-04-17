@@ -139,6 +139,8 @@ public class SessionLogService {
       return new SyncMutationResult<>(GeneratedSyncContract.SYNC_OUTCOME_STALE, toResponse(existingEntity));
     }
 
+    validateExistingRecordMutation(existingEntity, request);
+
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
 
     SessionLogEntity entity = new SessionLogEntity(
@@ -306,6 +308,87 @@ public class SessionLogService {
     parseTimestamp(request.startedAt(), "Started at must be a valid ISO timestamp.");
     parseTimestamp(request.endedAt(), "Ended at must be a valid ISO timestamp.");
     parseOptionalTimestamp(request.playlistRunStartedAt(), "Playlist run started at must be a valid ISO timestamp.");
+  }
+
+  private void validateExistingRecordMutation(SessionLogEntity existingEntity, SessionLogUpsertRequest request) {
+    if (existingEntity == null || isSameStoredSessionLog(existingEntity, request)) {
+      return;
+    }
+
+    if (!"manual log".equals(existingEntity.getSource())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Meditation type can be changed only for manual logs.");
+    }
+
+    if (!isManualLogMeditationTypeOnlyChange(existingEntity, request)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Only meditation type can change for an existing manual log."
+      );
+    }
+  }
+
+  private boolean isManualLogMeditationTypeOnlyChange(SessionLogEntity existingEntity, SessionLogUpsertRequest request) {
+    return "manual log".equals(request.source())
+        && sameText(existingEntity.getStartedAt().toString(), request.startedAt())
+        && sameText(existingEntity.getEndedAt().toString(), request.endedAt())
+        && sameText(existingEntity.getTimerMode(), request.timerMode())
+        && sameInteger(existingEntity.getPlannedDurationSeconds(), request.intendedDurationSeconds())
+        && existingEntity.getCompletedDurationSeconds() == request.completedDurationSeconds()
+        && sameText(existingEntity.getStatus(), request.status())
+        && sameText(existingEntity.getStartSound(), request.startSound())
+        && sameText(existingEntity.getEndSound(), request.endSound())
+        && existingEntity.isIntervalEnabled() == request.intervalEnabled()
+        && existingEntity.getIntervalMinutes() == request.intervalMinutes()
+        && sameText(existingEntity.getIntervalSound(), request.intervalSound())
+        && sameText(existingEntity.getPlaylistId(), request.playlistId())
+        && sameText(existingEntity.getPlaylistName(), request.playlistName())
+        && sameInteger(existingEntity.getPlaylistItemPosition(), request.playlistItemPosition())
+        && sameInteger(existingEntity.getPlaylistItemCount(), request.playlistItemCount())
+        && sameText(existingEntity.getPlaylistRunId(), request.playlistRunId())
+        && sameText(
+            existingEntity.getPlaylistRunStartedAt() == null ? null : existingEntity.getPlaylistRunStartedAt().toString(),
+            request.playlistRunStartedAt()
+        )
+        && sameText(existingEntity.getCustomPlayId(), request.customPlayId())
+        && sameText(existingEntity.getCustomPlayName(), request.customPlayName())
+        && sameText(existingEntity.getCustomPlayRecordingLabel(), request.customPlayRecordingLabel());
+  }
+
+  private boolean isSameStoredSessionLog(SessionLogEntity existingEntity, SessionLogUpsertRequest request) {
+    return sameText(existingEntity.getId(), request.id())
+        && sameText(existingEntity.getSource(), request.source())
+        && sameText(existingEntity.getStatus(), request.status())
+        && sameText(existingEntity.getMeditationTypeCode(), request.meditationType())
+        && sameText(existingEntity.getTimerMode(), request.timerMode())
+        && sameText(existingEntity.getStartedAt().toString(), request.startedAt())
+        && sameText(existingEntity.getEndedAt().toString(), request.endedAt())
+        && sameInteger(existingEntity.getPlannedDurationSeconds(), request.intendedDurationSeconds())
+        && existingEntity.getCompletedDurationSeconds() == request.completedDurationSeconds()
+        && sameText(existingEntity.getStartSound(), request.startSound())
+        && sameText(existingEntity.getEndSound(), request.endSound())
+        && existingEntity.isIntervalEnabled() == request.intervalEnabled()
+        && existingEntity.getIntervalMinutes() == request.intervalMinutes()
+        && sameText(existingEntity.getIntervalSound(), request.intervalSound())
+        && sameText(existingEntity.getPlaylistId(), request.playlistId())
+        && sameText(existingEntity.getPlaylistName(), request.playlistName())
+        && sameInteger(existingEntity.getPlaylistItemPosition(), request.playlistItemPosition())
+        && sameInteger(existingEntity.getPlaylistItemCount(), request.playlistItemCount())
+        && sameText(existingEntity.getPlaylistRunId(), request.playlistRunId())
+        && sameText(
+            existingEntity.getPlaylistRunStartedAt() == null ? null : existingEntity.getPlaylistRunStartedAt().toString(),
+            request.playlistRunStartedAt()
+        )
+        && sameText(existingEntity.getCustomPlayId(), request.customPlayId())
+        && sameText(existingEntity.getCustomPlayName(), request.customPlayName())
+        && sameText(existingEntity.getCustomPlayRecordingLabel(), request.customPlayRecordingLabel());
+  }
+
+  private boolean sameText(String left, String right) {
+    return java.util.Objects.equals(left, right);
+  }
+
+  private boolean sameInteger(Integer left, Integer right) {
+    return java.util.Objects.equals(left, right);
   }
 
   private Instant parseTimestamp(String value, String errorMessage) {

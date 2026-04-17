@@ -322,6 +322,123 @@ describe('HistoryPage UX', () => {
     expect(screen.getByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
   });
 
+  it('keeps the meditation-type correction rule calm and discoverable in history', () => {
+    localStorage.setItem(
+      SESSION_LOGS_KEY,
+      JSON.stringify([
+        {
+          id: 'auto-log-1',
+          startedAt: '2026-03-24T10:00:00.000Z',
+          endedAt: '2026-03-24T10:20:00.000Z',
+          meditationType: 'Vipassana',
+          intendedDurationSeconds: 1200,
+          completedDurationSeconds: 1200,
+          status: 'completed',
+          source: 'auto log',
+          startSound: 'None',
+          endSound: 'Temple Bell',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+        {
+          id: 'manual-log-1',
+          startedAt: '2026-03-24T09:30:00.000Z',
+          endedAt: '2026-03-24T09:45:00.000Z',
+          meditationType: 'Ajapa',
+          intendedDurationSeconds: 900,
+          completedDurationSeconds: 900,
+          status: 'completed',
+          source: 'manual log',
+          startSound: 'None',
+          endSound: 'None',
+          intervalEnabled: false,
+          intervalMinutes: 0,
+          intervalSound: 'None',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/only manual logs can change meditation type later; auto-created history stays read-only/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /change meditation type/i })).toHaveLength(1);
+  });
+
+  it('updates meditation type only for manual logs while keeping the rest of the history entry unchanged', async () => {
+    const autoLog = {
+      id: 'auto-log-1',
+      startedAt: '2026-03-24T10:00:00.000Z',
+      endedAt: '2026-03-24T10:20:00.000Z',
+      meditationType: 'Vipassana',
+      intendedDurationSeconds: 1200,
+      completedDurationSeconds: 1200,
+      status: 'completed',
+      source: 'auto log',
+      startSound: 'None',
+      endSound: 'Temple Bell',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    };
+    const manualLog = {
+      id: 'manual-log-1',
+      startedAt: '2026-03-24T09:30:00.000Z',
+      endedAt: '2026-03-24T09:45:00.000Z',
+      meditationType: 'Ajapa',
+      intendedDurationSeconds: 900,
+      completedDurationSeconds: 900,
+      status: 'completed',
+      source: 'manual log',
+      startSound: 'None',
+      endSound: 'None',
+      intervalEnabled: false,
+      intervalMinutes: 0,
+      intervalSound: 'None',
+    };
+
+    localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify([autoLog, manualLog]));
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <SyncStatusProvider>
+          <TimerProvider>
+            <Routes>
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </TimerProvider>
+        </SyncStatusProvider>
+      </MemoryRouter>
+    );
+
+    const expectedManualRange = getExpectedHistoryRange(manualLog.startedAt, manualLog.endedAt);
+    fireEvent.click(screen.getByRole('button', { name: /change meditation type/i }));
+
+    const editor = screen.getByText(/only this manual log changes here/i).closest('.history-edit-panel');
+    expect(editor).not.toBeNull();
+    fireEvent.change(within(editor as HTMLElement).getByRole('combobox'), { target: { value: 'Kriya' } });
+    fireEvent.click(within(editor as HTMLElement).getByRole('button', { name: /save meditation type/i }));
+
+    expect(await screen.findByText(/meditation type updated for the manual log/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /history/i })).toBeInTheDocument();
+    expect(screen.getByText(/^Kriya$/i, { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByText(expectedManualRange.startLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(expectedManualRange.endLabel, { selector: 'time' })).toBeInTheDocument();
+    expect(screen.getByText(/completed: 15 min/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Vipassana$/i, { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /change meditation type/i })).toHaveLength(1);
+  });
+
   it('shows a calm session time range for auto and manual logs', () => {
     const autoLog = {
       id: 'auto-log-1',

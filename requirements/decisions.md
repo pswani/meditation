@@ -195,6 +195,10 @@
   - accept `timerMode` so manual entries can truthfully represent `fixed` versus `open-ended` practice
   - continue defaulting omitted manual-log timer mode to `fixed` for compatibility with older callers
   - keep manual-log duration input as actual completed duration in both modes, with `open-ended` entries storing no planned duration
+- Keep post-save History meditation-type correction narrow and trust-preserving across web, backend, and native:
+  - only `manual log` entries may change meditation type after save
+  - auto-created timer, `custom play`, and playlist history stays read-only
+  - backend `session log` upsert accepts idempotent replays plus meditation-type-only edits for existing manual logs, and rejects broader rewrites of saved history
 - Keep the shared frontend API client responsible for explicit timeout and cancellation behavior rather than scattering ad hoc abort logic across features.
 - Keep `sankalpa` edits id-stable:
   - preserve `id` and `createdAt` when editing goal fields so progress and deadline windows stay anchored to the original goal

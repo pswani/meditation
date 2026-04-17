@@ -185,6 +185,161 @@ class SessionLogControllerTest {
   }
 
   @Test
+  void allowsMeditationTypeOnlyEditsForExistingManualLogs() throws Exception {
+    mockMvc.perform(put("/api/session-logs/manual-log-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "manual-log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meditationType").value("Vipassana"));
+
+    mockMvc.perform(put("/api/session-logs/manual-log-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "manual-log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Ajapa",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meditationType").value("Ajapa"))
+        .andExpect(jsonPath("$.completedDurationSeconds").value(1200))
+        .andExpect(jsonPath("$.status").value("completed"));
+  }
+
+  @Test
+  void rejectsMeditationTypeChangesForExistingAutoLogs() throws Exception {
+    mockMvc.perform(put("/api/session-logs/auto-log-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "auto-log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/session-logs/auto-log-1")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "auto-log-1",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Ajapa",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/session-logs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].meditationType").value("Vipassana"));
+  }
+
+  @Test
+  void rejectsBroaderRewritesForExistingManualLogs() throws Exception {
+    mockMvc.perform(put("/api/session-logs/manual-log-2")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "manual-log-2",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 1200,
+                  "status": "completed",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/session-logs/manual-log-2")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "manual-log-2",
+                  "startedAt": "2026-03-26T10:00:00Z",
+                  "endedAt": "2026-03-26T10:20:00Z",
+                  "meditationType": "Ajapa",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1200,
+                  "completedDurationSeconds": 900,
+                  "status": "ended early",
+                  "source": "manual log",
+                  "startSound": "None",
+                  "endSound": "None",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None"
+                }
+                """))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/api/session-logs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].meditationType").value("Vipassana"))
+        .andExpect(jsonPath("$.items[0].completedDurationSeconds").value(1200))
+        .andExpect(jsonPath("$.items[0].status").value("completed"));
+  }
+
+  @Test
   void savesOpenEndedSessionLogsThroughTheApi() throws Exception {
     mockMvc.perform(put("/api/session-logs/log-open-ended")
             .contentType(APPLICATION_JSON)

@@ -94,6 +94,20 @@ export function formatDurationLabel(totalSeconds: number): string {
   return `${roundedMinutes.toFixed(1)} min`;
 }
 
+export function canChangeSessionLogMeditationType(entry: Pick<SessionLog, 'source'>): boolean {
+  return entry.source === 'manual log';
+}
+
+export function updateSessionLogMeditationType(
+  entry: SessionLog,
+  meditationType: SessionLog['meditationType']
+): SessionLog {
+  return {
+    ...entry,
+    meditationType,
+  };
+}
+
 export function areSessionLogsEqual(left: SessionLog, right: SessionLog): boolean {
   return (
     left.id === right.id &&
