@@ -148,6 +148,18 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertTrue(PlaybackAudioSessionSupport.options.contains(.mixWithOthers))
     }
 
+    func testNotificationFallbackUsesBundledSelectedEndBellWhenAvailable() {
+        XCTAssertEqual(
+            TimerCompletionNotificationSoundSupport.bundledFilename(for: TimerSoundOption.templeBell.rawValue),
+            "temple-bell.mp3"
+        )
+        XCTAssertEqual(
+            TimerCompletionNotificationSoundSupport.bundledFilename(for: TimerSoundOption.gong.rawValue),
+            "gong.mp3"
+        )
+        XCTAssertNil(TimerCompletionNotificationSoundSupport.bundledFilename(for: nil))
+    }
+
     func testTimerEndRequiresConfirmationBeforeFinishing() throws {
         let (viewModel, notificationScheduler, _, _) = try makeViewModel()
         let existingLogCount = viewModel.recentSessionLogs.count
@@ -218,6 +230,34 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertTrue(longRunningBridge.armedTargetDates.isEmpty)
     }
 
+    func testInactiveNearEndReschedulesNotificationAsBridgeBackup() async throws {
+        let activeSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(
+                mode: .fixedDuration,
+                durationMinutes: 1,
+                meditationType: .vipassana,
+                endSoundName: TimerSoundOption.templeBell.rawValue
+            ),
+            now: Date().addingTimeInterval(-45)
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: activeSession)
+
+        let (viewModel, notificationScheduler, _, bridge) = try makeViewModel(snapshot: snapshot)
+
+        viewModel.handleScenePhaseChange(to: .inactive)
+
+        while notificationScheduler.scheduledDates.isEmpty {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(bridge.armedTargetDates.count, 1)
+        XCTAssertEqual(notificationScheduler.scheduledEndSoundNames.last!, TimerSoundOption.templeBell.rawValue)
+        let fallbackDate = try XCTUnwrap(notificationScheduler.scheduledDates.last)
+        let targetEndAt = try XCTUnwrap(activeSession.targetEndAt())
+        XCTAssertEqual(fallbackDate.timeIntervalSince(targetEndAt), 2, accuracy: 0.2)
+    }
+
     func testBackgroundTimerCompletionBridgeFinishesFixedTimer() async throws {
         let activeSession = try TimerFeature.makeActiveSession(
             from: TimerSettingsDraft(
@@ -241,7 +281,37 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
         XCTAssertEqual(viewModel.recentSessionLogs.first?.source, .timer)
         XCTAssertEqual(viewModel.recentSessionLogs.first?.status, .completed)
+        while notificationScheduler.cancelCount < 1 {
+            await Task.yield()
+        }
         XCTAssertGreaterThanOrEqual(notificationScheduler.cancelCount, 1)
+    }
+
+    func testBridgeCompletionDoesNotDuplicateTimerLogWhenAppReturnsActive() async throws {
+        let activeSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(
+                mode: .fixedDuration,
+                durationMinutes: 1,
+                meditationType: .vipassana,
+                endSoundName: TimerSoundOption.templeBell.rawValue
+            ),
+            now: Date().addingTimeInterval(-45)
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: activeSession)
+
+        let (viewModel, _, _, bridge) = try makeViewModel(snapshot: snapshot)
+        let existingLogCount = viewModel.recentSessionLogs.count
+
+        viewModel.handleScenePhaseChange(to: .background)
+        await bridge.fire()
+
+        XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
+
+        viewModel.handleScenePhaseChange(to: .active)
+
+        XCTAssertNil(viewModel.activeSession)
+        XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
     }
 
     func testHistoryMeditationTypeEditUpdatesOnlyManualLogs() throws {
@@ -568,6 +638,7 @@ private final class StubNotificationScheduler: NotificationScheduling, @unchecke
     private(set) var cancelCount = 0
     private(set) var scheduledDates: [Date] = []
     private(set) var scheduledMeditationTypes: [MeditationType] = []
+    private(set) var scheduledEndSoundNames: [String?] = []
 
     func authorizationState() async -> NotificationPermissionState {
         .authorized
@@ -579,10 +650,12 @@ private final class StubNotificationScheduler: NotificationScheduling, @unchecke
 
     func scheduleTimerCompletionNotification(
         at date: Date,
-        meditationType: MeditationType
+        meditationType: MeditationType,
+        endSoundName: String?
     ) async {
         scheduledDates.append(date)
         scheduledMeditationTypes.append(meditationType)
+        scheduledEndSoundNames.append(endSoundName)
     }
 
     func cancelTimerCompletionNotification() async {

@@ -83,6 +83,10 @@ struct SettingsView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
+                        Text("Foreground completion still relies on the in-app timer and selected end bell. When the phone locks near the end of a fixed sit, the app will try to finish with that bell first; longer lock-screen spans remain iOS-limited and may fall back to notification sound instead.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
                         if viewModel.notificationPermissionState.canRequestAuthorization {
                             Button("Allow notifications") {
                                 Task {

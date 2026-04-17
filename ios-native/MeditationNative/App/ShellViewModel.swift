@@ -4,6 +4,20 @@ import SwiftUI
 
 @MainActor
 final class ShellViewModel: ObservableObject {
+    private enum TimerNotificationCoordination {
+        case standard
+        case bridgeBackup
+
+        var backupDelaySeconds: TimeInterval {
+            switch self {
+            case .standard:
+                return 0
+            case .bridgeBackup:
+                return 2
+            }
+        }
+    }
+
     @Published private(set) var snapshot: AppSnapshot
     @Published private(set) var syncState: AppSyncState
     @Published private(set) var environment: AppEnvironment
@@ -838,6 +852,7 @@ final class ShellViewModel: ObservableObject {
             timerCompletionBridge.cancelTimerCompletionBridge()
             now = Date()
             handleClockTick(now)
+            rescheduleTimerNotificationIfNeeded()
             Task {
                 await refreshNotificationPermissionState()
             }
@@ -845,9 +860,9 @@ final class ShellViewModel: ObservableObject {
                 scheduleSync()
             }
         case .background:
-            armTimerCompletionBridgeIfNeeded()
+            prepareTimerForBackgroundTransition()
         case .inactive:
-            break
+            prepareTimerForBackgroundTransition()
         @unknown default:
             break
         }
@@ -1150,7 +1165,9 @@ final class ShellViewModel: ObservableObject {
         }
     }
 
-    private func rescheduleTimerNotificationIfNeeded() {
+    private func rescheduleTimerNotificationIfNeeded(
+        coordination: TimerNotificationCoordination = .standard
+    ) {
         guard let activeSession,
               activeSession.isPaused == false,
               activeSession.configuration.mode == .fixedDuration,
@@ -1161,25 +1178,40 @@ final class ShellViewModel: ObservableObject {
 
         Task {
             await notificationScheduler.scheduleTimerCompletionNotification(
-                at: targetEndAt,
-                meditationType: activeSession.configuration.meditationType
+                at: targetEndAt.addingTimeInterval(coordination.backupDelaySeconds),
+                meditationType: activeSession.configuration.meditationType,
+                endSoundName: activeSession.configuration.endSoundName
             )
         }
     }
 
-    private func armTimerCompletionBridgeIfNeeded() {
+    private func prepareTimerForBackgroundTransition() {
+        if armTimerCompletionBridgeIfNeeded() {
+            rescheduleTimerNotificationIfNeeded(coordination: .bridgeBackup)
+        }
+    }
+
+    @discardableResult
+    private func armTimerCompletionBridgeIfNeeded() -> Bool {
         guard let activeSession,
               activeSession.isPaused == false,
               activeSession.configuration.mode == .fixedDuration,
               let targetEndAt = activeSession.targetEndAt()
         else {
             timerCompletionBridge.cancelTimerCompletionBridge()
-            return
+            return false
+        }
+
+        let remainingSeconds = targetEndAt.timeIntervalSince(Date())
+        guard remainingSeconds > 0, remainingSeconds <= LiveTimerCompletionBridge.maxLeadTime else {
+            timerCompletionBridge.cancelTimerCompletionBridge()
+            return false
         }
 
         timerCompletionBridge.armTimerCompletionBridge(targetEndAt: targetEndAt) { [weak self] bridgedEndAt in
             self?.finishTimerFromBackgroundBridgeIfNeeded(endedAt: bridgedEndAt)
         }
+        return true
     }
 
     private func finishTimerFromBackgroundBridgeIfNeeded(endedAt: Date) {

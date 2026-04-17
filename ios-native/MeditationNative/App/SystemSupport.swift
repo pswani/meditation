@@ -31,13 +31,13 @@ enum NotificationPermissionState: Equatable {
         case .checking:
             return "The app is reading the current permission state."
         case .notDetermined:
-            return "You can allow a completion notification for fixed-duration sessions. The timer itself still stays local-first in the app."
+            return "You can allow a completion notification for fixed-duration sessions. The timer itself stays local-first, and lock-screen delivery still depends on what iOS allows at the moment of completion."
         case .denied:
-            return "You can still meditate in the app, but fixed sessions will rely on the in-app timer display unless you re-enable notifications in Settings."
+            return "You can still meditate in the app, but longer lock-screen completions will rely on the in-app timer catching up when you return unless you re-enable notifications in Settings."
         case .authorized:
-            return "Fixed-duration sessions can schedule a local completion notification when appropriate."
+            return "Fixed-duration sessions can schedule a local completion notification when appropriate, including a fallback when iOS does not keep the app runnable through the end bell."
         case .provisional:
-            return "The app can schedule local completion notifications, but the system may still present them quietly."
+            return "The app can schedule local completion notifications, but the system may still present them quietly and lock-screen behavior remains best-effort."
         }
     }
 
@@ -51,9 +51,24 @@ protocol NotificationScheduling: Sendable {
     func requestAuthorization() async -> NotificationPermissionState
     func scheduleTimerCompletionNotification(
         at date: Date,
-        meditationType: MeditationType
+        meditationType: MeditationType,
+        endSoundName: String?
     ) async
     func cancelTimerCompletionNotification() async
+}
+
+enum TimerCompletionNotificationSoundSupport {
+    static func bundledFilename(for endSoundName: String?) -> String? {
+        TimerSoundCatalog.bundledFilename(for: endSoundName)
+    }
+
+    static func notificationSound(for endSoundName: String?) -> UNNotificationSound {
+        guard let filename = bundledFilename(for: endSoundName) else {
+            return .default
+        }
+
+        return UNNotificationSound(named: UNNotificationSoundName(rawValue: filename))
+    }
 }
 
 @MainActor
@@ -94,7 +109,8 @@ struct LiveNotificationScheduler: NotificationScheduling {
 
     func scheduleTimerCompletionNotification(
         at date: Date,
-        meditationType: MeditationType
+        meditationType: MeditationType,
+        endSoundName: String?
     ) async {
         await cancelTimerCompletionNotification()
 
@@ -102,7 +118,7 @@ struct LiveNotificationScheduler: NotificationScheduling {
         let content = UNMutableNotificationContent()
         content.title = "Meditation complete"
         content.body = "\(meditationType.rawValue) timer finished."
-        content.sound = .default
+        content.sound = TimerCompletionNotificationSoundSupport.notificationSound(for: endSoundName)
 
         let trigger = UNTimeIntervalNotificationTrigger(
             timeInterval: interval,

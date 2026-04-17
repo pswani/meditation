@@ -148,7 +148,9 @@
   - legacy native or synced values normalize through the same `Soft Chime` -> `Temple Bell` and `Wood Block` -> `Gong` mapping
   - activate an `AVAudioSession` playback category before timer-cue and recording-backed playback so meditation audio is not muted by the iPhone silent switch
   - keep that native playback session on `.playback` with `.mixWithOthers` so timer cues and recording-backed sessions can sound without pausing another audio app
-  - when a fixed timer backgrounds within roughly the last 25 seconds, arm a narrow background-task bridge so the selected end bell can still fire if iOS keeps the app runnable through completion
+  - when a fixed timer is within roughly the last 25 seconds and the scene turns inactive or backgrounded, arm a narrow background-task bridge so the selected end bell can still fire if iOS keeps the app runnable through completion
+  - keep fixed-timer notification fallback aligned with the selected bundled end bell when one exists
+  - during near-end bridge coverage, delay the notification fallback slightly so the app-driven bell has a truthful chance to finish first without routinely producing duplicate bells
   - for longer lock-screen spans, rely on the existing local-notification sound plus foreground catch-up instead of claiming guaranteed app-driven end-bell playback after suspension
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:

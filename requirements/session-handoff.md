@@ -3,9 +3,9 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/history-meditation-type-edit-feature`
-- Active bundle: `history-meditation-type-edit-feature-bundle-with-branching` completed on 2026-04-17; History meditation-type correction is now explicitly manual-log-only across web, backend, and native expectations, with a discoverable web edit flow plus backend enforcement that allows idempotent replays and meditation-type-only edits for existing manual logs while rejecting broader saved-history rewrites
-- Previous bundle: `backend-test-h2-isolation-feature-bundle-with-branching` completed on 2026-04-17; backend Spring tests now use unique in-memory H2 names plus disposable temp media roots, and `./scripts/pipeline.sh verify` now launches its smoke backend with disposable runtime, H2, and media directories while leaving `local-data/h2` untouched
+- Current branch: `codex/defects-enhancements-16Apr`
+- Active bundle: `ios-native-lock-screen-end-bell-full-feature-bundle-with-branching` completed on 2026-04-17; native fixed-timer lock-screen completion now coordinates near-end inactive/background bridge arming with a short delayed notification fallback, keeps notification sound aligned with the selected bundled end bell when available, and makes the foreground-versus-best-effort lock-screen contract explicit in Practice and Settings
+- Previous bundle: `history-meditation-type-edit-feature-bundle-with-branching` completed on 2026-04-17; History meditation-type correction is now explicitly manual-log-only across web, backend, and native expectations, with a discoverable web edit flow plus backend enforcement that allows idempotent replays and meditation-type-only edits for existing manual logs while rejecting broader saved-history rewrites
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -38,6 +38,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-history-meditation-type-edit-feature.md`
   - `docs/review-history-meditation-type-edit-feature.md`
   - `docs/test-history-meditation-type-edit-feature.md`
+- Native iOS lock-screen end-bell artifacts completed on 2026-04-17:
+  - `docs/execplan-ios-native-lock-screen-end-bell-full-feature.md`
+  - `docs/review-ios-native-lock-screen-end-bell-full-feature.md`
+  - `docs/test-ios-native-lock-screen-end-bell-full-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -230,9 +234,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - shared playback-audio-session activation so timer cues and recording-backed sessions can play even when the iPhone silent switch is on
 - Native iOS lock-screen audio mixing now adds:
   - a deliberate native playback-audio-session policy using `.playback` with `.mixWithOthers`, so timer cues and recording-backed sessions can sound without automatically pausing another audio app
-  - a narrow fixed-timer background bridge that arms only when the app backgrounds within roughly the last 25 seconds before completion, giving the selected end bell a truthful chance to fire before suspension
+  - a narrow fixed-timer background bridge that now arms when the scene turns inactive or backgrounded within roughly the last 25 seconds before completion, giving the selected end bell a truthful chance to fire before suspension
+  - selected-bell notification fallback for fixed timers when the bundled cue is available, with a short delayed backup schedule during near-end bridge coverage to reduce duplicate-bell risk
   - continued fallback to local-notification sound and foreground catch-up for longer lock-screen spans, instead of overclaiming guaranteed app-driven bell playback after suspension
-  - focused app-target XCTest coverage for the mixing policy plus the near-end background-bridge arming and completion path
+  - focused app-target XCTest coverage for selected-bell fallback, near-end inactive or background bridge coordination, and duplicate-completion protection
 - Native iOS Home and Practice navigation defect fixes on 2026-04-16 now add:
   - one clear navigation title on the Home and Practice tab roots instead of duplicate in-content headings plus navigation titles
   - shared `custom play` startability rules so Home favorites and Practice `custom play` surfaces stay aligned about when locally available media can start
