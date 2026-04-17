@@ -1,6 +1,13 @@
 import type { ActiveCustomPlayRun } from '../types/customPlay';
 import { describe, expect, it } from 'vitest';
-import { areSessionLogsEqual, buildAutoLogEntry, buildCustomPlayLogEntry, formatDurationLabel } from './sessionLog';
+import {
+  areSessionLogsEqual,
+  buildAutoLogEntry,
+  buildCustomPlayLogEntry,
+  canChangeSessionLogMeditationType,
+  formatDurationLabel,
+  updateSessionLogMeditationType,
+} from './sessionLog';
 import type { ActiveSession } from '../types/timer';
 
 const activeSession: ActiveSession = {
@@ -157,5 +164,38 @@ describe('areSessionLogsEqual', () => {
 
     expect(areSessionLogsEqual(baseline, { ...baseline })).toBe(true);
     expect(areSessionLogsEqual(baseline, { ...baseline, completedDurationSeconds: 600 })).toBe(false);
+  });
+});
+
+describe('history meditation-type helpers', () => {
+  it('allows only manual logs to change meditation type', () => {
+    expect(canChangeSessionLogMeditationType({ source: 'manual log' })).toBe(true);
+    expect(canChangeSessionLogMeditationType({ source: 'auto log' })).toBe(false);
+  });
+
+  it('updates only the meditation type field for a saved log copy', () => {
+    const baseline = buildAutoLogEntry({
+      session: {
+        ...activeSession,
+        meditationType: 'Vipassana',
+      },
+      endedAt: new Date('2026-03-23T10:20:00.000Z'),
+      completedDurationSeconds: 1200,
+      status: 'completed',
+    });
+
+    const updated = updateSessionLogMeditationType(
+      {
+        ...baseline,
+        source: 'manual log',
+      },
+      'Kriya'
+    );
+
+    expect(updated.meditationType).toBe('Kriya');
+    expect(updated.startedAt).toBe(baseline.startedAt);
+    expect(updated.endedAt).toBe(baseline.endedAt);
+    expect(updated.completedDurationSeconds).toBe(baseline.completedDurationSeconds);
+    expect(updated.status).toBe(baseline.status);
   });
 });

@@ -32,7 +32,11 @@ import {
   updatePlaylistRunAudioProgress,
   updatePlaylistRunTimedProgress,
 } from '../../utils/playlistRuntime';
-import { buildCustomPlayLogEntry } from '../../utils/sessionLog';
+import {
+  buildCustomPlayLogEntry,
+  canChangeSessionLogMeditationType,
+  updateSessionLogMeditationType as applySessionLogMeditationTypeUpdate,
+} from '../../utils/sessionLog';
 import {
   loadLastUsedMeditation,
   saveActivePlaylistRunState,
@@ -57,6 +61,7 @@ import {
   createTimerBootstrap,
   mergeCustomPlays,
   mergePlaylists,
+  mergeSessionLogs,
   mergeQueueEntry,
   recordLastUsedMeditation,
   serializeActiveCustomPlayPersistence,
@@ -1204,6 +1209,47 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         return {
           ...validation,
           persisted: true,
+        };
+      },
+      canChangeSessionLogMeditationType: (entry) => canChangeSessionLogMeditationType(entry),
+      updateSessionLogMeditationType: (entry, meditationType) => {
+        if (!canChangeSessionLogMeditationType(entry)) {
+          return {
+            updated: false,
+            feedbackMessage: 'Meditation type can be changed only for manual logs.',
+          };
+        }
+
+        const latestEntry = latestSessionLogsRef.current.find((candidate) => candidate.id === entry.id);
+        if (!latestEntry) {
+          return {
+            updated: false,
+            feedbackMessage: 'That manual log is no longer available.',
+          };
+        }
+
+        const updatedEntry = applySessionLogMeditationTypeUpdate(latestEntry, meditationType);
+        const nextSessionLogs = mergeSessionLogs([updatedEntry], latestSessionLogsRef.current);
+        dispatch({
+          type: 'REPLACE_SESSION_LOGS',
+          payload: nextSessionLogs,
+        });
+        mergeQueueEntry(updateQueue, {
+          entityType: 'session-log',
+          operation: 'upsert',
+          recordId: updatedEntry.id,
+          payload: updatedEntry,
+        });
+
+        if (!canAttemptBackendSync) {
+          setSessionLogSyncError(buildQueuedSaveMessage(connectionMode, 'manual log change'));
+        } else {
+          setSessionLogSyncError(null);
+        }
+
+        return {
+          updated: true,
+          feedbackMessage: 'Meditation type updated for the manual log.',
         };
       },
       startSession: (settingsOverride) => {

@@ -3,9 +3,9 @@
 This file tracks the durable repository state rather than a prompt-by-prompt history.
 
 ## Repository status
-- Current branch: `codex/defects-enhancements-16Apr`
-- Active bundle: `backend-test-h2-isolation-feature-bundle-with-branching` completed on 2026-04-17; backend Spring tests now use unique in-memory H2 names plus disposable temp media roots, and `./scripts/pipeline.sh verify` now launches its smoke backend with disposable runtime, H2, and media directories while leaving `local-data/h2` untouched
-- Previous bundle: `sankalpa-threshold-frequency-goals-feature-bundle-with-branching` completed on 2026-04-16; meditation-derived `sankalpa` goals now support optional recurring weekly cadence with qualifying daily thresholds and weekly frequency targets across web, local storage, sync, and backend persistence
+- Current branch: `codex/history-meditation-type-edit-feature`
+- Active bundle: `history-meditation-type-edit-feature-bundle-with-branching` completed on 2026-04-17; History meditation-type correction is now explicitly manual-log-only across web, backend, and native expectations, with a discoverable web edit flow plus backend enforcement that allows idempotent replays and meditation-type-only edits for existing manual logs while rejecting broader saved-history rewrites
+- Previous bundle: `backend-test-h2-isolation-feature-bundle-with-branching` completed on 2026-04-17; backend Spring tests now use unique in-memory H2 names plus disposable temp media roots, and `./scripts/pipeline.sh verify` now launches its smoke backend with disposable runtime, H2, and media directories while leaving `local-data/h2` untouched
 - Latest completed bundles documented for the native track: `ios-native-foundation-feature-bundle-with-branching`, `ios-native-timer-history-feature-bundle-with-branching`, `ios-native-custom-play-playlist-feature-bundle-with-branching`, `ios-native-summary-sankalpa-feature-bundle-with-branching`, `ios-native-home-parity-feature-bundle-with-branching`, `ios-native-custom-play-parity-feature-bundle-with-branching`, and `ios-native-history-summary-parity-feature-bundle-with-branching` completed on 2026-04-09; `ios-native-sync-parity-feature-bundle-with-branching`, `ios-native-decomposition-hardening-feature-bundle-with-branching`, `ios-native-media-sound-parity-feature-bundle-with-branching`, `ios-native-runtime-ux-resilience-feature-bundle-with-branching`, `ios-native-low-risk-cleanup-feature-bundle-with-branching`, and `ios-native-runtime-device-defects-feature-bundle-with-branching` completed on 2026-04-10; older bundle history remains in Git and durable docs even when the bundle folders themselves are not retained in the current worktree
 - Latest merge outcome: merged `codex/cross-platform-contract-hardening-feature-bundle-with-branching` back into `codex/expert-review` on 2026-04-11 with a normal local merge commit
 - New expert-review remediation prompt assets prepared on 2026-04-11:
@@ -34,6 +34,10 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
   - `docs/execplan-backend-test-h2-isolation-feature.md`
   - `docs/review-backend-test-h2-isolation-feature.md`
   - `docs/test-backend-test-h2-isolation-feature.md`
+- History meditation-type edit artifacts completed on 2026-04-17:
+  - `docs/execplan-history-meditation-type-edit-feature.md`
+  - `docs/review-history-meditation-type-edit-feature.md`
+  - `docs/test-history-meditation-type-edit-feature.md`
 - Native iOS artifacts now include:
   - `prompts/ios-native-app-phased-plan.md`
   - `prompts/ios-native-parity-gap-phased-plan.md`
@@ -107,6 +111,7 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - Implemented vertical slices now include:
   - timer setup, active runtime, sounds, and session logging
   - History manual-log creation for both fixed-duration and `open-ended` sessions, with truthful `Planned: Open-ended` history copy and badge presentation
+  - History meditation-type correction that is now explicitly limited to `manual log` entries, with a discoverable web correction path and backend enforcement for existing-record trustworthiness
   - dedicated prerecorded `custom play` runtime with persisted recovery
   - managed custom-play media library foundations with backend metadata, frontend fallback metadata, and clearer Practice-screen selection states
   - playlist runtime with linked `custom play` audio, optional small gaps, and per-item logging
@@ -364,6 +369,22 @@ This file tracks the durable repository state rather than a prompt-by-prompt his
 - `./scripts/pipeline.sh verify`
 
 ## Latest verification
+- History meditation-type edit implementation verified on 2026-04-17:
+  - `npm run typecheck` passed
+  - `npm run lint` passed
+  - `npm run test` passed with 47 files and 342 tests
+  - `npm run build` passed
+  - `mvn -Dmaven.repo.local=../local-data/m2 -Dtest=SessionLogControllerTest test` in `backend/` passed with 13 backend tests
+  - `swift test --package-path ios-native` passed
+  - focused automated coverage confirms:
+    - the web History screen exposes `Change Meditation Type` only for eligible `manual log` entries
+    - manual-log edits keep duration and session time unchanged while updating the stored meditation type
+    - backend `session log` upsert accepts meditation-type-only edits for existing manual logs
+    - backend rejects meditation-type rewrites for saved `auto log` records and rejects broader rewrites for saved manual logs
+  - manual browser QA was not run during this bundle, so narrow-screen layout polish for the inline History edit affordance remains the main residual UI risk
+- Review outcome:
+  - no blocker, high, or medium findings were recorded for the History meditation-type edit slice
+
 - Sankalpa recurring-cadence implementation verified on 2026-04-16:
   - `npm run typecheck` passed
   - `npm run lint` passed

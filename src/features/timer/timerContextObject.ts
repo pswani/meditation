@@ -22,6 +22,11 @@ import type { TimerSettings } from '../../types/timer';
 import type { createInitialTimerState } from './timerReducer';
 import type { ManualLogInput, ManualLogSaveResult } from '../../utils/manualLog';
 
+export interface SessionLogMeditationTypeEditResult {
+  readonly updated: boolean;
+  readonly feedbackMessage: string;
+}
+
 export interface TimerContextValue {
   readonly settings: TimerSettings;
   readonly validation: ReturnType<typeof createInitialTimerState>['validation'];
@@ -79,6 +84,11 @@ export interface TimerContextValue {
   readonly clearPlaylistRunOutcome: () => void;
   readonly reportPlaylistRuntimeIssue: (message: string | null) => void;
   readonly addManualLog: (input: ManualLogInput) => Promise<ManualLogSaveResult>;
+  readonly canChangeSessionLogMeditationType: (entry: SessionLog) => boolean;
+  readonly updateSessionLogMeditationType: (
+    entry: SessionLog,
+    meditationType: SessionLog['meditationType']
+  ) => SessionLogMeditationTypeEditResult;
   readonly startSession: (settings?: TimerSettings) => boolean;
   readonly pauseSession: () => void;
   readonly resumeSession: () => void;

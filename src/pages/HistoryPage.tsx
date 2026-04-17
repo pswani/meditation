@@ -85,13 +85,24 @@ function getSessionTimeRangeLabels(entry: Pick<SessionLog, 'startedAt' | 'endedA
 }
 
 export default function HistoryPage() {
-  const { sessionLogs, addManualLog, isSessionLogsLoading, isSessionLogSyncing, sessionLogSyncError } = useTimer();
+  const {
+    sessionLogs,
+    addManualLog,
+    canChangeSessionLogMeditationType,
+    updateSessionLogMeditationType,
+    isSessionLogsLoading,
+    isSessionLogSyncing,
+    sessionLogSyncError,
+  } = useTimer();
   const navigate = useNavigate();
   const [manualLog, setManualLog] = useState<ManualLogInput>(initialManualLog);
   const [manualLogOpen, setManualLogOpen] = useState(() => sessionLogs.length === 0);
   const [errors, setErrors] = useState<ManualLogValidationResult['errors']>({});
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [historyFeedbackMessage, setHistoryFeedbackMessage] = useState<string | null>(null);
+  const [editingMeditationTypeLogId, setEditingMeditationTypeLogId] = useState<string | null>(null);
+  const [editedMeditationType, setEditedMeditationType] = useState<SessionLog['meditationType']>('Vipassana');
   const [isSavingManualLog, setIsSavingManualLog] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | SessionLog['source']>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | SessionLog['status']>('all');
@@ -142,10 +153,38 @@ export default function HistoryPage() {
     }
   }
 
+  function startMeditationTypeEdit(entry: SessionLog) {
+    setHistoryFeedbackMessage(null);
+    setEditingMeditationTypeLogId(entry.id);
+    setEditedMeditationType(entry.meditationType);
+  }
+
+  function cancelMeditationTypeEdit() {
+    setEditingMeditationTypeLogId(null);
+    setHistoryFeedbackMessage(null);
+  }
+
+  function saveMeditationTypeEdit(entry: SessionLog) {
+    const result = updateSessionLogMeditationType(entry, editedMeditationType);
+    setHistoryFeedbackMessage(result.feedbackMessage);
+    if (result.updated) {
+      setEditingMeditationTypeLogId(null);
+    }
+  }
+
   return (
     <section className="page-card history-screen">
       <h2 className="page-title">History</h2>
-      <p className="page-description">View recent session log entries and add manual log entries for off-app practice.</p>
+      <p className="page-description">
+        View recent session log entries and add manual log entries for off-app practice. Only manual logs can change
+        meditation type later; auto-created history stays read-only.
+      </p>
+
+      {historyFeedbackMessage ? (
+        <div className="status-banner" role="status">
+          <p>{historyFeedbackMessage}</p>
+        </div>
+      ) : null}
 
       <section className="history-log-panel">
         <h3 className="section-title">Recent Session Logs</h3>
@@ -216,6 +255,8 @@ export default function HistoryPage() {
               const showRunContext = Boolean(runClusterKey) && runClusterKey !== previousRunClusterKey;
               const runStartedAt = entry.playlistRunStartedAt ?? entry.startedAt;
               const sessionTimeRange = getSessionTimeRangeLabels(entry);
+              const canEditMeditationType = canChangeSessionLogMeditationType(entry);
+              const isEditingMeditationType = editingMeditationTypeLogId === entry.id;
 
               return (
                 <li key={entry.id} className="history-item">
@@ -247,6 +288,45 @@ export default function HistoryPage() {
                       <span>Completed: {formatDurationLabel(entry.completedDurationSeconds)}</span>
                       <span>Planned: {formatPlannedDurationLabel(entry)}</span>
                     </div>
+
+                    {canEditMeditationType ? (
+                      isEditingMeditationType ? (
+                        <div className="history-edit-panel">
+                          <label>
+                            <span>Meditation type</span>
+                            <select
+                              value={editedMeditationType}
+                              onChange={(event) => setEditedMeditationType(event.target.value as SessionLog['meditationType'])}
+                            >
+                              {meditationTypes.map((meditationType) => (
+                                <option key={meditationType} value={meditationType}>
+                                  {meditationType}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <p className="hint-text">Only this manual log changes here. Duration and session time stay unchanged.</p>
+                          <div className="timer-actions">
+                            <button
+                              type="button"
+                              onClick={() => saveMeditationTypeEdit(entry)}
+                              disabled={editedMeditationType === entry.meditationType}
+                            >
+                              Save Meditation Type
+                            </button>
+                            <button type="button" className="secondary" onClick={cancelMeditationTypeEdit}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="history-edit-panel">
+                          <button type="button" className="secondary" onClick={() => startMeditationTypeEdit(entry)}>
+                            Change Meditation Type
+                          </button>
+                        </div>
+                      )
+                    ) : null}
                   </div>
 
                   <div className="history-item-side">
