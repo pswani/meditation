@@ -16,13 +16,13 @@ Use the repo from the entrypoint that matches your task:
   - `ios-native/MeditationNative.xcodeproj` for app development, simulator builds, device runs, and UI tests
   - `ios-native/Package.swift` for the shared `MeditationNativeCore` package and its focused core tests
 - Durable product and operational docs:
-  - `docs/`
+  - `docs/README.md`
   - `requirements/`
   - `AGENTS.md`
   - `PLANS.md`
 - Repo scripts and operator flows:
   - `scripts/`
-- Prompt bundles and phased plans:
+- Prompt runner and any explicitly requested bundles:
   - `prompts/`
 - Ignored local runtime state created by builds, scripts, or verification:
   - `local-data/`

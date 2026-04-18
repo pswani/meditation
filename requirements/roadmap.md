@@ -32,10 +32,5 @@
 - Local-first persistence and offline queue behavior remain part of the current v1 baseline, while implemented backend-backed flows already use the real REST boundaries in this repo.
 
 ## Planned native iOS track
-- Native iOS milestone bundles are prepared for a separate iPhone app under `ios-native/`.
-- Planned execution order:
-  - `ios-native-foundation-feature-bundle-with-branching`
-  - `ios-native-timer-history-feature-bundle-with-branching`
-  - `ios-native-custom-play-playlist-feature-bundle-with-branching`
-  - `ios-native-summary-sankalpa-feature-bundle-with-branching`
-  - `ios-native-sync-polish-feature-bundle-with-branching`
+- Native iOS remains a separate iPhone app track under `ios-native/`.
+- Plan future native slices from the current product gaps and current repo state rather than from retained bundle history.

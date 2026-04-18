@@ -1,36 +1,17 @@
 # Prompt Bundles
 
-This folder stores reusable Codex prompt bundles when a new bounded milestone needs a structured implementation workflow.
+This folder stores the reusable runner plus any explicitly requested prompt bundles for bounded milestone work.
 
-Current status:
-
-- Bundle folders currently available in-repo:
-  - `ios-native-home-practice-navigation-defects-feature-bundle-with-branching`
-  - `ios-native-history-goals-build-branding-defects-feature-bundle-with-branching`
-  - `ios-native-lock-screen-audio-mixing-feature-bundle-with-branching`
-  - `web-manual-log-open-ended-feature-bundle-with-branching`
-  - `sankalpa-threshold-frequency-goals-feature-bundle-with-branching`
-  - `backend-test-h2-isolation-feature-bundle-with-branching`
-- Older bundle history remains in Git history and in the durable docs under `requirements/` and `docs/`.
-
-Phased planning files currently available in-repo:
-
-- `defects-enhancements-16Apr-phased-plan.md`
-- `production-grade-hardening-phased-plan.md`
-- `expert-review-remediation-phased-plan.md`
-- `ios-native-app-phased-plan.md`
-- `ios-native-parity-gap-phased-plan.md`
-- `ios-native-review-followup-phased-plan.md`
-
-Reusable runner template:
+## Current contents
 
 - `run-milestone-bundle.md`
+- `README.md`
 
-Additional usage guide:
+There are currently no retained prompt-bundle folders or phased-plan files in this worktree.
 
-- `ios-native-app-step-by-step.md`
+## When to add a new bundle
 
-When creating the next bundle:
+Create a new bundle under `prompts/` only when the user explicitly wants a reusable, staged workflow.
 
 1. Create a new folder under `prompts/` using a clear milestone-oriented name.
 2. Add a bounded prompt sequence in sorted order.
@@ -42,3 +23,4 @@ When creating the next bundle:
    - `04-fix-*.md`
    - `99-merge-branch.md`
 4. Keep all prompt guidance aligned with `AGENTS.md`, `PLANS.md`, and the durable requirements docs.
+5. Remove the bundle from the worktree after the work is done unless there is a clear reason to keep it.

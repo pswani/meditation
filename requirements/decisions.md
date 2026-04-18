@@ -244,6 +244,8 @@
 - Keep the root `README.md` current-state oriented and portable:
   - surface the real workspace entrypoints for web, backend, native iOS, docs, scripts, prompts, and `local-data/`
   - avoid absolute local filesystem links in durable repo docs
+- Keep the docs surface focused on durable product, platform, and operator references rather than historical execution records.
+- Keep `requirements/session-handoff.md` concise and current instead of turning it into a running execution log.
 - Keep the repo's baseline toolchain guidance minimal and machine-readable:
   - `.nvmrc` pins the expected Node major version for the web workspace
   - `package.json` `engines` captures the supported Node and recommended npm baseline for contributor workflows
@@ -268,6 +270,7 @@
 - Keep `vite.config.ts` as the only Vite config file and reserve its `/api` proxy for local development only.
 - Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
 - Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
+- Do not retain historical prompt-bundle inventories in durable repo docs once the work is complete.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep offline app cache versioning build-derived:
   - compute one frontend asset version in `vite.config.ts`
@@ -306,4 +309,4 @@
 - Keep the native iOS README current-state oriented once the main milestone bundle sequence has landed, instead of leaving stale milestone-step framing in operator-facing setup guidance.
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Author the next bounded prompt bundle before running the milestone runner again; the current bundled slices are now complete.
+- Create a new bounded prompt bundle only when a future task explicitly benefits from a reusable staged workflow.
