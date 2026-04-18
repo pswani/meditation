@@ -13,6 +13,7 @@ Use these first when you need the current product, architecture, UX, or operator
 - `sync-contract.md`
 - `media-registration-scripts.md`
 - `build-deploy-pipeline-review.md`
+- `codex-staged-workflow-design.md`
 - `mac-mini-production-runbook.md`
 - `ios-safari-real-device-qa-checklist.md`
 - `ios-native/README.md`

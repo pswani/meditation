@@ -34,17 +34,22 @@ This file is the concise handoff for the repository as it exists now. Use it as 
 
 ## Prompt status
 
-- `prompts/` currently keeps only the reusable runner and its README:
+- `prompts/` now keeps the reusable staged workflow surface:
+  - `prompts/run-pile-planning-workflow.md`
+  - `prompts/run-group-workflow.md`
   - `prompts/run-milestone-workflow.md`
+  - `prompts/reasoning-effort-profiles.md`
+  - `prompts/piles/README.md`
   - `prompts/README.md`
-- Historical staged prompt-folder execution details are not retained in the worktree.
-- Future staged prompt folders should use domain use-case names such as `timer-active-session` and should usually group 2-4 implementation prompts before one consolidated review, test, and fix sequence.
+- `scripts/codex/` now keeps repo-local Codex CLI helper scripts for pile planning, group execution, and bundle execution.
+- Historical generated pile execution details are not retained in the worktree.
+- Future staged workflows should use the `Pile -> Group -> Bundle` structure, group-related work at the group level, and keep bundle folders named as domain use cases such as `timer-active-session`.
 
 ## Current gaps and likely next work
 
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.
 - Real-device QA still matters for iPhone Safari timer completion behavior and native iPhone notification or lock-screen audio edge cases.
-- If new staged prompt folders are needed later, create fresh ones under `prompts/` rather than assuming older folders still exist.
+- If new staged workflows are needed later, create fresh pile folders under `prompts/piles/` rather than assuming older generated piles still exist.
 
 ## Working notes for the next agent
 

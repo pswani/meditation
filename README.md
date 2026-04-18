@@ -22,7 +22,7 @@ Use the repo from the entrypoint that matches your task:
   - `PLANS.md`
 - Repo scripts and operator flows:
   - `scripts/`
-- Prompt runner and any explicitly requested bundles:
+- Prompt runners, reasoning profiles, and generated staged workflow artifacts:
   - `prompts/`
 - Ignored local runtime state created by builds, scripts, or verification:
   - `local-data/`
@@ -353,9 +353,10 @@ README.md                Root workspace map and workflow guide
 backend/                 Spring Boot + H2 backend foundation
 docs/                    Product, architecture, UX, iOS, and ops docs
 ios-native/              Native iPhone app project plus shared core package
-prompts/                 Reusable prompt bundles and phased implementation plans
+prompts/                 Staged workflow runners, reasoning profiles, and generated pile/group/bundle plans
 requirements/            Intent, roadmap, decisions, and current-state notes
 scripts/                 Setup, media, verification, packaging, and operator helpers
+  codex/                Repo-local Codex CLI workflow helpers
 src/
   app/                  App shell and navigation metadata
   features/

@@ -269,10 +269,18 @@
   - `ios-native/Package.swift` exists for the shared `MeditationNativeCore` package and its focused core tests, not as a second canonical app build path
 - Keep `vite.config.ts` as the only Vite config file and reserve its `/api` proxy for local development only.
 - Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
-- Keep optional operator-authored staged prompt folders under `prompts/` only when explicitly requested.
-- Name staged prompt folders as domain use cases in the form `<domain>-<use-case>` instead of packaging labels such as `*-bundle`.
-- Default staged prompt folders to one coherent vertical slice with 2-4 implementation prompts followed by one consolidated review, test, fix, and merge sequence unless the task explicitly justifies another cadence.
-- Do not retain historical staged prompt-folder inventories in durable repo docs once the work is complete.
+- Keep the durable AI workflow design in `docs/codex-staged-workflow-design.md`.
+- Keep optional operator-authored staged workflow artifacts under `prompts/` only when explicitly requested.
+- Organize staged workflow artifacts as `prompts/piles/<pile>/<group>/<bundle>`, where:
+  - the pile owns the integration branch batch
+  - the group is the main execution and verification unit
+  - the bundle is the implementation unit
+- Name bundle folders as domain use cases in the form `<domain>-<use-case>` instead of packaging labels such as `*-bundle`.
+- Default each bundle to one coherent vertical slice with 2-4 implementation prompts followed by local review, test, fix, and merge steps unless the task explicitly justifies another cadence.
+- Default each group to one Codex thread and only split a bundle into its own thread when the group plan explicitly justifies it.
+- Keep reusable runners at the top level of `prompts/`, including pile-planning, group, and bundle runners.
+- Keep repo-local reasoning-effort profiles in `prompts/reasoning-effort-profiles.md` and repo-local CLI helpers in `scripts/codex/`.
+- Do not retain historical generated pile inventories in durable repo docs once the work is complete.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep offline app cache versioning build-derived:
   - compute one frontend asset version in `vite.config.ts`
@@ -311,4 +319,5 @@
 - Keep the native iOS README current-state oriented once the main staged workflow sequence has landed, instead of leaving stale milestone-step framing in operator-facing setup guidance.
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
 - Keep staged workflow history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Create a new bounded staged prompt folder only when a future task explicitly benefits from a reusable staged workflow.
+- Remove temporary pile folders, task-specific ExecPlans, and execution traces from the integration branch before merging to `main`, once durable outcomes have been folded into the long-lived docs.
+- Create a new bounded pile, group, and bundle workflow only when a future task explicitly benefits from a reusable staged workflow.
