@@ -35,15 +35,16 @@ This file is the concise handoff for the repository as it exists now. Use it as 
 ## Prompt status
 
 - `prompts/` currently keeps only the reusable runner and its README:
-  - `prompts/run-milestone-bundle.md`
+  - `prompts/run-milestone-workflow.md`
   - `prompts/README.md`
-- Historical prompt-bundle execution details are not retained in the worktree.
+- Historical staged prompt-folder execution details are not retained in the worktree.
+- Future staged prompt folders should use domain use-case names such as `timer-active-session` and should usually group 2-4 implementation prompts before one consolidated review, test, and fix sequence.
 
 ## Current gaps and likely next work
 
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.
 - Real-device QA still matters for iPhone Safari timer completion behavior and native iPhone notification or lock-screen audio edge cases.
-- If new milestone bundles are needed later, create fresh ones under `prompts/` rather than assuming older bundle folders still exist.
+- If new staged prompt folders are needed later, create fresh ones under `prompts/` rather than assuming older folders still exist.
 
 ## Working notes for the next agent
 

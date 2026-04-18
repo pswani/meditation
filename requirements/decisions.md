@@ -269,8 +269,10 @@
   - `ios-native/Package.swift` exists for the shared `MeditationNativeCore` package and its focused core tests, not as a second canonical app build path
 - Keep `vite.config.ts` as the only Vite config file and reserve its `/api` proxy for local development only.
 - Keep node-side TypeScript build outputs under ignored local storage so config compilation does not recreate tracked root artifacts such as `vite.config.js` or `tsconfig.node.tsbuildinfo`.
-- Keep optional operator-authored prompt bundles under `prompts/` only when explicitly requested, and keep them focused on bounded branch, implement, review, test, fix, and merge sequences.
-- Do not retain historical prompt-bundle inventories in durable repo docs once the work is complete.
+- Keep optional operator-authored staged prompt folders under `prompts/` only when explicitly requested.
+- Name staged prompt folders as domain use cases in the form `<domain>-<use-case>` instead of packaging labels such as `*-bundle`.
+- Default staged prompt folders to one coherent vertical slice with 2-4 implementation prompts followed by one consolidated review, test, fix, and merge sequence unless the task explicitly justifies another cadence.
+- Do not retain historical staged prompt-folder inventories in durable repo docs once the work is complete.
 - Keep media registration script-driven so sound labels, playback mappings, fallback media catalogs, and Flyway migrations stay consistent.
 - Keep offline app cache versioning build-derived:
   - compute one frontend asset version in `vite.config.ts`
@@ -306,7 +308,7 @@
   - `requirements/roadmap.md`
   - `requirements/decisions.md`
   - `requirements/session-handoff.md`
-- Keep the native iOS README current-state oriented once the main milestone bundle sequence has landed, instead of leaving stale milestone-step framing in operator-facing setup guidance.
+- Keep the native iOS README current-state oriented once the main staged workflow sequence has landed, instead of leaving stale milestone-step framing in operator-facing setup guidance.
 - Remove prompt-specific review files, old prompt runners, and stale ExecPlans once their durable outcomes have been folded back into the long-lived docs.
-- Keep remediation bundle history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
-- Create a new bounded prompt bundle only when a future task explicitly benefits from a reusable staged workflow.
+- Keep staged workflow history in Git commits and merge commits rather than rebuilding a second prompt-by-prompt documentation layer after cleanup.
+- Create a new bounded staged prompt folder only when a future task explicitly benefits from a reusable staged workflow.

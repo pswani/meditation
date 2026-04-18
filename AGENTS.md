@@ -221,22 +221,27 @@ After each meaningful implementation slice:
 - update `requirements/session-handoff.md` when the current repo state, remaining gaps, or recommended next slice materially changes
 - keep `requirements/session-handoff.md` concise and current rather than appending step-by-step history
 
-## Prompt bundle expectations
+## Staged prompt expectations
 When creating reusable prompts for future work:
 - place them under `prompts/`
-- keep each bundle focused on one meaningful vertical slice
-- prefer one folder per slice using a clear suffix such as `-feature`
+- keep each staged prompt folder focused on one meaningful vertical slice
+- prefer one folder per slice named as a domain use case in the form `<domain>-<use-case>`
 - include the same bounded sequence unless the user explicitly wants a different flow:
   - `00-create-branch.md`
   - `01-implement-*.md`
-  - `02-review-*.md`
-  - `03-test-*.md`
-  - `04-fix-*.md`
+  - `02-implement-*.md`
+  - `03-implement-*.md`
+  - `04-review-*.md`
+  - `05-test-*.md`
+  - `06-fix-*.md`
   - `99-merge-branch.md`
-- include or update a reusable parameterized runner prompt when it helps execute bundles consistently
+- include or update a reusable parameterized runner prompt when it helps execute staged workflows consistently
 - make each prompt file self-contained about required docs, scope, verification, documentation updates, and expected commit style
-- keep prompt bundles production-aware and aligned with the current repo workflow instead of reviving removed dev-only paths
-- avoid generating prompt bundles that are overly granular, overlapping, or disconnected from the product roadmap.  Use a sizable chunk of work per bundle.  Include multiple implementation prompts per slice of work within a bundle as appropriate.
+- keep staged prompt workflows production-aware and aligned with the current repo workflow instead of reviving removed dev-only paths
+- avoid generating staged prompt folders that are overly granular, overlapping, or disconnected from the product roadmap
+- default to 2-4 implementation prompts that together deliver one real user journey before the consolidated review, test, and fix prompts
+- use repo product terminology in folder names, such as `timer-active-session`, `custom-play-start-session`, or `sankalpa-track-observance`
+- avoid folder names centered on packaging labels or implementation layers, such as `*-bundle`, `phase-*`, `ui-*`, or `api-*`
 
 ## Done means
 Before considering work complete:
