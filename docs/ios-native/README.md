@@ -167,6 +167,18 @@ If you do not know the exact simulator name, list available destinations in Xcod
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
 ```
 
+The repo helper wraps the simulator build, full simulator test run, and shared-core SwiftPM tests:
+
+```bash
+./scripts/test-iPhone-simulator.sh
+```
+
+It fails on the first unsuccessful command and defaults to the checked-in simulator UUID. To use another installed simulator, set `MEDITATION_IOS_SIMULATOR_DESTINATION` to a destination from `xcodebuild -showdestinations`, for example:
+
+```bash
+MEDITATION_IOS_SIMULATOR_DESTINATION="platform=iOS Simulator,name=<Your Installed iPhone Simulator>" ./scripts/test-iPhone-simulator.sh
+```
+
 For the shared core package only, you can also run:
 
 ```bash

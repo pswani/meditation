@@ -544,8 +544,10 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -560,8 +562,10 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -639,7 +643,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.meditation.native.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MeditationNative.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MeditationNative";
 			};
 			name = Debug;
@@ -660,7 +666,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.meditation.native.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MeditationNative.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MeditationNative";
 			};
 			name = Release;
@@ -680,7 +688,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.meditation.native.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = MeditationNative;
 			};
 			name = Debug;
@@ -700,7 +710,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.meditation.native.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = MeditationNative;
 			};
 			name = Release;

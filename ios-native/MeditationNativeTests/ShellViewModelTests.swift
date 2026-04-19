@@ -277,9 +277,14 @@ final class ShellViewModelTests: XCTestCase {
 
         let (viewModel, notificationScheduler, _, bridge) = try makeViewModel(snapshot: snapshot)
 
+        while notificationScheduler.scheduledDates.isEmpty {
+            await Task.yield()
+        }
+        let restoredScheduleCount = notificationScheduler.scheduledDates.count
+
         viewModel.handleScenePhaseChange(to: .inactive)
 
-        while notificationScheduler.scheduledDates.isEmpty {
+        while notificationScheduler.scheduledDates.count <= restoredScheduleCount {
             await Task.yield()
         }
 
