@@ -160,6 +160,7 @@
   - for longer lock-screen spans, rely on the existing local-notification sound plus foreground catch-up instead of claiming guaranteed app-driven end-bell playback after suspension
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
+  - schedule a fixed-timer completion timeout from wall-clock remaining time so the selected end bell is attempted when an unfocused browser page remains runnable, even if regular interval ticks are throttled
   - force timer catch-up evaluation on `visibilitychange`/`pageshow` foreground return
   - coalesce overlapping foreground events so one foreground return produces one catch-up pass
   - show calm Safari-specific guidance only in likely iPhone Safari browser contexts

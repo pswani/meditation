@@ -67,7 +67,18 @@ import {
   serializeActiveCustomPlayPersistence,
   type TimerBootstrap,
 } from './timerProviderHelpers';
+import { getActiveSessionElapsedMilliseconds } from './time';
 import { useTimerSyncEffects } from './useTimerSyncEffects';
+
+type TimerSyncTickSource = 'interval' | 'scheduled-completion' | 'foreground-return';
+
+function getFixedTimerCompletionDelayMs(session: ActiveSession, nowMs: number): number | null {
+  if (session.timerMode !== 'fixed' || session.intendedDurationSeconds === null) {
+    return null;
+  }
+
+  return Math.max(0, session.intendedDurationSeconds * 1000 - getActiveSessionElapsedMilliseconds(session, nowMs));
+}
 
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
   const {
@@ -417,7 +428,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
   });
 
   useEffect(() => {
-    function syncTimerClockAndSessionState(source: 'interval' | 'foreground-return'): void {
+    function syncTimerClockAndSessionState(source: TimerSyncTickSource): void {
       const nowMs = Date.now();
       setActiveSessionNowMs(nowMs);
       dispatch({ type: 'SYNC_TICK', nowMs, source });
@@ -443,6 +454,13 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const intervalId = window.setInterval(() => {
       syncTimerClockAndSessionState('interval');
     }, 500);
+    const completionDelayMs = getFixedTimerCompletionDelayMs(state.activeSession, Date.now());
+    const completionTimeoutId =
+      completionDelayMs === null
+        ? null
+        : window.setTimeout(() => {
+            syncTimerClockAndSessionState('scheduled-completion');
+          }, completionDelayMs);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -458,6 +476,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       window.clearInterval(intervalId);
+      if (completionTimeoutId !== null) {
+        window.clearTimeout(completionTimeoutId);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pageshow', handlePageShow);
     };

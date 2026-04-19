@@ -18,7 +18,7 @@ export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'REPLACE_SESSION_LOGS'; payload: readonly SessionLog[] }
   | { type: 'START_SESSION'; nowMs: number; settings?: TimerSettings }
-  | { type: 'SYNC_TICK'; nowMs: number; source?: 'interval' | 'foreground-return' }
+  | { type: 'SYNC_TICK'; nowMs: number; source?: 'interval' | 'scheduled-completion' | 'foreground-return' }
   | { type: 'PAUSE_SESSION'; nowMs: number }
   | { type: 'RESUME_SESSION'; nowMs: number }
   | { type: 'END_EARLY'; nowMs: number }
