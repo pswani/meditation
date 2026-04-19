@@ -24,6 +24,11 @@ export function describeRecurringCadence(goal: SankalpaGoal): string {
 
 export function describeSankalpa(goal: SankalpaGoal): string {
   if (goal.goalType === 'observance-based') {
+    if (isRecurringCadenceGoal(goal)) {
+      const cadenceWeeks = getSankalpaCadenceWeeks(goal) ?? 1;
+      return `${goal.observanceLabel} ${pluralize(goal.qualifyingDaysPerWeek ?? 0, 'day')} each week for ${pluralize(cadenceWeeks, 'week')}`;
+    }
+
     return `${goal.observanceLabel} for ${goal.days} day${goal.days === 1 ? '' : 's'}`;
   }
 
@@ -40,6 +45,10 @@ export function describeSankalpa(goal: SankalpaGoal): string {
 
 export function progressDetail(progress: SankalpaProgress): string {
   if (progress.goal.goalType === 'observance-based') {
+    if (isRecurringCadenceGoal(progress.goal)) {
+      return `${progress.metRecurringWeekCount} / ${progress.targetRecurringWeekCount} weeks met`;
+    }
+
     return `${progress.matchedObservanceCount} / ${progress.targetObservanceCount} observed dates`;
   }
 
@@ -56,6 +65,21 @@ export function progressDetail(progress: SankalpaProgress): string {
 
 export function remainingDetail(progress: SankalpaProgress): string {
   if (progress.goal.goalType === 'observance-based') {
+    if (isRecurringCadenceGoal(progress.goal)) {
+      const activeWeek = progress.recurringWeeks.find((week) => week.status === 'active');
+      const missedWeeks = progress.recurringWeeks.filter((week) => week.status === 'missed').length;
+      if (activeWeek) {
+        return `Current week ${activeWeek.qualifyingDayCount} / ${activeWeek.requiredQualifyingDayCount} observed days${missedWeeks > 0 ? ` · ${missedWeeks} missed` : ''}`;
+      }
+
+      const upcomingWeeks = progress.recurringWeeks.filter((week) => week.status === 'upcoming').length;
+      if (upcomingWeeks > 0) {
+        return `${upcomingWeeks} upcoming week${upcomingWeeks === 1 ? '' : 's'}${missedWeeks > 0 ? ` · ${missedWeeks} missed` : ''}`;
+      }
+
+      return `${missedWeeks} missed week${missedWeeks === 1 ? '' : 's'}`;
+    }
+
     return `${progress.pendingObservanceCount} pending · ${progress.missedObservanceCount} missed`;
   }
 
@@ -85,6 +109,10 @@ export function remainingDetail(progress: SankalpaProgress): string {
 
 export function filterDetail(goal: SankalpaGoal): string {
   if (goal.goalType === 'observance-based') {
+    if (isRecurringCadenceGoal(goal)) {
+      return 'Manual observance tracking · weekly cadence';
+    }
+
     return 'Manual observance tracking';
   }
 

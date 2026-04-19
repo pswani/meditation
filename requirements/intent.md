@@ -24,5 +24,6 @@ Here are my use cases.
 
 5.3 Either 5.1 or 5.2 at specific times of the day (morning, afternoon, evening, night)
 5.4 Manual observance-based sankalpa in Y days, such as brahmacharya or meal before 7 PM, with explicit per-date success or failure marking
+5.5 Manual observance-based sankalpa with weekly cadence, such as Gym 5 observed days per week for 4 weeks
 
 6. Playlist: Sequence a few meditations one after the other.

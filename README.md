@@ -98,7 +98,9 @@ Machine-readable repo baselines:
   - restoring archived goals back into their derived active, completed, or expired sections
   - deleting archived goals with explicit confirmation and queue-backed stale-delete recovery
   - manual `observance-based` goals for disciplines the app cannot infer from meditation data
+  - weekly observance goals such as Gym 5 observed days per week for 4 weeks
   - per-date observance check-ins with observed, missed, and pending states
+  - week-grouped daily observance evidence on active goals
   - backend-backed archived-state persistence with local cache fallback
 
 ## Confirmed Full-Stack Gaps
@@ -133,6 +135,7 @@ The app supports a focused meditation practice workflow:
 - sankalpa goal tracking
   - meditation-derived goals from `session log` history
   - manual observance goals such as brahmacharya or meal cutoffs
+  - weekly manual observance goals such as gym attendance
 
 Implemented primary screens:
 

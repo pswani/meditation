@@ -764,6 +764,10 @@ button:disabled {
   align-items: center;
 }
 
+.compact-actions {
+  margin-top: 0.2rem;
+}
+
 .practice-tools-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -968,6 +972,49 @@ button:disabled {
   color: var(--muted);
   display: grid;
   gap: 0.45rem;
+}
+
+.observance-tracker {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.observance-week-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.observance-week {
+  border-top: 1px solid var(--border);
+  padding-top: 0.55rem;
+}
+
+.observance-week > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.observance-week-count {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.observance-list {
+  margin-top: 0.5rem;
+}
+
+.observance-row {
+  gap: 0.7rem;
+}
+
+.observance-row select {
+  min-width: 8.25rem;
 }
 
 .manual-log-disclosure {

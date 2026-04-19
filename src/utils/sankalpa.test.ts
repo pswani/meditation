@@ -116,6 +116,48 @@ describe('sankalpa helpers', () => {
     expect(goal.observanceRecords).toEqual([]);
   });
 
+  it('creates gym-style observance sankalpas with weekly cadence fields', () => {
+    const goal = createSankalpaGoal(
+      {
+        goalType: 'observance-based',
+        cadenceMode: 'weekly',
+        targetValue: 99,
+        days: 7,
+        weeks: 4,
+        qualifyingDaysPerWeek: 5,
+        meditationType: '',
+        timeOfDayBucket: '',
+        observanceLabel: 'Gym',
+      },
+      new Date(localIso(2026, 3, 5, 8, 0))
+    );
+
+    expect(goal.goalType).toBe('observance-based');
+    expect(goal.observanceLabel).toBe('Gym');
+    expect(goal.targetValue).toBe(5);
+    expect(goal.days).toBe(28);
+    expect(goal.qualifyingDaysPerWeek).toBe(5);
+    expect(goal.observanceRecords).toEqual([]);
+  });
+
+  it('validates weekly observance cadence values', () => {
+    const result = validateSankalpaDraft({
+      goalType: 'observance-based',
+      cadenceMode: 'weekly',
+      targetValue: 5,
+      days: 28,
+      weeks: 4.5,
+      qualifyingDaysPerWeek: 8,
+      meditationType: '',
+      timeOfDayBucket: '',
+      observanceLabel: 'Gym',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.weeks).toMatch(/whole number/i);
+    expect(result.errors.qualifyingDaysPerWeek).toMatch(/cannot exceed 7/i);
+  });
+
   it('derives recurring weekly cadence progress from qualifying days', () => {
     const goal: SankalpaGoal = {
       id: 'goal-recurring-duration',
@@ -379,6 +421,44 @@ describe('sankalpa helpers', () => {
       { date: '2026-04-06', status: 'missed', isFuture: false },
       { date: '2026-04-07', status: 'pending', isFuture: false },
     ]);
+  });
+
+  it('derives weekly observance progress from observed dates grouped by goal weeks', () => {
+    const goal: SankalpaGoal = {
+      id: 'goal-gym',
+      goalType: 'observance-based',
+      targetValue: 5,
+      days: 28,
+      qualifyingDaysPerWeek: 5,
+      observanceLabel: 'Gym',
+      observanceRecords: [
+        { date: '2026-04-05', status: 'observed' },
+        { date: '2026-04-06', status: 'observed' },
+        { date: '2026-04-07', status: 'observed' },
+        { date: '2026-04-08', status: 'observed' },
+        { date: '2026-04-09', status: 'observed' },
+        { date: '2026-04-12', status: 'observed' },
+        { date: '2026-04-13', status: 'missed' },
+        { date: '2026-04-14', status: 'observed' },
+      ],
+      createdAt: localIso(2026, 3, 5, 8, 0),
+    };
+
+    const progress = deriveSankalpaProgress(goal, [], new Date(localIso(2026, 3, 14, 10, 0)));
+
+    expect(progress.matchedObservanceCount).toBe(7);
+    expect(progress.missedObservanceCount).toBe(1);
+    expect(progress.targetObservanceCount).toBe(20);
+    expect(progress.metRecurringWeekCount).toBe(1);
+    expect(progress.targetRecurringWeekCount).toBe(4);
+    expect(progress.recurringWeeks).toEqual([
+      expect.objectContaining({ weekIndex: 1, qualifyingDayCount: 5, requiredQualifyingDayCount: 5, status: 'met' }),
+      expect.objectContaining({ weekIndex: 2, qualifyingDayCount: 2, requiredQualifyingDayCount: 5, status: 'active' }),
+      expect.objectContaining({ weekIndex: 3, qualifyingDayCount: 0, requiredQualifyingDayCount: 5, status: 'upcoming' }),
+      expect.objectContaining({ weekIndex: 4, qualifyingDayCount: 0, requiredQualifyingDayCount: 5, status: 'upcoming' }),
+    ]);
+    expect(progress.progressRatio).toBe(0.25);
+    expect(progress.status).toBe('active');
   });
 
   it('updates and clears observance records through the helper', () => {

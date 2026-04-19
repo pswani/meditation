@@ -16,7 +16,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - shared frontend reference values in `src/types/referenceData.ts`
 - storage, validation, summary, and API-boundary helpers in `src/utils`
 - backend-backed persistence for custom plays, playlists, sankalpas, timer settings, and session logs
-- sankalpa persistence now includes manual observance labels plus per-date observance records for `observance-based` goals
+- sankalpa persistence now includes manual observance labels, optional weekly cadence targets, and per-date observance records for `observance-based` goals
 - browser `localStorage` fallback caches and migration support for backend-backed flows, including sankalpas
 - browser-persisted last-successful snapshots for summary and managed media catalog reads
 - browser-persisted sync queue state for offline-first deferred writes
@@ -97,7 +97,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - current sankalpa REST surfaces include:
   - `/api/sankalpas`
     - accepts optional `timeZone` query input for time-of-day filter evaluation
-    - also persists manual observance labels and per-date observance records for `observance-based` goals
+    - also persists manual observance labels, optional weekly cadence targets, and per-date observance records for `observance-based` goals
 - current session-log REST surfaces include:
   - `/api/session-logs`
     - accepts optional `startAt`, `endAt`, `meditationType`, and `source` filters
@@ -199,7 +199,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - `src/features/timer/timerProviderHelpers.ts` now owns provider bootstrap, recovery, persistence-shaping, and last-used-meditation helper logic that used to sit directly inside `TimerContext`.
 - `src/features/timer/useTimerSyncEffects.ts` now owns the queue hydration, backend fetch, replay, and optimistic reconciliation side effects that used to sit directly inside `TimerContext`.
 - `src/features/sankalpa/useSankalpaProgress.ts` owns local-first sankalpa hydration, queue flushing, and offline fallback guidance.
-- `src/features/sankalpa/ObservanceTracker.tsx` owns the calm per-date observance check-in UI for `observance-based` goals.
+- `src/features/sankalpa/ObservanceTracker.tsx` owns the calm week-grouped per-date observance check-in UI for `observance-based` goals.
 - Remaining oversized route and manager modules are now decomposed into feature-local helpers, hooks, and presentational modules instead of mixing orchestration with large JSX trees:
   - `src/features/sankalpa/` now owns the summary hook plus section, summary, and editor subcomponents used by `SankalpaPage`
   - `src/features/customPlays/` now separates media-catalog loading, form rendering, and collection rendering for `CustomPlayManager`

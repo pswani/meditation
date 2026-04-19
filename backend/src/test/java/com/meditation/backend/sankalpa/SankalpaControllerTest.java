@@ -380,6 +380,47 @@ class SankalpaControllerTest {
   }
 
   @Test
+  void upsertsWeeklyObservanceGoalsFromManualCheckIns() throws Exception {
+    mockMvc.perform(put("/api/sankalpas/goal-gym")
+            .queryParam("timeZone", "America/Chicago")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-gym",
+                  "goalType": "observance-based",
+                  "targetValue": 5,
+                  "days": 28,
+                  "qualifyingDaysPerWeek": 5,
+                  "observanceLabel": "Gym",
+                  "observanceRecords": [
+                    { "date": "2026-04-05", "status": "observed" },
+                    { "date": "2026-04-06", "status": "observed" },
+                    { "date": "2026-04-07", "status": "observed" },
+                    { "date": "2026-04-08", "status": "observed" },
+                    { "date": "2026-04-09", "status": "observed" },
+                    { "date": "2026-04-12", "status": "observed" },
+                    { "date": "2026-04-13", "status": "missed" },
+                    { "date": "2026-04-14", "status": "observed" }
+                  ],
+                  "createdAt": "2026-04-05T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.goal.goalType").value("observance-based"))
+        .andExpect(jsonPath("$.goal.observanceLabel").value("Gym"))
+        .andExpect(jsonPath("$.goal.qualifyingDaysPerWeek").value(5))
+        .andExpect(jsonPath("$.matchedObservanceCount").value(7))
+        .andExpect(jsonPath("$.missedObservanceCount").value(1))
+        .andExpect(jsonPath("$.targetObservanceCount").value(20))
+        .andExpect(jsonPath("$.metRecurringWeekCount").value(1))
+        .andExpect(jsonPath("$.targetRecurringWeekCount").value(4))
+        .andExpect(jsonPath("$.recurringWeeks[0].status").value("met"))
+        .andExpect(jsonPath("$.recurringWeeks[1].qualifyingDayCount").value(2))
+        .andExpect(jsonPath("$.progressRatio").value(0.25));
+  }
+
+  @Test
   void rejectsObservanceGoalsWithDatesOutsideTheGoalWindow() throws Exception {
     mockMvc.perform(put("/api/sankalpas/goal-observance")
             .queryParam("timeZone", "America/Chicago")
@@ -394,6 +435,43 @@ class SankalpaControllerTest {
                   "observanceRecords": [
                     { "date": "2026-04-09", "status": "observed" }
                   ],
+                  "createdAt": "2026-04-05T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void rejectsInvalidWeeklyObservanceGoals() throws Exception {
+    mockMvc.perform(put("/api/sankalpas/goal-gym")
+            .queryParam("timeZone", "America/Chicago")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-gym",
+                  "goalType": "observance-based",
+                  "targetValue": 5,
+                  "days": 27,
+                  "qualifyingDaysPerWeek": 5,
+                  "observanceLabel": "Gym",
+                  "createdAt": "2026-04-05T08:00:00Z",
+                  "archived": false
+                }
+                """))
+        .andExpect(status().isBadRequest());
+
+    mockMvc.perform(put("/api/sankalpas/goal-gym")
+            .queryParam("timeZone", "America/Chicago")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "goal-gym",
+                  "goalType": "observance-based",
+                  "targetValue": 4,
+                  "days": 28,
+                  "qualifyingDaysPerWeek": 5,
+                  "observanceLabel": "Gym",
                   "createdAt": "2026-04-05T08:00:00Z",
                   "archived": false
                 }

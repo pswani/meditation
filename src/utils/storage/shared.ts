@@ -552,15 +552,15 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
     if (
       typeof candidate.observanceLabel !== 'string' ||
       candidate.observanceLabel.trim().length === 0 ||
-      candidate.targetValue !== candidate.days ||
-      typeof candidate.qualifyingDaysPerWeek !== 'undefined'
+      (qualifyingDaysPerWeek === null
+        ? candidate.targetValue !== candidate.days
+        : candidate.targetValue !== qualifyingDaysPerWeek)
     ) {
       return null;
     }
   }
 
   if (
-    candidate.goalType !== 'observance-based' &&
     qualifyingDaysPerWeek !== null &&
     candidate.days % 7 !== 0
   ) {

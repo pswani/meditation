@@ -107,7 +107,7 @@ export function isObservanceGoalType(goalType: SankalpaGoalType | '' | undefined
 }
 
 export function isRecurringCadenceGoal(goal: Pick<SankalpaGoal, 'goalType' | 'qualifyingDaysPerWeek'>): boolean {
-  return !isObservanceGoalType(goal.goalType) && Number.isInteger(goal.qualifyingDaysPerWeek) && (goal.qualifyingDaysPerWeek ?? 0) > 0;
+  return Number.isInteger(goal.qualifyingDaysPerWeek) && (goal.qualifyingDaysPerWeek ?? 0) > 0;
 }
 
 export function getSankalpaCadenceWeeks(goal: Pick<SankalpaGoal, 'days' | 'goalType' | 'qualifyingDaysPerWeek'>): number | null {
@@ -150,6 +150,9 @@ function deriveObservanceWindow(goal: SankalpaGoal, now: Date) {
   const todayKey = formatLocalDate(startOfLocalDay(now));
   const lastScheduledDate = addLocalDays(startDate, Math.max(0, goal.days - 1));
   const recordsByDate = new Map(normalizeObservanceRecords(goal.observanceRecords).map((record) => [record.date, record.status]));
+  const qualifyingDaysPerWeek = goal.qualifyingDaysPerWeek ?? null;
+  const targetRecurringWeekCount =
+    qualifyingDaysPerWeek === null ? 0 : Math.max(1, Math.round(goal.days / DAYS_PER_WEEK));
 
   let matchedObservanceCount = 0;
   let missedObservanceCount = 0;
@@ -169,13 +172,54 @@ function deriveObservanceWindow(goal: SankalpaGoal, now: Date) {
       isFuture: date > todayKey,
     };
   });
+  let metRecurringWeekCount = 0;
+  const recurringWeeks: SankalpaRecurringWeekProgress[] =
+    qualifyingDaysPerWeek === null
+      ? []
+      : Array.from({ length: targetRecurringWeekCount }, (_, weekIndex) => {
+          const weekStartDate = addLocalDays(startDate, weekIndex * DAYS_PER_WEEK);
+          const weekEndDate = addLocalDays(weekStartDate, DAYS_PER_WEEK - 1);
+          const qualifyingDayCount = Array.from({ length: DAYS_PER_WEEK }).filter((_, dayOffset) => {
+            const dayKey = formatLocalDate(addLocalDays(weekStartDate, dayOffset));
+            return recordsByDate.get(dayKey) === 'observed';
+          }).length;
+          const weekStartKey = formatLocalDate(weekStartDate);
+          const weekEndKey = formatLocalDate(weekEndDate);
+          const status: SankalpaRecurringWeekProgress['status'] =
+            qualifyingDayCount >= qualifyingDaysPerWeek
+              ? 'met'
+              : todayKey > weekEndKey
+                ? 'missed'
+                : todayKey < weekStartKey
+                  ? 'upcoming'
+                  : 'active';
+
+          if (status === 'met') {
+            metRecurringWeekCount += 1;
+          }
+
+          return {
+            weekIndex: weekIndex + 1,
+            startDate: weekStartKey,
+            endDate: weekEndKey,
+            qualifyingDayCount,
+            requiredQualifyingDayCount: qualifyingDaysPerWeek,
+            status,
+          };
+        });
 
   return {
     observanceDays,
     matchedObservanceCount,
     missedObservanceCount,
     pendingObservanceCount: observanceDays.length - matchedObservanceCount - missedObservanceCount,
-    targetObservanceCount: Math.round(goal.targetValue),
+    targetObservanceCount:
+      qualifyingDaysPerWeek === null
+        ? Math.round(goal.targetValue)
+        : qualifyingDaysPerWeek * targetRecurringWeekCount,
+    metRecurringWeekCount,
+    targetRecurringWeekCount,
+    recurringWeeks,
     deadlineAt: endOfLocalDay(lastScheduledDate).toISOString(),
   };
 }
@@ -294,7 +338,21 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
   }
 
   if (isObservanceGoalType(draft.goalType)) {
-    if (!Number.isFinite(draft.days) || draft.days <= 0) {
+    if (draft.cadenceMode === 'weekly') {
+      if (!Number.isFinite(draft.weeks) || draft.weeks <= 0) {
+        errors.weeks = 'Weeks must be greater than 0.';
+      } else if (!Number.isInteger(draft.weeks)) {
+        errors.weeks = 'Weeks must be a whole number.';
+      }
+
+      if (!Number.isFinite(draft.qualifyingDaysPerWeek) || draft.qualifyingDaysPerWeek <= 0) {
+        errors.qualifyingDaysPerWeek = 'Observed days per week must be greater than 0.';
+      } else if (!Number.isInteger(draft.qualifyingDaysPerWeek)) {
+        errors.qualifyingDaysPerWeek = 'Observed days per week must be a whole number.';
+      } else if (draft.qualifyingDaysPerWeek > DAYS_PER_WEEK) {
+        errors.qualifyingDaysPerWeek = 'Observed days per week cannot exceed 7.';
+      }
+    } else if (!Number.isFinite(draft.days) || draft.days <= 0) {
       errors.days = 'Days must be greater than 0.';
     } else if (!Number.isInteger(draft.days)) {
       errors.days = 'Days must be a whole number.';
@@ -345,13 +403,13 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
 
 export function createSankalpaGoal(draft: SankalpaDraft, now: Date): SankalpaGoal {
   const observanceGoal = isObservanceGoalType(draft.goalType);
-  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
+  const recurringCadence = draft.cadenceMode === 'weekly';
 
   return {
     id: `sankalpa-${now.getTime()}-${Math.round(Math.random() * 100000)}`,
     goalType: draft.goalType as SankalpaGoal['goalType'],
-    targetValue: observanceGoal ? draft.days : draft.targetValue,
-    days: observanceGoal ? draft.days : recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
+    targetValue: observanceGoal ? (recurringCadence ? draft.qualifyingDaysPerWeek : draft.days) : draft.targetValue,
+    days: recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
     qualifyingDaysPerWeek: recurringCadence ? draft.qualifyingDaysPerWeek : undefined,
     meditationType: observanceGoal ? undefined : draft.meditationType || undefined,
     timeOfDayBucket: observanceGoal ? undefined : draft.timeOfDayBucket || undefined,
@@ -380,13 +438,13 @@ export function createSankalpaDraftFromGoal(goal: SankalpaGoal): SankalpaDraft {
 
 export function updateSankalpaGoal(existing: SankalpaGoal, draft: SankalpaDraft): SankalpaGoal {
   const observanceGoal = isObservanceGoalType(draft.goalType);
-  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
+  const recurringCadence = draft.cadenceMode === 'weekly';
 
   return {
     ...existing,
     goalType: draft.goalType as SankalpaGoal['goalType'],
-    targetValue: observanceGoal ? draft.days : draft.targetValue,
-    days: observanceGoal ? draft.days : recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
+    targetValue: observanceGoal ? (recurringCadence ? draft.qualifyingDaysPerWeek : draft.days) : draft.targetValue,
+    days: recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
     qualifyingDaysPerWeek: recurringCadence ? draft.qualifyingDaysPerWeek : undefined,
     meditationType: observanceGoal ? undefined : draft.meditationType || undefined,
     timeOfDayBucket: observanceGoal ? undefined : draft.timeOfDayBucket || undefined,
@@ -506,7 +564,7 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
   const targetSessionCount = goal.goalType === 'session-count-based' && !recurringCadence ? goal.targetValue : 0;
   const targetDurationSeconds = goal.goalType === 'duration-based' && !recurringCadence ? Math.round(goal.targetValue * 60) : 0;
   const recurringWeekSummary =
-    recurringCadence
+    recurringCadence && goal.goalType !== 'observance-based'
       ? deriveRecurringWeeks(goal, matchingSessionLogs, now)
       : {
           recurringWeeks: [],
@@ -519,6 +577,9 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
     missedObservanceCount,
     pendingObservanceCount,
     targetObservanceCount,
+    metRecurringWeekCount: metObservanceWeekCount,
+    targetRecurringWeekCount: targetObservanceWeekCount,
+    recurringWeeks: observanceRecurringWeeks,
     deadlineAt,
   } = goal.goalType === 'observance-based'
     ? deriveObservanceWindow(goal, now)
@@ -528,29 +589,41 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
         missedObservanceCount: 0,
         pendingObservanceCount: 0,
         targetObservanceCount: 0,
+        metRecurringWeekCount: 0,
+        targetRecurringWeekCount: 0,
+        recurringWeeks: [],
         deadlineAt: deriveGoalDeadlineAt(goal, now),
       };
+  const metRecurringWeekCount =
+    goal.goalType === 'observance-based' ? metObservanceWeekCount : recurringWeekSummary.metRecurringWeekCount;
+  const targetRecurringWeekCount =
+    goal.goalType === 'observance-based' ? targetObservanceWeekCount : recurringWeekSummary.targetRecurringWeekCount;
+  const recurringWeeks = goal.goalType === 'observance-based' ? observanceRecurringWeeks : recurringWeekSummary.recurringWeeks;
 
   const targetValue =
     goal.goalType === 'duration-based'
       ? recurringCadence
-        ? recurringWeekSummary.targetRecurringWeekCount
+        ? targetRecurringWeekCount
         : targetDurationSeconds
       : goal.goalType === 'session-count-based'
         ? recurringCadence
-          ? recurringWeekSummary.targetRecurringWeekCount
+          ? targetRecurringWeekCount
           : targetSessionCount
-        : targetObservanceCount;
+        : recurringCadence
+          ? targetRecurringWeekCount
+          : targetObservanceCount;
   const progressValue =
     goal.goalType === 'duration-based'
       ? recurringCadence
-        ? recurringWeekSummary.metRecurringWeekCount
+        ? metRecurringWeekCount
         : matchedDurationSeconds
       : goal.goalType === 'session-count-based'
         ? recurringCadence
-          ? recurringWeekSummary.metRecurringWeekCount
+          ? metRecurringWeekCount
           : matchedSessionCount
-        : matchedObservanceCount;
+        : recurringCadence
+          ? metRecurringWeekCount
+          : matchedObservanceCount;
 
   const status: SankalpaStatus =
     goal.archived === true
@@ -572,9 +645,9 @@ export function deriveSankalpaProgress(goal: SankalpaGoal, sessionLogs: readonly
     matchedDurationSeconds,
     targetSessionCount,
     targetDurationSeconds,
-    metRecurringWeekCount: recurringWeekSummary.metRecurringWeekCount,
-    targetRecurringWeekCount: recurringWeekSummary.targetRecurringWeekCount,
-    recurringWeeks: recurringWeekSummary.recurringWeeks,
+    metRecurringWeekCount,
+    targetRecurringWeekCount,
+    recurringWeeks,
     matchedObservanceCount,
     missedObservanceCount,
     pendingObservanceCount,

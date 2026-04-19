@@ -917,4 +917,47 @@ describe('Sankalpa summary UX', () => {
 
     expect(screen.getByText(/1 \/ 3 observed dates/i)).toBeInTheDocument();
   });
+
+  it('creates an editable gym observance sankalpa from the preset path', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-07T12:00:00.000Z'));
+
+    render(
+      <MemoryRouter initialEntries={['/goals']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Summary' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start gym sankalpa/i }));
+
+    expect(screen.getByLabelText(/observance/i)).toHaveValue('Gym');
+    expect(screen.getByLabelText(/observed days per week/i)).toHaveValue(5);
+    expect(screen.getByLabelText(/^weeks$/i)).toHaveValue(4);
+
+    fireEvent.change(screen.getByLabelText(/observance/i), { target: { value: 'Gym strength' } });
+    fireEvent.change(screen.getByLabelText(/observed days per week/i), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText(/^weeks$/i), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
+
+    expect(screen.getByText(/gym strength 4 days each week for 3 weeks/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 \/ 3 weeks met/i)).toBeInTheDocument();
+    expect(screen.getByText(/weeks met: 0 \/ 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/week 1/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/0\/4 observed/i)).toHaveLength(3);
+
+    const todaySelect = screen.getByLabelText('Observance status for 2026-04-07');
+    const futureSelect = screen.getByLabelText('Observance status for 2026-04-08');
+
+    expect(futureSelect).toBeDisabled();
+
+    fireEvent.change(todaySelect, { target: { value: 'observed' } });
+
+    expect(screen.getByText(/observed dates: 1/i)).toBeInTheDocument();
+  });
 });

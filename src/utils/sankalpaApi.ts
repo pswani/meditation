@@ -157,12 +157,7 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
     return false;
   }
 
-  if (candidate.goalType === 'observance-based' && qualifyingDaysPerWeek !== null) {
-    return false;
-  }
-
   if (
-    candidate.goalType !== 'observance-based' &&
     qualifyingDaysPerWeek !== null &&
     days !== null &&
     days % 7 !== 0

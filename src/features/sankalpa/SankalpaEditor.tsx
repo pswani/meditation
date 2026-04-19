@@ -31,7 +31,7 @@ export function SankalpaEditor({
   onClearSaveMessage,
 }: SankalpaEditorProps) {
   const observanceGoal = isObservanceGoalType(draft.goalType);
-  const recurringCadence = !observanceGoal && draft.cadenceMode === 'weekly';
+  const recurringCadence = draft.cadenceMode === 'weekly';
 
   return (
     <section className="sankalpa-panel">
@@ -41,6 +41,31 @@ export function SankalpaEditor({
           ? 'Editing keeps this sankalpa in its existing goal window, so progress and deadline stay anchored to the original creation date.'
           : 'Meditation-based goals can track either a total target or a recurring weekly cadence. Observance goals use manual per-date check-ins for observances the app cannot infer automatically.'}
       </p>
+      {!editingGoalId ? (
+        <div className="timer-actions compact-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              onClearSaveMessage();
+              onChangeDraft((current) => ({
+                ...current,
+                goalType: 'observance-based',
+                cadenceMode: 'weekly',
+                targetValue: 5,
+                days: 28,
+                weeks: 4,
+                qualifyingDaysPerWeek: 5,
+                meditationType: '',
+                timeOfDayBucket: '',
+                observanceLabel: 'Gym',
+              }));
+            }}
+          >
+            Start Gym Sankalpa
+          </button>
+        </div>
+      ) : null}
 
       {saveMessage ? (
         <div className={`status-banner ${saveMessageTone === 'error' ? 'warn' : saveMessageTone}`} role="status">
@@ -83,22 +108,47 @@ export function SankalpaEditor({
         </label>
 
         {observanceGoal ? (
-          <label>
-            <span>Observance</span>
-            <input
-              type="text"
-              value={draft.observanceLabel}
-              placeholder="Brahmacharya"
-              onChange={(event) => {
-                onClearSaveMessage();
-                onChangeDraft((current) => ({
-                  ...current,
-                  observanceLabel: event.target.value,
-                }));
-              }}
-            />
-            {errors.observanceLabel ? <small className="error-text">{errors.observanceLabel}</small> : null}
-          </label>
+          <>
+            <label>
+              <span>Observance</span>
+              <input
+                type="text"
+                value={draft.observanceLabel}
+                placeholder="Brahmacharya"
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  onChangeDraft((current) => ({
+                    ...current,
+                    observanceLabel: event.target.value,
+                  }));
+                }}
+              />
+              {errors.observanceLabel ? <small className="error-text">{errors.observanceLabel}</small> : null}
+            </label>
+
+            <label>
+              <span>Tracking style</span>
+              <select
+                value={draft.cadenceMode}
+                onChange={(event) => {
+                  onClearSaveMessage();
+                  const nextCadenceMode = event.target.value as SankalpaDraft['cadenceMode'];
+                  onChangeDraft((current) => ({
+                    ...current,
+                    cadenceMode: nextCadenceMode,
+                    targetValue: nextCadenceMode === 'weekly' ? current.qualifyingDaysPerWeek : current.days,
+                    weeks:
+                      nextCadenceMode === 'weekly'
+                        ? Math.max(1, Math.ceil(current.days / 7))
+                        : current.weeks,
+                  }));
+                }}
+              >
+                <option value="cumulative">Every scheduled date</option>
+                <option value="weekly">Weekly observed days</option>
+              </select>
+            </label>
+          </>
         ) : (
           <>
             <label>
@@ -155,7 +205,7 @@ export function SankalpaEditor({
           </>
         )}
 
-        {observanceGoal || draft.cadenceMode === 'cumulative' ? (
+        {draft.cadenceMode === 'cumulative' ? (
           <label>
             <span>Days</span>
             <input
@@ -177,7 +227,7 @@ export function SankalpaEditor({
         ) : (
           <>
             <label>
-              <span>Qualifying days per week</span>
+              <span>{observanceGoal ? 'Observed days per week' : 'Qualifying days per week'}</span>
               <input
                 type="number"
                 min={1}
@@ -217,8 +267,17 @@ export function SankalpaEditor({
 
         {observanceGoal ? (
           <div className="empty-state">
-            <p>Each date in this window will appear in the sankalpa card for manual check-ins.</p>
-            <p>The goal completes when every scheduled date is marked as observed.</p>
+            {recurringCadence ? (
+              <>
+                <p>Each week counts when enough dates are marked observed.</p>
+                <p>Gym check-ins stay manual and separate from meditation session logs.</p>
+              </>
+            ) : (
+              <>
+                <p>Each date in this window will appear in the sankalpa card for manual check-ins.</p>
+                <p>The goal completes when every scheduled date is marked as observed.</p>
+              </>
+            )}
           </div>
         ) : (
           <>

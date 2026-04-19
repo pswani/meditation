@@ -64,7 +64,7 @@ export function SankalpaSection({
               <p className="section-subtitle">
                 Progress: {progressDetail(progress)} · {remainingDetail(progress)}
               </p>
-              {isRecurringCadenceGoal(progress.goal) ? (
+              {progress.goal.goalType !== 'observance-based' && isRecurringCadenceGoal(progress.goal) ? (
                 <div className="sankalpa-week-pills" aria-label="Recurring week progress">
                   {progress.recurringWeeks.map((week) => (
                     <span
@@ -79,7 +79,7 @@ export function SankalpaSection({
               {progress.goal.goalType === 'observance-based' ? (
                 <ObservanceTracker
                   progress={progress}
-                  readOnly={progress.status === 'archived'}
+                  readOnly={progress.status !== 'active'}
                   onChangeStatus={
                     onUpdateObservanceStatus
                       ? (date, status) => {

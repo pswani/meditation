@@ -11,7 +11,7 @@ This file is the concise handoff for the repository as it exists now. Use it as 
   - offline-first queue-backed behavior for implemented backend-backed domains
   - native iPhone work under `ios-native/`
 - Primary product journeys now exist across Home, Practice, History, Goals, and Settings.
-- Implemented domains include timer sessions, `custom play`, playlists, automatic and manual `session log` flows, summaries, and `sankalpa`.
+- Implemented domains include timer sessions, `custom play`, playlists, automatic and manual `session log` flows, summaries, and `sankalpa`, including weekly manual observance goals such as gym attendance.
 
 ## Durable docs to read first
 

@@ -234,6 +234,9 @@
   - persist explicit per-date observance records with `observed` or `missed` status
   - derive `pending` in the UI from missing records instead of storing a third persisted state
   - disable future-date check-ins until their date arrives so manual observance tracking stays trustworthy
+  - reuse `qualifyingDaysPerWeek` for weekly observance cadence, such as Gym 5 observed days per week for 4 weeks, instead of adding a separate habit or title model
+  - derive weekly observance progress from explicit per-date `observed` records grouped by goal weeks, never from meditation `session log` entries
+  - present active observance evidence as week-grouped daily rows with visible status text rather than a dense calendar grid
 - Keep large route screens and manager modules decomposed with feature-local helpers, hooks, and presentational panels:
   - route files should stay focused on composition, navigation, and action wiring
   - derived state and effects should move into narrowly scoped hooks when they are page-local

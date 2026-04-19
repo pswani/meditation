@@ -202,17 +202,21 @@ public class SankalpaService {
         ? goal.getTargetValue().multiply(BigDecimal.valueOf(60)).setScale(0, RoundingMode.HALF_UP).intValueExact()
         : 0;
     int targetSessionCount = "session-count-based".equals(goal.getGoalType()) && !recurringCadenceGoal ? goal.getTargetValue().intValueExact() : 0;
-    int targetObservanceCount = "observance-based".equals(goal.getGoalType()) ? goal.getTargetValue().intValueExact() : 0;
+    int targetObservanceCount = "observance-based".equals(goal.getGoalType())
+        ? recurringCadenceGoal
+          ? goal.getQualifyingDaysPerWeek() * matchTotals.targetRecurringWeekCount()
+          : goal.getTargetValue().intValueExact()
+        : 0;
     int targetValue = "duration-based".equals(goal.getGoalType())
         ? recurringCadenceGoal ? matchTotals.targetRecurringWeekCount() : targetDurationSeconds
         : "session-count-based".equals(goal.getGoalType())
           ? recurringCadenceGoal ? matchTotals.targetRecurringWeekCount() : targetSessionCount
-          : targetObservanceCount;
+          : recurringCadenceGoal ? matchTotals.targetRecurringWeekCount() : targetObservanceCount;
     int progressValue = "duration-based".equals(goal.getGoalType())
         ? recurringCadenceGoal ? matchTotals.metRecurringWeekCount() : matchedDurationSeconds
         : "session-count-based".equals(goal.getGoalType())
           ? recurringCadenceGoal ? matchTotals.metRecurringWeekCount() : matchedSessionCount
-          : matchTotals.matchedObservanceCount();
+          : recurringCadenceGoal ? matchTotals.metRecurringWeekCount() : matchTotals.matchedObservanceCount();
     Instant deadlineAt = "observance-based".equals(goal.getGoalType())
         ? deriveObservanceDeadline(goal, zoneId)
         : recurringCadenceGoal
@@ -337,6 +341,47 @@ public class SankalpaService {
       ));
     }
 
+    int metRecurringWeekCount = 0;
+    int targetRecurringWeekCount =
+        goal.getQualifyingDaysPerWeek() == null ? 0 : Math.max(1, goal.getDays() / DAYS_PER_WEEK);
+    List<SankalpaRecurringWeekResponse> recurringWeeks = new java.util.ArrayList<>();
+
+    if (goal.getQualifyingDaysPerWeek() != null) {
+      for (int weekIndex = 0; weekIndex < targetRecurringWeekCount; weekIndex += 1) {
+        LocalDate weekStart = startDate.plusDays((long) weekIndex * DAYS_PER_WEEK);
+        LocalDate weekEnd = weekStart.plusDays(DAYS_PER_WEEK - 1L);
+        int qualifyingDayCount = 0;
+
+        for (int dayOffset = 0; dayOffset < DAYS_PER_WEEK; dayOffset += 1) {
+          LocalDate currentDate = weekStart.plusDays(dayOffset);
+          if (Objects.equals(statusByDate.get(currentDate), "observed")) {
+            qualifyingDayCount += 1;
+          }
+        }
+
+        String status;
+        if (qualifyingDayCount >= goal.getQualifyingDaysPerWeek()) {
+          status = "met";
+          metRecurringWeekCount += 1;
+        } else if (today.isAfter(weekEnd)) {
+          status = "missed";
+        } else if (today.isBefore(weekStart)) {
+          status = "upcoming";
+        } else {
+          status = "active";
+        }
+
+        recurringWeeks.add(new SankalpaRecurringWeekResponse(
+            weekIndex + 1,
+            weekStart.toString(),
+            weekEnd.toString(),
+            qualifyingDayCount,
+            goal.getQualifyingDaysPerWeek(),
+            status
+        ));
+      }
+    }
+
     return new SankalpaMatchTotals(
         0,
         0,
@@ -344,9 +389,9 @@ public class SankalpaService {
         missedObservanceCount,
         pendingObservanceCount,
         observanceDays,
-        0,
-        0,
-        List.of()
+        metRecurringWeekCount,
+        targetRecurringWeekCount,
+        recurringWeeks
     );
   }
 
@@ -361,7 +406,7 @@ public class SankalpaService {
   }
 
   private boolean isRecurringCadenceGoal(SankalpaGoalEntity goal) {
-    return !"observance-based".equals(goal.getGoalType()) && goal.getQualifyingDaysPerWeek() != null;
+    return goal.getQualifyingDaysPerWeek() != null;
   }
 
   private List<SessionLogRepository.SessionLogTimeSliceView> loadMatchingTimeSlices(
@@ -491,8 +536,8 @@ public class SankalpaService {
     Instant createdAt = parseTimestamp(request.createdAt(), "Created at must be a valid ISO timestamp.");
 
     if ("observance-based".equals(request.goalType())) {
-      if (request.targetValue().stripTrailingZeros().scale() > 0 || request.targetValue().intValueExact() != request.days()) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals must target all scheduled days.");
+      if (request.targetValue().stripTrailingZeros().scale() > 0) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance target must be a whole number.");
       }
 
       if (request.observanceLabel() == null || request.observanceLabel().isBlank()) {
@@ -507,8 +552,22 @@ public class SankalpaService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals cannot include a time-of-day filter.");
       }
 
-      if (request.qualifyingDaysPerWeek() != null) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals cannot include a weekly cadence target.");
+      if (request.qualifyingDaysPerWeek() == null) {
+        if (request.targetValue().intValueExact() != request.days()) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observance goals must target all scheduled days.");
+        }
+      } else {
+        if (request.qualifyingDaysPerWeek() <= 0 || request.qualifyingDaysPerWeek() > DAYS_PER_WEEK) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observed days per week must be between 1 and 7.");
+        }
+
+        if (request.days() % DAYS_PER_WEEK != 0) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Weekly observance goals must use a whole number of weeks.");
+        }
+
+        if (request.targetValue().intValueExact() != request.qualifyingDaysPerWeek()) {
+          throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Weekly observance target must match observed days per week.");
+        }
       }
 
       validateObservanceRecords(request.observanceRecords(), createdAt, request.days(), zoneId);

@@ -4,6 +4,7 @@ import type { Playlist } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaProgress } from '../../types/sankalpa';
 import { formatDurationLabel } from '../../utils/sessionLog';
+import { isRecurringCadenceGoal } from '../../utils/sankalpa';
 import { describeSankalpa, progressDetail } from '../sankalpa/sankalpaPageHelpers';
 import { describeLastUsedMeditation } from './homePageHelpers';
 
@@ -71,6 +72,18 @@ interface TodayAndSankalpaPanelsProps {
   readonly onOpenSankalpa: () => void;
 }
 
+function describeHomeSankalpaTarget(progress: SankalpaProgress): string {
+  if (progress.goal.goalType === 'observance-based') {
+    if (isRecurringCadenceGoal(progress.goal)) {
+      return `${progress.goal.qualifyingDaysPerWeek ?? 0} observed days each week`;
+    }
+
+    return `${progress.targetObservanceCount} observed dates`;
+  }
+
+  return describeSankalpa(progress.goal);
+}
+
 export function HomeTodayAndSankalpaPanels({
   todaySummary,
   isSankalpaLoading,
@@ -119,18 +132,12 @@ export function HomeTodayAndSankalpaPanels({
         {topActiveSankalpa ? (
           <>
             <div className="history-row">
-              <strong>
-                {topActiveSankalpa.goal.goalType === 'observance-based'
-                  ? topActiveSankalpa.goal.observanceLabel
-                  : describeSankalpa(topActiveSankalpa.goal)}
-              </strong>
+              <strong>{describeSankalpa(topActiveSankalpa.goal)}</strong>
               <span className="pill active">{topActiveSankalpa.status}</span>
             </div>
             <p className="section-subtitle">
               Deadline: {new Date(topActiveSankalpa.deadlineAt).toLocaleDateString()} · Target:{' '}
-              {topActiveSankalpa.goal.goalType === 'observance-based'
-                ? `${topActiveSankalpa.targetObservanceCount} observed dates`
-                : describeSankalpa(topActiveSankalpa.goal)}
+              {describeHomeSankalpaTarget(topActiveSankalpa)}
             </p>
             <div className="sankalpa-progress-track" aria-hidden="true">
               <span className="sankalpa-progress-fill" style={{ width: `${Math.min(100, topActiveSankalpa.progressRatio * 100)}%` }} />
