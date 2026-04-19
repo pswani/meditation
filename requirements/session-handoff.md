@@ -49,6 +49,7 @@ This file is the concise handoff for the repository as it exists now. Use it as 
 
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.
 - Real-device QA still matters for iPhone Safari timer completion behavior and native iPhone notification or lock-screen audio edge cases.
+- Native iPhone helper scripts now default to SDK-target app builds plus shared-core SwiftPM tests; full scheme XCTest runs remain opt-in until Xcode lists an eligible simulator or device destination.
 - If new staged workflows are needed later, create fresh pile folders under `prompts/piles/` rather than assuming older generated piles still exist.
 
 ## Working notes for the next agent

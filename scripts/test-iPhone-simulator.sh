@@ -1,62 +1,38 @@
 #!/usr/bin/env zsh
-# Do not delete
 
 set -euo pipefail
 
-SIMULATOR_DESTINATION="${MEDITATION_IOS_SIMULATOR_DESTINATION:-platform=iOS Simulator,id=7DB36B64-7692-47D8-839A-2E6DA0165463}"
+project="ios-native/MeditationNative.xcodeproj"
+scheme="MeditationNative"
+target="MeditationNative"
+configuration="${MEDITATION_IOS_CONFIGURATION:-Debug}"
+sdk="${MEDITATION_IOS_SIMULATOR_SDK:-iphonesimulator}"
+destination="${MEDITATION_IOS_SIMULATOR_DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4}"
 
-# See available simulator and device destinations
-destinations="$(xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations 2>&1)"
-print -r -- "${destinations}"
+print "Available Xcode destinations:"
+xcodebuild -project "${project}" -scheme "${scheme}" -showdestinations || true
 
-destination_available=false
-if [[ "${SIMULATOR_DESTINATION}" == *"id="* ]]; then
-  simulator_id="${SIMULATOR_DESTINATION##*id=}"
-  simulator_id="${simulator_id%%,*}"
-  [[ "${destinations}" == *"id:${simulator_id}"* ]] && destination_available=true
-elif [[ "${SIMULATOR_DESTINATION}" == *"name="* ]]; then
-  simulator_name="${SIMULATOR_DESTINATION##*name=}"
-  simulator_name="${simulator_name%%,*}"
-  [[ "${destinations}" == *"name:${simulator_name}"* ]] && destination_available=true
-else
-  [[ "${destinations}" == *"platform:iOS Simulator"* ]] && destination_available=true
-fi
-
-if [[ "${destination_available}" != true ]]; then
-  print -u2 "The configured simulator destination is not available to Xcode: ${SIMULATOR_DESTINATION}"
-  print -u2 "Set MEDITATION_IOS_SIMULATOR_DESTINATION to an eligible simulator from the list above, or install the matching iOS simulator runtime in Xcode Settings > Components."
-  exit 70
-fi
-
-# Simulator build
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-  -destination "${SIMULATOR_DESTINATION}" \
+print "Building ${target} for ${sdk} (${configuration})"
+xcodebuild \
+  -project "${project}" \
+  -target "${target}" \
+  -sdk "${sdk}" \
+  -configuration "${configuration}" \
   build
 
-# Full simulator test run
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-  -destination "${SIMULATOR_DESTINATION}" \
-  -parallel-testing-enabled NO \
-  test
+if [[ "${MEDITATION_IOS_RUN_SCHEME_TESTS:-0}" == "1" ]]; then
+  print "Testing ${scheme} on simulator destination: ${destination}"
+  xcodebuild \
+    -project "${project}" \
+    -scheme "${scheme}" \
+    -destination "${destination}" \
+    -parallel-testing-enabled NO \
+    test
+else
+  print "Skipping scheme XCTest run; set MEDITATION_IOS_RUN_SCHEME_TESTS=1 when Xcode lists an eligible simulator destination for ${scheme}."
+fi
 
-# Shared core package tests
+print "Running shared native core package tests"
 SWIFTPM_MODULECACHE_OVERRIDE=/tmp/meditation-swift-module-cache \
 CLANG_MODULE_CACHE_PATH=/tmp/meditation-swift-clang-cache \
 swift test --package-path ios-native
-
-
-
-# # Show available destinations first
-# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
-
-
-# # Simulator build by name
-# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-#   -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4" \
-#   build
-
-# # Simulator test by name
-# xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative \
-#   -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.4" \
-#   -parallel-testing-enabled NO \
-#   test

@@ -151,33 +151,49 @@ Project and scheme:
 
 If you are building the app target from a clean checkout, prepare the local media roots first and place the expected sample recording at `local-data/media/custom-plays/vipassana-sit-20.mp3`. The current Xcode project still packages that repo-local sample file into the app bundle.
 
-Use an installed simulator destination on your machine. Example shape:
+Build the app target directly against the simulator SDK:
 
 ```bash
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" build
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" build-for-testing
-xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" -parallel-testing-enabled NO test
+xcodebuild -project ios-native/MeditationNative.xcodeproj -target MeditationNative -sdk iphonesimulator -configuration Debug build
 ```
 
-Use `-parallel-testing-enabled NO` for the full simulator suite when you want the UI tests to run serially against one simulator instance.
+Build the app target for a connected device with the configured development team:
 
-If you do not know the exact simulator name, list available destinations in Xcode or with:
+```bash
+xcodebuild -project ios-native/MeditationNative.xcodeproj -target MeditationNative -sdk iphoneos -configuration Debug DEVELOPMENT_TEAM=435KZ98WJR -allowProvisioningUpdates build
+```
+
+Scheme-based XCTest runs still require Xcode to list an eligible simulator or device destination. If you do not know the exact destination name, list available destinations in Xcode or with:
 
 ```bash
 xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -showdestinations
 ```
 
-The repo helper wraps the simulator build, full simulator test run, and shared-core SwiftPM tests:
+When a destination is available, use `-parallel-testing-enabled NO` for the full simulator suite so the UI tests run serially against one simulator instance:
+
+```bash
+xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination "platform=iOS Simulator,name=<Your Installed iPhone Simulator>" -parallel-testing-enabled NO test
+```
+
+The repo helper wraps the simulator SDK app build and shared-core SwiftPM tests:
 
 ```bash
 ./scripts/test-iPhone-simulator.sh
 ```
 
-It fails on the first unsuccessful command and defaults to the checked-in simulator UUID. To use another installed simulator, set `MEDITATION_IOS_SIMULATOR_DESTINATION` to a destination from `xcodebuild -showdestinations`, for example:
+It fails on the first unsuccessful build or SwiftPM test command. To opt into the scheme-based XCTest run after Xcode lists an eligible simulator, set `MEDITATION_IOS_RUN_SCHEME_TESTS=1` and provide a destination from `xcodebuild -showdestinations`, for example:
 
 ```bash
-MEDITATION_IOS_SIMULATOR_DESTINATION="platform=iOS Simulator,name=<Your Installed iPhone Simulator>" ./scripts/test-iPhone-simulator.sh
+MEDITATION_IOS_RUN_SCHEME_TESTS=1 MEDITATION_IOS_SIMULATOR_DESTINATION="platform=iOS Simulator,name=<Your Installed iPhone Simulator>" ./scripts/test-iPhone-simulator.sh
 ```
+
+For a connected iPhone, run:
+
+```bash
+./scripts/test-iPhone.sh
+```
+
+It builds the device target with the configured development team and runs the shared-core SwiftPM tests. To opt into the scheme-based device XCTest run after Xcode lists the device as eligible, set `MEDITATION_IOS_RUN_SCHEME_TESTS=1` and override `MEDITATION_IOS_DEVICE_DESTINATION` if needed.
 
 For the shared core package only, you can also run:
 
