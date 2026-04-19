@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.meditation.backend.sessionlog.SessionLogEntity;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import com.meditation.backend.sync.SyncRequestSupport;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -22,6 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,6 +33,16 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SankalpaControllerTest {
+
+  @TestConfiguration
+  static class FixedClockConfiguration {
+
+    @Bean
+    @Primary
+    Clock fixedClock() {
+      return Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneId.of("UTC"));
+    }
+  }
 
   @Autowired
   private MockMvc mockMvc;

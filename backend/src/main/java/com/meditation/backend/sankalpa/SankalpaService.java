@@ -7,6 +7,7 @@ import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,19 +34,22 @@ public class SankalpaService {
   private final SankalpaGoalRepository sankalpaGoalRepository;
   private final SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository;
   private final SessionLogRepository sessionLogRepository;
+  private final Clock clock;
 
   public SankalpaService(
       SankalpaGoalRepository sankalpaGoalRepository,
       SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository,
-      SessionLogRepository sessionLogRepository
+      SessionLogRepository sessionLogRepository,
+      Clock clock
   ) {
     this.sankalpaGoalRepository = sankalpaGoalRepository;
     this.sankalpaObservanceEntryRepository = sankalpaObservanceEntryRepository;
     this.sessionLogRepository = sessionLogRepository;
+    this.clock = clock;
   }
 
   public List<SankalpaProgressResponse> listSankalpas(String timeZoneRaw) {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     ZoneId zoneId = parseZoneId(timeZoneRaw);
     List<SankalpaGoalEntity> goals = sankalpaGoalRepository.findAllByOrderByCreatedAtDesc();
     Map<String, List<SankalpaObservanceEntryEntity>> observanceEntriesByGoalId = loadObservanceEntries(goals);
@@ -65,7 +69,7 @@ public class SankalpaService {
     ZoneId zoneId = parseZoneId(timeZoneRaw);
     validateRequest(sankalpaId, request, zoneId);
 
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     SankalpaGoalEntity existingEntity = sankalpaGoalRepository.findById(sankalpaId).orElse(null);
     if (existingEntity != null && SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
       List<SankalpaObservanceEntryEntity> staleEntries =
@@ -138,7 +142,7 @@ public class SankalpaService {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Only archived sankalpas can be deleted.");
     }
 
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     ZoneId zoneId = parseZoneId(timeZoneRaw);
 
     if (SyncRequestSupport.isStaleMutation(existingEntity.getUpdatedAt(), syncQueuedAtRaw)) {
@@ -194,7 +198,7 @@ public class SankalpaService {
       Instant now,
       ZoneId zoneId
   ) {
-    SankalpaMatchTotals matchTotals = loadMatchTotals(goal, observanceEntries, zoneId);
+    SankalpaMatchTotals matchTotals = loadMatchTotals(goal, observanceEntries, now, zoneId);
     boolean recurringCadenceGoal = isRecurringCadenceGoal(goal);
     int matchedSessionCount = matchTotals.matchedSessionCount();
     int matchedDurationSeconds = matchTotals.matchedDurationSeconds();
@@ -278,10 +282,11 @@ public class SankalpaService {
   private SankalpaMatchTotals loadMatchTotals(
       SankalpaGoalEntity goal,
       List<SankalpaObservanceEntryEntity> observanceEntries,
+      Instant now,
       ZoneId zoneId
   ) {
     if ("observance-based".equals(goal.getGoalType())) {
-      return loadObservanceMatchTotals(goal, observanceEntries, zoneId);
+      return loadObservanceMatchTotals(goal, observanceEntries, now, zoneId);
     }
 
     Instant startAt = goal.getCreatedAt();
@@ -300,12 +305,13 @@ public class SankalpaService {
       return new SankalpaMatchTotals(matchedSessionCount, matchedDurationSeconds, 0, 0, 0, List.of(), 0, 0, List.of());
     }
 
-    return loadRecurringCadenceMatchTotals(goal, matchingSlices, zoneId, matchedSessionCount, matchedDurationSeconds);
+    return loadRecurringCadenceMatchTotals(goal, matchingSlices, now, zoneId, matchedSessionCount, matchedDurationSeconds);
   }
 
   private SankalpaMatchTotals loadObservanceMatchTotals(
       SankalpaGoalEntity goal,
       List<SankalpaObservanceEntryEntity> observanceEntries,
+      Instant now,
       ZoneId zoneId
   ) {
     Map<LocalDate, String> statusByDate = observanceEntries.stream()
@@ -317,7 +323,7 @@ public class SankalpaService {
         ));
 
     LocalDate startDate = goal.getCreatedAt().atZone(zoneId).toLocalDate();
-    LocalDate today = Instant.now().atZone(zoneId).toLocalDate();
+    LocalDate today = now.atZone(zoneId).toLocalDate();
     int matchedObservanceCount = 0;
     int missedObservanceCount = 0;
     int pendingObservanceCount = 0;
@@ -428,6 +434,7 @@ public class SankalpaService {
   private SankalpaMatchTotals loadRecurringCadenceMatchTotals(
       SankalpaGoalEntity goal,
       List<SessionLogRepository.SessionLogTimeSliceView> matchingSlices,
+      Instant now,
       ZoneId zoneId,
       int matchedSessionCount,
       int matchedDurationSeconds
@@ -440,7 +447,7 @@ public class SankalpaService {
     }
 
     LocalDate startDate = goal.getCreatedAt().atZone(zoneId).toLocalDate();
-    LocalDate today = Instant.now().atZone(zoneId).toLocalDate();
+    LocalDate today = now.atZone(zoneId).toLocalDate();
     int targetRecurringWeekCount = Math.max(1, goal.getDays() / DAYS_PER_WEEK);
     int threshold = "duration-based".equals(goal.getGoalType())
         ? goal.getTargetValue().multiply(BigDecimal.valueOf(60)).setScale(0, RoundingMode.HALF_UP).intValueExact()
