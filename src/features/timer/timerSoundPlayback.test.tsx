@@ -147,6 +147,7 @@ describe('timer sound playback', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
@@ -239,6 +240,42 @@ describe('timer sound playback', () => {
     await flushAsyncWork();
 
     expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
+    expect(MockAudio.playCalls.filter((src) => src === gongPath)).toHaveLength(1);
+  });
+
+  it('uses scheduled completion to preserve the hidden end sound when interval ticks are throttled', async () => {
+    vi.spyOn(window, 'setInterval').mockImplementation(() => 1);
+    vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+
+    renderHarness();
+    await flushAsyncWork();
+
+    fireEvent.click(screen.getByRole('button', { name: /load valid timer settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await flushAsyncWork();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+    await flushAsyncWork();
+
+    expect(screen.getByTestId('outcome-status')).toHaveTextContent('completed');
+    expect(MockAudio.playCalls.filter((src) => src === gongPath)).toHaveLength(1);
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new PageTransitionEvent('pageshow'));
+    });
+    await flushAsyncWork();
+
     expect(MockAudio.playCalls.filter((src) => src === gongPath)).toHaveLength(1);
   });
 

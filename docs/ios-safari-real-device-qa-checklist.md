@@ -65,7 +65,22 @@ Pass expectations:
 - one foreground return produces one catch-up completion
 - the UI does not show duplicate completion banners or repeat the end state multiple times
 
-### 3. Deferred-completion explanation after foreground catch-up
+### 3. Safari not frontmost before scheduled completion
+
+Steps:
+
+1. Start a fixed timer with an end sound.
+2. Before the scheduled end, switch away from Safari without locking the phone.
+3. Wait until after the scheduled end time.
+4. Return to Safari.
+
+Pass expectations:
+
+- if Safari kept the page runnable, the configured end sound is attempted around the scheduled completion time
+- if Safari suspended the page, the timer still completes promptly on return through foreground catch-up
+- the app does not duplicate the end sound or completion state when returning to Safari
+
+### 4. Deferred-completion explanation after foreground catch-up
 
 Steps:
 
@@ -78,7 +93,7 @@ Pass expectations:
 - the explanation appears once for that completion
 - the explanation is specific enough to build trust without sounding alarmist
 
-### 4. Safari-specific guidance targeting
+### 5. Safari-specific guidance targeting
 
 Steps:
 
@@ -91,7 +106,7 @@ Pass expectations:
 - the guidance matches the current product wording about background or lock-screen deferral
 - the guidance stays consistent between setup and active timer surfaces
 
-### 5. Notification permission state handling
+### 6. Notification permission state handling
 
 Steps:
 

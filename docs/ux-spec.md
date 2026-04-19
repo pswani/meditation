@@ -41,6 +41,7 @@ Primary destinations:
 - pause/resume prominent during session
 - active timer should clearly label countdown vs elapsed time
 - ending a session should confirm intent
+- fixed timers should attempt scheduled completion from wall-clock time while the browser page remains runnable, even when the tab or window is not focused
 - for likely iPhone Safari browser contexts, timer setup and active timer should explain that lock-screen browser suspension can defer completion handling until Safari returns to foreground
 - after foreground catch-up finalizes a fixed timer, the completion UI should explain that the scheduled end was reached while Safari was in the background
 - Safari-specific guidance should stay hidden for unrelated desktop and Android contexts
