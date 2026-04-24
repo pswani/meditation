@@ -433,8 +433,10 @@ class SessionLogControllerTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("log-missing-library-records"))
-        .andExpect(jsonPath("$.playlistId").value("deleted-playlist-1"))
-        .andExpect(jsonPath("$.customPlayId").value("deleted-custom-play-1"))
+        // IDs are nulled when the referenced entity no longer exists (FK ON DELETE SET NULL semantics);
+        // name snapshots are always retained for display.
+        .andExpect(jsonPath("$.playlistId").doesNotExist())
+        .andExpect(jsonPath("$.customPlayId").doesNotExist())
         .andExpect(jsonPath("$.customPlayName").value("Deleted custom play"));
   }
 

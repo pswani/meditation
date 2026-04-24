@@ -34,6 +34,8 @@ management:
 
 meditation:
   backend:
+    sync:
+      clock-skew-tolerance-seconds: 300
     media:
       root: ${MEDITATION_MEDIA_STORAGE_ROOT:../local-data/media}
       custom-play-subdirectory: custom-plays

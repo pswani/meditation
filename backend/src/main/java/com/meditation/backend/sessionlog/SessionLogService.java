@@ -1,5 +1,7 @@
 package com.meditation.backend.sessionlog;
 
+import com.meditation.backend.customplay.CustomPlayRepository;
+import com.meditation.backend.playlist.PlaylistRepository;
 import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sync.GeneratedSyncContract;
 import com.meditation.backend.sync.SyncMutationResult;
@@ -21,9 +23,16 @@ public class SessionLogService {
   private static final int MAX_PAGE_SIZE = 200;
 
   private final SessionLogRepository sessionLogRepository;
+  private final CustomPlayRepository customPlayRepository;
+  private final PlaylistRepository playlistRepository;
 
-  public SessionLogService(SessionLogRepository sessionLogRepository) {
+  public SessionLogService(
+      SessionLogRepository sessionLogRepository,
+      CustomPlayRepository customPlayRepository,
+      PlaylistRepository playlistRepository) {
     this.sessionLogRepository = sessionLogRepository;
+    this.customPlayRepository = customPlayRepository;
+    this.playlistRepository = playlistRepository;
   }
 
   public SessionLogListResponse listSessionLogs(
@@ -143,6 +152,11 @@ public class SessionLogService {
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, Instant.now());
 
+    // Resolve IDs against the DB. If the referenced entity was deleted before this sync
+    // arrived, null the ID so the FK constraint is satisfied; the name snapshot is preserved.
+    String resolvedCustomPlayId = resolveExistingCustomPlayId(normalizeOptionalText(request.customPlayId()));
+    String resolvedPlaylistId = resolveExistingPlaylistId(normalizeOptionalText(request.playlistId()));
+
     SessionLogEntity entity = new SessionLogEntity(
         request.id(),
         request.source(),
@@ -158,13 +172,13 @@ public class SessionLogService {
         request.intervalEnabled(),
         request.intervalMinutes(),
         request.intervalSound(),
-        normalizeOptionalText(request.playlistId()),
+        resolvedPlaylistId,
         normalizeOptionalText(request.playlistName()),
         request.playlistItemPosition(),
         request.playlistItemCount(),
         normalizeOptionalText(request.playlistRunId()),
         playlistRunStartedAt,
-        normalizeOptionalText(request.customPlayId()),
+        resolvedCustomPlayId,
         normalizeOptionalText(request.customPlayName()),
         normalizeOptionalText(request.customPlayRecordingLabel()),
         existingEntity == null ? mutationTimestamp : existingEntity.getCreatedAt()
@@ -174,6 +188,16 @@ public class SessionLogService {
         GeneratedSyncContract.SYNC_OUTCOME_APPLIED,
         toResponse(sessionLogRepository.save(entity))
     );
+  }
+
+  private String resolveExistingCustomPlayId(String customPlayId) {
+    if (customPlayId == null) return null;
+    return customPlayRepository.existsById(customPlayId) ? customPlayId : null;
+  }
+
+  private String resolveExistingPlaylistId(String playlistId) {
+    if (playlistId == null) return null;
+    return playlistRepository.existsById(playlistId) ? playlistId : null;
   }
 
   private SessionLogResponse toResponse(SessionLogEntity entity) {

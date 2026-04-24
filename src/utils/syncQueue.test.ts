@@ -8,6 +8,7 @@ import {
   markSyncQueueEntryInFlight,
   removeSyncQueueEntry,
   saveSyncQueue,
+  STALLED_INFLIGHT_THRESHOLD_MS,
   summarizeSyncQueue,
   SYNC_QUEUE_STORAGE_KEY,
 } from './syncQueue';
@@ -40,7 +41,8 @@ describe('sync queue storage', () => {
     expect(loadSyncQueue()).toEqual([]);
   });
 
-  it('requeues in-flight work as pending on reload', () => {
+  it('demotes stalled in-flight entry (old lastAttemptAt) to pending on reload', () => {
+    const stalledAttemptAt = new Date(Date.now() - STALLED_INFLIGHT_THRESHOLD_MS - 5_000).toISOString();
     const queue: SyncQueueEntry[] = [
       {
         ...createSyncQueueEntry({
@@ -52,7 +54,7 @@ describe('sync queue storage', () => {
           queuedAt: '2026-03-27T10:00:00.000Z',
         }),
         state: 'in-flight',
-        lastAttemptAt: '2026-03-27T10:01:00.000Z',
+        lastAttemptAt: stalledAttemptAt,
       },
     ];
 
@@ -64,6 +66,48 @@ describe('sync queue storage', () => {
         state: 'pending',
       },
     ]);
+  });
+
+  it('keeps a recent in-flight entry in-flight on reload (concurrent tab scenario)', () => {
+    const recentAttemptAt = new Date(Date.now() - 5_000).toISOString();
+    const queue: SyncQueueEntry[] = [
+      {
+        ...createSyncQueueEntry({
+          id: 'sync-1',
+          entityType: 'timer-settings',
+          operation: 'upsert',
+          recordId: 'default',
+          payload: {},
+          queuedAt: '2026-03-27T10:00:00.000Z',
+        }),
+        state: 'in-flight',
+        lastAttemptAt: recentAttemptAt,
+      },
+    ];
+
+    localStorage.setItem(SYNC_QUEUE_STORAGE_KEY, JSON.stringify(queue));
+
+    expect(loadSyncQueue()[0]?.state).toBe('in-flight');
+  });
+
+  it('demotes in-flight entry with no lastAttemptAt to pending on reload', () => {
+    const queue: SyncQueueEntry[] = [
+      {
+        ...createSyncQueueEntry({
+          id: 'sync-1',
+          entityType: 'session-log',
+          operation: 'upsert',
+          recordId: 'log-1',
+          payload: { id: 'log-1' },
+          queuedAt: '2026-03-27T10:00:00.000Z',
+        }),
+        state: 'in-flight',
+      },
+    ];
+
+    localStorage.setItem(SYNC_QUEUE_STORAGE_KEY, JSON.stringify(queue));
+
+    expect(loadSyncQueue()[0]?.state).toBe('pending');
   });
 });
 

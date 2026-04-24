@@ -2,6 +2,7 @@ package com.meditation.backend;
 
 import com.meditation.backend.config.CorsProperties;
 import com.meditation.backend.config.MediaStorageProperties;
+import com.meditation.backend.config.SyncProperties;
 import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
@@ -15,6 +16,7 @@ import org.springframework.core.env.Environment;
 @EnableConfigurationProperties({
     CorsProperties.class,
     MediaStorageProperties.class,
+    SyncProperties.class,
 })
 public class MeditationBackendApplication {
 

@@ -261,8 +261,8 @@ class PlaylistControllerTest {
 
     List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
     assertEquals(1, sessionLogs.size());
-    assertEquals("playlist-1", sessionLogs.get(0).getPlaylistId());
-    assertEquals("Morning Sequence", sessionLogs.get(0).getPlaylistName());
+    assertNull(sessionLogs.get(0).getPlaylistId()); // nulled by FK ON DELETE SET NULL
+    assertEquals("Morning Sequence", sessionLogs.get(0).getPlaylistName()); // name snapshot retained
   }
 
   @Test

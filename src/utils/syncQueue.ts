@@ -2,6 +2,13 @@ import type { SyncEntityType, SyncOperation, SyncQueueEntry, SyncQueueSummary } 
 
 export const SYNC_QUEUE_STORAGE_KEY = 'meditation.syncQueue.v1';
 
+/**
+ * In-flight entries older than this threshold are demoted to pending on queue load.
+ * Prevents a mid-flush reload or multi-tab race from stranding entries in-flight forever.
+ * Entries with a recent lastAttemptAt stay in-flight to allow a legitimate concurrent sync to complete.
+ */
+export const STALLED_INFLIGHT_THRESHOLD_MS = 30_000;
+
 interface CreateSyncQueueEntryInput {
   readonly entityType: SyncEntityType;
   readonly operation: SyncOperation;
@@ -72,16 +79,20 @@ function sortSyncQueueEntries(queue: readonly SyncQueueEntry[]): SyncQueueEntry[
   return [...queue].sort((left, right) => Date.parse(left.queuedAt) - Date.parse(right.queuedAt));
 }
 
-function normalizeHydratedQueue(queue: readonly SyncQueueEntry[]): SyncQueueEntry[] {
+function normalizeHydratedQueue(
+  queue: readonly SyncQueueEntry[],
+  nowMs: number = Date.now()
+): SyncQueueEntry[] {
   return sortSyncQueueEntries(
-    queue.map((entry) =>
-      entry.state === 'in-flight'
-        ? {
-            ...entry,
-            state: 'pending',
-          }
-        : entry
-    )
+    queue.map((entry) => {
+      if (entry.state !== 'in-flight') {
+        return entry;
+      }
+      const lastAttemptMs = entry.lastAttemptAt ? Date.parse(entry.lastAttemptAt) : null;
+      const isStalled =
+        lastAttemptMs === null || nowMs - lastAttemptMs > STALLED_INFLIGHT_THRESHOLD_MS;
+      return isStalled ? { ...entry, state: 'pending' } : entry;
+    })
   );
 }
 
