@@ -124,15 +124,33 @@ export function buildSyncQueueRecordKey(entityType: SyncEntityType, recordId: st
   return `${entityType}:${recordId}`;
 }
 
+/**
+ * Enqueues a sync entry with operation-aware deduplication:
+ * - DELETE supersedes all pending entries for the same record (both upserts and prior deletes).
+ * - UPSERT deduplicates against other upserts but preserves any pending delete, so an
+ *   accidental background upsert cannot silently undo a user-initiated delete.
+ */
 export function enqueueSyncQueueEntry(
   queue: readonly SyncQueueEntry[],
   input: CreateSyncQueueEntryInput | SyncQueueEntry
 ): SyncQueueEntry[] {
   const nextEntry = 'state' in input ? input : createSyncQueueEntry(input);
   const nextRecordKey = buildSyncQueueRecordKey(nextEntry.entityType, nextEntry.recordId);
-  const dedupedQueue = queue.filter(
-    (entry) => buildSyncQueueRecordKey(entry.entityType, entry.recordId) !== nextRecordKey
-  );
+
+  let dedupedQueue: SyncQueueEntry[];
+  if (nextEntry.operation === 'delete') {
+    // A delete supersedes any pending upserts or prior deletes for this record.
+    dedupedQueue = queue.filter(
+      (entry) => buildSyncQueueRecordKey(entry.entityType, entry.recordId) !== nextRecordKey
+    );
+  } else {
+    // An upsert deduplicates against other upserts but preserves a pending delete.
+    dedupedQueue = queue.filter(
+      (entry) =>
+        buildSyncQueueRecordKey(entry.entityType, entry.recordId) !== nextRecordKey ||
+        entry.operation === 'delete'
+    );
+  }
 
   return sortSyncQueueEntries([
     ...dedupedQueue,

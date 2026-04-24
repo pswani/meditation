@@ -1,0 +1,17 @@
+# Production profile — override all development defaults here.
+# MUST set: spring.datasource.url (non-H2), spring.datasource.username, spring.datasource.password
+spring:
+  datasource:
+    url: ${MEDITATION_DB_URL}
+    username: ${MEDITATION_DB_USER}
+    password: ${MEDITATION_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

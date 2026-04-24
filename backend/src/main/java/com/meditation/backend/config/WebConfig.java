@@ -25,7 +25,12 @@ public class WebConfig implements WebMvcConfigurer {
     registry.addMapping("/api/**")
         .allowedOriginPatterns(corsProperties.getAllowedOriginPatterns().toArray(String[]::new))
         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        .allowedHeaders("*");
+        // Keep this list in sync with headers used by the web client; do not restore wildcard.
+        .allowedHeaders(
+            "Content-Type",
+            "X-Meditation-Sync-Queued-At",
+            "X-Requested-With"
+        );
   }
 
   @Override

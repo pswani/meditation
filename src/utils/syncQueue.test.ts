@@ -72,7 +72,7 @@ describe('sync queue operations', () => {
     localStorage.clear();
   });
 
-  it('replaces older queued work for the same entity record', () => {
+  it('delete after upsert: supersedes the upsert', () => {
     const initialQueue = [
       createSyncQueueEntry({
         id: 'sync-1',
@@ -105,6 +105,108 @@ describe('sync queue operations', () => {
         retryCount: 0,
       },
     ]);
+  });
+
+  it('upsert after delete: preserves the pending delete and appends the upsert', () => {
+    const initialQueue = [
+      createSyncQueueEntry({
+        id: 'sync-1',
+        entityType: 'custom-play',
+        operation: 'delete',
+        recordId: 'play-1',
+        payload: null,
+        queuedAt: '2026-03-27T10:00:00.000Z',
+      }),
+    ];
+
+    const nextQueue = enqueueSyncQueueEntry(initialQueue, {
+      id: 'sync-2',
+      entityType: 'custom-play',
+      operation: 'upsert',
+      recordId: 'play-1',
+      payload: { name: 'Morning Sit' },
+      queuedAt: '2026-03-27T10:05:00.000Z',
+    });
+
+    expect(nextQueue).toHaveLength(2);
+    expect(nextQueue[0]).toMatchObject({ id: 'sync-1', operation: 'delete' });
+    expect(nextQueue[1]).toMatchObject({ id: 'sync-2', operation: 'upsert' });
+  });
+
+  it('upsert after upsert: deduplicates to a single upsert', () => {
+    const initialQueue = [
+      createSyncQueueEntry({
+        id: 'sync-1',
+        entityType: 'session-log',
+        operation: 'upsert',
+        recordId: 'log-1',
+        payload: { duration: 10 },
+        queuedAt: '2026-03-27T10:00:00.000Z',
+      }),
+    ];
+
+    const nextQueue = enqueueSyncQueueEntry(initialQueue, {
+      id: 'sync-2',
+      entityType: 'session-log',
+      operation: 'upsert',
+      recordId: 'log-1',
+      payload: { duration: 20 },
+      queuedAt: '2026-03-27T10:05:00.000Z',
+    });
+
+    expect(nextQueue).toHaveLength(1);
+    expect(nextQueue[0]).toMatchObject({ id: 'sync-2', operation: 'upsert' });
+  });
+
+  it('delete after delete: deduplicates to a single delete', () => {
+    const initialQueue = [
+      createSyncQueueEntry({
+        id: 'sync-1',
+        entityType: 'playlist',
+        operation: 'delete',
+        recordId: 'pl-1',
+        payload: null,
+        queuedAt: '2026-03-27T10:00:00.000Z',
+      }),
+    ];
+
+    const nextQueue = enqueueSyncQueueEntry(initialQueue, {
+      id: 'sync-2',
+      entityType: 'playlist',
+      operation: 'delete',
+      recordId: 'pl-1',
+      payload: null,
+      queuedAt: '2026-03-27T10:05:00.000Z',
+    });
+
+    expect(nextQueue).toHaveLength(1);
+    expect(nextQueue[0]).toMatchObject({ id: 'sync-2', operation: 'delete' });
+  });
+
+  it('operations on different records do not affect each other', () => {
+    const initialQueue = [
+      createSyncQueueEntry({
+        id: 'sync-1',
+        entityType: 'custom-play',
+        operation: 'delete',
+        recordId: 'play-R',
+        payload: null,
+        queuedAt: '2026-03-27T10:00:00.000Z',
+      }),
+    ];
+
+    const nextQueue = enqueueSyncQueueEntry(initialQueue, {
+      id: 'sync-2',
+      entityType: 'custom-play',
+      operation: 'upsert',
+      recordId: 'play-S',
+      payload: { name: 'Evening' },
+      queuedAt: '2026-03-27T10:05:00.000Z',
+    });
+
+    expect(nextQueue).toHaveLength(2);
+    expect(nextQueue.find((e) => e.recordId === 'play-R')).toBeDefined();
+    expect(nextQueue.find((e) => e.recordId === 'play-S')).toBeDefined();
   });
 
   it('tracks in-flight and failed retry state', () => {
