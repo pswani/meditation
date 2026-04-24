@@ -186,6 +186,24 @@ final class MeditationNativeUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Vipassana Sit 20"].exists)
     }
 
+    func testPracticeCustomPlayAddOpensCreateForm() throws {
+        let app = makeApp()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        XCTAssertTrue(app.buttons["Open custom play library"].waitForExistence(timeout: 2))
+        app.buttons["Open custom play library"].tap()
+        XCTAssertTrue(app.navigationBars["Custom plays"].waitForExistence(timeout: 2))
+
+        app.buttons["customPlayLibrary.addButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["New custom play"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["customPlayEditor.createButton"].exists)
+        XCTAssertTrue(app.buttons["customPlayEditor.cancelButton"].exists)
+        app.buttons["customPlayEditor.cancelButton"].tap()
+        XCTAssertTrue(app.navigationBars["Custom plays"].waitForExistence(timeout: 2))
+    }
+
     func testPracticePlaylistLibrarySupportsDeleteConfirmationFlow() throws {
         let app = makeApp()
 
@@ -201,6 +219,24 @@ final class MeditationNativeUITests: XCTestCase {
         playlistDeleteButton.tap()
         confirmAlert(in: app, title: "Delete playlist?", button: "Delete")
         XCTAssertFalse(app.staticTexts["Morning Discipline"].exists)
+    }
+
+    func testPracticePlaylistAddOpensCreateForm() throws {
+        let app = makeApp()
+
+        app.tabBars.buttons["Practice"].tap()
+
+        XCTAssertTrue(app.buttons["Open playlist library"].waitForExistence(timeout: 2))
+        app.buttons["Open playlist library"].tap()
+        XCTAssertTrue(app.navigationBars["Playlists"].waitForExistence(timeout: 2))
+
+        app.buttons["playlistLibrary.addButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["New playlist"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["playlistEditor.createButton"].exists)
+        XCTAssertTrue(app.buttons["playlistEditor.cancelButton"].exists)
+        app.buttons["playlistEditor.cancelButton"].tap()
+        XCTAssertTrue(app.navigationBars["Playlists"].waitForExistence(timeout: 2))
     }
 
     func testHistoryAndSettingsExposeMilestoneControls() throws {

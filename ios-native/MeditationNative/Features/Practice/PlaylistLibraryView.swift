@@ -106,9 +106,11 @@ struct PlaylistLibraryView: View {
                     draft = PlaylistDraft()
                     isPresentingEditor = true
                 }
+                .accessibilityLabel("Add playlist")
+                .accessibilityIdentifier("playlistLibrary.addButton")
             }
         }
-        .sheet(isPresented: $isPresentingEditor) {
+        .fullScreenCover(isPresented: $isPresentingEditor) {
             NavigationStack {
                 PlaylistEditorView(
                     viewModel: viewModel,
@@ -230,19 +232,23 @@ struct PlaylistEditorView: View {
                 }
             }
         }
-        .navigationTitle(draft.id == nil ? "New playlist" : "Edit playlist")
+        .accessibilityIdentifier("playlistEditor.form")
+        .navigationTitle(PlaylistEditorPresentation.navigationTitle(for: draft))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
                     dismiss()
                 }
+                .accessibilityIdentifier("playlistEditor.cancelButton")
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button(PlaylistEditorPresentation.confirmationTitle(for: draft)) {
                     if viewModel.savePlaylist(draft) {
                         dismiss()
                     }
                 }
+                .accessibilityIdentifier(PlaylistEditorPresentation.confirmationAccessibilityIdentifier(for: draft))
             }
         }
         .sheet(isPresented: $isPresentingItemEditor) {
@@ -278,6 +284,20 @@ struct PlaylistEditorView: View {
             let meditationTypeLabel = item.meditationType?.rawValue ?? "Linked custom play"
             return "Custom play • \(meditationTypeLabel) • \(item.durationMinutes) min"
         }
+    }
+}
+
+enum PlaylistEditorPresentation {
+    static func navigationTitle(for draft: PlaylistDraft) -> String {
+        draft.id == nil ? "New playlist" : "Edit playlist"
+    }
+
+    static func confirmationTitle(for draft: PlaylistDraft) -> String {
+        draft.id == nil ? "Create" : "Save"
+    }
+
+    static func confirmationAccessibilityIdentifier(for draft: PlaylistDraft) -> String {
+        draft.id == nil ? "playlistEditor.createButton" : "playlistEditor.saveButton"
     }
 }
 

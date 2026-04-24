@@ -3,6 +3,42 @@ import XCTest
 @testable import MeditationNative
 
 final class ShellViewModelPresentationTests: XCTestCase {
+    func testCustomPlayEditorPresentationDifferentiatesCreateAndEdit() {
+        let createDraft = CustomPlayDraft()
+        let editDraft = CustomPlayDraft(id: UUID(uuidString: "11111111-2222-3333-4444-555555555555"))
+
+        XCTAssertEqual(CustomPlayEditorPresentation.navigationTitle(for: createDraft), "New custom play")
+        XCTAssertEqual(CustomPlayEditorPresentation.confirmationTitle(for: createDraft), "Create")
+        XCTAssertEqual(
+            CustomPlayEditorPresentation.confirmationAccessibilityIdentifier(for: createDraft),
+            "customPlayEditor.createButton"
+        )
+        XCTAssertEqual(CustomPlayEditorPresentation.navigationTitle(for: editDraft), "Edit custom play")
+        XCTAssertEqual(CustomPlayEditorPresentation.confirmationTitle(for: editDraft), "Save")
+        XCTAssertEqual(
+            CustomPlayEditorPresentation.confirmationAccessibilityIdentifier(for: editDraft),
+            "customPlayEditor.saveButton"
+        )
+    }
+
+    func testPlaylistEditorPresentationDifferentiatesCreateAndEdit() {
+        let createDraft = PlaylistDraft()
+        let editDraft = PlaylistDraft(id: UUID(uuidString: "22222222-3333-4444-5555-666666666666"))
+
+        XCTAssertEqual(PlaylistEditorPresentation.navigationTitle(for: createDraft), "New playlist")
+        XCTAssertEqual(PlaylistEditorPresentation.confirmationTitle(for: createDraft), "Create")
+        XCTAssertEqual(
+            PlaylistEditorPresentation.confirmationAccessibilityIdentifier(for: createDraft),
+            "playlistEditor.createButton"
+        )
+        XCTAssertEqual(PlaylistEditorPresentation.navigationTitle(for: editDraft), "Edit playlist")
+        XCTAssertEqual(PlaylistEditorPresentation.confirmationTitle(for: editDraft), "Save")
+        XCTAssertEqual(
+            PlaylistEditorPresentation.confirmationAccessibilityIdentifier(for: editDraft),
+            "playlistEditor.saveButton"
+        )
+    }
+
     func testSyncPresentationReflectsQueuedAndUpToDateStates() {
         var pendingState = AppSyncState(connectionState: .pendingSync)
         pendingState.pendingMutations = [

@@ -16,6 +16,7 @@ Included:
 - web Home action hierarchy cleanup and active-timer CTA cleanup
 - web state-message and visual-polish improvements where they intersect the reviewed issues
 - native iPhone sync banner presentation cleanup
+- native iPhone custom play and playlist Add flows as explicit full-screen create flows
 - native iPhone custom play and playlist library copy cleanup
 - native iPhone safe-area/layout polish that supports the reviewed issues
 - focused tests for changed behavior
@@ -65,6 +66,7 @@ Excluded:
 - Home should present one primary next-step action and lighter secondary shortcuts.
 - The active timer screen should not offer a redundant resume action when already open.
 - iPhone sync status should stay concise, separate from nav controls, and avoid crowding toolbar actions.
+- iPhone custom play and playlist Add actions should open unmistakable full-screen create flows with `New custom play` or `New playlist` titles, Cancel on the left, and Create on the right.
 - iPhone library cards should remove technical identifiers from normal reading order.
 
 ## Data And State Model
@@ -72,6 +74,7 @@ Excluded:
 - Web form state will keep existing draft shapes but may add derived error-clearing behavior.
 - Goals page may add UI-only disclosure state for mobile density control.
 - Native iPhone banner changes are presentation-only.
+- Native create-flow presentation changes keep the existing draft and save models; no persisted domain shape changes are introduced.
 
 ## Risks
 - Shell spacing changes can accidentally regress desktop spacing or keyboard focus behavior.
@@ -97,9 +100,11 @@ Excluded:
 ## Decision Log
 - 2026-04-23: Keep this follow-up scoped to the review's high and medium issues instead of mixing in unrelated feature work.
 - 2026-04-23: Treat the web `Goals` nav rename as a user-facing terminology fix only; keep `/sankalpa` as a compatibility route.
+- 2026-04-23: Resolve the remaining critical native Add-flow issue as a focused presentation and regression-test slice instead of expanding into broader native library management changes.
 
 ## Progress Log
 - 2026-04-23: Read required product docs, review artifacts, and the `ux-designer` skill.
 - 2026-04-23: Mapped the review issues to the current web shell, Goals, Home, playlist, custom play, and native iPhone presentation code.
 - 2026-04-23: Implemented the high and medium review fixes across web and native iPhone surfaces, including shell spacing, calmer copy, Home hierarchy cleanup, Goals disclosure sections, playlist error pruning, and native banner/library presentation cleanup.
 - 2026-04-23: Updated focused regression tests to match the calmer terminology and new CTA structure, then reran repo verification and native Swift package tests.
+- 2026-04-23: Updated native custom play and playlist Add flows to present full-screen create forms with explicit Create actions, stable automation identifiers, focused Swift tests for presentation copy plus minimum valid saves, and XCUITest coverage for tapping Add into each create form.

@@ -106,9 +106,11 @@ struct CustomPlayLibraryView: View {
                     draft = CustomPlayDraft()
                     isPresentingEditor = true
                 }
+                .accessibilityLabel("Add custom play")
+                .accessibilityIdentifier("customPlayLibrary.addButton")
             }
         }
-        .sheet(isPresented: $isPresentingEditor) {
+        .fullScreenCover(isPresented: $isPresentingEditor) {
             NavigationStack {
                 CustomPlayEditorView(
                     viewModel: viewModel,
@@ -208,19 +210,23 @@ struct CustomPlayEditorView: View {
                 }
             }
         }
-        .navigationTitle(draft.id == nil ? "New custom play" : "Edit custom play")
+        .accessibilityIdentifier("customPlayEditor.form")
+        .navigationTitle(CustomPlayEditorPresentation.navigationTitle(for: draft))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
                     dismiss()
                 }
+                .accessibilityIdentifier("customPlayEditor.cancelButton")
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button(CustomPlayEditorPresentation.confirmationTitle(for: draft)) {
                     if viewModel.saveCustomPlay(draft) {
                         dismiss()
                     }
                 }
+                .accessibilityIdentifier(CustomPlayEditorPresentation.confirmationAccessibilityIdentifier(for: draft))
             }
         }
     }
@@ -239,6 +245,20 @@ struct CustomPlayEditorView: View {
                 }
             }
         )
+    }
+}
+
+enum CustomPlayEditorPresentation {
+    static func navigationTitle(for draft: CustomPlayDraft) -> String {
+        draft.id == nil ? "New custom play" : "Edit custom play"
+    }
+
+    static func confirmationTitle(for draft: CustomPlayDraft) -> String {
+        draft.id == nil ? "Create" : "Save"
+    }
+
+    static func confirmationAccessibilityIdentifier(for draft: CustomPlayDraft) -> String {
+        draft.id == nil ? "customPlayEditor.createButton" : "customPlayEditor.saveButton"
     }
 }
 

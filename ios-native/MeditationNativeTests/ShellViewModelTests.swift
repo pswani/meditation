@@ -104,6 +104,61 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.practiceRuntimeMessage, "Custom play \"Morning Focus\" applied to timer setup.")
     }
 
+    func testSavingNewCustomPlayDraftAddsItToTheLibrary() throws {
+        let (viewModel, _, _, _) = try makeViewModel()
+        let draft = CustomPlayDraft(
+            name: "QA Evening Sit",
+            meditationType: .ajapa,
+            durationMinutes: 18,
+            recordingLabel: "Review recording",
+            linkedMediaIdentifier: CustomPlayMediaAsset.vipassanaSit20.id,
+            media: .bundledSample(.vipassanaSit20),
+            isFavorite: true
+        )
+
+        XCTAssertTrue(viewModel.saveCustomPlay(draft))
+
+        let savedCustomPlay = try XCTUnwrap(
+            viewModel.snapshot.customPlays.first { $0.name == "QA Evening Sit" }
+        )
+        XCTAssertEqual(savedCustomPlay.meditationType, .ajapa)
+        XCTAssertEqual(savedCustomPlay.durationSeconds, 18 * 60)
+        XCTAssertEqual(savedCustomPlay.recordingLabel, "Review recording")
+        XCTAssertEqual(savedCustomPlay.media?.bundledAsset, .vipassanaSit20)
+        XCTAssertTrue(savedCustomPlay.isFavorite)
+        XCTAssertNil(viewModel.customPlayValidationMessage)
+    }
+
+    func testSavingNewPlaylistDraftAddsItToTheLibrary() throws {
+        let (viewModel, _, _, _) = try makeViewModel()
+        let draft = PlaylistDraft(
+            name: "QA Morning Sequence",
+            items: [
+                PlaylistDraftItem(
+                    title: "Vipassana opener",
+                    kind: .timer,
+                    durationMinutes: 12,
+                    meditationType: .vipassana
+                ),
+            ],
+            gapSeconds: 15,
+            isFavorite: true
+        )
+
+        XCTAssertTrue(viewModel.savePlaylist(draft))
+
+        let savedPlaylist = try XCTUnwrap(
+            viewModel.snapshot.playlists.first { $0.name == "QA Morning Sequence" }
+        )
+        XCTAssertEqual(savedPlaylist.items.count, 1)
+        XCTAssertEqual(savedPlaylist.items.first?.title, "Vipassana opener")
+        XCTAssertEqual(savedPlaylist.items.first?.durationSeconds, 12 * 60)
+        XCTAssertEqual(savedPlaylist.items.first?.meditationType, .vipassana)
+        XCTAssertEqual(savedPlaylist.gapSeconds, 15)
+        XCTAssertTrue(savedPlaylist.isFavorite)
+        XCTAssertNil(viewModel.playlistValidationMessage)
+    }
+
     func testLocalOnlyBundledFavoriteCustomPlayRemainsStartable() throws {
         let (viewModel, _, _, _) = try makeViewModel(environment: .localOnly)
         let customPlay = try XCTUnwrap(viewModel.favoriteCustomPlaysForHome.first)
@@ -138,7 +193,7 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.canStartCustomPlay(customPlay))
         XCTAssertEqual(
             viewModel.customPlayStartSupportMessage(for: customPlay),
-            "Recording unavailable on this device. Start still runs the saved duration and bells."
+            "Recording unavailable here. You can still run this as a timed session with saved bells."
         )
     }
 
