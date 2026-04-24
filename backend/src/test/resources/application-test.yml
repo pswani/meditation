@@ -10,6 +10,11 @@ spring:
 
 meditation:
   backend:
+    # Effectively disable clock-skew rejection in tests so that existing stale-mutation
+    # tests can use far-future/past timestamps without interference. The interceptor
+    # itself is tested in SyncClockSkewInterceptorTest with a 300s override.
+    sync:
+      clock-skew-tolerance-seconds: 9999999999
     test-runtime-root: ${java.io.tmpdir}/meditation-backend-test/${random.uuid}
     media:
       root: ${meditation.backend.test-runtime-root}/media
