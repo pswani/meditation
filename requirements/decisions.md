@@ -155,12 +155,13 @@
   - the iOS app reuses the same bundled `temple-bell.mp3` and `gong.mp3` assets for playback
   - legacy native or synced values normalize through the same `Soft Chime` -> `Temple Bell` and `Wood Block` -> `Gong` mapping
   - activate an `AVAudioSession` playback category before timer-cue and recording-backed playback so meditation audio is not muted by the iPhone silent switch
-  - keep that native playback session on `.playback` with `.mixWithOthers` so timer cues and recording-backed sessions can sound without pausing another audio app
+  - keep that native playback session on `.playback` with `.mixWithOthers`, `.duckOthers`, and spoken-audio interruption support so timer cues and recording-backed sessions can sound without being suppressed by another audio app
+  - keep a native silent background-audio keepalive available for timer sessions with delayed bells and bells-only `custom play` runs so interval and end cues are less dependent on foreground clock ticks while the phone is locked
   - declare native background audio for recording-backed playback so standalone `custom play` sessions can remain truthful while the phone is locked when iOS allows that playback to continue
   - when a fixed timer is within roughly the last 25 seconds and the scene turns inactive or backgrounded, arm a narrow background-task bridge so the selected end bell can still fire if iOS keeps the app runnable through completion
   - keep fixed-timer notification fallback aligned with the selected bundled end bell when one exists
   - during near-end bridge coverage, delay the notification fallback slightly so the app-driven bell has a truthful chance to finish first without routinely producing duplicate bells
-  - for longer lock-screen spans, rely on the existing local-notification sound plus foreground catch-up instead of claiming guaranteed app-driven end-bell playback after suspension
+  - for longer lock-screen spans, treat the silent keepalive, the near-end bridge, and the selected local-notification sound as layered reliability measures instead of claiming one mechanism is sufficient in every iOS suspension path
 - Keep timer sound playback Safari-friendly by playing the start cue directly from the user's Start tap and priming only deferred interval/end cues from that same gesture.
 - Mitigate iPhone Safari lock-screen completion-bell deferral with a web-first path:
   - schedule a fixed-timer completion timeout from wall-clock remaining time so the selected end bell is attempted when an unfocused browser page remains runnable, even if regular interval ticks are throttled

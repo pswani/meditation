@@ -48,6 +48,7 @@ final class ShellViewModel: ObservableObject {
     private let timerCompletionBridge: TimerCompletionBridging
     private let soundPlayer: TimerSoundPlaying
     private let audioPlayer: CustomPlayAudioControlling
+    private let backgroundAudioKeepAlive: BackgroundAudioKeeping
     private var clockCancellable: AnyCancellable?
     private let syncClientFactory: @Sendable (URL) -> AppSyncClient
     private var syncClient: AppSyncClient?
@@ -65,6 +66,7 @@ final class ShellViewModel: ObservableObject {
         timerCompletionBridge: TimerCompletionBridging? = nil,
         soundPlayer: TimerSoundPlaying? = nil,
         audioPlayer: CustomPlayAudioControlling? = nil,
+        backgroundAudioKeepAlive: BackgroundAudioKeeping? = nil,
         syncClient: AppSyncClient? = nil,
         syncClientFactory: @escaping @Sendable (URL) -> AppSyncClient = { LiveAppSyncClient(baseURL: $0) }
     ) {
@@ -74,6 +76,7 @@ final class ShellViewModel: ObservableObject {
         self.timerCompletionBridge = timerCompletionBridge ?? LiveTimerCompletionBridge()
         self.soundPlayer = soundPlayer ?? SystemSoundPlayer()
         self.audioPlayer = audioPlayer ?? BundledCustomPlayAudioPlayer()
+        self.backgroundAudioKeepAlive = backgroundAudioKeepAlive ?? SilentBackgroundAudioKeepAlive()
         self.syncClientFactory = syncClientFactory
         self.syncClient = syncClient ?? repository.environment.apiBaseURL.map(syncClientFactory)
 
@@ -219,6 +222,59 @@ final class ShellViewModel: ObservableObject {
         )
     }
 
+    private func syncBackgroundAudioKeepAlive() {
+        if shouldKeepBackgroundAudioAlive {
+            backgroundAudioKeepAlive.begin()
+        } else {
+            backgroundAudioKeepAlive.end()
+        }
+    }
+
+    private var shouldKeepBackgroundAudioAlive: Bool {
+        if let activeSession, shouldKeepBackgroundAudioAlive(for: activeSession) {
+            return true
+        }
+
+        if let activeCustomPlaySession, shouldKeepBackgroundAudioAlive(for: activeCustomPlaySession) {
+            return true
+        }
+
+        return false
+    }
+
+    private func shouldKeepBackgroundAudioAlive(for session: ActiveTimerSession) -> Bool {
+        guard session.isPaused == false else {
+            return false
+        }
+
+        if let endSoundName = session.configuration.endSoundName,
+           endSoundName.isEmpty == false {
+            return true
+        }
+
+        if let intervalSoundName = session.configuration.intervalSoundName,
+           intervalSoundName.isEmpty == false,
+           (session.configuration.intervalMinutes ?? 0) > 0 {
+            return true
+        }
+
+        return false
+    }
+
+    private func shouldKeepBackgroundAudioAlive(for session: ActiveCustomPlaySession) -> Bool {
+        guard session.isPaused == false,
+              canResolvePlayback(for: session.customPlay.media) == false
+        else {
+            return false
+        }
+
+        guard let endSoundName = session.customPlay.endSoundName else {
+            return false
+        }
+
+        return endSoundName.isEmpty == false
+    }
+
     func playlistRunValidationMessage(for playlist: Playlist) -> String? {
         if let validationError = PlaylistFeature.validatePlaylistForRun(
             playlist,
@@ -307,6 +363,7 @@ final class ShellViewModel: ObservableObject {
 
         activeSession.pause(at: now)
         self.activeSession = activeSession
+        syncBackgroundAudioKeepAlive()
         persistSnapshot()
         timerCompletionBridge.cancelTimerCompletionBridge()
         Task {
@@ -323,6 +380,7 @@ final class ShellViewModel: ObservableObject {
         activeSession.resume(at: resumedAt)
         self.activeSession = activeSession
         now = resumedAt
+        syncBackgroundAudioKeepAlive()
         persistSnapshot()
         rescheduleTimerNotificationIfNeeded()
     }
@@ -514,6 +572,7 @@ final class ShellViewModel: ObservableObject {
         practiceRuntimeMessage = startCustomPlayPlaybackIfAvailable(for: customPlay)
         activeCustomPlaySession = ActiveCustomPlaySession(customPlay: customPlay, startedAt: Date())
         soundPlayer.playSound(named: customPlay.startSoundName)
+        syncBackgroundAudioKeepAlive()
         recordLastUsedPracticeTarget(
             LastUsedPracticeTarget(
                 kind: .customPlay,
@@ -536,6 +595,7 @@ final class ShellViewModel: ObservableObject {
         activeCustomPlaySession.pause(at: now)
         self.activeCustomPlaySession = activeCustomPlaySession
         audioPlayer.pausePlayback()
+        syncBackgroundAudioKeepAlive()
         Task {
             await notificationScheduler.cancelTimerCompletionNotification()
         }
@@ -555,6 +615,7 @@ final class ShellViewModel: ObservableObject {
             practiceRuntimeMessage = resumedWithoutRecording
                 ? "Recording unavailable on this device. This custom play resumed with its saved duration and bells only."
                 : nil
+            syncBackgroundAudioKeepAlive()
             rescheduleCustomPlayCompletionNotificationIfNeeded()
             persistSnapshot()
         } catch let error as LocalAudioPlaybackError {
@@ -999,6 +1060,7 @@ final class ShellViewModel: ObservableObject {
         let log = activeSession.makeSessionLog(status: status, endedAt: endedAt)
         soundPlayer.playSound(named: activeSession.configuration.endSoundName)
         self.activeSession = nil
+        syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
         Task {
@@ -1017,6 +1079,7 @@ final class ShellViewModel: ObservableObject {
         audioPlayer.stopPlayback()
         soundPlayer.playSound(named: activeCustomPlaySession.customPlay.endSoundName)
         self.activeCustomPlaySession = nil
+        syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
         Task {
@@ -1291,6 +1354,7 @@ final class ShellViewModel: ObservableObject {
             activeSession = try TimerFeature.makeActiveSession(from: draft, now: Date())
             now = Date()
             soundPlayer.playSound(named: activeSession?.configuration.startSoundName)
+            syncBackgroundAudioKeepAlive()
             if let lastUsedTarget {
                 var updatedLastUsedTarget = lastUsedTarget
                 updatedLastUsedTarget.updatedAt = Date()
@@ -1398,6 +1462,7 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        syncBackgroundAudioKeepAlive()
         startClock()
         rescheduleTimerNotificationIfNeeded()
         persistSnapshot()
@@ -1430,6 +1495,7 @@ final class ShellViewModel: ObservableObject {
             practiceRuntimeMessage = nil
         }
 
+        syncBackgroundAudioKeepAlive()
         startClock()
         rescheduleCustomPlayCompletionNotificationIfNeeded()
         persistSnapshot()
@@ -1483,6 +1549,7 @@ final class ShellViewModel: ObservableObject {
         timerCompletionBridge.cancelTimerCompletionBridge()
         let log = activeSession.makeSessionLog(status: .completed, endedAt: endedAt)
         self.activeSession = nil
+        syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
         Task {
@@ -1500,6 +1567,7 @@ final class ShellViewModel: ObservableObject {
         let log = activeCustomPlaySession.makeSessionLog(status: .completed, endedAt: endedAt)
         audioPlayer.stopPlayback()
         self.activeCustomPlaySession = nil
+        syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
         Task {

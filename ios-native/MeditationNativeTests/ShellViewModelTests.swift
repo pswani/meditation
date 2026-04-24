@@ -197,7 +197,7 @@ final class ShellViewModelTests: XCTestCase {
         )
     }
 
-    func testCustomPlayWithoutResolvableMediaCanStillStartWithBellsOnlyFallback() throws {
+    func testCustomPlayWithoutResolvableMediaCanStillStartWithBellsOnlyFallback() async throws {
         var snapshot = SampleData.snapshot
         let unavailableCustomPlay = CustomPlay(
             name: "Unavailable Recording",
@@ -226,13 +226,103 @@ final class ShellViewModelTests: XCTestCase {
             viewModel.practiceRuntimeMessage,
             "Recording unavailable on this device. This custom play is running with its saved duration and bells only."
         )
-        XCTAssertEqual(notificationScheduler.scheduledEndSoundNames.last!, unavailableCustomPlay.endSoundName)
+        while notificationScheduler.scheduledEndSoundNames.isEmpty {
+            await Task.yield()
+        }
+        XCTAssertEqual(notificationScheduler.scheduledEndSoundNames.last, unavailableCustomPlay.endSoundName)
     }
 
     func testPlaybackAudioSessionPolicyMixesWithOtherAudio() {
         XCTAssertEqual(PlaybackAudioSessionSupport.category, .playback)
         XCTAssertEqual(PlaybackAudioSessionSupport.mode, .default)
         XCTAssertTrue(PlaybackAudioSessionSupport.options.contains(.mixWithOthers))
+        XCTAssertTrue(PlaybackAudioSessionSupport.options.contains(.duckOthers))
+    }
+
+    func testTimerWithDelayedBellsStartsAndStopsBackgroundKeepAlive() throws {
+        var snapshot = SampleData.snapshot
+        snapshot.timerDraft = TimerSettingsDraft(
+            mode: .fixedDuration,
+            durationMinutes: 12,
+            meditationType: .vipassana,
+            endSoundName: TimerSoundOption.gong.rawValue,
+            intervalSoundName: TimerSoundOption.templeBell.rawValue,
+            intervalMinutes: 4
+        )
+        let keepAlive = StubBackgroundAudioKeepAlive()
+        let (viewModel, _, _, _) = try makeViewModel(
+            snapshot: snapshot,
+            backgroundAudioKeepAlive: keepAlive
+        )
+
+        viewModel.startTimer()
+        XCTAssertEqual(keepAlive.beginCount, 1)
+        XCTAssertTrue(keepAlive.isActive)
+
+        viewModel.pauseTimer()
+        XCTAssertEqual(keepAlive.endCount, 1)
+        XCTAssertFalse(keepAlive.isActive)
+
+        viewModel.resumeTimer()
+        XCTAssertEqual(keepAlive.beginCount, 2)
+        XCTAssertTrue(keepAlive.isActive)
+
+        viewModel.requestEndTimerConfirmation()
+        viewModel.confirmRuntimeSafetyPrompt()
+        XCTAssertEqual(keepAlive.endCount, 2)
+        XCTAssertFalse(keepAlive.isActive)
+    }
+
+    func testBellsOnlyCustomPlayUsesBackgroundKeepAliveForDelayedEndBell() throws {
+        var snapshot = SampleData.snapshot
+        let customPlay = CustomPlay(
+            name: "Unavailable Recording",
+            meditationType: .vipassana,
+            durationSeconds: 600,
+            endSoundName: TimerSoundOption.gong.rawValue,
+            linkedMediaIdentifier: "remote-only",
+            media: .remote(
+                id: "remote-only",
+                label: "Unavailable Recording",
+                relativePath: "custom-plays/unavailable.mp3",
+                filePath: ""
+            ),
+            isFavorite: true
+        )
+        snapshot.customPlays = [customPlay]
+        let keepAlive = StubBackgroundAudioKeepAlive()
+        let (viewModel, _, _, _) = try makeViewModel(
+            snapshot: snapshot,
+            environment: .localOnly,
+            backgroundAudioKeepAlive: keepAlive
+        )
+
+        XCTAssertTrue(viewModel.startCustomPlay(customPlay))
+        XCTAssertEqual(keepAlive.beginCount, 1)
+        XCTAssertTrue(keepAlive.isActive)
+
+        viewModel.pauseCustomPlay()
+        XCTAssertEqual(keepAlive.endCount, 1)
+        XCTAssertFalse(keepAlive.isActive)
+
+        viewModel.resumeCustomPlay()
+        XCTAssertEqual(keepAlive.beginCount, 2)
+        XCTAssertTrue(keepAlive.isActive)
+
+        viewModel.requestEndCustomPlayConfirmation()
+        viewModel.confirmRuntimeSafetyPrompt()
+        XCTAssertEqual(keepAlive.endCount, 2)
+        XCTAssertFalse(keepAlive.isActive)
+    }
+
+    func testPlayableCustomPlayDoesNotStartBackgroundKeepAlive() throws {
+        let keepAlive = StubBackgroundAudioKeepAlive()
+        let (viewModel, _, _, _) = try makeViewModel(backgroundAudioKeepAlive: keepAlive)
+        let customPlay = try XCTUnwrap(viewModel.snapshot.customPlays.first(where: { $0.media?.isPlayable == true }))
+
+        XCTAssertTrue(viewModel.startCustomPlay(customPlay))
+        XCTAssertEqual(keepAlive.beginCount, 0)
+        XCTAssertFalse(keepAlive.isActive)
     }
 
     func testNotificationFallbackUsesBundledSelectedEndBellWhenAvailable() {
@@ -535,7 +625,11 @@ final class ShellViewModelTests: XCTestCase {
 
     func testSaveBackendConfigurationUpdatesEnvironmentAndStartsConfiguredSync() throws {
         let syncClientFactory = RecordingSyncClientFactory()
-        let (viewModel, _, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+        let (viewModel, _, _, _) = try makeViewModel(
+            syncClientFactory: { [syncClientFactory] baseURL in
+                syncClientFactory.makeClient(baseURL: baseURL)
+            }
+        )
 
         let saved = viewModel.saveBackendConfiguration(
             profileName: "Phone Sync",
@@ -577,7 +671,11 @@ final class ShellViewModelTests: XCTestCase {
 
     func testClearBackendConfigurationReturnsToLocalOnlyMode() throws {
         let syncClientFactory = RecordingSyncClientFactory()
-        let (viewModel, _, _, _) = try makeViewModel(syncClientFactory: syncClientFactory.makeClient)
+        let (viewModel, _, _, _) = try makeViewModel(
+            syncClientFactory: { [syncClientFactory] baseURL in
+                syncClientFactory.makeClient(baseURL: baseURL)
+            }
+        )
         _ = viewModel.saveBackendConfiguration(
             profileName: "Phone Sync",
             apiBaseURLString: "http://192.168.1.12:8080"
@@ -657,6 +755,7 @@ final class ShellViewModelTests: XCTestCase {
     private func makeViewModel(
         snapshot: AppSnapshot = SampleData.snapshot,
         environment: AppEnvironment = .localOnly,
+        backgroundAudioKeepAlive: BackgroundAudioKeeping? = nil,
         syncClientFactory: @escaping @Sendable (URL) -> AppSyncClient = { _ in StubAppSyncClient() }
     ) throws -> (ShellViewModel, StubNotificationScheduler, RecordingAudioPlayer, StubTimerCompletionBridge) {
         let tempDirectory = FileManager.default.temporaryDirectory
@@ -687,6 +786,7 @@ final class ShellViewModelTests: XCTestCase {
             timerCompletionBridge: timerCompletionBridge,
             soundPlayer: soundPlayer,
             audioPlayer: audioPlayer,
+            backgroundAudioKeepAlive: backgroundAudioKeepAlive,
             syncClientFactory: syncClientFactory
         )
 
@@ -810,6 +910,23 @@ private final class RecordingAudioPlayer: CustomPlayAudioControlling {
 
     func firePlaybackCompletion() {
         onPlaybackCompletion?()
+    }
+}
+
+@MainActor
+private final class StubBackgroundAudioKeepAlive: BackgroundAudioKeeping {
+    private(set) var beginCount = 0
+    private(set) var endCount = 0
+    private(set) var isActive = false
+
+    func begin() {
+        beginCount += 1
+        isActive = true
+    }
+
+    func end() {
+        endCount += 1
+        isActive = false
     }
 }
 

@@ -18,9 +18,11 @@ Implemented native surfaces today include:
 - playlist creation, editing, reordering, favorite handling, and ordered runtime
 - web-aligned timer sound choices and bundled timer cue playback using the shared `Temple Bell` and `Gong` audio files
 - native playback audio mixing that keeps timer cues and recording-backed sessions audible while another audio app continues playing
-- a near-end fixed-timer background bridge that can preserve the selected end bell for the last few locked-screen seconds, while longer background spans still fall back to notification sound or foreground catch-up
+- a background-audio keepalive for timer sessions with delayed bells so fixed-session interval and end cues stay runnable under lock more reliably instead of depending only on foreground clock ticks
+- a near-end fixed-timer background bridge that still backs up the last few locked-screen seconds when iOS is already transitioning the app away from active execution
 - selected-bell notification fallback for fixed timers when the bundled `Temple Bell` or `Gong` cue is available, with a short backup delay during near-end lock-screen transitions to reduce duplicate bell risk
 - background-audio-backed `custom play` completion that keeps recording playback truthful under lock when iOS allows it, then finishes with the saved end bell or notification fallback instead of depending only on foreground clock ticks
+- bells-only `custom play` completion support that starts a silent background-audio keepalive when the recording itself is unavailable so the saved end bell can still fire after lock-screen suspension pressure
 - Home favorites and Practice `custom play` starts that remain available even when the recording is unavailable on the device, running the saved duration and bells with explicit calm guidance instead of disabling the primary action
 - truthful `custom play` and linked-playlist recording playback:
   - one bundled sample recording ships with the app for local-only use
@@ -216,6 +218,7 @@ Physical iPhone or concrete simulator verification is still recommended for:
 - fixed-duration completion notifications and near-end lock-screen end-bell behavior
 - Home favorite and Practice `custom play` starts when synced media is unavailable on the device
 - standalone `custom play` completion bells while the phone is locked, including fallback behavior when another audio app is already playing
+- fixed-timer interval and end bells on a locked physical iPhone, including longer spans that now rely on the native background-audio keepalive instead of only near-end bridging
 - near-end app-driven bell versus delayed notification fallback timing on a locked iPhone
 - background or foreground transitions around timer completion
 - competing-audio mixing behavior for timer cues and recording-backed playback
@@ -223,6 +226,7 @@ Physical iPhone or concrete simulator verification is still recommended for:
 - bundled timer cue playback for `Temple Bell` and `Gong`
 - bundled-sample and backend-linked recording playback for `custom play` and playlist-linked items
 - silent-switch playback for timer cues and recording-backed sessions on physical hardware
+- silent-switch playback for locked-session interval bells and bells-only `custom play` completion on physical hardware
 - pause or resume behavior when audio playback is interrupted by the system
 - Home density and readability on a real iPhone-sized screen
 - `sankalpa` editor ergonomics and observance day-menu interactions on a concrete device

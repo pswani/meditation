@@ -235,6 +235,13 @@ protocol TimerSoundPlaying: AnyObject {
 }
 
 @MainActor
+protocol BackgroundAudioKeeping: AnyObject {
+    var isActive: Bool { get }
+    func begin()
+    func end()
+}
+
+@MainActor
 final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAudioPlayerDelegate {
     private var activePlayers: [AVAudioPlayer] = []
 
@@ -251,16 +258,19 @@ final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAu
             player.delegate = self
             player.prepareToPlay()
             guard player.play() else {
+                PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
                 return
             }
             activePlayers.append(player)
         } catch {
+            PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
             return
         }
     }
 
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         activePlayers.removeAll { $0 === player }
+        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
     }
 }
 
@@ -299,6 +309,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 
     private var player: AVPlayer?
     private var playbackCompletionObserver: NSObjectProtocol?
+    private var holdsPlaybackSessionLease = false
 
     func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval = 0) throws {
         stopPlayback()
@@ -306,6 +317,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 
         do {
             try PlaybackAudioSessionSupport.activatePlaybackSession()
+            holdsPlaybackSessionLease = true
 
             let player = AVPlayer(url: url)
             player.automaticallyWaitsToMinimizeStalling = true
@@ -318,8 +330,10 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
             player.play()
             self.player = player
         } catch let playbackError as LocalAudioPlaybackError {
+            releasePlaybackSessionLeaseIfNeeded()
             throw playbackError
         } catch {
+            releasePlaybackSessionLeaseIfNeeded()
             throw LocalAudioPlaybackError.audioSetupFailed
         }
     }
@@ -333,7 +347,10 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
             throw LocalAudioPlaybackError.audioSetupFailed
         }
 
-        try PlaybackAudioSessionSupport.activatePlaybackSession()
+        if holdsPlaybackSessionLease == false {
+            try PlaybackAudioSessionSupport.activatePlaybackSession()
+            holdsPlaybackSessionLease = true
+        }
         player.play()
     }
 
@@ -341,6 +358,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
         detachPlaybackCompletionObserver()
         player?.pause()
         player = nil
+        releasePlaybackSessionLeaseIfNeeded()
     }
 
     private func attachPlaybackCompletionObserver(to item: AVPlayerItem?) {
@@ -426,17 +444,109 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
         components.fragment = nil
         return components.url
     }
+
+    private func releasePlaybackSessionLeaseIfNeeded() {
+        guard holdsPlaybackSessionLease else {
+            return
+        }
+
+        holdsPlaybackSessionLease = false
+        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+    }
 }
 
+@MainActor
+final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
+    private let engine = AVAudioEngine()
+    private let playerNode = AVAudioPlayerNode()
+    private let silentBuffer: AVAudioPCMBuffer
+    private(set) var isActive = false
+
+    init() {
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+        let frameCapacity: AVAudioFrameCount = 4_410
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)!
+        buffer.frameLength = frameCapacity
+        if let channelData = buffer.floatChannelData {
+            channelData[0].initialize(repeating: 0, count: Int(frameCapacity))
+        }
+        silentBuffer = buffer
+
+        engine.attach(playerNode)
+        engine.connect(playerNode, to: engine.mainMixerNode, format: format)
+        engine.prepare()
+    }
+
+    deinit {
+        playerNode.stop()
+        engine.stop()
+    }
+
+    func begin() {
+        guard isActive == false else {
+            return
+        }
+
+        do {
+            try PlaybackAudioSessionSupport.activatePlaybackSession()
+            if engine.isRunning == false {
+                try engine.start()
+            }
+            if playerNode.isPlaying == false {
+                playerNode.scheduleBuffer(silentBuffer, at: nil, options: [.loops], completionHandler: nil)
+                playerNode.play()
+            }
+            isActive = true
+        } catch {
+            PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+            playerNode.stop()
+            engine.stop()
+            isActive = false
+        }
+    }
+
+    func end() {
+        guard isActive else {
+            return
+        }
+
+        playerNode.stop()
+        engine.pause()
+        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+        isActive = false
+    }
+}
+
+@MainActor
 enum PlaybackAudioSessionSupport {
     static let category: AVAudioSession.Category = .playback
     static let mode: AVAudioSession.Mode = .default
-    static let options: AVAudioSession.CategoryOptions = [.mixWithOthers]
+    static let options: AVAudioSession.CategoryOptions = [
+        .mixWithOthers,
+        .duckOthers,
+        .interruptSpokenAudioAndMixWithOthers
+    ]
+    private static var activationCount = 0
 
     static func activatePlaybackSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(category, mode: mode, options: options)
         try session.setActive(true)
+        activationCount += 1
+    }
+
+    static func deactivatePlaybackSessionIfNeeded() {
+        guard activationCount > 0 else {
+            return
+        }
+
+        activationCount -= 1
+        guard activationCount == 0 else {
+            return
+        }
+
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
     }
 }
 
