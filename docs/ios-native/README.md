@@ -181,10 +181,16 @@ The repo helper wraps the simulator SDK app build and shared-core SwiftPM tests:
 ./scripts/test-iPhone-simulator.sh
 ```
 
-It fails on the first unsuccessful build or SwiftPM test command. To opt into the scheme-based XCTest run after Xcode lists an eligible simulator, set `MEDITATION_IOS_RUN_SCHEME_TESTS=1` and provide a destination from `xcodebuild -showdestinations`, for example:
+It fails on the first unsuccessful build, scheme XCTest run, or SwiftPM test command. When Xcode lists an eligible iPhone simulator, the script now runs the full scheme-based XCTest suite automatically. Override the detected simulator with `MEDITATION_IOS_SIMULATOR_DESTINATION` when needed, for example:
 
 ```bash
-MEDITATION_IOS_RUN_SCHEME_TESTS=1 MEDITATION_IOS_SIMULATOR_DESTINATION="platform=iOS Simulator,name=<Your Installed iPhone Simulator>" ./scripts/test-iPhone-simulator.sh
+MEDITATION_IOS_SIMULATOR_DESTINATION="platform=iOS Simulator,name=<Your Installed iPhone Simulator>" ./scripts/test-iPhone-simulator.sh
+```
+
+If you want the simulator helper to skip the scheme XCTest layer and run only the app build plus shared-core SwiftPM tests, set:
+
+```bash
+MEDITATION_IOS_RUN_SCHEME_TESTS=0 ./scripts/test-iPhone-simulator.sh
 ```
 
 For a connected iPhone, run:
@@ -193,7 +199,7 @@ For a connected iPhone, run:
 ./scripts/test-iPhone.sh
 ```
 
-It builds the device target with the configured development team and runs the shared-core SwiftPM tests. To opt into the scheme-based device XCTest run after Xcode lists the device as eligible, set `MEDITATION_IOS_RUN_SCHEME_TESTS=1` and override `MEDITATION_IOS_DEVICE_DESTINATION` if needed.
+It builds the device target with the configured development team, runs the full scheme XCTest suite automatically when Xcode lists an eligible iPhone destination, and then runs the shared-core SwiftPM tests. Override the detected device destination with `MEDITATION_IOS_DEVICE_DESTINATION` if needed. Set `MEDITATION_IOS_RUN_SCHEME_TESTS=0` only when you intentionally want to skip the device XCTest layer.
 
 For the shared core package only, you can also run:
 
