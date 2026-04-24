@@ -503,6 +503,7 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
 
   if (
     typeof candidate.id !== 'string' ||
+    (typeof candidate.title !== 'string' && typeof candidate.title !== 'undefined') ||
     (candidate.goalType !== 'duration-based' &&
       candidate.goalType !== 'session-count-based' &&
       candidate.goalType !== 'observance-based') ||
@@ -569,6 +570,7 @@ export function normalizeSankalpa(value: unknown): SankalpaGoal | null {
 
   return {
     id: candidate.id,
+    title: typeof candidate.title === 'string' && candidate.title.trim().length > 0 ? candidate.title.trim() : undefined,
     goalType: candidate.goalType,
     targetValue: candidate.targetValue,
     days: candidate.days,

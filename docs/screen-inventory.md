@@ -41,9 +41,11 @@
 - expired
 - archived
 - create and edit sankalpa form
+- editable sankalpa title field prefilled from current goal settings
 - gym observance preset for 5 observed days per week over 4 weeks
 - observance date tracker for `observance-based` goals
 - week-grouped daily activity tracker for active observance goals
+- explicit `Activity Tracking` label above observance check-ins
 - archive confirmation
 
 ## Settings

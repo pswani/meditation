@@ -15,6 +15,27 @@ This is the production-only golden path:
 EOF
 }
 
+ensure_release_install_access() {
+  if ! command -v sudo >/dev/null 2>&1; then
+    printf '%s\n' "sudo is required to install the production bundle."
+    exit 1
+  fi
+
+  if sudo -n true >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [ -t 0 ] && [ -t 1 ]; then
+    printf '%s\n' "Requesting sudo access for the production install step..."
+    sudo -v
+    return 0
+  fi
+
+  printf '%s\n' "Release install requires sudo access, but no interactive terminal is available to prompt for a password."
+  printf '%s\n' "Run ./scripts/pipeline.sh package when you only need the bundle, or run release from an interactive terminal after sudo -v."
+  exit 1
+}
+
 dry_run=0
 skip_build=0
 bundle_dir=""
@@ -72,10 +93,14 @@ fi
 if [ "$dry_run" -eq 1 ]; then
   printf '%s\n' "Packaging production bundle"
   if [ "$skip_build" -eq 1 ]; then
-    printf '%s\n' "  ./scripts/package-deploy.sh --skip-build"
+    printf '%s' "  ./scripts/package-deploy.sh --skip-build"
   else
-    printf '%s\n' "  ./scripts/package-deploy.sh"
+    printf '%s' "  ./scripts/package-deploy.sh"
   fi
+  if [ -n "$bundle_dir" ]; then
+    printf '%s' " --bundle-dir $bundle_dir"
+  fi
+  printf '\n'
 
   printf '%s\n' "Installing production bundle"
   printf '%s' "  ./scripts/prod-macos-setup.sh install-app --skip-build --bundle-dir $bundle_dir"
@@ -89,12 +114,18 @@ if [ "$dry_run" -eq 1 ]; then
   exit 0
 fi
 
+ensure_release_install_access
+
 printf '%s\n' "Packaging production bundle"
 if [ "$skip_build" -eq 1 ]; then
-  "$SCRIPT_DIR/package-deploy.sh" --skip-build
+  set -- --skip-build
 else
-  "$SCRIPT_DIR/package-deploy.sh"
+  set --
 fi
+if [ -n "$bundle_dir" ]; then
+  set -- "$@" --bundle-dir "$bundle_dir"
+fi
+"$SCRIPT_DIR/package-deploy.sh" "$@"
 
 printf '%s\n' "Installing production bundle"
 set -- install-app --skip-build --bundle-dir "$bundle_dir"

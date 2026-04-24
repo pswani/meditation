@@ -789,6 +789,7 @@ describe('storage sankalpas', () => {
     const sankalpas: SankalpaGoal[] = [
       {
         id: 'goal-1',
+        title: '120 min in 7 days',
         goalType: 'duration-based',
         targetValue: 120,
         days: 7,
@@ -797,6 +798,7 @@ describe('storage sankalpas', () => {
       },
       {
         id: 'goal-2',
+        title: 'Morning discipline',
         goalType: 'session-count-based',
         targetValue: 5,
         days: 14,
@@ -808,6 +810,7 @@ describe('storage sankalpas', () => {
       },
       {
         id: 'goal-3',
+        title: 'Meal before 7 PM for 3 days',
         goalType: 'observance-based',
         targetValue: 3,
         days: 3,

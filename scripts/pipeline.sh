@@ -14,14 +14,14 @@ Simple build and deploy pipeline entrypoint.
 Usage:
   ./scripts/pipeline.sh verify
   ./scripts/pipeline.sh build
-  ./scripts/pipeline.sh package [--skip-build]
+  ./scripts/pipeline.sh package [--skip-build] [--bundle-dir PATH]
   ./scripts/pipeline.sh release [--skip-build] [--bundle-dir PATH] [--domain NAME] [--email ADDRESS]
   ./scripts/pipeline.sh help
 
 Commands:
   verify   Run the quality gate: frontend checks, backend verify, backend health smoke.
   build    Build frontend and backend artifacts.
-  package  Build (unless --skip-build) and assemble local-data/deploy.
+  package  Build (unless --skip-build) and assemble the deployment bundle.
   release  Package then install via prod-macos-setup.sh install-app.
 
 Notes:

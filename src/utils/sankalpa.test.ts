@@ -42,6 +42,7 @@ function createSessionLog(overrides: Partial<SessionLog> = {}): SessionLog {
 describe('sankalpa helpers', () => {
   it('validates positive target and days', () => {
     const result = validateSankalpaDraft({
+      title: '',
       goalType: '',
       cadenceMode: 'cumulative',
       targetValue: 0,
@@ -61,6 +62,7 @@ describe('sankalpa helpers', () => {
 
   it('requires whole-number session-count targets and whole-number days', () => {
     const result = validateSankalpaDraft({
+      title: 'Count goal',
       goalType: 'session-count-based',
       cadenceMode: 'cumulative',
       targetValue: 2.5,
@@ -79,6 +81,7 @@ describe('sankalpa helpers', () => {
 
   it('requires an observance label for observance-based sankalpas', () => {
     const result = validateSankalpaDraft({
+      title: 'Observance goal',
       goalType: 'observance-based',
       cadenceMode: 'cumulative',
       targetValue: 7,
@@ -97,6 +100,7 @@ describe('sankalpa helpers', () => {
   it('creates observance-based sankalpas with a target equal to the scheduled days', () => {
     const goal = createSankalpaGoal(
       {
+        title: 'Brahmacharya for 5 days',
         goalType: 'observance-based',
         cadenceMode: 'cumulative',
         targetValue: 99,
@@ -111,6 +115,7 @@ describe('sankalpa helpers', () => {
     );
 
     expect(goal.goalType).toBe('observance-based');
+    expect(goal.title).toBe('Brahmacharya for 5 days');
     expect(goal.targetValue).toBe(5);
     expect(goal.observanceLabel).toBe('Brahmacharya');
     expect(goal.observanceRecords).toEqual([]);
@@ -119,6 +124,7 @@ describe('sankalpa helpers', () => {
   it('creates gym-style observance sankalpas with weekly cadence fields', () => {
     const goal = createSankalpaGoal(
       {
+        title: 'Gym 5 days each week for 4 weeks',
         goalType: 'observance-based',
         cadenceMode: 'weekly',
         targetValue: 99,
@@ -133,6 +139,7 @@ describe('sankalpa helpers', () => {
     );
 
     expect(goal.goalType).toBe('observance-based');
+    expect(goal.title).toBe('Gym 5 days each week for 4 weeks');
     expect(goal.observanceLabel).toBe('Gym');
     expect(goal.targetValue).toBe(5);
     expect(goal.days).toBe(28);
@@ -142,6 +149,7 @@ describe('sankalpa helpers', () => {
 
   it('validates weekly observance cadence values', () => {
     const result = validateSankalpaDraft({
+      title: 'Gym 5 days each week for 4 weeks',
       goalType: 'observance-based',
       cadenceMode: 'weekly',
       targetValue: 5,

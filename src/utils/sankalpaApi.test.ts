@@ -38,6 +38,7 @@ describe('sankalpa api boundary', () => {
           {
             goal: {
               id: 'goal-valid',
+              title: 'Morning Count Goal',
               goalType: 'session-count-based',
               targetValue: 5,
               days: 10,
@@ -62,6 +63,7 @@ describe('sankalpa api boundary', () => {
       {
         goal: {
           id: 'goal-valid',
+          title: 'Morning Count Goal',
           goalType: 'session-count-based',
           targetValue: 5,
           days: 10,
@@ -99,6 +101,7 @@ describe('sankalpa api boundary', () => {
       json: async () => ({
         goal: {
           id: 'goal-1',
+          title: 'Morning Vipassana Focus',
           goalType: 'duration-based',
           targetValue: 12.5,
           days: 7,
@@ -121,6 +124,7 @@ describe('sankalpa api boundary', () => {
       persistSankalpaToApi(
         {
           id: 'goal-1',
+          title: 'Morning Vipassana Focus',
           goalType: 'duration-based',
           targetValue: 12.5,
           days: 7,
@@ -135,6 +139,7 @@ describe('sankalpa api boundary', () => {
     ).resolves.toMatchObject({
       goal: {
         id: 'goal-1',
+        title: 'Morning Vipassana Focus',
         targetValue: 12.5,
         archived: true,
       },
@@ -194,6 +199,7 @@ describe('sankalpa api boundary', () => {
           currentRecord: {
             goal: {
               id: 'goal-1',
+              title: 'Morning Vipassana Focus',
               goalType: 'duration-based',
               targetValue: 12.5,
               days: 7,
@@ -217,6 +223,7 @@ describe('sankalpa api boundary', () => {
       currentSankalpa: {
         goal: {
           id: 'goal-1',
+          title: 'Morning Vipassana Focus',
           goalType: 'duration-based',
           targetValue: 12.5,
           days: 7,
@@ -257,6 +264,7 @@ describe('sankalpa api boundary', () => {
           {
             goal: {
               id: 'goal-observance',
+              title: 'Meal before 7 PM for 3 days',
               goalType: 'observance-based',
               targetValue: 3,
               days: 3,
@@ -293,6 +301,7 @@ describe('sankalpa api boundary', () => {
       {
         goal: {
           id: 'goal-observance',
+          title: 'Meal before 7 PM for 3 days',
           goalType: 'observance-based',
           targetValue: 3,
           days: 3,

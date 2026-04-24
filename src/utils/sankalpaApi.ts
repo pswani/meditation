@@ -16,6 +16,7 @@ export const SANKALPAS_COLLECTION_ENDPOINT = buildApiPath(SANKALPAS_COLLECTION_P
 
 interface SankalpaGoalApiResponse {
   readonly id: string;
+  readonly title?: string | null;
   readonly goalType: SankalpaGoal['goalType'];
   readonly targetValue: number;
   readonly days: number;
@@ -124,6 +125,9 @@ function isValidGoalPayload(value: unknown): value is SankalpaGoalApiResponse {
   const days = typeof candidate.days === 'number' ? candidate.days : null;
   const hasValidBaseShape = (
     typeof candidate.id === 'string' &&
+    (typeof candidate.title === 'undefined' ||
+      candidate.title === null ||
+      typeof candidate.title === 'string') &&
     goalTypes.has(candidate.goalType as string) &&
     typeof candidate.targetValue === 'number' &&
     Number.isFinite(candidate.targetValue) &&
@@ -210,6 +214,7 @@ function isValidProgressPayload(value: unknown): value is SankalpaProgressApiRes
 function normalizeGoalPayload(payload: SankalpaGoalApiResponse): SankalpaGoal {
   return {
     id: payload.id,
+    title: payload.title?.trim() || undefined,
     goalType: payload.goalType,
     targetValue: payload.targetValue,
     days: payload.days,

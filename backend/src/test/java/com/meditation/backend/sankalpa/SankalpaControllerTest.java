@@ -96,6 +96,7 @@ class SankalpaControllerTest {
             .content("""
                 {
                   "id": "goal-1",
+                  "title": "Morning Vipassana Focus",
                   "goalType": "duration-based",
                   "targetValue": 12.5,
                   "days": 5,
@@ -107,6 +108,7 @@ class SankalpaControllerTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.goal.id").value("goal-1"))
+        .andExpect(jsonPath("$.goal.title").value("Morning Vipassana Focus"))
         .andExpect(jsonPath("$.goal.targetValue").value(12.5))
         .andExpect(jsonPath("$.goal.archived").value(false))
         .andExpect(jsonPath("$.targetDurationSeconds").value(750));

@@ -15,6 +15,9 @@ public class SankalpaGoalEntity {
   @Column(name = "id", nullable = false, length = 64)
   private String id;
 
+  @Column(name = "title", length = 160)
+  private String title;
+
   @Column(name = "goal_type", nullable = false, length = 32)
   private String goalType;
 
@@ -65,7 +68,40 @@ public class SankalpaGoalEntity {
       Instant completedAt,
       boolean archived
   ) {
+    this(
+        id,
+        null,
+        goalType,
+        targetValue,
+        days,
+        qualifyingDaysPerWeek,
+        meditationTypeCode,
+        timeOfDayBucket,
+        observanceLabel,
+        createdAt,
+        updatedAt,
+        completedAt,
+        archived
+    );
+  }
+
+  public SankalpaGoalEntity(
+      String id,
+      String title,
+      String goalType,
+      BigDecimal targetValue,
+      int days,
+      Integer qualifyingDaysPerWeek,
+      String meditationTypeCode,
+      String timeOfDayBucket,
+      String observanceLabel,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant completedAt,
+      boolean archived
+  ) {
     this.id = id;
+    this.title = title;
     this.goalType = goalType;
     this.targetValue = targetValue;
     this.days = days;
@@ -85,6 +121,10 @@ public class SankalpaGoalEntity {
 
   public String getGoalType() {
     return goalType;
+  }
+
+  public String getTitle() {
+    return title;
   }
 
   public BigDecimal getTargetValue() {
@@ -128,6 +168,7 @@ public class SankalpaGoalEntity {
   }
 
   public void updateFrom(SankalpaGoalUpsertRequest request, Instant createdAt, Instant updatedAt) {
+    this.title = request.title();
     this.goalType = request.goalType();
     this.targetValue = request.targetValue();
     this.days = request.days();

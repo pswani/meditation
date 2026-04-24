@@ -1,7 +1,7 @@
 import { ObservanceTracker } from './ObservanceTracker';
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import { describeSankalpa, filterDetail, progressDetail, remainingDetail } from './sankalpaPageHelpers';
-import { isRecurringCadenceGoal } from '../../utils/sankalpa';
+import { getSankalpaTitle, isRecurringCadenceGoal } from '../../utils/sankalpa';
 
 interface SankalpaSectionProps {
   readonly title: string;
@@ -45,102 +45,111 @@ export function SankalpaSection({
         </div>
       ) : (
         <ul className="sankalpa-list">
-          {items.map((progress) => (
-            <li key={progress.goal.id} className="sankalpa-item">
-              <div className="history-row">
-                <strong>{describeSankalpa(progress.goal)}</strong>
-                <span className={`pill ${progress.status === 'completed' ? 'ok' : progress.status === 'expired' ? 'warn' : 'active'}`}>
-                  {progress.status}
-                </span>
-              </div>
-              <p className="section-subtitle">
-                Created: {new Date(progress.goal.createdAt).toLocaleDateString()} · Deadline:{' '}
-                {new Date(progress.deadlineAt).toLocaleDateString()}
-              </p>
-              <p className="section-subtitle">Filters: {filterDetail(progress.goal)}</p>
-              <div className="sankalpa-progress-track" aria-hidden="true">
-                <span className="sankalpa-progress-fill" style={{ width: `${Math.min(100, progress.progressRatio * 100)}%` }} />
-              </div>
-              <p className="section-subtitle">
-                Progress: {progressDetail(progress)} · {remainingDetail(progress)}
-              </p>
-              {progress.goal.goalType !== 'observance-based' && isRecurringCadenceGoal(progress.goal) ? (
-                <div className="sankalpa-week-pills" aria-label="Recurring week progress">
-                  {progress.recurringWeeks.map((week) => (
-                    <span
-                      key={`${progress.goal.id}-week-${week.weekIndex}`}
-                      className={`pill ${week.status === 'met' ? 'ok' : week.status === 'missed' ? 'warn' : 'active'}`}
-                    >
-                      W{week.weekIndex} {week.qualifyingDayCount}/{week.requiredQualifyingDayCount}
-                    </span>
-                  ))}
+          {items.map((progress) => {
+            const sankalpaTitle = getSankalpaTitle(progress.goal);
+            const sankalpaRule = describeSankalpa(progress.goal);
+
+            return (
+              <li key={progress.goal.id} className="sankalpa-item">
+                <div className="history-row">
+                  <strong>{sankalpaTitle}</strong>
+                  <span className={`pill ${progress.status === 'completed' ? 'ok' : progress.status === 'expired' ? 'warn' : 'active'}`}>
+                    {progress.status}
+                  </span>
                 </div>
-              ) : null}
-              {progress.goal.goalType === 'observance-based' ? (
-                <ObservanceTracker
-                  progress={progress}
-                  readOnly={progress.status !== 'active'}
-                  onChangeStatus={
-                    onUpdateObservanceStatus
-                      ? (date, status) => {
-                          onUpdateObservanceStatus(progress.goal, date, status);
-                        }
-                      : undefined
-                  }
-                />
-              ) : null}
-              {onEditGoal || onStartArchive || onUnarchiveGoal || onStartDelete ? (
-                <div className="timer-actions">
-                  {onEditGoal ? (
-                    <button type="button" className="secondary" onClick={() => onEditGoal(progress.goal)}>
-                      Edit
-                    </button>
-                  ) : null}
-                  {onStartArchive ? (
-                    <button type="button" className="secondary" onClick={() => onStartArchive(progress.goal.id)}>
-                      Archive
-                    </button>
-                  ) : null}
-                  {onUnarchiveGoal ? (
-                    <button type="button" className="secondary" onClick={() => onUnarchiveGoal(progress.goal)}>
-                      Unarchive
-                    </button>
-                  ) : null}
-                  {onStartDelete ? (
-                    <button type="button" className="secondary" onClick={() => onStartDelete(progress.goal.id)}>
-                      Delete
-                    </button>
-                  ) : null}
+                {sankalpaTitle !== sankalpaRule ? <p className="section-subtitle">Goal: {sankalpaRule}</p> : null}
+                <p className="section-subtitle">
+                  Created: {new Date(progress.goal.createdAt).toLocaleDateString()} · Deadline:{' '}
+                  {new Date(progress.deadlineAt).toLocaleDateString()}
+                </p>
+                <p className="section-subtitle">Filters: {filterDetail(progress.goal)}</p>
+                <div className="sankalpa-progress-track" aria-hidden="true">
+                  <span className="sankalpa-progress-fill" style={{ width: `${Math.min(100, progress.progressRatio * 100)}%` }} />
                 </div>
-              ) : null}
-              {pendingArchiveGoalId === progress.goal.id && onCancelArchive && onConfirmArchive ? (
-                <div className="confirm-sheet" role="dialog" aria-label={`Archive ${title} confirmation`}>
-                  <p>Archive this sankalpa and move it out of the active goal lists?</p>
-                  <div className="timer-actions">
-                    <button type="button" className="secondary" onClick={onCancelArchive}>
-                      Keep Goal
-                    </button>
-                    <button type="button" onClick={() => onConfirmArchive(progress.goal)}>
-                      Archive Sankalpa
-                    </button>
+                <p className="section-subtitle">
+                  Progress: {progressDetail(progress)} · {remainingDetail(progress)}
+                </p>
+                {progress.goal.goalType !== 'observance-based' && isRecurringCadenceGoal(progress.goal) ? (
+                  <div className="sankalpa-week-pills" aria-label="Recurring week progress">
+                    {progress.recurringWeeks.map((week) => (
+                      <span
+                        key={`${progress.goal.id}-week-${week.weekIndex}`}
+                        className={`pill ${week.status === 'met' ? 'ok' : week.status === 'missed' ? 'warn' : 'active'}`}
+                      >
+                        W{week.weekIndex} {week.qualifyingDayCount}/{week.requiredQualifyingDayCount}
+                      </span>
+                    ))}
                   </div>
-                </div>
-              ) : null}
-              {pendingDeleteGoalId === progress.goal.id && onCancelDelete && onConfirmDelete ? (
-                <div className="confirm-sheet" role="dialog" aria-label={`Delete ${title} confirmation`}>
-                  <p>Delete this archived sankalpa permanently? This cannot be undone.</p>
-                  <div className="timer-actions">
-                    <button type="button" className="secondary" onClick={onCancelDelete}>
-                      Keep Archived Goal
-                    </button>
-                    <button type="button" onClick={() => onConfirmDelete(progress.goal)}>
-                      Delete Sankalpa
-                    </button>
+                ) : null}
+                {progress.goal.goalType === 'observance-based' ? (
+                  <div>
+                    <p className="section-subtitle">Activity Tracking</p>
+                    <ObservanceTracker
+                      progress={progress}
+                      readOnly={progress.status !== 'active'}
+                      onChangeStatus={
+                        onUpdateObservanceStatus
+                          ? (date, status) => {
+                              onUpdateObservanceStatus(progress.goal, date, status);
+                            }
+                          : undefined
+                      }
+                    />
                   </div>
-                </div>
-              ) : null}
-            </li>
-          ))}
+                ) : null}
+                {onEditGoal || onStartArchive || onUnarchiveGoal || onStartDelete ? (
+                  <div className="timer-actions">
+                    {onEditGoal ? (
+                      <button type="button" className="secondary" onClick={() => onEditGoal(progress.goal)}>
+                        Edit
+                      </button>
+                    ) : null}
+                    {onStartArchive ? (
+                      <button type="button" className="secondary" onClick={() => onStartArchive(progress.goal.id)}>
+                        Archive
+                      </button>
+                    ) : null}
+                    {onUnarchiveGoal ? (
+                      <button type="button" className="secondary" onClick={() => onUnarchiveGoal(progress.goal)}>
+                        Unarchive
+                      </button>
+                    ) : null}
+                    {onStartDelete ? (
+                      <button type="button" className="secondary" onClick={() => onStartDelete(progress.goal.id)}>
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {pendingArchiveGoalId === progress.goal.id && onCancelArchive && onConfirmArchive ? (
+                  <div className="confirm-sheet" role="dialog" aria-label={`Archive ${title} confirmation`}>
+                    <p>Archive this sankalpa and move it out of the active goal lists?</p>
+                    <div className="timer-actions">
+                      <button type="button" className="secondary" onClick={onCancelArchive}>
+                        Keep Goal
+                      </button>
+                      <button type="button" onClick={() => onConfirmArchive(progress.goal)}>
+                        Archive Sankalpa
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {pendingDeleteGoalId === progress.goal.id && onCancelDelete && onConfirmDelete ? (
+                  <div className="confirm-sheet" role="dialog" aria-label={`Delete ${title} confirmation`}>
+                    <p>Delete this archived sankalpa permanently? This cannot be undone.</p>
+                    <div className="timer-actions">
+                      <button type="button" className="secondary" onClick={onCancelDelete}>
+                        Keep Archived Goal
+                      </button>
+                      <button type="button" onClick={() => onConfirmDelete(progress.goal)}>
+                        Delete Sankalpa
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

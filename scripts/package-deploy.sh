@@ -7,15 +7,24 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/common.sh"
 
 print_usage() {
-  printf '%s\n' "Usage: ./scripts/package-deploy.sh [--skip-build]"
+  printf '%s\n' "Usage: ./scripts/package-deploy.sh [--skip-build] [--bundle-dir PATH]"
 }
 
 skip_build=0
+bundle_dir=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --skip-build)
       skip_build=1
+      ;;
+    --bundle-dir)
+      shift
+      if [ "$#" -eq 0 ]; then
+        print_usage
+        exit 1
+      fi
+      bundle_dir=$1
       ;;
     --help|-h)
       print_usage
@@ -30,6 +39,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 load_local_env
+
+if [ -n "$bundle_dir" ]; then
+  MEDITATION_DEPLOY_DIR=$bundle_dir
+fi
 
 if [ "$skip_build" -eq 0 ]; then
   "$SCRIPT_DIR/prod-build.sh"

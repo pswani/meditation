@@ -31,6 +31,7 @@ export interface SankalpaRecurringWeekProgress {
 
 export interface SankalpaGoal {
   readonly id: string;
+  readonly title?: string;
   readonly goalType: SankalpaGoalType;
   readonly targetValue: number;
   readonly days: number;
@@ -44,6 +45,7 @@ export interface SankalpaGoal {
 }
 
 export interface SankalpaDraft {
+  title: string;
   goalType: SankalpaGoalType | '';
   cadenceMode: SankalpaCadenceMode;
   targetValue: number;
@@ -58,6 +60,7 @@ export interface SankalpaDraft {
 export interface SankalpaValidationResult {
   readonly isValid: boolean;
   readonly errors: {
+    title?: string;
     goalType?: string;
     targetValue?: string;
     days?: string;

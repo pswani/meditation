@@ -1,7 +1,7 @@
 import type { SankalpaGoal, SankalpaProgress } from '../../types/sankalpa';
 import { formatDurationLabel } from '../../utils/sessionLog';
 import { deriveDateRangeFromInputs, type SummaryDateRange } from '../../utils/summary';
-import { getSankalpaCadenceWeeks, isRecurringCadenceGoal, timeOfDayBucketLabels } from '../../utils/sankalpa';
+import { describeSankalpaGoal, getSankalpaCadenceWeeks, isRecurringCadenceGoal, timeOfDayBucketLabels } from '../../utils/sankalpa';
 
 export type SummaryRangePreset = 'all-time' | 'last-7-days' | 'last-30-days' | 'custom';
 export type SaveMessageTone = 'ok' | 'warn' | 'error';
@@ -23,24 +23,7 @@ export function describeRecurringCadence(goal: SankalpaGoal): string {
 }
 
 export function describeSankalpa(goal: SankalpaGoal): string {
-  if (goal.goalType === 'observance-based') {
-    if (isRecurringCadenceGoal(goal)) {
-      const cadenceWeeks = getSankalpaCadenceWeeks(goal) ?? 1;
-      return `${goal.observanceLabel} ${pluralize(goal.qualifyingDaysPerWeek ?? 0, 'day')} each week for ${pluralize(cadenceWeeks, 'week')}`;
-    }
-
-    return `${goal.observanceLabel} for ${goal.days} day${goal.days === 1 ? '' : 's'}`;
-  }
-
-  if (isRecurringCadenceGoal(goal)) {
-    return describeRecurringCadence(goal);
-  }
-
-  if (goal.goalType === 'duration-based') {
-    return `${goal.targetValue} min in ${goal.days} day${goal.days === 1 ? '' : 's'}`;
-  }
-
-  return `${goal.targetValue} session log${goal.targetValue === 1 ? '' : 's'} in ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+  return describeSankalpaGoal(goal);
 }
 
 export function progressDetail(progress: SankalpaProgress): string {

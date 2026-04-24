@@ -53,10 +53,12 @@ Primary destinations:
 
 ## Sankalpa UX rules
 - `observance-based` sankalpas should feel like disciplined manual check-ins, not like a separate habit-dashboard product.
+- Sankalpa forms should expose an editable title field that is prefilled from the current goal settings, so preset and custom goals start with a usable name without locking the user into generated copy.
 - Observance goals require a clear label describing what is being observed.
 - Observance progress should show explicit per-date `Pending`, `Observed`, and `Missed` states so users can audit the result.
 - Weekly observance goals, such as gym attendance, should stay inside Sankalpa and use manual check-ins rather than session-log inference.
 - Active observance tracking should use week-grouped daily rows with visible text states instead of a dense calendar grid.
+- Active observance cards should label the tracking area explicitly as activity tracking so the per-date check-ins are easy to discover.
 - Future observance dates should stay visible but non-editable until that date arrives.
 - Archived sankalpas should surface explicit `Unarchive` and `Delete` actions in the archived section without reintroducing clutter into active goal lists
 - Only archived sankalpas should expose permanent delete, and delete should require calm confirmation copy before the action proceeds

@@ -404,6 +404,41 @@ class SessionLogControllerTest {
   }
 
   @Test
+  void savesSessionLogsEvenWhenReferencedCustomPlayOrPlaylistAreMissing() throws Exception {
+    mockMvc.perform(put("/api/session-logs/log-missing-library-records")
+            .contentType(APPLICATION_JSON)
+            .content("""
+                {
+                  "id": "log-missing-library-records",
+                  "startedAt": "2026-03-26T11:00:00Z",
+                  "endedAt": "2026-03-26T11:18:00Z",
+                  "meditationType": "Vipassana",
+                  "timerMode": "fixed",
+                  "intendedDurationSeconds": 1080,
+                  "completedDurationSeconds": 1080,
+                  "status": "completed",
+                  "source": "auto log",
+                  "startSound": "None",
+                  "endSound": "Temple Bell",
+                  "intervalEnabled": false,
+                  "intervalMinutes": 0,
+                  "intervalSound": "None",
+                  "playlistId": "deleted-playlist-1",
+                  "playlistName": "Deleted playlist",
+                  "playlistRunId": "playlist-run-1",
+                  "customPlayId": "deleted-custom-play-1",
+                  "customPlayName": "Deleted custom play",
+                  "customPlayRecordingLabel": "Saved recording label"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("log-missing-library-records"))
+        .andExpect(jsonPath("$.playlistId").value("deleted-playlist-1"))
+        .andExpect(jsonPath("$.customPlayId").value("deleted-custom-play-1"))
+        .andExpect(jsonPath("$.customPlayName").value("Deleted custom play"));
+  }
+
+  @Test
   void filtersAndPaginatesSessionLogsThroughTheApi() throws Exception {
     mockMvc.perform(put("/api/session-logs/log-1")
             .contentType(APPLICATION_JSON)

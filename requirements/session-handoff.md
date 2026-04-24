@@ -12,6 +12,7 @@ This file is the concise handoff for the repository as it exists now. Use it as 
   - native iPhone work under `ios-native/`
 - Primary product journeys now exist across Home, Practice, History, Goals, and Settings.
 - Implemented domains include timer sessions, `custom play`, playlists, automatic and manual `session log` flows, summaries, and `sankalpa`, including weekly manual observance goals such as gym attendance.
+- `Sankalpa` now persists an optional editable title, with the create/edit form prefilling that title from the current goal settings and observance cards labeling their per-date rows as `Activity Tracking`.
 
 ## Durable docs to read first
 
@@ -50,6 +51,8 @@ This file is the concise handoff for the repository as it exists now. Use it as 
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.
 - Real-device QA still matters for iPhone Safari timer completion behavior and native iPhone notification or lock-screen audio edge cases; the web timer now has a scheduled unfocused completion path when the browser page remains runnable.
 - Native iPhone helper scripts now default to SDK-target app builds plus shared-core SwiftPM tests; full scheme XCTest runs remain opt-in until Xcode lists an eligible simulator or device destination.
+- Session-log sync no longer requires referenced `custom play` or playlist rows to still exist in the backend database; historical log context is now stored as snapshot metadata so native replay stays resilient after library deletes or out-of-order reconciliation.
+- The release bundle scripts now honor `--bundle-dir` during packaging, and `release` performs an upfront sudo preflight so non-interactive runs fail with clear guidance before spending time on the install step.
 - If new staged workflows are needed later, create fresh pile folders under `prompts/piles/` rather than assuming older generated piles still exist.
 
 ## Working notes for the next agent

@@ -4,7 +4,7 @@ import type { Playlist } from '../../types/playlist';
 import type { SessionLog } from '../../types/sessionLog';
 import type { SankalpaProgress } from '../../types/sankalpa';
 import { formatDurationLabel } from '../../utils/sessionLog';
-import { isRecurringCadenceGoal } from '../../utils/sankalpa';
+import { getSankalpaTitle, isRecurringCadenceGoal } from '../../utils/sankalpa';
 import { describeSankalpa, progressDetail } from '../sankalpa/sankalpaPageHelpers';
 import { describeLastUsedMeditation } from './homePageHelpers';
 
@@ -132,7 +132,7 @@ export function HomeTodayAndSankalpaPanels({
         {topActiveSankalpa ? (
           <>
             <div className="history-row">
-              <strong>{describeSankalpa(topActiveSankalpa.goal)}</strong>
+              <strong>{getSankalpaTitle(topActiveSankalpa.goal)}</strong>
               <span className="pill active">{topActiveSankalpa.status}</span>
             </div>
             <p className="section-subtitle">

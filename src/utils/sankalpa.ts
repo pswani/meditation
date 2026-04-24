@@ -38,6 +38,95 @@ export const sankalpaObservanceStatusLabels: Record<SankalpaObservanceDay['statu
   missed: 'Missed',
 };
 
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+export function describeSankalpaGoal(
+  goal: Pick<SankalpaGoal, 'goalType' | 'targetValue' | 'days' | 'qualifyingDaysPerWeek' | 'observanceLabel'>
+): string {
+  if (goal.goalType === 'observance-based') {
+    const observanceLabel = goal.observanceLabel?.trim() || 'Observance';
+    if (isRecurringCadenceGoal(goal)) {
+      const cadenceWeeks = getSankalpaCadenceWeeks(goal) ?? 1;
+      return `${observanceLabel} ${pluralize(goal.qualifyingDaysPerWeek ?? 0, 'day')} each week for ${pluralize(cadenceWeeks, 'week')}`;
+    }
+
+    return `${observanceLabel} for ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+  }
+
+  if (isRecurringCadenceGoal(goal)) {
+    const cadenceWeeks = getSankalpaCadenceWeeks(goal) ?? 1;
+    const thresholdLabel =
+      goal.goalType === 'duration-based'
+        ? `${goal.targetValue} min`
+        : pluralize(goal.targetValue, 'session log');
+
+    return `At least ${thresholdLabel} on ${pluralize(goal.qualifyingDaysPerWeek ?? 0, 'day')} each week for ${pluralize(cadenceWeeks, 'week')}`;
+  }
+
+  if (goal.goalType === 'duration-based') {
+    return `${goal.targetValue} min in ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+  }
+
+  return `${goal.targetValue} session log${goal.targetValue === 1 ? '' : 's'} in ${goal.days} day${goal.days === 1 ? '' : 's'}`;
+}
+
+export function describeSankalpaDraft(
+  draft: Pick<SankalpaDraft, 'goalType' | 'cadenceMode' | 'targetValue' | 'days' | 'weeks' | 'qualifyingDaysPerWeek' | 'observanceLabel'>
+): string {
+  if (draft.goalType === 'observance-based') {
+    const observanceLabel = draft.observanceLabel.trim() || 'Observance';
+    if (draft.cadenceMode === 'weekly') {
+      return `${observanceLabel} ${pluralize(draft.qualifyingDaysPerWeek, 'day')} each week for ${pluralize(draft.weeks, 'week')}`;
+    }
+
+    return `${observanceLabel} for ${draft.days} day${draft.days === 1 ? '' : 's'}`;
+  }
+
+  if (draft.cadenceMode === 'weekly') {
+    const thresholdLabel =
+      draft.goalType === 'duration-based'
+        ? `${draft.targetValue} min`
+        : pluralize(draft.targetValue, 'session log');
+
+    return `At least ${thresholdLabel} on ${pluralize(draft.qualifyingDaysPerWeek, 'day')} each week for ${pluralize(draft.weeks, 'week')}`;
+  }
+
+  if (draft.goalType === 'duration-based') {
+    return `${draft.targetValue} min in ${draft.days} day${draft.days === 1 ? '' : 's'}`;
+  }
+
+  if (draft.goalType === 'session-count-based') {
+    return `${draft.targetValue} session log${draft.targetValue === 1 ? '' : 's'} in ${draft.days} day${draft.days === 1 ? '' : 's'}`;
+  }
+
+  return 'New sankalpa';
+}
+
+export function getSankalpaTitle(
+  goal: Pick<SankalpaGoal, 'title' | 'goalType' | 'targetValue' | 'days' | 'qualifyingDaysPerWeek' | 'observanceLabel'>
+): string {
+  const title = goal.title?.trim();
+  if (title) {
+    return title;
+  }
+
+  return describeSankalpaGoal(goal);
+}
+
+export function syncDraftTitle(current: SankalpaDraft, next: SankalpaDraft): SankalpaDraft {
+  const currentTitle = current.title.trim();
+  if (currentTitle.length === 0 || currentTitle === describeSankalpaDraft(current)) {
+    return {
+      ...next,
+      title: describeSankalpaDraft(next),
+    };
+  }
+
+  return next;
+}
+
 export interface SankalpaProgressByStatus {
   readonly active: SankalpaProgress[];
   readonly completed: SankalpaProgress[];
@@ -306,7 +395,8 @@ function deriveRecurringWeeks(
 }
 
 export function createInitialSankalpaDraft(): SankalpaDraft {
-  return {
+  const draft: SankalpaDraft = {
+    title: '',
     goalType: 'duration-based',
     cadenceMode: 'cumulative',
     targetValue: 120,
@@ -317,6 +407,11 @@ export function createInitialSankalpaDraft(): SankalpaDraft {
     timeOfDayBucket: '',
     observanceLabel: '',
   };
+
+  return {
+    ...draft,
+    title: describeSankalpaDraft(draft),
+  };
 }
 
 export function getSankalpaGoalTypeLabel(goalType: SankalpaGoalType): string {
@@ -325,6 +420,7 @@ export function getSankalpaGoalTypeLabel(goalType: SankalpaGoalType): string {
 
 export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationResult {
   const errors: {
+    title?: string;
     goalType?: string;
     targetValue?: string;
     days?: string;
@@ -332,6 +428,10 @@ export function validateSankalpaDraft(draft: SankalpaDraft): SankalpaValidationR
     qualifyingDaysPerWeek?: string;
     observanceLabel?: string;
   } = {};
+
+  if (!draft.title.trim()) {
+    errors.title = 'Title is required.';
+  }
 
   if (!draft.goalType) {
     errors.goalType = 'Goal type is required.';
@@ -407,6 +507,7 @@ export function createSankalpaGoal(draft: SankalpaDraft, now: Date): SankalpaGoa
 
   return {
     id: `sankalpa-${now.getTime()}-${Math.round(Math.random() * 100000)}`,
+    title: draft.title.trim() || describeSankalpaDraft(draft),
     goalType: draft.goalType as SankalpaGoal['goalType'],
     targetValue: observanceGoal ? (recurringCadence ? draft.qualifyingDaysPerWeek : draft.days) : draft.targetValue,
     days: recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,
@@ -424,6 +525,7 @@ export function createSankalpaDraftFromGoal(goal: SankalpaGoal): SankalpaDraft {
   const recurringCadence = isRecurringCadenceGoal(goal);
 
   return {
+    title: getSankalpaTitle(goal),
     goalType: goal.goalType,
     cadenceMode: recurringCadence ? 'weekly' : 'cumulative',
     targetValue: goal.goalType === 'observance-based' ? goal.days : goal.targetValue,
@@ -442,6 +544,7 @@ export function updateSankalpaGoal(existing: SankalpaGoal, draft: SankalpaDraft)
 
   return {
     ...existing,
+    title: draft.title.trim() || describeSankalpaDraft(draft),
     goalType: draft.goalType as SankalpaGoal['goalType'],
     targetValue: observanceGoal ? (recurringCadence ? draft.qualifyingDaysPerWeek : draft.days) : draft.targetValue,
     days: recurringCadence ? draft.weeks * DAYS_PER_WEEK : draft.days,

@@ -86,6 +86,7 @@ public class SankalpaService {
         ? existingEntity
         : new SankalpaGoalEntity(
             sankalpaId,
+            normalizeOptionalText(request.title()),
             request.goalType(),
             request.targetValue(),
             request.days(),
@@ -102,6 +103,7 @@ public class SankalpaService {
     entity.updateFrom(
         new SankalpaGoalUpsertRequest(
             request.id(),
+            normalizeOptionalText(request.title()),
             request.goalType(),
             request.targetValue().stripTrailingZeros(),
             request.days(),
@@ -264,6 +266,7 @@ public class SankalpaService {
   ) {
     return new SankalpaGoalResponse(
         entity.getId(),
+        entity.getTitle(),
         entity.getGoalType(),
         entity.getTargetValue().doubleValue(),
         entity.getDays(),
@@ -530,6 +533,11 @@ public class SankalpaService {
 
     if (!ReferenceData.isGoalType(request.goalType())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sankalpa goal type is invalid.");
+    }
+
+    String title = normalizeOptionalText(request.title());
+    if (title != null && title.length() > 160) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title must be 160 characters or fewer.");
     }
 
     if (request.targetValue() == null || request.targetValue().compareTo(BigDecimal.ZERO) <= 0) {

@@ -261,7 +261,7 @@ class PlaylistControllerTest {
 
     List<SessionLogEntity> sessionLogs = sessionLogRepository.findAllByOrderByEndedAtDescCreatedAtDesc();
     assertEquals(1, sessionLogs.size());
-    assertNull(sessionLogs.get(0).getPlaylistId());
+    assertEquals("playlist-1", sessionLogs.get(0).getPlaylistId());
     assertEquals("Morning Sequence", sessionLogs.get(0).getPlaylistName());
   }
 

@@ -1,7 +1,15 @@
 import type { FormEvent } from 'react';
 import { meditationTypes } from '../timer/constants';
 import type { SankalpaDraft, SankalpaValidationResult } from '../../types/sankalpa';
-import { getSankalpaGoalTypeLabel, isObservanceGoalType, timeOfDayBuckets, timeOfDayBucketLabels } from '../../utils/sankalpa';
+import {
+  createInitialSankalpaDraft,
+  describeSankalpaDraft,
+  getSankalpaGoalTypeLabel,
+  isObservanceGoalType,
+  syncDraftTitle,
+  timeOfDayBuckets,
+  timeOfDayBucketLabels,
+} from '../../utils/sankalpa';
 
 interface SankalpaEditorProps {
   readonly draft: SankalpaDraft;
@@ -15,6 +23,20 @@ interface SankalpaEditorProps {
   readonly onCancelEdit: () => void;
   readonly onChangeDraft: (updater: (current: SankalpaDraft) => SankalpaDraft) => void;
   readonly onClearSaveMessage: () => void;
+}
+
+function isGymPresetDraft(draft: SankalpaDraft): boolean {
+  return (
+    draft.goalType === 'observance-based' &&
+    draft.cadenceMode === 'weekly' &&
+    draft.targetValue === 5 &&
+    draft.days === 28 &&
+    draft.weeks === 4 &&
+    draft.qualifyingDaysPerWeek === 5 &&
+    draft.meditationType === '' &&
+    draft.timeOfDayBucket === '' &&
+    draft.observanceLabel.trim() === 'Gym'
+  );
 }
 
 export function SankalpaEditor({
@@ -32,6 +54,13 @@ export function SankalpaEditor({
 }: SankalpaEditorProps) {
   const observanceGoal = isObservanceGoalType(draft.goalType);
   const recurringCadence = draft.cadenceMode === 'weekly';
+  const titlePlaceholder = describeSankalpaDraft(draft);
+  const gymPresetActive = isGymPresetDraft(draft);
+
+  function applyDraftChange(updater: (current: SankalpaDraft) => SankalpaDraft) {
+    onClearSaveMessage();
+    onChangeDraft((current) => syncDraftTitle(current, updater(current)));
+  }
 
   return (
     <section className="sankalpa-panel">
@@ -47,8 +76,13 @@ export function SankalpaEditor({
             type="button"
             className="secondary"
             onClick={() => {
-              onClearSaveMessage();
-              onChangeDraft((current) => ({
+              if (gymPresetActive) {
+                onClearSaveMessage();
+                onChangeDraft(() => createInitialSankalpaDraft());
+                return;
+              }
+
+              applyDraftChange((current) => ({
                 ...current,
                 goalType: 'observance-based',
                 cadenceMode: 'weekly',
@@ -61,8 +95,9 @@ export function SankalpaEditor({
                 observanceLabel: 'Gym',
               }));
             }}
+            aria-pressed={gymPresetActive}
           >
-            Start Gym Sankalpa
+            {gymPresetActive ? 'Unset Gym Preset' : 'Use Gym Preset'}
           </button>
         </div>
       ) : null}
@@ -77,13 +112,30 @@ export function SankalpaEditor({
 
       <form className="form-grid" onSubmit={onSubmit}>
         <label>
+          <span>Title</span>
+          <input
+            type="text"
+            value={draft.title}
+            placeholder={titlePlaceholder}
+            maxLength={160}
+            onChange={(event) => {
+              onClearSaveMessage();
+              onChangeDraft((current) => ({
+                ...current,
+                title: event.target.value,
+              }));
+            }}
+          />
+          {errors.title ? <small className="error-text">{errors.title}</small> : null}
+        </label>
+
+        <label>
           <span>Goal type</span>
           <select
             value={draft.goalType}
             onChange={(event) => {
-              onClearSaveMessage();
               const nextGoalType = event.target.value as typeof draft.goalType;
-              onChangeDraft((current) => ({
+              applyDraftChange((current) => ({
                 ...current,
                 goalType: nextGoalType,
                 cadenceMode: nextGoalType === 'observance-based' ? 'cumulative' : current.cadenceMode,
@@ -110,14 +162,13 @@ export function SankalpaEditor({
         {observanceGoal ? (
           <>
             <label>
-              <span>Observance</span>
+              <span>Observed activity</span>
               <input
                 type="text"
                 value={draft.observanceLabel}
                 placeholder="Brahmacharya"
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     observanceLabel: event.target.value,
                   }));
@@ -131,9 +182,8 @@ export function SankalpaEditor({
               <select
                 value={draft.cadenceMode}
                 onChange={(event) => {
-                  onClearSaveMessage();
                   const nextCadenceMode = event.target.value as SankalpaDraft['cadenceMode'];
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     cadenceMode: nextCadenceMode,
                     targetValue: nextCadenceMode === 'weekly' ? current.qualifyingDaysPerWeek : current.days,
@@ -156,9 +206,8 @@ export function SankalpaEditor({
               <select
                 value={draft.cadenceMode}
                 onChange={(event) => {
-                  onClearSaveMessage();
                   const nextCadenceMode = event.target.value as SankalpaDraft['cadenceMode'];
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     cadenceMode: nextCadenceMode,
                     targetValue:
@@ -193,8 +242,7 @@ export function SankalpaEditor({
                 step={draft.goalType === 'session-count-based' ? 1 : 0.5}
                 value={draft.targetValue}
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     targetValue: Number(event.target.value),
                   }));
@@ -214,8 +262,7 @@ export function SankalpaEditor({
               step={1}
               value={draft.days}
               onChange={(event) => {
-                onClearSaveMessage();
-                onChangeDraft((current) => ({
+                applyDraftChange((current) => ({
                   ...current,
                   days: Number(event.target.value),
                   targetValue: isObservanceGoalType(current.goalType) ? Number(event.target.value) : current.targetValue,
@@ -235,8 +282,7 @@ export function SankalpaEditor({
                 step={1}
                 value={draft.qualifyingDaysPerWeek}
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     qualifyingDaysPerWeek: Number(event.target.value),
                   }));
@@ -253,8 +299,7 @@ export function SankalpaEditor({
                 step={1}
                 value={draft.weeks}
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     weeks: Number(event.target.value),
                   }));
@@ -293,8 +338,7 @@ export function SankalpaEditor({
               <select
                 value={draft.meditationType}
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     meditationType: event.target.value as typeof current.meditationType,
                   }));
@@ -314,8 +358,7 @@ export function SankalpaEditor({
               <select
                 value={draft.timeOfDayBucket}
                 onChange={(event) => {
-                  onClearSaveMessage();
-                  onChangeDraft((current) => ({
+                  applyDraftChange((current) => ({
                     ...current,
                     timeOfDayBucket: event.target.value as typeof current.timeOfDayBucket,
                   }));

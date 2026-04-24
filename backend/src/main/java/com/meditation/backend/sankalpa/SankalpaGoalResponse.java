@@ -4,6 +4,7 @@ import java.util.List;
 
 public record SankalpaGoalResponse(
     String id,
+    String title,
     String goalType,
     double targetValue,
     int days,

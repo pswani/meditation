@@ -60,6 +60,9 @@
     - store optional `SessionLog` context for playlist runs and `custom play` entries instead of inferring everything from notes
     - support History filtering by source, status, and meditation type
     - keep invalid custom summary ranges calm and explicit instead of coercing them into another preset
+  - keep persisted `session log` library context snapshot-based rather than referentially strict:
+    - stored `custom play` and playlist ids may remain on the log for context, but they must not require the referenced library record to still exist
+    - backend sync should accept historical logs even when the related `custom play` or playlist is deleted, missing, or not yet reconciled
   - keep native milestone-4 `sankalpa` local-first on the same JSON snapshot store:
     - preserve `id` and `createdAt` when editing so the original goal window remains trustworthy
     - keep archive as a boolean goal-state mutation rather than inventing a second history entity
@@ -214,6 +217,10 @@
 - Keep `sankalpa` edits id-stable:
   - preserve `id` and `createdAt` when editing goal fields so progress and deadline windows stay anchored to the original goal
   - recalculate progress from the updated goal fields without inventing a second versioned goal history model
+- Keep `sankalpa` titles explicitly editable while still suggestion-backed:
+  - persist an optional `title` alongside the goal fields
+  - prefill new and edited titles from the current goal definition until the user customizes them
+  - keep the generated goal description available as supporting detail instead of forcing it to be the only visible title
 - Keep `sankalpa` archival as a first-class persisted goal state:
   - frontend, local cache, and backend contracts all carry the same `archived` flag
   - archived goals stay visible in a dedicated read-only section instead of being deleted from the product surface

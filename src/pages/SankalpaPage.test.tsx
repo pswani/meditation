@@ -901,12 +901,14 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Summary' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/goal type/i), { target: { value: 'observance-based' } });
-    fireEvent.change(screen.getByLabelText(/observance/i), { target: { value: 'Meal before 7 PM' } });
+    fireEvent.change(screen.getByLabelText(/observed activity/i), { target: { value: 'Meal before 7 PM' } });
     fireEvent.change(screen.getByLabelText(/^days$/i), { target: { value: '3' } });
+    expect(screen.getByLabelText(/^title$/i)).toHaveValue('Meal before 7 PM for 3 days');
     fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
 
     expect(screen.getByText(/meal before 7 pm for 3 days/i)).toBeInTheDocument();
     expect(screen.getByText(/0 \/ 3 observed dates/i)).toBeInTheDocument();
+    expect(screen.getByText(/activity tracking/i)).toBeInTheDocument();
 
     const todaySelect = screen.getByLabelText('Observance status for 2026-04-07');
     const futureSelect = screen.getByLabelText('Observance status for 2026-04-08');
@@ -934,15 +936,27 @@ describe('Sankalpa summary UX', () => {
 
     expect(screen.getByRole('heading', { level: 3, name: 'Summary' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /start gym sankalpa/i }));
+    const gymPresetButton = screen.getByRole('button', { name: /use gym preset/i });
+    fireEvent.click(gymPresetButton);
 
-    expect(screen.getByLabelText(/observance/i)).toHaveValue('Gym');
+    expect(screen.getByLabelText(/^title$/i)).toHaveValue('Gym 5 days each week for 4 weeks');
+    expect(screen.getByLabelText(/observed activity/i)).toHaveValue('Gym');
     expect(screen.getByLabelText(/observed days per week/i)).toHaveValue(5);
     expect(screen.getByLabelText(/^weeks$/i)).toHaveValue(4);
+    expect(screen.getByRole('button', { name: /unset gym preset/i })).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByLabelText(/observance/i), { target: { value: 'Gym strength' } });
+    fireEvent.click(screen.getByRole('button', { name: /unset gym preset/i }));
+
+    expect(screen.getByLabelText(/^title$/i)).toHaveValue('120 min in 7 days');
+    expect(screen.getByLabelText(/goal type/i)).toHaveValue('duration-based');
+    expect(screen.getByRole('button', { name: /use gym preset/i })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: /use gym preset/i }));
+
+    fireEvent.change(screen.getByLabelText(/observed activity/i), { target: { value: 'Gym strength' } });
     fireEvent.change(screen.getByLabelText(/observed days per week/i), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText(/^weeks$/i), { target: { value: '3' } });
+    expect(screen.getByLabelText(/^title$/i)).toHaveValue('Gym strength 4 days each week for 3 weeks');
     fireEvent.click(screen.getByRole('button', { name: /create sankalpa/i }));
 
     expect(screen.getByText(/gym strength 4 days each week for 3 weeks/i)).toBeInTheDocument();
@@ -950,6 +964,7 @@ describe('Sankalpa summary UX', () => {
     expect(screen.getByText(/weeks met: 0 \/ 3/i)).toBeInTheDocument();
     expect(screen.getByText(/week 1/i)).toBeInTheDocument();
     expect(screen.getAllByText(/0\/4 observed/i)).toHaveLength(3);
+    expect(screen.getByText(/activity tracking/i)).toBeInTheDocument();
 
     const todaySelect = screen.getByLabelText('Observance status for 2026-04-07');
     const futureSelect = screen.getByLabelText('Observance status for 2026-04-08');

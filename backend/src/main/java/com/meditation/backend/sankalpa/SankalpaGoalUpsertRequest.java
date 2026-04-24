@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 
 public record SankalpaGoalUpsertRequest(
     String id,
+    String title,
     String goalType,
     BigDecimal targetValue,
     int days,
