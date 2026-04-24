@@ -35,7 +35,7 @@
 - manual vs auto badges
 - open-ended mode badge and planned-duration label handling
 
-## Goals
+## Sankalpa
 - active sankalpas
 - completed
 - expired

@@ -17,7 +17,7 @@ Primary destinations:
 - Home
 - Practice
 - History
-- Goals
+- Sankalpa
 - Settings
 
 ## Connectivity UX rules

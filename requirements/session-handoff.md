@@ -10,7 +10,7 @@ This file is the concise handoff for the repository as it exists now. Use it as 
   - H2 persistence plus Flyway migrations
   - offline-first queue-backed behavior for implemented backend-backed domains
   - native iPhone work under `ios-native/`
-- Primary product journeys now exist across Home, Practice, History, Goals, and Settings.
+- Primary product journeys now exist across Home, Practice, History, Sankalpa, and Settings.
 - Implemented domains include timer sessions, `custom play`, playlists, automatic and manual `session log` flows, summaries, and `sankalpa`, including weekly manual observance goals such as gym attendance.
 - `Sankalpa` now persists an optional editable title, with the create/edit form prefilling that title from the current goal settings and observance cards labeling their per-date rows as `Activity Tracking`.
 
@@ -50,9 +50,9 @@ This file is the concise handoff for the repository as it exists now. Use it as 
 
 - The high and medium issues from `review-artifacts/ux-review.md` are now addressed across the web app and native iPhone presentation:
   - web mobile shell spacing no longer traps content under fixed chrome
-  - the primary nav now uses `Goals` while keeping the `Sankalpa` page title and `/sankalpa` compatibility route
+  - the primary nav now uses `Sankalpa` to match the page title while keeping the `/sankalpa` compatibility route
   - Home hierarchy, empty-state actions, calmer sync and recording copy, and playlist validation clearing were tightened up
-  - the Goals screen now collapses lower-priority sections on phone for a calmer first view
+  - the Sankalpa screen now collapses lower-priority sections on phone for a calmer first view
   - native iPhone sync banners and practice-library cards are more compact and less technical
   - native iPhone custom play and playlist Add actions now open full-screen create flows with clear `New custom play` and `New playlist` titles
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.

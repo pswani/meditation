@@ -122,7 +122,7 @@ export function HomeTodayAndSankalpaPanels({
         <div className="panel-header">
           <h3 className="section-title">Sankalpa Snapshot</h3>
           <button type="button" className="link-button" onClick={onOpenSankalpa}>
-            Open Goals
+            Open Sankalpa
           </button>
         </div>
         {isSankalpaLoading ? <p className="section-subtitle">Refreshing goals.</p> : null}
@@ -145,7 +145,7 @@ export function HomeTodayAndSankalpaPanels({
         ) : (
           <div className="empty-state">
             <p>No active sankalpa right now.</p>
-            <p>Create one in Goals to track your current intent.</p>
+            <p>Create one in Sankalpa to track your current intent.</p>
           </div>
         )}
       </section>

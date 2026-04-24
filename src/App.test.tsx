@@ -419,7 +419,7 @@ describe('App shell', () => {
     vi.useRealTimers();
   });
 
-  it('renders home route with functional quick-start content and Goals navigation label', async () => {
+  it('renders home route with functional quick-start content and Sankalpa navigation label', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
@@ -430,7 +430,7 @@ describe('App shell', () => {
     expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content');
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /^Goals$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /^Sankalpa$/i }).length).toBeGreaterThan(0);
   });
 
   it('renders settings route with functional defaults form', async () => {
@@ -1445,7 +1445,7 @@ describe('App shell', () => {
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
     await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
 
-    fireEvent.click(screen.getAllByRole('link', { name: /^Goals$/i })[0]);
+    fireEvent.click(screen.getAllByRole('link', { name: /^Sankalpa$/i })[0]);
 
     expect(await screen.findByText(/manual log: 1/i)).toBeInTheDocument();
     expect(screen.getByText(/progress: 1 \/ 1 session logs · 0 session logs remaining/i)).toBeInTheDocument();
