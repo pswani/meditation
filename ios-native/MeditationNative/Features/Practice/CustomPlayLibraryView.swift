@@ -32,11 +32,6 @@ struct CustomPlayLibraryView: View {
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
                                     }
-                                    if let linkedMediaIdentifier = customPlay.linkedMediaIdentifier {
-                                        Text("Linked media identifier: \(linkedMediaIdentifier)")
-                                            .font(.footnote)
-                                            .foregroundStyle(.secondary)
-                                    }
                                     Text(mediaSummary(
                                         customPlay,
                                         canResolvePlayback: viewModel.canResolvePlayback(for: customPlay.media)
@@ -87,6 +82,9 @@ struct CustomPlayLibraryView: View {
             }
         }
         .navigationTitle("Custom plays")
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 12)
+        }
         .alert(
             viewModel.runtimeSafetyPrompt?.title ?? "",
             isPresented: runtimeSafetyPromptIsPresented,
@@ -177,10 +175,9 @@ struct CustomPlayEditorView: View {
 
             Section("Recording details") {
                 TextField("Session note", text: $draft.recordingLabel)
-                TextField("Linked media identifier", text: $draft.linkedMediaIdentifier)
                 Picker("Bundled sample media", selection: bundledSampleSelection) {
                     if draft.media?.source == .remote {
-                        Text("Keep current linked media").tag(CustomPlayMediaAsset?.none)
+                        Text("Keep current recording").tag(CustomPlayMediaAsset?.none)
                     } else {
                         Text("Choose").tag(CustomPlayMediaAsset?.none)
                     }
@@ -198,7 +195,7 @@ struct CustomPlayEditorView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Text("Choose bundled sample media for local-only playback, or keep a backend-linked recording when one is already synced. The linked media identifier remains the sync seam for managed media.")
+                Text("Choose bundled sample media for local-only playback, or keep an existing synced recording when one is already available.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -306,12 +303,12 @@ private extension CustomPlayLibraryView {
 
 private func mediaSummary(_ customPlay: CustomPlay, canResolvePlayback: Bool) -> String {
     guard let media = customPlay.media else {
-        return "Recording unavailable on this device"
+        return "Recording unavailable here"
     }
 
     if canResolvePlayback {
         return "Recording: \(media.label) • \(media.sourceSummary)"
     }
 
-    return "Recording unavailable on this device"
+    return "Recording unavailable here"
 }

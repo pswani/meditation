@@ -196,7 +196,7 @@ export default function HomePage() {
 
       {isSettingsLoading ? (
         <div className="status-banner" role="status">
-          <p>Loading timer defaults from the backend.</p>
+          <p>Loading timer defaults.</p>
         </div>
       ) : null}
 
@@ -214,11 +214,11 @@ export default function HomePage() {
         } · ${settings.meditationType || 'select meditation type'}`}
         actionButtonLabel={
           activeSession
-            ? 'Resume Active Timer'
+            ? 'Open Active Timer'
             : activeCustomPlayRun
-            ? 'Resume Custom Play'
+            ? 'Open Custom Play'
             : activePlaylistRun
-            ? 'Resume Playlist Run'
+            ? 'Open Playlist Run'
             : 'Start Timer Now'
         }
         lastUsedMeditation={lastUsedMeditation}

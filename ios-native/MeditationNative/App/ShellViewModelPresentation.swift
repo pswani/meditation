@@ -6,12 +6,12 @@ enum ShellViewModelPresentation {
         case .localOnly:
             if syncState.pendingMutationCount > 0 {
                 return syncState.pendingMutationCount == 1
-                    ? "This iPhone is in local-only mode. 1 saved change will stay on this device until a backend base URL is configured."
-                    : "This iPhone is in local-only mode. \(syncState.pendingMutationCount) saved changes will stay on this device until a backend base URL is configured."
+                    ? "Local-only mode. 1 saved change stays on this iPhone."
+                    : "Local-only mode. \(syncState.pendingMutationCount) saved changes stay on this iPhone."
             }
-            return "This iPhone is running in intentional local-only mode."
+            return "Local-only mode. Changes stay on this iPhone."
         case .syncing:
-            return "Syncing with the configured backend."
+            return "Syncing changes."
         case .upToDate:
             return syncState.lastNoticeMessage
         case .pendingSync:
@@ -19,31 +19,31 @@ enum ShellViewModelPresentation {
             guard count > 0 else {
                 return nil
             }
-            return count == 1 ? "1 local change is pending sync." : "\(count) local changes are pending sync."
+            return count == 1 ? "1 change is waiting to sync." : "\(count) changes are waiting to sync."
         case .offline:
             let count = syncState.pendingMutationCount
             if count > 0 {
                 return count == 1
-                    ? "Offline. 1 local change will sync when the connection returns."
-                    : "Offline. \(count) local changes will sync when the connection returns."
+                    ? "Offline. 1 change will sync when the connection returns."
+                    : "Offline. \(count) changes will sync when the connection returns."
             }
             return "Offline. Showing the latest saved local state."
         case .backendUnavailable:
             let count = syncState.pendingMutationCount
             if count > 0 {
                 return count == 1
-                    ? "Backend unavailable. 1 local change will sync when the API is reachable."
-                    : "Backend unavailable. \(count) local changes will sync when the API is reachable."
+                    ? "Server unavailable. 1 change will sync when it reconnects."
+                    : "Server unavailable. \(count) changes will sync when it reconnects."
             }
-            return "Backend unavailable. Showing the latest saved local state."
+            return "Server unavailable. Showing the latest saved local state."
         case .invalidBackendResponse:
             let count = syncState.pendingMutationCount
             if count > 0 {
                 return count == 1
-                    ? "Backend response invalid. 1 local change will stay queued until the backend contract is corrected."
-                    : "Backend response invalid. \(count) local changes will stay queued until the backend contract is corrected."
+                    ? "Server response invalid. 1 change will stay queued until this is corrected."
+                    : "Server response invalid. \(count) changes will stay queued until this is corrected."
             }
-            return "Backend response invalid. Showing the latest saved local state."
+            return "Server response invalid. Showing the latest saved local state."
         }
     }
 
@@ -150,7 +150,7 @@ enum ShellViewModelPresentation {
         }
 
         if canResolvePlayback == false {
-            return "Recording unavailable on this device. Start still runs the saved duration and bells."
+            return "Recording unavailable here. You can still run this as a timed session with saved bells."
         }
 
         return nil

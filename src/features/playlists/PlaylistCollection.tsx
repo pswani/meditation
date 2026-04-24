@@ -13,6 +13,7 @@ interface PlaylistCollectionProps {
   readonly onRequestDelete: (playlistId: string) => void;
   readonly onCancelDelete: () => void;
   readonly onConfirmDelete: (playlistId: string) => Promise<unknown>;
+  readonly onCreatePlaylist: () => void;
 }
 
 export function PlaylistCollection({
@@ -26,6 +27,7 @@ export function PlaylistCollection({
   onRequestDelete,
   onCancelDelete,
   onConfirmDelete,
+  onCreatePlaylist,
 }: PlaylistCollectionProps) {
   const navigate = useNavigate();
 
@@ -35,6 +37,9 @@ export function PlaylistCollection({
         <div className="empty-state">
           <p>No playlist entries yet.</p>
           <p>Create a playlist to run multiple meditation segments or linked recordings in order.</p>
+          <button type="button" className="secondary" onClick={onCreatePlaylist}>
+            Create Playlist
+          </button>
         </div>
       ) : (
         <ul className="playlist-list">

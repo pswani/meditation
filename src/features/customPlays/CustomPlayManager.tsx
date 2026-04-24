@@ -21,6 +21,7 @@ const initialDraft: CustomPlayDraft = {
 
 const initialErrors: CustomPlayValidationResult['errors'] = {};
 type FeedbackTone = 'ok' | 'warn';
+const customPlayFormId = 'custom-play-form';
 
 interface CustomPlayManagerProps {
   readonly timerSettings: TimerSettings;
@@ -148,20 +149,24 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
   const showManagedLibraryEmptyState = !isMediaCatalogLoading && !isCustomPlaysLoading && mediaAssets.length === 0;
   const controlsDisabled = isCustomPlaysLoading || isCustomPlaySyncing;
 
+  function focusCustomPlayForm() {
+    document.getElementById(customPlayFormId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
-    <section className="custom-play-panel">
+    <section className="custom-play-panel" id={customPlayFormId}>
       <h3 className="section-title">Custom Plays</h3>
       <p className="section-subtitle">Create and manage your custom play presets.</p>
 
       {isCustomPlaysLoading ? (
         <div className="status-banner" role="status">
-          <p>Loading custom plays from the backend.</p>
+          <p>Loading custom plays.</p>
         </div>
       ) : null}
 
       {isCustomPlaySyncing ? (
         <div className="status-banner" role="status">
-          <p>Saving custom plays to the backend.</p>
+          <p>Saving custom plays.</p>
         </div>
       ) : null}
 
@@ -179,12 +184,12 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
 
       {isMediaCatalogLoading ? (
         <div className="status-banner" role="status">
-          <p>Loading managed media sessions from the backend library.</p>
+          <p>Loading available recordings.</p>
         </div>
       ) : showManagedLibraryEmptyState ? (
         <div className="status-banner warn" role="status">
-          <p>No managed media sessions are available yet.</p>
-          <p>Register a custom-play recording through the repo media workflow, restart the backend, then reload this screen.</p>
+          <p>No recordings are available yet.</p>
+          <p>Add a recording to the library, then reload this screen.</p>
         </div>
       ) : (
         <div className={`status-banner ${mediaCatalogSource === 'backend' ? 'ok' : ''}`} role="status">
@@ -230,6 +235,13 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
           onRequestDelete={requestDelete}
           onCancelDelete={() => setPendingDeleteId(null)}
           onConfirmDelete={confirmDelete}
+          onCreateCustomPlay={() => {
+            setEditId(null);
+            setDraft(initialDraft);
+            setErrors(initialErrors);
+            setSaveFeedbackMessage(null);
+            focusCustomPlayForm();
+          }}
           onClearFeedback={() => setSaveFeedbackMessage(null)}
         />
       </div>

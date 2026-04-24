@@ -8,7 +8,7 @@ export function playlistStartBlockMessage(result: PlaylistRunStartResult): strin
   }
 
   const reasonToMessage: Record<NonNullable<PlaylistRunStartResult['reason']>, string> = {
-    'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
+    'playlists loading': 'Playlists are still loading. Wait a moment and try again.',
     'timer session active': 'Finish or end the active timer session before starting a playlist run.',
     'custom play run active': 'Finish the active custom play before starting a playlist run.',
     'playlist run active': 'A playlist run is already active. Open it to continue.',
@@ -39,12 +39,12 @@ export function describeLastUsedMeditation(lastUsedMeditation: LastUsedMeditatio
 
 export function customPlayStartBlockMessage(reason?: string): string {
   const reasonToMessage: Record<string, string> = {
-    'custom plays loading': 'Custom plays are still loading from the backend. Wait a moment and try again.',
+    'custom plays loading': 'Custom plays are still loading. Wait a moment and try again.',
     'timer session active': 'Finish or end the active timer session before starting a custom play.',
     'playlist run active': 'Finish the active playlist run before starting a custom play.',
     'custom play run active': 'A custom play is already active. Open it to continue.',
     'custom play not found': 'That custom play is no longer available.',
-    'media unavailable': 'The linked media session is unavailable right now. Reconnect the custom play and try again.',
+    'media unavailable': 'The linked recording is unavailable right now. Reconnect the custom play and try again.',
   };
 
   return reason ? reasonToMessage[reason] ?? 'Unable to start that custom play right now.' : 'Unable to start that custom play right now.';

@@ -44,6 +44,9 @@ struct PracticeView: View {
             .dismissesKeyboardOnBackgroundTap()
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 12)
+        }
         .navigationTitle("Practice")
         .alert(
             viewModel.runtimeSafetyPrompt?.title ?? "",

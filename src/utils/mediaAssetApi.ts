@@ -117,7 +117,7 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
     return {
       assets: cloneMediaAssetCatalog(cachedAssets),
       source: 'cached-backend',
-      errorMessage: 'Showing the last available managed media library because the backend media API is unavailable.',
+      errorMessage: 'Showing your last saved recording library because live recordings are unavailable right now.',
       errorKind: isApiClientError(error) && (error.kind === 'invalid-json' || error.kind === 'invalid-response')
         ? 'invalid-response'
         : isApiClientError(error) && error.status === 404
@@ -136,7 +136,7 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
     return {
       assets: fallbackAssets,
       source: 'sample-fallback',
-      errorMessage: 'Using built-in media session options because the backend media API is not available yet.',
+      errorMessage: 'Using built-in recording options because the recording library is not available yet.',
       errorKind: 'unavailable',
     };
   }
@@ -145,7 +145,7 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
     return {
       assets: fallbackAssets,
       source: 'sample-fallback',
-      errorMessage: 'Using built-in media session options because the backend media API could not be reached.',
+      errorMessage: 'Using built-in recording options because the recording library could not be reached.',
       errorKind: 'unavailable',
     };
   }
@@ -154,7 +154,7 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
     return {
       assets: fallbackAssets,
       source: 'sample-fallback',
-      errorMessage: 'Backend media session data is invalid. Showing built-in media session options instead.',
+      errorMessage: 'Recording library data is unavailable right now. Showing built-in recording options instead.',
       errorKind: 'invalid-response',
     };
   }
@@ -162,7 +162,7 @@ function createFallbackResult(error: unknown): MediaAssetCatalogResult {
   return {
     assets: fallbackAssets,
     source: 'sample-fallback',
-    errorMessage: 'Backend media session loading failed. Showing built-in media session options instead.',
+    errorMessage: 'Recording library loading failed. Showing built-in recording options instead.',
     errorKind: 'backend-error',
   };
 }

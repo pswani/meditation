@@ -108,7 +108,7 @@ export function CustomPlayForm({
             {errors.durationMinutes}
           </small>
         ) : null}
-        <small className="hint-text">Duration is derived from the linked media session.</small>
+        <small className="hint-text">Duration is derived from the selected recording.</small>
       </label>
 
       <label>
@@ -154,7 +154,7 @@ export function CustomPlayForm({
       </label>
 
       <label>
-        <span>Linked media session</span>
+        <span>Recording</span>
         <select
           disabled={controlsDisabled || isMediaCatalogLoading}
           value={draft.mediaAssetId}
@@ -171,7 +171,7 @@ export function CustomPlayForm({
             }));
           }}
         >
-          <option value="">Select linked media session</option>
+          <option value="">Select recording</option>
           {mediaAssets.map((asset) => (
             <option key={asset.id} value={asset.id}>
               {describeLinkedMedia(asset)}
@@ -184,15 +184,14 @@ export function CustomPlayForm({
           </small>
         ) : isMediaCatalogLoading ? (
           <small id={customPlayMediaMessageId} className="hint-text">
-            Loading managed media sessions from the backend library.
+            Loading available recordings.
           </small>
         ) : selectedMediaAsset ? (
           <>
             <small id={customPlayMediaMessageId} className="hint-text">
-              Managed library entry: {describeLinkedMedia(selectedMediaAsset)}
+              Selected recording: {describeLinkedMedia(selectedMediaAsset)}
             </small>
-            <small className="hint-text">Managed path: {selectedMediaAsset.relativePath}</small>
-            <small className="hint-text">This keeps the custom play connected to the selected managed media session.</small>
+            <small className="hint-text">This keeps the custom play connected to the selected recording.</small>
           </>
         ) : (
           <>
@@ -201,7 +200,7 @@ export function CustomPlayForm({
                 {mediaLoadError}
               </small>
             ) : null}
-            <small className="hint-text">Choose a managed media session to remember which recording this custom play uses.</small>
+            <small className="hint-text">Choose a recording to remember which session this custom play uses.</small>
           </>
         )}
       </label>

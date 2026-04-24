@@ -44,10 +44,6 @@ struct FeaturedCustomPlayLibrarySection: View {
                             Text("Session note: \(recordingLabel)")
                                 .foregroundStyle(.secondary)
                         }
-                        if let linkedMediaIdentifier = featuredCustomPlay.linkedMediaIdentifier {
-                            Text("Linked media identifier: \(linkedMediaIdentifier)")
-                                .foregroundStyle(.secondary)
-                        }
                         Text(
                             viewModel.canResolvePlayback(for: featuredCustomPlay.media)
                                 ? "Ready to play with linked recording media on this device."
@@ -76,7 +72,7 @@ struct FeaturedCustomPlayLibrarySection: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    Text("No custom plays yet. Add one with bundled sample media or a synced linked recording so you can start it quickly from Practice.")
+                    Text("No custom plays yet. Add one with a recording so you can start it quickly from Practice.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

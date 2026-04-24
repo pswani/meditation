@@ -56,7 +56,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
         XCTAssertEqual(
             ShellViewModelPresentation.syncBannerMessage(for: localOnlyState),
-            "This iPhone is in local-only mode. 1 saved change will stay on this device until a backend base URL is configured."
+            "Local-only mode. 1 saved change stays on this iPhone."
         )
         XCTAssertEqual(
             ShellViewModelPresentation.syncStatusDetail(
@@ -85,7 +85,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
         )
         XCTAssertEqual(
             ShellViewModelPresentation.syncBannerMessage(for: invalidState),
-            "Backend response invalid. 1 local change will stay queued until the backend contract is corrected."
+            "Server response invalid. 1 change will stay queued until this is corrected."
         )
         XCTAssertEqual(
             ShellViewModelPresentation.syncStatusDetail(
@@ -121,7 +121,7 @@ final class ShellViewModelPresentationTests: XCTestCase {
                 canResolvePlayback: false,
                 hasActivePracticeRuntime: false
             ),
-            "Recording unavailable on this device. Start still runs the saved duration and bells."
+            "Recording unavailable here. You can still run this as a timed session with saved bells."
         )
     }
 

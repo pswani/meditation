@@ -17,6 +17,7 @@
   --radius-md: 14px;
   --radius-sm: 11px;
   --max-content: 74rem;
+  --mobile-nav-height: 5.35rem;
   font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
@@ -59,11 +60,12 @@ a {
 }
 
 .app-shell {
+  position: relative;
   min-height: 100vh;
 }
 
 .skip-link {
-  position: fixed;
+  position: absolute;
   top: 0.8rem;
   left: 0.9rem;
   z-index: 120;
@@ -93,9 +95,7 @@ a {
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  position: static;
   border-bottom: 1px solid var(--border);
   background: rgba(247, 249, 247, 0.88);
   backdrop-filter: blur(12px);
@@ -137,7 +137,7 @@ a {
 .content {
   width: min(100%, var(--max-content));
   margin: 0 auto;
-  padding: 1rem 1rem 7rem;
+  padding: 1rem 1rem 1.5rem;
 }
 
 .page-card {
@@ -151,8 +151,7 @@ a {
 .eyebrow {
   margin: 0;
   color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -173,9 +172,9 @@ a {
 }
 
 .bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
   bottom: 0;
   z-index: 30;
   display: grid;
@@ -185,6 +184,7 @@ a {
   background: rgba(247, 249, 247, 0.96);
   backdrop-filter: blur(14px);
   padding: 0.7rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom));
+  min-height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
 }
 
 .bottom-link,
@@ -653,6 +653,15 @@ button:disabled {
   gap: 0.7rem;
 }
 
+.home-primary-actions {
+  align-items: stretch;
+}
+
+.home-secondary-action {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .settings-draft-state {
   margin: 0;
   font-size: 0.92rem;
@@ -974,6 +983,10 @@ button:disabled {
   gap: 0.45rem;
 }
 
+.empty-state button {
+  justify-self: start;
+}
+
 .observance-tracker {
   display: grid;
   gap: 0.65rem;
@@ -1054,6 +1067,32 @@ button:disabled {
   gap: 1rem;
 }
 
+.page-disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #f9fcfa;
+  padding: 0.35rem 0.9rem 0.9rem;
+}
+
+.page-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.page-disclosure-summary {
+  color: var(--accent);
+  font-weight: 700;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.page-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-disclosure[open] > .page-disclosure-summary {
+  padding-bottom: 0.75rem;
+}
+
 .custom-play-form,
 .playlist-form,
 .custom-play-collection,
@@ -1108,6 +1147,12 @@ button:disabled {
   .content {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
 
   .content {

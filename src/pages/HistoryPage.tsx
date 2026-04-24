@@ -194,13 +194,13 @@ export default function HistoryPage() {
 
         {isSessionLogsLoading ? (
           <div className="status-banner" role="status">
-            <p>Loading session log history from the backend.</p>
+            <p>Loading session log history.</p>
           </div>
         ) : null}
 
         {isSessionLogSyncing ? (
           <div className="status-banner" role="status">
-            <p>Syncing recent session logs to the backend.</p>
+            <p>Syncing recent session logs.</p>
           </div>
         ) : null}
 

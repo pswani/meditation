@@ -35,7 +35,7 @@ export function HomeQuickStartPanel({
       <p className="section-subtitle">
         {isSettingsLoading ? 'Loading timer defaults...' : `Default timer: ${defaultTimerLabel}`}
       </p>
-      <div className="timer-actions">
+      <div className="timer-actions home-primary-actions">
         <button type="button" onClick={onQuickStart} disabled={isActionButtonDisabled}>
           {actionButtonLabel}
         </button>
@@ -44,14 +44,12 @@ export function HomeQuickStartPanel({
         </button>
       </div>
       {lastUsedMeditation ? (
-        <>
+        <div className="home-secondary-action">
           <p className="section-subtitle">Last used: {describeLastUsedMeditation(lastUsedMeditation)}</p>
-          <div className="timer-actions">
-            <button type="button" className="secondary" onClick={onStartLastUsedMeditation}>
-              Start Last Used Meditation
-            </button>
-          </div>
-        </>
+          <button type="button" className="link-button" onClick={onStartLastUsedMeditation}>
+            Start Last Used Meditation
+          </button>
+        </div>
       ) : (
         <p className="section-subtitle">Your last started timer, custom play, or playlist will appear here.</p>
       )}
@@ -124,10 +122,10 @@ export function HomeTodayAndSankalpaPanels({
         <div className="panel-header">
           <h3 className="section-title">Sankalpa Snapshot</h3>
           <button type="button" className="link-button" onClick={onOpenSankalpa}>
-            Open Sankalpa
+            Open Goals
           </button>
         </div>
-        {isSankalpaLoading ? <p className="section-subtitle">Refreshing sankalpa progress from the backend.</p> : null}
+        {isSankalpaLoading ? <p className="section-subtitle">Refreshing goals.</p> : null}
         {sankalpaSyncMessage ? <p className="section-subtitle">{sankalpaSyncMessage}</p> : null}
         {topActiveSankalpa ? (
           <>
@@ -147,7 +145,7 @@ export function HomeTodayAndSankalpaPanels({
         ) : (
           <div className="empty-state">
             <p>No active sankalpa right now.</p>
-            <p>Create one in Sankalpa to track your current intent.</p>
+            <p>Create one in Goals to track your current intent.</p>
           </div>
         )}
       </section>
@@ -241,13 +239,13 @@ export function HomeFavoritesPanel({
             <strong>Favorite playlist</strong>
             {favoritePlaylists.length === 0 ? (
               isPlaylistsLoading ? (
-                <p className="section-subtitle">Loading favorite playlists from the backend.</p>
+                <p className="section-subtitle">Loading favorite playlists.</p>
               ) : (
                 <p className="section-subtitle">No favorite playlist yet.</p>
               )
             ) : (
               <>
-                {isPlaylistsLoading ? <p className="section-subtitle">Loading favorite playlists from the backend.</p> : null}
+                {isPlaylistsLoading ? <p className="section-subtitle">Loading favorite playlists.</p> : null}
                 <ul className="home-shortcut-list">
                   {favoritePlaylists.map((playlist) => (
                     <li key={playlist.id} className="home-shortcut-item">

@@ -3,6 +3,7 @@ import SwiftUI
 struct ShellRootView: View {
     @ObservedObject var viewModel: ShellViewModel
     @Environment(\.scenePhase) private var scenePhase
+    private let accentColor = Color(red: 0.12, green: 0.48, blue: 0.42)
 
     var body: some View {
         TabView {
@@ -41,15 +42,24 @@ struct ShellRootView: View {
                 Label("Settings", systemImage: "gearshape")
             }
         }
-        .tint(.teal)
+        .tint(accentColor)
         .safeAreaInset(edge: .top) {
             if let syncBannerMessage = viewModel.syncBannerMessage {
-                Text(syncBannerMessage)
-                    .font(.footnote.weight(.medium))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.teal.opacity(0.12))
+                HStack {
+                    Spacer(minLength: 0)
+                    Text(syncBannerMessage)
+                        .font(.footnote.weight(.medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.84)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(accentColor.opacity(0.12))
+                        .clipShape(Capsule())
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 2)
             }
         }
         .task {

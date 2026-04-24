@@ -31,6 +31,9 @@ export default function AppShell() {
   } = useSyncStatus();
   const activeNavItem = getActiveNavItem(location.pathname);
   const syncStatusMessage = buildSyncStatusMessage(connectionMode, nextRetryCount, failedCount);
+  const showActiveTimerBanner = location.pathname !== '/practice/active';
+  const showActiveCustomPlayBanner = location.pathname !== '/practice/custom-plays/active';
+  const showActivePlaylistBanner = location.pathname !== '/practice/playlists/active';
   const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
   const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
   const activePlaylistItem = getPlaylistRunCurrentItem(activePlaylistRun);
@@ -97,6 +100,9 @@ export default function AppShell() {
             syncStatusMessage={syncStatusMessage}
             connectionMode={connectionMode}
             failedCount={failedCount}
+            showActiveTimerBanner={showActiveTimerBanner}
+            showActiveCustomPlayBanner={showActiveCustomPlayBanner}
+            showActivePlaylistBanner={showActivePlaylistBanner}
             onOpenActiveTimer={() => navigate('/practice/active')}
             onOpenActiveCustomPlay={() => navigate('/practice/custom-plays/active')}
             onOpenActivePlaylist={() => navigate('/practice/playlists/active')}
@@ -137,7 +143,7 @@ export default function AppShell() {
             completeCustomPlayRun(audio?.duration || audio?.currentTime || activeCustomPlayRun?.durationSeconds || 0);
           }}
           onError={() => {
-            reportCustomPlayRuntimeIssue('The linked recording could not be loaded from its media path.');
+            reportCustomPlayRuntimeIssue('The linked recording could not be loaded right now.');
           }}
         />
 
@@ -171,7 +177,7 @@ export default function AppShell() {
             completePlaylistRunCurrentItem(audio?.duration || audio?.currentTime || 0);
           }}
           onError={() => {
-            reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded from its media path.');
+            reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded right now.');
           }}
         />
 

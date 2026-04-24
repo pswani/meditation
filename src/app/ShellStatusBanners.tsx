@@ -11,6 +11,9 @@ interface ShellStatusBannersProps {
   readonly syncStatusMessage: string | null;
   readonly connectionMode: 'offline' | 'backend-unreachable' | 'online';
   readonly failedCount: number;
+  readonly showActiveTimerBanner: boolean;
+  readonly showActiveCustomPlayBanner: boolean;
+  readonly showActivePlaylistBanner: boolean;
   readonly onOpenActiveTimer: () => void;
   readonly onOpenActiveCustomPlay: () => void;
   readonly onOpenActivePlaylist: () => void;
@@ -25,13 +28,16 @@ export function ShellStatusBanners({
   syncStatusMessage,
   connectionMode,
   failedCount,
+  showActiveTimerBanner,
+  showActiveCustomPlayBanner,
+  showActivePlaylistBanner,
   onOpenActiveTimer,
   onOpenActiveCustomPlay,
   onOpenActivePlaylist,
 }: ShellStatusBannersProps) {
   return (
     <>
-      {activeSession ? (
+      {activeSession && showActiveTimerBanner ? (
         <div className="shell-active-banner" role="status" aria-live="polite">
           <p>
             {activeSession.isPaused ? 'Paused timer' : 'Active timer'}: {activeSession.meditationType} ·{' '}
@@ -48,7 +54,7 @@ export function ShellStatusBanners({
           </button>
         </div>
       ) : null}
-      {!activeSession && activeCustomPlayRun ? (
+      {!activeSession && activeCustomPlayRun && showActiveCustomPlayBanner ? (
         <div className="shell-active-banner" role="status" aria-live="polite">
           <p>{activeCustomPlayRun.isPaused ? 'Paused custom play' : 'Active custom play'}: {activeCustomPlayRun.customPlayName}</p>
           <button type="button" className="secondary shell-active-action" onClick={onOpenActiveCustomPlay}>
@@ -56,7 +62,7 @@ export function ShellStatusBanners({
           </button>
         </div>
       ) : null}
-      {!activeSession && !activeCustomPlayRun && activePlaylistRun ? (
+      {!activeSession && !activeCustomPlayRun && activePlaylistRun && showActivePlaylistBanner ? (
         <div className="shell-active-banner" role="status" aria-live="polite">
           <p>
             Active playlist run: {activePlaylistRun.playlistName} · item {activePlaylistRun.currentIndex + 1}/

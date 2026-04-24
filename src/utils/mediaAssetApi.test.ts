@@ -73,7 +73,7 @@ describe('media asset api boundary', () => {
 
     expect(result.source).toBe('sample-fallback');
     expect(result.errorKind).toBe('unavailable');
-    expect(result.errorMessage).toMatch(/built-in media session options/i);
+    expect(result.errorMessage).toMatch(/built-in recording options/i);
     expect(first?.id).toBeTruthy();
     expect(first?.label).toBeTruthy();
     expect(first?.meditationType).toBeTruthy();
@@ -96,7 +96,7 @@ describe('media asset api boundary', () => {
 
     expect(result.source).toBe('sample-fallback');
     expect(result.errorKind).toBe('invalid-response');
-    expect(result.errorMessage).toMatch(/data is invalid/i);
+    expect(result.errorMessage).toMatch(/recording library data is unavailable right now/i);
   });
 
   it('surfaces backend http failures without pretending the backend is merely offline', async () => {
@@ -172,7 +172,7 @@ describe('media asset api boundary', () => {
     const result = await loadCustomPlayMediaAssets();
 
     expect(result.source).toBe('cached-backend');
-    expect(result.errorMessage).toMatch(/last available managed media library/i);
+    expect(result.errorMessage).toMatch(/last saved recording library/i);
     expect(result.assets[0]?.id).toBe('media-cached-backend-only');
     expect(findCustomPlayMediaAssetById('media-cached-backend-only')?.label).toBe('Cached Backend Session');
   });

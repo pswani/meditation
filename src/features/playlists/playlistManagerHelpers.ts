@@ -12,7 +12,7 @@ export function playlistRunFeedbackMessage(result: PlaylistRunStartResult): stri
   }
 
   const reasonToMessage: Record<NonNullable<PlaylistRunStartResult['reason']>, string> = {
-    'playlists loading': 'Playlists are still loading from the backend. Wait a moment and try again.',
+    'playlists loading': 'Playlists are still loading. Wait a moment and try again.',
     'timer session active': 'Finish or end the active timer session before starting a playlist run.',
     'custom play run active': 'Finish the active custom play before starting a playlist run.',
     'playlist run active': 'A playlist run is already active. Open it to continue before starting another.',

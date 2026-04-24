@@ -62,7 +62,7 @@ export default function ActiveTimerPage() {
           ) : null}
           {isSessionLogSyncing ? (
             <div className="status-banner" role="status">
-              <p>Saving the latest auto log to the backend history.</p>
+              <p>Saving the latest auto log to history.</p>
             </div>
           ) : null}
           {sessionLogSyncError ? (

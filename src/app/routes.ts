@@ -11,7 +11,7 @@ export const primaryNavItems: readonly PrimaryNavItem[] = [
   { to: '/', label: 'Home', eyebrow: 'Daily Practice', title: 'Home' },
   { to: '/practice', label: 'Practice', eyebrow: 'Meditation Tools', title: 'Practice' },
   { to: '/history', label: 'History', eyebrow: 'Session Log', title: 'History' },
-  { to: '/goals', label: 'Sankalpa', eyebrow: 'Goal Tracking', title: 'Sankalpa' },
+  { to: '/goals', label: 'Goals', eyebrow: 'Goal Tracking', title: 'Sankalpa' },
   { to: '/settings', label: 'Settings', eyebrow: 'Preferences', title: 'Settings' },
 ];
 

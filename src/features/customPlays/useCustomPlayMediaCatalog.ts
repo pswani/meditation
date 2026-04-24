@@ -29,7 +29,7 @@ export function useCustomPlayMediaCatalog() {
           return;
         }
         setMediaCatalogSource('sample-fallback');
-        setMediaLoadError('Unable to load media session options right now.');
+        setMediaLoadError('Unable to load recording options right now.');
         setMediaLoadIssueKind('backend-error');
         setIsMediaCatalogLoading(false);
       });

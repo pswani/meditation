@@ -8,12 +8,14 @@ import type { PlaylistDraft, PlaylistValidationResult } from '../../types/playli
 import {
   createInitialPlaylistDraft,
   createPlaylistDraftItem,
+  pruneResolvedPlaylistErrors,
 } from '../../utils/playlist';
 import { useTimer } from '../timer/useTimer';
 
 const initialErrors: PlaylistValidationResult['errors'] = {
   itemErrors: {},
 };
+const playlistFormId = 'playlist-form';
 
 export default function PlaylistManager() {
   const navigate = useNavigate();
@@ -39,6 +41,7 @@ export default function PlaylistManager() {
   const controlsDisabled = isPlaylistsLoading || isPlaylistSyncing;
 
   function updateDraft(next: PlaylistDraft) {
+    setErrors((current) => pruneResolvedPlaylistErrors(next, current));
     setDraft(next);
   }
 
@@ -124,6 +127,10 @@ export default function PlaylistManager() {
     });
   }
 
+  function focusPlaylistForm() {
+    document.getElementById(playlistFormId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function runPlaylist(playlistId: string) {
     if (activePlaylistRun?.playlistId === playlistId) {
       setPlaylistFeedback(null);
@@ -173,13 +180,13 @@ export default function PlaylistManager() {
 
       {isPlaylistsLoading ? (
         <div className="status-banner" role="status">
-          <p>Loading playlists from the backend.</p>
+          <p>Loading playlists.</p>
         </div>
       ) : null}
 
       {isPlaylistSyncing ? (
         <div className="status-banner" role="status">
-          <p>Saving playlists to the backend.</p>
+          <p>Saving playlists.</p>
         </div>
       ) : null}
 
@@ -199,7 +206,8 @@ export default function PlaylistManager() {
       ) : null}
 
       <div className="playlist-manager-layout">
-        <PlaylistForm
+        <div id={playlistFormId}>
+          <PlaylistForm
           draft={draft}
           errors={errors}
           editId={editId}
@@ -213,7 +221,8 @@ export default function PlaylistManager() {
           onSyncDraftItemFromCustomPlay={syncDraftItemFromCustomPlay}
           onRemoveDraftItem={removeDraftItem}
           onClearFeedback={() => setPlaylistFeedback(null)}
-        />
+          />
+        </div>
 
         <PlaylistCollection
           playlists={playlists}
@@ -226,6 +235,10 @@ export default function PlaylistManager() {
           onRequestDelete={setPendingDeleteId}
           onCancelDelete={() => setPendingDeleteId(null)}
           onConfirmDelete={confirmDelete}
+          onCreatePlaylist={() => {
+            cancelEdit();
+            focusPlaylistForm();
+          }}
         />
       </div>
     </section>

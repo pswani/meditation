@@ -5,7 +5,7 @@ export function buildSyncStatusMessage(
 ): string | null {
   if (connectionMode === 'offline') {
     if (pendingCount > 0) {
-      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device and sync when the backend is reachable again.`;
+      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device and sync when the connection is stable again.`;
     }
 
     return 'You are offline. Saved data already on this device remains available.';
@@ -13,18 +13,18 @@ export function buildSyncStatusMessage(
 
   if (connectionMode === 'backend-unreachable') {
     if (pendingCount > 0) {
-      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device until the backend is reachable again.`;
+      return `${pendingCount} change${pendingCount === 1 ? '' : 's'} will stay on this device until the server reconnects.`;
     }
 
-    return 'The backend is unavailable right now. Saved data already on this device remains available.';
+    return 'The server is unavailable right now. Saved data already on this device remains available.';
   }
 
   if (failedCount > 0) {
-    return `${failedCount} change${failedCount === 1 ? '' : 's'} still need another sync attempt.`;
+    return `${failedCount} change${failedCount === 1 ? ' is' : 's are'} waiting to sync.`;
   }
 
   if (pendingCount > 0) {
-    return `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync with the backend.`;
+    return `${pendingCount} change${pendingCount === 1 ? ' is' : 's are'} waiting to sync.`;
   }
 
   return null;

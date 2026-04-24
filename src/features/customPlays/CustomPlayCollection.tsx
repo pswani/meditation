@@ -18,6 +18,7 @@ interface CustomPlayCollectionProps {
   readonly onRequestDelete: (playId: string) => void;
   readonly onCancelDelete: () => void;
   readonly onConfirmDelete: (playId: string) => Promise<unknown>;
+  readonly onCreateCustomPlay: () => void;
   readonly onClearFeedback: () => void;
 }
 
@@ -36,6 +37,7 @@ export function CustomPlayCollection({
   onRequestDelete,
   onCancelDelete,
   onConfirmDelete,
+  onCreateCustomPlay,
   onClearFeedback,
 }: CustomPlayCollectionProps) {
   return (
@@ -44,6 +46,9 @@ export function CustomPlayCollection({
         <div className="empty-state">
           <p>No custom play entries yet.</p>
           <p>Create one to quickly reuse your preferred setup.</p>
+          <button type="button" className="secondary" onClick={onCreateCustomPlay}>
+            Create Custom Play
+          </button>
         </div>
       ) : (
         <ul className="custom-play-list">
@@ -51,9 +56,9 @@ export function CustomPlayCollection({
             const linkedAsset = play.mediaAssetId ? mediaAssets.find((asset) => asset.id === play.mediaAssetId) : null;
             const startDisabled = controlsDisabled || isMediaCatalogLoading || !linkedAsset;
             const startTitle = isMediaCatalogLoading
-              ? 'Wait for the linked media session list to finish loading.'
+              ? 'Wait for the recording list to finish loading.'
               : !linkedAsset
-              ? 'This custom play cannot start until its linked media session is available again.'
+              ? 'This custom play cannot start until its recording is available again.'
               : 'Start this custom play';
 
             return (
@@ -76,11 +81,10 @@ export function CustomPlayCollection({
                     </p>
                     {linkedAsset ? (
                       <>
-                        <p className="section-subtitle">Media session: {describeLinkedMedia(linkedAsset)}</p>
-                        <p className="section-subtitle">Managed path: {linkedAsset.relativePath}</p>
+                        <p className="section-subtitle">Recording: {describeLinkedMedia(linkedAsset)}</p>
                       </>
                     ) : play.mediaAssetId ? (
-                      <p className="section-subtitle">Linked media session unavailable right now.</p>
+                      <p className="section-subtitle">Recording unavailable here.</p>
                     ) : null}
                     {appliedPlayId === play.id ? (
                       <p className="section-subtitle" role="status">
@@ -121,11 +125,11 @@ export function CustomPlayCollection({
                       </p>
                     ) : isMediaCatalogLoading ? (
                       <p className="section-subtitle" role="status">
-                        Loading linked media session details before this custom play can start.
+                        Loading recording details before this custom play can start.
                       </p>
                     ) : !linkedAsset ? (
                       <p className="section-subtitle" role="status">
-                        Start is unavailable until the linked media session is available again.
+                        Start is unavailable until the linked recording is available again.
                       </p>
                     ) : null}
                     {appliedPlayId === play.id ? (

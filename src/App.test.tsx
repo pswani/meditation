@@ -376,7 +376,7 @@ async function flushBackendHydration() {
   });
 
   await waitFor(() =>
-    expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading timer defaults/i)).not.toBeInTheDocument()
   );
 }
 
@@ -402,9 +402,9 @@ async function flushRouteLoad() {
 async function waitForPracticeHydration() {
   await flushRouteLoad();
   await waitFor(() =>
-    expect(screen.queryByText(/loading timer defaults from the backend/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading timer defaults/i)).not.toBeInTheDocument()
   );
-  await waitFor(() => expect(screen.queryByText(/loading custom plays from the backend/i)).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText(/loading custom plays/i)).not.toBeInTheDocument());
 }
 
 describe('App shell', () => {
@@ -419,7 +419,7 @@ describe('App shell', () => {
     vi.useRealTimers();
   });
 
-  it('renders home route with functional quick-start content and Sankalpa navigation label', async () => {
+  it('renders home route with functional quick-start content and Goals navigation label', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
@@ -430,7 +430,7 @@ describe('App shell', () => {
     expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content');
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
-    expect(screen.getAllByText('Sankalpa').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /^Goals$/i }).length).toBeGreaterThan(0);
   });
 
   it('renders settings route with functional defaults form', async () => {
@@ -847,7 +847,7 @@ describe('App shell', () => {
     );
 
     expect(
-      screen.getByText(/1 change will stay on this device and sync when the backend is reachable again/i)
+      screen.getByText(/1 change will stay on this device and sync when the connection is stable again/i)
     ).toBeInTheDocument();
     expect(await screen.findByText(/showing 1 of 1 filtered entries/i)).toBeInTheDocument();
     expect(screen.getByText(/^manual log$/i)).toBeInTheDocument();
@@ -862,7 +862,7 @@ describe('App shell', () => {
     expect(store.sessionLogs[0]?.id).toBe('offline-log-1');
     await waitFor(() =>
       expect(
-        screen.queryByText(/1 change will stay on this device and sync when the backend is reachable again/i)
+        screen.queryByText(/1 change will stay on this device and sync when the connection is stable again/i)
       ).not.toBeInTheDocument()
     );
   });
@@ -890,10 +890,10 @@ describe('App shell', () => {
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Offline Focus' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
-    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+    fireEvent.change(screen.getByRole('combobox', { name: /recording/i }), {
       target: { value: 'media-vipassana-sit-20' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /create custom play/i })[0]);
 
     expect(await screen.findByText(/custom play "Offline Focus" saved\./i)).toBeInTheDocument();
     expect(screen.getByText(/saved locally while offline\. this custom play will sync when the backend is reachable/i)).toBeInTheDocument();
@@ -929,7 +929,7 @@ describe('App shell', () => {
     });
     expect(store.customPlays).toHaveLength(0);
     expect(customPlayPutAttempts).toBe(1);
-    expect(screen.getByText(/1 change still need another sync attempt/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 change is waiting to sync/i)).toBeInTheDocument();
     expect(screen.getByText('Offline Focus')).toBeInTheDocument();
 
     setNavigatorOnline(false);
@@ -943,7 +943,7 @@ describe('App shell', () => {
     expect(store.customPlays[0]?.name).toBe('Offline Focus');
     expect(customPlayPutAttempts).toBe(2);
     await waitFor(() =>
-      expect(screen.queryByText(/1 change still need another sync attempt/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/1 change is waiting to sync/i)).not.toBeInTheDocument()
     );
   });
 
@@ -1046,7 +1046,7 @@ describe('App shell', () => {
     });
     await flushAsyncEffects();
 
-    expect(screen.getAllByText(/lunch reset .* item 2\/2/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/item 2 of 2/i)).toBeInTheDocument();
 
     await act(async () => {
       vi.advanceTimersByTime(60_000);
@@ -1114,7 +1114,7 @@ describe('App shell', () => {
     );
 
     expect(screen.getByRole('button', { name: /start timer now/i })).toBeDisabled();
-    expect(screen.getByText(/loading timer defaults from the backend/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/loading timer defaults/i).length).toBeGreaterThan(0);
 
     resolveSettings?.({
       id: 'default',
@@ -1445,7 +1445,7 @@ describe('App shell', () => {
     expect(await screen.findByText(/manual log saved to history/i)).toBeInTheDocument();
     await waitFor(() => expect(store.sessionLogs).toHaveLength(1));
 
-    fireEvent.click(screen.getAllByRole('link', { name: /^Sankalpa$/i })[0]);
+    fireEvent.click(screen.getAllByRole('link', { name: /^Goals$/i })[0]);
 
     expect(await screen.findByText(/manual log: 1/i)).toBeInTheDocument();
     expect(screen.getByText(/progress: 1 \/ 1 session logs · 0 session logs remaining/i)).toBeInTheDocument();
@@ -1477,10 +1477,10 @@ describe('App shell', () => {
     fireEvent.change(screen.getByLabelText(/custom play name/i), { target: { value: 'Sunrise Sit' } });
     fireEvent.change(screen.getByLabelText(/custom play meditation type/i), { target: { value: 'Vipassana' } });
     await screen.findByRole('option', { name: /vipassana sit \(20 min\)/i });
-    fireEvent.change(screen.getByRole('combobox', { name: /linked media session/i }), {
+    fireEvent.change(screen.getByRole('combobox', { name: /recording/i }), {
       target: { value: 'media-vipassana-sit-20' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /create custom play/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /create custom play/i })[0]);
 
     expect(await screen.findByText(/custom play "Sunrise Sit" saved\./i)).toBeInTheDocument();
     await waitFor(() => expect(store.customPlays).toHaveLength(1));
@@ -1496,6 +1496,6 @@ describe('App shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /show tools/i }));
 
     expect(screen.getByText('Sunrise Sit')).toBeInTheDocument();
-    expect(await screen.findByText(/media session: vipassana sit \(20 min\)/i)).toBeInTheDocument();
+    expect(await screen.findByText(/recording: vipassana sit \(20 min\)/i)).toBeInTheDocument();
   });
 });

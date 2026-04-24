@@ -307,7 +307,10 @@ describe('HomePage UX', () => {
     expect(screen.getByText(/recording: vipassana sit \(20 min\)/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('link', { name: /^home$/i })[0]);
-    expect(await screen.findByRole('button', { name: /resume custom play/i })).toBeEnabled();
+    const quickStartHeading = await screen.findByRole('heading', { name: /quick start/i });
+    const quickStartPanel = quickStartHeading.closest('section');
+    expect(quickStartPanel).not.toBeNull();
+    expect(within(quickStartPanel as HTMLElement).getByRole('button', { name: /open custom play/i })).toBeEnabled();
     expect(screen.getByText(/default timer: 20 min · vipassana/i)).toBeInTheDocument();
   });
 
@@ -417,7 +420,7 @@ describe('HomePage UX', () => {
     const quickStartPanel = quickStartHeading.closest('section');
     expect(quickStartPanel).not.toBeNull();
 
-    const resumeButton = within(quickStartPanel as HTMLElement).getByRole('button', { name: /resume active timer/i });
+    const resumeButton = within(quickStartPanel as HTMLElement).getByRole('button', { name: /open active timer/i });
     expect(resumeButton).toBeEnabled();
 
     fireEvent.click(resumeButton);
@@ -720,7 +723,7 @@ describe('HomePage UX', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/loading favorite playlists from the backend/i)).toBeInTheDocument();
+    expect(screen.getByText(/loading favorite playlists/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^run$/i })).toBeDisabled();
 
     resolvePlaylists?.([
@@ -741,7 +744,7 @@ describe('HomePage UX', () => {
     ]);
 
     await waitFor(() => expect(screen.getByRole('button', { name: /^run$/i })).toBeEnabled());
-    expect(screen.queryByText(/loading favorite playlists from the backend/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/loading favorite playlists/i)).not.toBeInTheDocument();
   });
 
   it('shows the sankalpa snapshot from the backend when sankalpa progress loads successfully', async () => {

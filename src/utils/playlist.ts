@@ -114,6 +114,47 @@ export function validatePlaylistDraft(draft: PlaylistDraft): PlaylistValidationR
   };
 }
 
+export function pruneResolvedPlaylistErrors(
+  draft: PlaylistDraft,
+  currentErrors: PlaylistValidationResult['errors']
+): PlaylistValidationResult['errors'] {
+  if (!currentErrors.name && !currentErrors.smallGapSeconds && !currentErrors.items && Object.keys(currentErrors.itemErrors).length === 0) {
+    return currentErrors;
+  }
+
+  const nextValidation = validatePlaylistDraft(draft).errors;
+  const itemErrors: PlaylistValidationResult['errors']['itemErrors'] = {};
+
+  for (const [itemId, itemError] of Object.entries(currentErrors.itemErrors)) {
+    const nextItemError = nextValidation.itemErrors[itemId];
+    if (!nextItemError) {
+      continue;
+    }
+
+    const prunedItemError = {
+      meditationType:
+        itemError.meditationType && nextItemError.meditationType ? nextItemError.meditationType : undefined,
+      durationMinutes:
+        itemError.durationMinutes && nextItemError.durationMinutes ? nextItemError.durationMinutes : undefined,
+      customPlayId: itemError.customPlayId && nextItemError.customPlayId ? nextItemError.customPlayId : undefined,
+    };
+
+    if (!prunedItemError.meditationType && !prunedItemError.durationMinutes && !prunedItemError.customPlayId) {
+      continue;
+    }
+
+    itemErrors[itemId] = prunedItemError;
+  }
+
+  return {
+    name: currentErrors.name && nextValidation.name ? nextValidation.name : undefined,
+    smallGapSeconds:
+      currentErrors.smallGapSeconds && nextValidation.smallGapSeconds ? nextValidation.smallGapSeconds : undefined,
+    items: currentErrors.items && nextValidation.items ? nextValidation.items : undefined,
+    itemErrors,
+  };
+}
+
 export function createPlaylist(draft: PlaylistDraft, now: Date): Playlist {
   const timestamp = now.toISOString();
 

@@ -71,6 +71,9 @@ struct GoalsView: View {
             .padding()
         }
         .navigationTitle("Goals")
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 12)
+        }
         .alert(
             viewModel.runtimeSafetyPrompt?.title ?? "",
             isPresented: runtimeSafetyPromptIsPresented,

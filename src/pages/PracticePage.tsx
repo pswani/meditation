@@ -91,7 +91,7 @@ export default function PracticePage() {
 
       {isSettingsLoading ? (
         <div className="status-banner" role="status">
-          <p>Loading timer defaults from the backend before starting a session.</p>
+          <p>Loading timer defaults before starting a session.</p>
         </div>
       ) : null}
 
@@ -115,7 +115,7 @@ export default function PracticePage() {
           <p>
             Last session {lastOutcome.status}.{' '}
             {isSessionLogSyncing
-              ? `Saving ${formatRemainingTime(lastOutcome.completedDurationSeconds)} to backend history.`
+              ? `Saving ${formatRemainingTime(lastOutcome.completedDurationSeconds)} to history.`
               : `An auto log was created for ${formatRemainingTime(lastOutcome.completedDurationSeconds)}.`}
           </p>
           {lastOutcome.deferredCompletion ? (
@@ -167,7 +167,7 @@ export default function PracticePage() {
         <div id={timerStartBlockedMessageId} className="status-banner warn" role="status">
           <p>
             {isSettingsLoading
-              ? 'Timer defaults are still loading from the backend. Please wait a moment before starting.'
+              ? 'Timer defaults are still loading. Please wait a moment before starting.'
               : activeCustomPlayRun
               ? `Custom play active: ${activeCustomPlayRun.customPlayName}. Resume or end it before starting a separate timer session.`
               : 'A playlist run is active. Resume or end the playlist run before starting a separate timer session.'}

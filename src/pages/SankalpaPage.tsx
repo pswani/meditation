@@ -169,43 +169,32 @@ export default function SankalpaPage() {
         Review summaries and track sankalpa progress with clear, bounded goals.
       </p>
 
-      <SankalpaSummaryPanel
-        summaryRangePreset={summaryRangePreset}
-        setSummaryRangePreset={setSummaryRangePreset}
-        customStartDate={customStartDate}
-        setCustomStartDate={setCustomStartDate}
-        customEndDate={customEndDate}
-        setCustomEndDate={setCustomEndDate}
-        summaryDateDefaults={summaryDateDefaults}
-        summaryRangeSelection={summaryRangeSelection}
-        isSummaryLoading={isSummaryLoading}
-        summaryLoadMessage={summaryLoadMessage}
-        hasAnySessionLogs={hasAnySessionLogs}
-        effectiveSummarySnapshot={effectiveSummarySnapshot}
-        inactiveSummaryCategoriesCount={inactiveSummaryCategoriesCount}
-        showInactiveSummaryCategories={showInactiveSummaryCategories}
-        setShowInactiveSummaryCategories={setShowInactiveSummaryCategories}
-        byTypeSummaryRows={byTypeSummaryRows}
-        byTimeOfDaySummaryRows={byTimeOfDaySummaryRows}
-      />
-
-      <SankalpaEditor
-        draft={draft}
-        errors={errors}
-        editingGoalId={editingGoalId}
-        saveMessage={saveMessage}
-        saveMessageTone={saveMessageTone}
-        isSankalpaLoading={isSankalpaLoading}
-        sankalpaSyncMessage={sankalpaSyncMessage}
-        onSubmit={onSubmitSankalpa}
-        onCancelEdit={cancelEdit}
-        onChangeDraft={(updater) => setDraft((current) => updater(current))}
-        onClearSaveMessage={() => setSaveMessage(null)}
-      />
+      <details className="page-disclosure" open={progressByStatus.active.length === 0}>
+        <summary className="page-disclosure-summary">View Summary Details</summary>
+        <SankalpaSummaryPanel
+          summaryRangePreset={summaryRangePreset}
+          setSummaryRangePreset={setSummaryRangePreset}
+          customStartDate={customStartDate}
+          setCustomStartDate={setCustomStartDate}
+          customEndDate={customEndDate}
+          setCustomEndDate={setCustomEndDate}
+          summaryDateDefaults={summaryDateDefaults}
+          summaryRangeSelection={summaryRangeSelection}
+          isSummaryLoading={isSummaryLoading}
+          summaryLoadMessage={summaryLoadMessage}
+          hasAnySessionLogs={hasAnySessionLogs}
+          effectiveSummarySnapshot={effectiveSummarySnapshot}
+          inactiveSummaryCategoriesCount={inactiveSummaryCategoriesCount}
+          showInactiveSummaryCategories={showInactiveSummaryCategories}
+          setShowInactiveSummaryCategories={setShowInactiveSummaryCategories}
+          byTypeSummaryRows={byTypeSummaryRows}
+          byTimeOfDaySummaryRows={byTimeOfDaySummaryRows}
+        />
+      </details>
 
       <SankalpaSection
         title="Active Sankalpas"
-        emptyText="No active sankalpas. Create one above."
+        emptyText="No active sankalpas. Create one below."
         items={progressByStatus.active}
         pendingArchiveGoalId={pendingArchiveGoalId}
         pendingDeleteGoalId={pendingDeleteGoalId}
@@ -215,45 +204,72 @@ export default function SankalpaPage() {
         onConfirmArchive={confirmArchive}
         onUpdateObservanceStatus={updateObservanceStatus}
       />
-      <SankalpaSection
-        title="Completed Sankalpas"
-        emptyText="Completed sankalpas will appear here."
-        items={progressByStatus.completed}
-        pendingArchiveGoalId={pendingArchiveGoalId}
-        pendingDeleteGoalId={pendingDeleteGoalId}
-        onEditGoal={beginEdit}
-        onStartArchive={setPendingArchiveGoalId}
-        onCancelArchive={() => setPendingArchiveGoalId(null)}
-        onConfirmArchive={confirmArchive}
-        onUpdateObservanceStatus={updateObservanceStatus}
-      />
-      <SankalpaSection
-        title="Expired Sankalpas"
-        emptyText="Expired sankalpas will appear here if deadlines pass before completion."
-        items={progressByStatus.expired}
-        pendingArchiveGoalId={pendingArchiveGoalId}
-        pendingDeleteGoalId={pendingDeleteGoalId}
-        onEditGoal={beginEdit}
-        onStartArchive={setPendingArchiveGoalId}
-        onCancelArchive={() => setPendingArchiveGoalId(null)}
-        onConfirmArchive={confirmArchive}
-        onUpdateObservanceStatus={updateObservanceStatus}
-      />
-      <SankalpaSection
-        title="Archived Sankalpas"
-        emptyText="Archived sankalpas will appear here."
-        items={progressByStatus.archived}
-        pendingArchiveGoalId={pendingArchiveGoalId}
-        pendingDeleteGoalId={pendingDeleteGoalId}
-        onUnarchiveGoal={unarchiveGoal}
-        onStartDelete={(goalId) => {
-          setPendingArchiveGoalId(null);
-          setPendingDeleteGoalId(goalId);
-        }}
-        onCancelDelete={() => setPendingDeleteGoalId(null)}
-        onConfirmDelete={confirmDelete}
-        onUpdateObservanceStatus={updateObservanceStatus}
-      />
+
+      <details className="page-disclosure" open={editingGoalId !== null || progressByStatus.active.length === 0}>
+        <summary className="page-disclosure-summary">{editingGoalId ? 'Edit Sankalpa' : 'New Sankalpa'}</summary>
+        <SankalpaEditor
+          draft={draft}
+          errors={errors}
+          editingGoalId={editingGoalId}
+          saveMessage={saveMessage}
+          saveMessageTone={saveMessageTone}
+          isSankalpaLoading={isSankalpaLoading}
+          sankalpaSyncMessage={sankalpaSyncMessage}
+          onSubmit={onSubmitSankalpa}
+          onCancelEdit={cancelEdit}
+          onChangeDraft={(updater) => setDraft((current) => updater(current))}
+          onClearSaveMessage={() => setSaveMessage(null)}
+        />
+      </details>
+
+      <details className="page-disclosure">
+        <summary className="page-disclosure-summary">Completed Sankalpas ({progressByStatus.completed.length})</summary>
+        <SankalpaSection
+          title="Completed Sankalpas"
+          emptyText="Completed sankalpas will appear here."
+          items={progressByStatus.completed}
+          pendingArchiveGoalId={pendingArchiveGoalId}
+          pendingDeleteGoalId={pendingDeleteGoalId}
+          onEditGoal={beginEdit}
+          onStartArchive={setPendingArchiveGoalId}
+          onCancelArchive={() => setPendingArchiveGoalId(null)}
+          onConfirmArchive={confirmArchive}
+          onUpdateObservanceStatus={updateObservanceStatus}
+        />
+      </details>
+      <details className="page-disclosure">
+        <summary className="page-disclosure-summary">Expired Sankalpas ({progressByStatus.expired.length})</summary>
+        <SankalpaSection
+          title="Expired Sankalpas"
+          emptyText="Expired sankalpas will appear here if deadlines pass before completion."
+          items={progressByStatus.expired}
+          pendingArchiveGoalId={pendingArchiveGoalId}
+          pendingDeleteGoalId={pendingDeleteGoalId}
+          onEditGoal={beginEdit}
+          onStartArchive={setPendingArchiveGoalId}
+          onCancelArchive={() => setPendingArchiveGoalId(null)}
+          onConfirmArchive={confirmArchive}
+          onUpdateObservanceStatus={updateObservanceStatus}
+        />
+      </details>
+      <details className="page-disclosure">
+        <summary className="page-disclosure-summary">Archived Sankalpas ({progressByStatus.archived.length})</summary>
+        <SankalpaSection
+          title="Archived Sankalpas"
+          emptyText="Archived sankalpas will appear here."
+          items={progressByStatus.archived}
+          pendingArchiveGoalId={pendingArchiveGoalId}
+          pendingDeleteGoalId={pendingDeleteGoalId}
+          onUnarchiveGoal={unarchiveGoal}
+          onStartDelete={(goalId) => {
+            setPendingArchiveGoalId(null);
+            setPendingDeleteGoalId(goalId);
+          }}
+          onCancelDelete={() => setPendingDeleteGoalId(null)}
+          onConfirmDelete={confirmDelete}
+          onUpdateObservanceStatus={updateObservanceStatus}
+        />
+      </details>
     </section>
   );
 }

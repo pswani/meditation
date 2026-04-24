@@ -42,6 +42,9 @@ struct HomeView: View {
             .padding()
         }
         .navigationTitle("Home")
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 12)
+        }
     }
 
     private var quickStartSection: some View {

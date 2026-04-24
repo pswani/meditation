@@ -82,6 +82,9 @@ struct PlaylistLibraryView: View {
             }
         }
         .navigationTitle("Playlists")
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 12)
+        }
         .alert(
             viewModel.runtimeSafetyPrompt?.title ?? "",
             isPresented: runtimeSafetyPromptIsPresented,
