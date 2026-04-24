@@ -53,6 +53,7 @@ public class SessionLogEntity {
   @Column(name = "interval_sound", nullable = false, length = 100)
   private String intervalSound;
 
+  // Point-in-time snapshot; nulled by FK cascade when the referenced library item is deleted.
   @Column(name = "playlist_id", length = 64)
   private String playlistId;
 
@@ -71,6 +72,7 @@ public class SessionLogEntity {
   @Column(name = "playlist_run_started_at")
   private Instant playlistRunStartedAt;
 
+  // Point-in-time snapshot; nulled by FK cascade when the referenced library item is deleted.
   @Column(name = "custom_play_id", length = 64)
   private String customPlayId;
 
