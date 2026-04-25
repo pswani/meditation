@@ -36,6 +36,12 @@ run_verify() {
   npm run typecheck
   npm run lint
   npm run test
+  npm run generate:sync-contract
+  git diff --exit-code \
+      src/generated/syncContract.ts \
+      backend/src/main/java/com/meditation/backend/sync/GeneratedSyncContract.java \
+      ios-native/Sources/MeditationNativeCore/Domain/GeneratedSyncContract.swift \
+    || { echo "ERROR: Generated sync contract files are stale. Run: npm run generate:sync-contract"; exit 1; }
   npm run build
   command_value=$(backend_build_cmd)
   if [ -n "$command_value" ]; then

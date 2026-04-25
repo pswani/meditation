@@ -28,7 +28,8 @@
     "sound:add": "node ./scripts/add-sound-option.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:sync-contract": "node scripts/generate-sync-contract.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
