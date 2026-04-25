@@ -3,11 +3,12 @@
 # /Users/prashantwani/wrk/claude/meditation/claude-work.sh
 #
 # Project-specific Claude work script.
-# Runs the prompts in PROMPTS[] in order, one per cron invocation.
+# Reads tasks from work-queue.txt (one per line) and runs the first one.
+# Completed tasks are removed from the queue automatically.
 # Aborts cleanly on usage-limit or permission errors and resumes on next run.
 #
 # Exit codes (consumed by the parent claude-work.sh):
-#   0  — prompt completed (or nothing left to do)
+#   0  — task completed (or nothing left to do)
 #   2  — API usage limit reached; parent must stop all projects
 #   3  — permission required; parent logs and continues to next project
 #   1  — unexpected error
@@ -16,39 +17,22 @@ set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$PROJECT_DIR/.claude-work-state"
+QUEUE_FILE="$PROJECT_DIR/work-queue.txt"
 LOG_FILE="${CLAUDE_WORK_LOG:-$PROJECT_DIR/.claude-work.log}"
 CLAUDE="${CLAUDE_BIN:-/Users/prashantwani/.local/bin/claude}"
 
-# ── Prompt queue ──────────────────────────────────────────────────────────────
-# Each entry is either:
-#   • a path relative to PROJECT_DIR (file must exist)   → its content is used
-#   • any other string                                   → used as the prompt text directly
-#
-# Sessions A, B, C are already committed; the queue starts at D.
-PROMPTS=(
-    "the server is not starting up clean.  I am getting this message on the console when I run ./scripts/pipeline.sh release message: Backend health did not become ready at http://127.0.0.1:8080/api/health"
-    "prompts/session-c-issue-10-ios-bell-reliability.md"
-    "prompts/session-d-issue-6-monster-file-splits.md"
-    # Inline example (no file needed):
-    # "Run the full test suite, fix any failures, and commit the result."
-)
-
 # Maximum wall-clock minutes to allow a single claude run before timing out.
 MAX_RUNTIME_MINUTES=90
-# ─────────────────────────────────────────────────────────────────────────────
+
+# Optional flags added to every claude invocation.
+# Example: CLAUDE_FLAGS=(--dangerously-skip-permissions)
+CLAUDE_FLAGS=()
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [meditation] $*" | tee -a "$LOG_FILE"; }
-# ─────────────────────────────────────────────────────────────────────────────
 
 # ── State helpers ─────────────────────────────────────────────────────────────
-# State file is a simple bash-sourceable key=value file:
-#   CURRENT_INDEX=3
-#   NEEDS_RESUME=false
-#   ABORT_REASON=
-
 state_read() {
-    CURRENT_INDEX=0
     NEEDS_RESUME=false
     ABORT_REASON=""
     if [[ -f "$STATE_FILE" ]]; then
@@ -58,45 +42,34 @@ state_read() {
 }
 
 state_write() {
-    local index=$1 needs_resume=$2 abort_reason=${3:-}
+    local needs_resume=$1 abort_reason=${2:-}
     cat > "$STATE_FILE" <<EOF
-CURRENT_INDEX=$index
 NEEDS_RESUME=$needs_resume
 ABORT_REASON=$abort_reason
 EOF
 }
-# ─────────────────────────────────────────────────────────────────────────────
 
 # ── Abort-condition detection ─────────────────────────────────────────────────
-# Returns:
-#   0  — success (no abort condition detected)
-#   2  — usage / rate limit
-#   3  — permission required
-#   1  — other / unknown error
 classify_exit() {
     local exit_code=$1
     local output=$2
 
-    # Usage / rate limit — check output regardless of exit code
     if echo "$output" | grep -qiE \
         'usage.?limit|rate.?limit|quota.?exceeded|overloaded|too many requests|529|529 error'; then
         return 2
     fi
 
-    # Permission required — Claude Code tells us it cannot run a tool
     if echo "$output" | grep -qiE \
         'requires? (user )?approval|permission (required|denied)|not allowed to|tool.*not.*available|bash.*not.*permitted'; then
         return 3
     fi
 
-    # Non-zero exit with no recognised pattern
     if [[ $exit_code -ne 0 ]]; then
         return 1
     fi
 
     return 0
 }
-# ─────────────────────────────────────────────────────────────────────────────
 
 # ── Run claude and capture output ─────────────────────────────────────────────
 run_claude() {
@@ -107,7 +80,6 @@ run_claude() {
     local tmpout
     tmpout=$(mktemp)
 
-    # Stream output to log AND capture it; respect the timeout
     timeout "${MAX_RUNTIME_MINUTES}m" \
         "$CLAUDE" --print "${extra_flags[@]}" "$prompt" \
         2>&1 | tee -a "$LOG_FILE" > "$tmpout"
@@ -117,7 +89,6 @@ run_claude() {
     output=$(cat "$tmpout")
     rm -f "$tmpout"
 
-    # timeout exits 124 on timeout — treat as error
     if [[ $pipe_exit -eq 124 ]]; then
         log "claude timed out after ${MAX_RUNTIME_MINUTES} minutes"
         echo "$output"
@@ -127,33 +98,52 @@ run_claude() {
     echo "$output"
     return $pipe_exit
 }
-# ─────────────────────────────────────────────────────────────────────────────
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 log "――― Run started ―――"
 
 state_read
 
-TOTAL=${#PROMPTS[@]}
-
-# Nothing left to do
-if [[ $CURRENT_INDEX -ge $TOTAL ]]; then
-    log "All $TOTAL prompts completed — nothing to do"
+# Check queue file exists
+if [[ ! -f "$QUEUE_FILE" ]]; then
+    log "Queue file not found: $QUEUE_FILE — nothing to do"
     exit 0
 fi
 
-PROMPT_ENTRY="${PROMPTS[$CURRENT_INDEX]}"
+# Get first non-empty, non-comment line (raw, may include a flags prefix)
+QUEUE_ENTRY=$(grep -v '^\s*#' "$QUEUE_FILE" | grep -v '^\s*$' | head -1)
 
-# Resolve: relative file path → read file; anything else → use as-is
+if [[ -z "$QUEUE_ENTRY" ]]; then
+    log "Queue is empty — nothing to do"
+    exit 0
+fi
+
+# Find its line number in the file (exact match on raw entry, for removal after completion)
+TASK_LINE=$(awk -v entry="$QUEUE_ENTRY" '$0 == entry {print NR; exit}' "$QUEUE_FILE")
+
+# Parse optional per-task flags: "--flag1 --flag2 :: actual prompt"
+TASK_FLAGS=()
+PROMPT_ENTRY="$QUEUE_ENTRY"
+if [[ "$QUEUE_ENTRY" == *" :: "* ]]; then
+    flags_str="${QUEUE_ENTRY%% :: *}"
+    PROMPT_ENTRY="${QUEUE_ENTRY#* :: }"
+    read -ra TASK_FLAGS <<< "$flags_str"
+    log "Task flags: $flags_str"
+fi
+
+# Count tasks remaining (including current)
+QUEUE_REMAINING=$(grep -v '^\s*#' "$QUEUE_FILE" | grep -c '\S' || true)
+
+# Resolve: relative file path → read file contents; anything else → use as-is
 if [[ -f "$PROJECT_DIR/$PROMPT_ENTRY" ]]; then
     PROMPT_LABEL="$PROMPT_ENTRY"
     PROMPT_TEXT="$(cat "$PROJECT_DIR/$PROMPT_ENTRY")"
 else
-    PROMPT_LABEL="inline[$((CURRENT_INDEX + 1))]"
+    PROMPT_LABEL="inline: ${PROMPT_ENTRY:0:60}"
     PROMPT_TEXT="$PROMPT_ENTRY"
 fi
 
-log "Prompt $((CURRENT_INDEX + 1))/$TOTAL: $PROMPT_LABEL"
+log "Task ($QUEUE_REMAINING in queue): $PROMPT_LABEL"
 
 # ── Build the prompt and choose fresh vs resume ───────────────────────────────
 EXTRA_FLAGS=()
@@ -182,41 +172,35 @@ fi
 # ── Execute ───────────────────────────────────────────────────────────────────
 log "Invoking claude (timeout ${MAX_RUNTIME_MINUTES}m) …"
 
-output=$(run_claude "$PROMPT" "${EXTRA_FLAGS[@]}")
+output=$(run_claude "$PROMPT" "${CLAUDE_FLAGS[@]}" "${TASK_FLAGS[@]}" "${EXTRA_FLAGS[@]}")
 claude_exit=$?
 
 log "claude exited with code $claude_exit"
 
-# Classify the result
 classify_exit "$claude_exit" "$output"
 result=$?
 
 case $result in
     0)
-        log "Prompt completed successfully"
-        NEXT_INDEX=$((CURRENT_INDEX + 1))
-        if [[ $NEXT_INDEX -ge $TOTAL ]]; then
-            log "All $TOTAL prompts finished"
-            state_write "$NEXT_INDEX" "false" ""
-        else
-            log "Advancing to prompt $((NEXT_INDEX + 1))/$TOTAL: ${PROMPTS[$NEXT_INDEX]}"
-            state_write "$NEXT_INDEX" "false" ""
-        fi
+        log "Task completed successfully"
+        sed -i '' "${TASK_LINE}d" "$QUEUE_FILE"
+        log "Removed from queue: $PROMPT_LABEL"
+        state_write "false" ""
         exit 0
         ;;
     2)
         log "ABORT: usage limit reached — will resume next run"
-        state_write "$CURRENT_INDEX" "true" "usage_limit"
+        state_write "true" "usage_limit"
         exit 2
         ;;
     3)
         log "ABORT: permission required — will resume next run"
-        state_write "$CURRENT_INDEX" "true" "permission"
+        state_write "true" "permission"
         exit 3
         ;;
     *)
         log "ABORT: unexpected error (claude exit $claude_exit) — will resume next run"
-        state_write "$CURRENT_INDEX" "true" "error"
+        state_write "true" "error"
         exit 1
         ;;
 esac

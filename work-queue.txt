@@ -1,0 +1,21 @@
+# work-queue.txt — pending tasks for claude-work
+#
+# One task per line. Each entry is either:
+#   • a path relative to this directory  →  prompts/my-task.md
+#   • inline prompt text                 →  Run the test suite and fix failures
+#
+# To pass claude flags for a specific task, prefix with "flags :: ":
+#   --dangerously-skip-permissions :: prompts/my-task.md
+#   --dangerously-skip-permissions :: Run the test suite and fix failures
+#
+# Tasks run top-to-bottom. Completed tasks are removed automatically.
+# Add new tasks here; no script edits needed.
+
+prompts/session-c-issue-10-ios-bell-reliability.md
+prompts/session-d-issue-6-monster-file-splits.md
+
+Analyze the CODE-REVIEW-2026-04-24.md file to analyze, design and plan for the Backend & Database issues (High medium and low). Create the prompt files for fixing as many issues possible in a single session. Dont make any code changes.
+
+Review the deployment architecture of the application and make recommendations
+
+Review the build scripts thoroughly.  Check if they follow the best practices? Are they good for this kind of application?  Do we need to redesign the scripts and rebuild?  Or would just making improvements would make them best in class?
