@@ -4,10 +4,8 @@
       "Bash(npm run *)",
       "Bash(npm install *)",
       "Bash(npx vitest *)",
-
       "Bash(./mvnw *)",
       "Bash(mvn *)",
-
       "Bash(git status)",
       "Bash(git status *)",
       "Bash(git diff)",
@@ -24,21 +22,17 @@
       "Bash(git log)",
       "Bash(git log *)",
       "Bash(gh pr *)",
-
       "Bash(xcodebuild test *)",
       "Bash(xcodebuild build *)",
       "Bash(xcodebuild -list)",
       "Bash(xcrun simctl *)",
-
       "Bash(grep -v \"^$\")",
-
       "Bash(curl http://localhost:*)",
       "Bash(curl https://localhost:*)",
       "Bash(curl http://127.0.0.1:*)",
       "Bash(curl https://127.0.0.1:*)",
       "Bash(curl http://192.168.*)",
       "Bash(curl https://192.168.*)",
-
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_fill_form",
@@ -47,7 +41,10 @@
       "mcp__playwright__browser_press_key",
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_snapshot"
+      "mcp__playwright__browser_snapshot",
+      "Bash(claude --version)",
+      "Bash(crontab -l)",
+      "Bash(bash -n /Users/prashantwani/wrk/claude/meditation/claude-work.sh)"
     ]
   }
 }
