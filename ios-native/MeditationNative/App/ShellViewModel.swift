@@ -1198,7 +1198,8 @@ final class ShellViewModel: ObservableObject {
         }
 
         Task { [weak self] in
-            await self?.runSyncPass()
+            guard let self else { return }
+            await self.runSyncPass()
         }
     }
 
@@ -1218,7 +1219,8 @@ final class ShellViewModel: ObservableObject {
             if needsSyncPass {
                 needsSyncPass = false
                 Task { [weak self] in
-                    await self?.runSyncPass()
+                    guard let self else { return }
+                    await self.runSyncPass()
                 }
             }
         }
