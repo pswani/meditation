@@ -924,6 +924,7 @@ describe('storage active runtime state', () => {
       elapsedSeconds: 300,
       isPaused: true,
       lastResumedAtMs: null,
+      lastResumedAtPerformanceMs: null,
       meditationType: 'Vipassana',
       startSound: 'None',
       endSound: 'Temple Bell',

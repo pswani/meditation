@@ -98,6 +98,8 @@ function normalizePersistedActiveSession(session: ActiveSession): ActiveSession 
     endSound: normalizeTimerSoundLabel(session.endSound, DEFAULT_END_SOUND_LABEL),
     intervalSound: normalizeTimerSoundLabel(session.intervalSound, DEFAULT_INTERVAL_SOUND_LABEL),
     lastResumedAtMs: session.isPaused ? null : session.lastResumedAtMs,
+    // performance.now() epoch resets on page reload; any stored value is stale
+    lastResumedAtPerformanceMs: null,
   };
 }
 

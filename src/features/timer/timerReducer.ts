@@ -17,10 +17,10 @@ export interface TimerState {
 export type TimerAction =
   | { type: 'SET_SETTINGS'; payload: TimerSettings }
   | { type: 'REPLACE_SESSION_LOGS'; payload: readonly SessionLog[] }
-  | { type: 'START_SESSION'; nowMs: number; settings?: TimerSettings }
+  | { type: 'START_SESSION'; nowMs: number; nowPerformanceMs?: number; settings?: TimerSettings }
   | { type: 'SYNC_TICK'; nowMs: number; source?: 'interval' | 'scheduled-completion' | 'foreground-return' }
   | { type: 'PAUSE_SESSION'; nowMs: number }
-  | { type: 'RESUME_SESSION'; nowMs: number }
+  | { type: 'RESUME_SESSION'; nowMs: number; nowPerformanceMs?: number }
   | { type: 'END_EARLY'; nowMs: number }
   | { type: 'ADD_SESSION_LOG'; payload: SessionLog }
   | { type: 'CLEAR_OUTCOME' };
@@ -83,6 +83,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           elapsedSeconds: 0,
           isPaused: false,
           lastResumedAtMs: action.nowMs,
+          lastResumedAtPerformanceMs: action.nowPerformanceMs ?? null,
           meditationType: sessionSettings.meditationType,
           startSound: sessionSettings.startSound,
           endSound: sessionSettings.endSound,
@@ -136,6 +137,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           elapsedSeconds: getActiveSessionElapsedSeconds(state.activeSession, action.nowMs),
           isPaused: true,
           lastResumedAtMs: null,
+          lastResumedAtPerformanceMs: null,
         },
       };
     }
@@ -150,6 +152,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
           ...state.activeSession,
           isPaused: false,
           lastResumedAtMs: action.nowMs,
+          lastResumedAtPerformanceMs: action.nowPerformanceMs ?? null,
         },
       };
     }

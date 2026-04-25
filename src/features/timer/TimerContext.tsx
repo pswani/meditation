@@ -72,12 +72,12 @@ import { useTimerSyncEffects } from './useTimerSyncEffects';
 
 type TimerSyncTickSource = 'interval' | 'scheduled-completion' | 'foreground-return';
 
-function getFixedTimerCompletionDelayMs(session: ActiveSession, nowMs: number): number | null {
+function getFixedTimerCompletionDelayMs(session: ActiveSession, nowMs: number, nowPerformanceMs: number): number | null {
   if (session.timerMode !== 'fixed' || session.intendedDurationSeconds === null) {
     return null;
   }
 
-  return Math.max(0, session.intendedDurationSeconds * 1000 - getActiveSessionElapsedMilliseconds(session, nowMs));
+  return Math.max(0, session.intendedDurationSeconds * 1000 - getActiveSessionElapsedMilliseconds(session, nowMs, nowPerformanceMs));
 }
 
 export function TimerProvider({ children }: { readonly children: ReactNode }) {
@@ -147,6 +147,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     }
   }, [customPlays, isCustomPlaysLoading, lastUsedMeditation]);
   const [activeSessionNowMs, setActiveSessionNowMs] = useState(() => Date.now());
+  const [activeSessionNowPerformanceMs, setActiveSessionNowPerformanceMs] = useState(() => performance.now());
   const latestSessionLogsRef = useRef(state.sessionLogs);
   const latestCustomPlaysRef = useRef(customPlays);
   const latestPlaylistsRef = useRef(playlists);
@@ -320,6 +321,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
   useEffect(() => {
     setActiveSessionNowMs(Date.now());
+    setActiveSessionNowPerformanceMs(performance.now());
   }, [state.activeSession, isPaused]);
 
   useEffect(() => {
@@ -431,6 +433,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     function syncTimerClockAndSessionState(source: TimerSyncTickSource): void {
       const nowMs = Date.now();
       setActiveSessionNowMs(nowMs);
+      setActiveSessionNowPerformanceMs(performance.now());
       dispatch({ type: 'SYNC_TICK', nowMs, source });
     }
 
@@ -442,6 +445,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
       lastForegroundCatchUpAtMsRef.current = nowMs;
       setActiveSessionNowMs(nowMs);
+      setActiveSessionNowPerformanceMs(performance.now());
       dispatch({ type: 'SYNC_TICK', nowMs, source: 'foreground-return' });
     }
 
@@ -454,7 +458,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const intervalId = window.setInterval(() => {
       syncTimerClockAndSessionState('interval');
     }, 500);
-    const completionDelayMs = getFixedTimerCompletionDelayMs(state.activeSession, Date.now());
+    const completionDelayMs = getFixedTimerCompletionDelayMs(state.activeSession, Date.now(), performance.now());
     const completionTimeoutId =
       completionDelayMs === null
         ? null
@@ -488,6 +492,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     const activeSession = state.activeSession;
     const soundState = activeSessionSoundStateRef.current;
     const nowMs = activeSessionNowMs;
+    const nowPerformanceMs = activeSessionNowPerformanceMs;
 
     if (activeSession) {
       const isRecoveredSession = activeSession.startedAt === initialRecoveredActiveSessionIdRef.current;
@@ -496,7 +501,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
         soundState.sessionId = activeSession.startedAt;
         soundState.startHandled = isRecoveredSession;
         soundState.lastIntervalCueCount = isRecoveredSession
-          ? getElapsedIntervalCueCount(activeSession, nowMs)
+          ? getElapsedIntervalCueCount(activeSession, nowMs, nowPerformanceMs)
           : 0;
         handledSoundPlaybackMessageKeyRef.current = null;
         setTimerSoundPlaybackMessage(null);
@@ -519,7 +524,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
       // Interval playback follows actual elapsed session milestones so pause/resume and timer drift do not double-fire cues.
       if (activeSession.intervalEnabled && !isPaused) {
-        const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs);
+        const elapsedIntervalCueCount = getElapsedIntervalCueCount(activeSession, nowMs, nowPerformanceMs);
         if (elapsedIntervalCueCount > soundState.lastIntervalCueCount) {
           soundState.lastIntervalCueCount = elapsedIntervalCueCount;
           void attemptTimerSoundPlayback(
@@ -569,7 +574,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       completedSession.endSound,
       'end'
     );
-  }, [activeSessionNowMs, isPaused, state.activeSession, state.lastOutcome]);
+  }, [activeSessionNowMs, activeSessionNowPerformanceMs, isPaused, state.activeSession, state.lastOutcome]);
 
   const finalizePlaylistRunSegment = useCallback(
     (status: PlaylistRunOutcome['status'], currentPositionSeconds?: number) => {
@@ -1306,14 +1311,14 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           settings: nextSettings,
           usedAt: startedAt,
         });
-        dispatch({ type: 'START_SESSION', nowMs, settings: nextSettings });
+        dispatch({ type: 'START_SESSION', nowMs, nowPerformanceMs: performance.now(), settings: nextSettings });
         return true;
       },
       pauseSession: () => {
         dispatch({ type: 'PAUSE_SESSION', nowMs: Date.now() });
       },
       resumeSession: () => {
-        dispatch({ type: 'RESUME_SESSION', nowMs: Date.now() });
+        dispatch({ type: 'RESUME_SESSION', nowMs: Date.now(), nowPerformanceMs: performance.now() });
       },
       endSessionEarly: () => {
         pendingEndedSessionRef.current = state.activeSession;

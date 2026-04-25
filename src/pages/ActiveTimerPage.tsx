@@ -21,6 +21,7 @@ export default function ActiveTimerPage() {
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
   const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+  const [clockNowPerformanceMs, setClockNowPerformanceMs] = useState(() => performance.now());
   const timerRuntime = useMemo(() => detectTimerRuntimeEnvironment(), []);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function ActiveTimerPage() {
 
   useEffect(() => {
     setClockNowMs(Date.now());
+    setClockNowPerformanceMs(performance.now());
 
     if (!activeSession || isPaused) {
       return;
@@ -38,6 +40,7 @@ export default function ActiveTimerPage() {
 
     const intervalId = window.setInterval(() => {
       setClockNowMs(Date.now());
+      setClockNowPerformanceMs(performance.now());
     }, 500);
 
     return () => {
@@ -111,7 +114,7 @@ export default function ActiveTimerPage() {
     );
   }
 
-  const timerClockSeconds = getActiveSessionClockSeconds(activeSession, clockNowMs);
+  const timerClockSeconds = getActiveSessionClockSeconds(activeSession, clockNowMs, clockNowPerformanceMs);
   const isOpenEndedSession = activeSession.timerMode === 'open-ended';
   const timerClockLabel = isOpenEndedSession ? 'Elapsed' : 'Remaining';
   const endActionLabel = isOpenEndedSession ? 'End Session' : 'End Early';

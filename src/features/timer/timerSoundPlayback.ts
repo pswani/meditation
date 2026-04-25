@@ -193,11 +193,11 @@ export function createTimerSoundPlayer(
   };
 }
 
-export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number): number {
-  return getActiveSessionElapsedSeconds(session, nowMs);
+export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number, nowPerformanceMs?: number): number {
+  return getActiveSessionElapsedSeconds(session, nowMs, nowPerformanceMs);
 }
 
-export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number): number {
+export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number, nowPerformanceMs?: number): number {
   if (!session.intervalEnabled || session.intervalMinutes <= 0) {
     return 0;
   }
@@ -207,7 +207,7 @@ export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number
     return 0;
   }
 
-  const completedSeconds = getCompletedSessionSeconds(session, nowMs);
+  const completedSeconds = getCompletedSessionSeconds(session, nowMs, nowPerformanceMs);
 
   if (session.timerMode === 'open-ended' || session.intendedDurationSeconds === null) {
     return Math.floor(completedSeconds / intervalSeconds);

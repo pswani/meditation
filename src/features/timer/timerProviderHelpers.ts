@@ -110,7 +110,10 @@ function recoverActiveSession(
     activeSession: {
       ...storedActiveSession,
       elapsedSeconds,
+      // performance.now() epoch resets on page reload; the field stays absent/null from storage
+      // so time.ts falls back to the wall-clock path until the next RESUME_SESSION action
       lastResumedAtMs: nowMs,
+      lastResumedAtPerformanceMs: null,
     },
     recoveryMessage: 'Recovered an active timer from your previous app state.',
   };

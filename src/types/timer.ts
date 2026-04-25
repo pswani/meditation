@@ -24,6 +24,7 @@ export interface ActiveSession {
   readonly elapsedSeconds: number;
   readonly isPaused: boolean;
   readonly lastResumedAtMs: number | null;
+  readonly lastResumedAtPerformanceMs?: number | null;
   readonly meditationType: MeditationType;
   readonly startSound: string;
   readonly endSound: string;
