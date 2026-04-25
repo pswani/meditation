@@ -315,12 +315,32 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertFalse(keepAlive.isActive)
     }
 
-    func testPlayableCustomPlayDoesNotStartBackgroundKeepAlive() throws {
+    func testPlayableCustomPlayWithEndBellActivatesBackgroundKeepAlive() throws {
         let keepAlive = StubBackgroundAudioKeepAlive()
         let (viewModel, _, _, _) = try makeViewModel(backgroundAudioKeepAlive: keepAlive)
-        let customPlay = try XCTUnwrap(viewModel.snapshot.customPlays.first(where: { $0.media?.isPlayable == true }))
+        let customPlay = try XCTUnwrap(viewModel.snapshot.customPlays.first(where: {
+            $0.media?.isPlayable == true && $0.endSoundName?.isEmpty == false
+        }))
 
         XCTAssertTrue(viewModel.startCustomPlay(customPlay))
+        XCTAssertEqual(keepAlive.beginCount, 1)
+        XCTAssertTrue(keepAlive.isActive)
+    }
+
+    func testPlayableCustomPlayWithoutEndBellDoesNotStartBackgroundKeepAlive() throws {
+        var snapshot = SampleData.snapshot
+        let noEndBellCustomPlay = CustomPlay(
+            name: "Recording No Bell",
+            meditationType: .vipassana,
+            durationSeconds: 600,
+            media: .bundledSample(.vipassanaSit20),
+            isFavorite: false
+        )
+        snapshot.customPlays = [noEndBellCustomPlay]
+        let keepAlive = StubBackgroundAudioKeepAlive()
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot, backgroundAudioKeepAlive: keepAlive)
+
+        XCTAssertTrue(viewModel.startCustomPlay(noEndBellCustomPlay))
         XCTAssertEqual(keepAlive.beginCount, 0)
         XCTAssertFalse(keepAlive.isActive)
     }

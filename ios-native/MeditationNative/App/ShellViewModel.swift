@@ -263,17 +263,15 @@ final class ShellViewModel: ObservableObject {
     }
 
     private func shouldKeepBackgroundAudioAlive(for session: ActiveCustomPlaySession) -> Bool {
-        guard session.isPaused == false,
-              canResolvePlayback(for: session.customPlay.media) == false
-        else {
+        guard session.isPaused == false else {
             return false
         }
 
-        guard let endSoundName = session.customPlay.endSoundName else {
-            return false
+        if let endSoundName = session.customPlay.endSoundName, endSoundName.isEmpty == false {
+            return true
         }
 
-        return endSoundName.isEmpty == false
+        return false
     }
 
     func playlistRunValidationMessage(for playlist: Playlist) -> String? {
@@ -369,7 +367,8 @@ final class ShellViewModel: ObservableObject {
         syncBackgroundAudioKeepAlive()
         persistSnapshot()
         timerCompletionBridge.cancelTimerCompletionBridge()
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
     }
@@ -601,7 +600,8 @@ final class ShellViewModel: ObservableObject {
         self.activeCustomPlaySession = activeCustomPlaySession
         audioPlayer.pausePlayback()
         syncBackgroundAudioKeepAlive()
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
         persistSnapshot()
@@ -911,7 +911,8 @@ final class ShellViewModel: ObservableObject {
             handleClockTick(now)
             rescheduleTimerNotificationIfNeeded()
             rescheduleCustomPlayCompletionNotificationIfNeeded()
-            Task {
+            Task { [weak self] in
+                guard let self else { return }
                 await refreshNotificationPermissionState()
             }
             if environment.requiresBackend {
@@ -1091,7 +1092,8 @@ final class ShellViewModel: ObservableObject {
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
 
@@ -1110,7 +1112,8 @@ final class ShellViewModel: ObservableObject {
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
 
@@ -1274,7 +1277,8 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.scheduleTimerCompletionNotification(
                 at: targetEndAt.addingTimeInterval(coordination.backupDelaySeconds),
                 meditationType: activeSession.configuration.meditationType,
@@ -1290,9 +1294,11 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        Task {
+        let targetEndAt = customPlayTargetEndAt(activeCustomPlaySession)
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.scheduleTimerCompletionNotification(
-                at: customPlayTargetEndAt(activeCustomPlaySession),
+                at: targetEndAt,
                 meditationType: activeCustomPlaySession.customPlay.meditationType,
                 endSoundName: activeCustomPlaySession.customPlay.endSoundName
             )
@@ -1589,7 +1595,8 @@ final class ShellViewModel: ObservableObject {
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
 
@@ -1607,7 +1614,8 @@ final class ShellViewModel: ObservableObject {
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             await notificationScheduler.cancelTimerCompletionNotification()
         }
 

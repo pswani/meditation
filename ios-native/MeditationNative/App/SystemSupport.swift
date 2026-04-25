@@ -1,5 +1,7 @@
 import AVFoundation
+import Combine
 import Foundation
+import os
 import SwiftUI
 import UIKit
 @preconcurrency import UserNotifications
@@ -244,6 +246,31 @@ protocol BackgroundAudioKeeping: AnyObject {
 @MainActor
 final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAudioPlayerDelegate {
     private var activePlayers: [AVAudioPlayer] = []
+    private var cancellables = Set<AnyCancellable>()
+
+    override init() {
+        super.init()
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    let playerCount = self.activePlayers.count
+                    self.activePlayers.forEach { $0.stop() }
+                    self.activePlayers = []
+                    for _ in 0..<playerCount {
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    break
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func playSound(named soundName: String?) {
         guard let resourceName = TimerSoundCatalog.bundledResourceName(for: soundName),
@@ -310,6 +337,33 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
     private var player: AVPlayer?
     private var playbackCompletionObserver: NSObjectProtocol?
     private var holdsPlaybackSessionLease = false
+    private var cancellables = Set<AnyCancellable>()
+
+    override init() {
+        super.init()
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    self.player?.pause()
+                    if self.holdsPlaybackSessionLease {
+                        self.holdsPlaybackSessionLease = false
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    let shouldResume = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                        .flatMap(AVAudioSession.InterruptionOptions.init(rawValue:))
+                        .map { $0.contains(.shouldResume) } ?? false
+                    if shouldResume { try? self.resumePlayback() }
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval = 0) throws {
         stopPlayback()
@@ -461,6 +515,7 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
     private let playerNode = AVAudioPlayerNode()
     private let silentBuffer: AVAudioPCMBuffer
     private(set) var isActive = false
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
@@ -475,6 +530,28 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
         engine.attach(playerNode)
         engine.connect(playerNode, to: engine.mainMixerNode, format: format)
         engine.prepare()
+
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    if self.isActive {
+                        self.isActive = false
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    let shouldResume = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                        .flatMap(AVAudioSession.InterruptionOptions.init(rawValue:))
+                        .map { $0.contains(.shouldResume) } ?? false
+                    if shouldResume { self.begin() }
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -546,7 +623,11 @@ enum PlaybackAudioSessionSupport {
         }
 
         let session = AVAudioSession.sharedInstance()
-        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+        do {
+            try session.setActive(false, options: [.notifyOthersOnDeactivation])
+        } catch {
+            os_log("Audio session deactivation failed: %{public}@", log: .default, type: .error, error.localizedDescription)
+        }
     }
 }
 
