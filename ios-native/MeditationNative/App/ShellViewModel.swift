@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import SwiftUI
 
@@ -49,7 +48,9 @@ final class ShellViewModel: ObservableObject {
     private let soundPlayer: TimerSoundPlaying
     private let audioPlayer: CustomPlayAudioControlling
     private let backgroundAudioKeepAlive: BackgroundAudioKeeping
-    private var clockCancellable: AnyCancellable?
+    private var clockTimer: DispatchSourceTimer?
+    private var sessionResumedAt: ContinuousClock.Instant?
+    private var sessionResumedAtWallDate: Date?
     private let syncClientFactory: @Sendable (URL) -> AppSyncClient
     private var syncClient: AppSyncClient?
     private var isRunningSync = false
@@ -119,7 +120,7 @@ final class ShellViewModel: ObservableObject {
     }
 
     deinit {
-        clockCancellable?.cancel()
+        clockTimer?.cancel()
     }
 
     var timerDraftBinding: Binding<TimerSettingsDraft> {
@@ -363,6 +364,8 @@ final class ShellViewModel: ObservableObject {
 
         activeSession.pause(at: now)
         self.activeSession = activeSession
+        sessionResumedAt = nil
+        sessionResumedAtWallDate = nil
         syncBackgroundAudioKeepAlive()
         persistSnapshot()
         timerCompletionBridge.cancelTimerCompletionBridge()
@@ -380,6 +383,8 @@ final class ShellViewModel: ObservableObject {
         activeSession.resume(at: resumedAt)
         self.activeSession = activeSession
         now = resumedAt
+        sessionResumedAt = ContinuousClock().now
+        sessionResumedAtWallDate = resumedAt
         syncBackgroundAudioKeepAlive()
         persistSnapshot()
         rescheduleTimerNotificationIfNeeded()
@@ -958,12 +963,18 @@ final class ShellViewModel: ObservableObject {
     }
 
     private func startClock() {
-        clockCancellable?.cancel()
-        clockCancellable = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] currentDate in
-                self?.handleClockTick(currentDate)
+        clockTimer?.cancel()
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .userInteractive))
+        timer.schedule(deadline: .now(), repeating: .milliseconds(200), leeway: .milliseconds(50))
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.now = Date()
+                self.tickSession()
             }
+        }
+        timer.resume()
+        self.clockTimer = timer
     }
 
     private func stopClockIfIdle() {
@@ -971,17 +982,32 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
-        clockCancellable?.cancel()
-        clockCancellable = nil
+        clockTimer?.cancel()
+        clockTimer = nil
+    }
+
+    private var effectiveTimerNow: Date {
+        guard let sessionResumedAt, let wallDate = sessionResumedAtWallDate else {
+            return now
+        }
+        let elapsed = ContinuousClock().now - sessionResumedAt
+        let (seconds, attoseconds) = elapsed.components
+        let elapsedSeconds = TimeInterval(seconds) + TimeInterval(attoseconds) / 1_000_000_000_000_000_000
+        return wallDate.addingTimeInterval(elapsedSeconds)
     }
 
     private func handleClockTick(_ currentDate: Date) {
         now = currentDate
+        tickSession()
+    }
+
+    private func tickSession() {
+        let timerNow = effectiveTimerNow
 
         if var activeSession {
             let previousSession = activeSession
             if activeSession.isPaused == false,
-               activeSession.nextDueIntervalCount(at: currentDate) != nil {
+               activeSession.nextDueIntervalCount(at: timerNow) != nil {
                 soundPlayer.playSound(named: activeSession.configuration.intervalSoundName)
             }
 
@@ -991,20 +1017,20 @@ final class ShellViewModel: ObservableObject {
             }
 
             if activeSession.configuration.mode == .fixedDuration,
-               activeSession.remainingSeconds(at: currentDate) == 0 {
-                let endedAt = activeSession.targetEndAt() ?? currentDate
+               activeSession.remainingSeconds(at: timerNow) == 0 {
+                let endedAt = activeSession.targetEndAt() ?? Date()
                 finishTimer(status: .completed, endedAt: endedAt)
             }
         }
 
         if let activeCustomPlaySession,
            activeCustomPlaySession.isPaused == false,
-           activeCustomPlaySession.remainingSeconds(at: currentDate) == 0 {
+           activeCustomPlaySession.remainingSeconds(at: now) == 0 {
             finishCustomPlay(status: .completed, endedAt: customPlayTargetEndAt(activeCustomPlaySession))
         }
 
         if var activePlaylistSession {
-            let advanceResult = activePlaylistSession.advanceIfNeeded(at: currentDate)
+            let advanceResult = activePlaylistSession.advanceIfNeeded(at: now)
             if advanceResult.logs.isEmpty == false {
                 insertLogs(advanceResult.logs)
             }
@@ -1060,6 +1086,8 @@ final class ShellViewModel: ObservableObject {
         let log = activeSession.makeSessionLog(status: status, endedAt: endedAt)
         soundPlayer.playSound(named: activeSession.configuration.endSoundName)
         self.activeSession = nil
+        sessionResumedAt = nil
+        sessionResumedAtWallDate = nil
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
@@ -1353,6 +1381,8 @@ final class ShellViewModel: ObservableObject {
         do {
             activeSession = try TimerFeature.makeActiveSession(from: draft, now: Date())
             now = Date()
+            sessionResumedAt = ContinuousClock().now
+            sessionResumedAtWallDate = now
             soundPlayer.playSound(named: activeSession?.configuration.startSoundName)
             syncBackgroundAudioKeepAlive()
             if let lastUsedTarget {
@@ -1462,6 +1492,11 @@ final class ShellViewModel: ObservableObject {
             return
         }
 
+        if restoredSession.isPaused == false {
+            sessionResumedAt = ContinuousClock().now
+            sessionResumedAtWallDate = currentDate
+        }
+
         syncBackgroundAudioKeepAlive()
         startClock()
         rescheduleTimerNotificationIfNeeded()
@@ -1549,6 +1584,8 @@ final class ShellViewModel: ObservableObject {
         timerCompletionBridge.cancelTimerCompletionBridge()
         let log = activeSession.makeSessionLog(status: .completed, endedAt: endedAt)
         self.activeSession = nil
+        sessionResumedAt = nil
+        sessionResumedAtWallDate = nil
         syncBackgroundAudioKeepAlive()
         insertLogs([log])
 
