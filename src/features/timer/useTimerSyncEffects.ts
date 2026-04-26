@@ -22,7 +22,6 @@ import type { SyncConnectionMode } from '../sync/syncContextObject';
 import {
   applyQueuedCollectionMutations,
   areOrderedCollectionsEqual,
-  buildQueueHydrationSignature,
   reconcileQueueBackedCollection,
 } from './queueCollectionSync';
 import type { TimerAction, TimerState } from './timerReducer';
@@ -44,6 +43,7 @@ import {
 import { areCustomPlaysEqual } from '../../utils/customPlay';
 import { arePlaylistsEqual } from '../../utils/playlist';
 import { areSessionLogsEqual } from '../../utils/sessionLog';
+import { buildHydrationEffect } from './useCollectionHydrator';
 
 export interface TimerSyncRefs {
   readonly latestSessionLogsRef: MutableRefObject<readonly SessionLog[]>;
@@ -124,39 +124,23 @@ export function useTimerSyncEffects({
   setIsSettingsSyncing,
   setSettingsSyncError,
 }: UseTimerSyncEffectsArgs) {
-  useEffect(() => {
-    let cancelled = false;
-    const queuedCustomPlayEntries = selectSyncQueueEntries(refs.latestSyncQueueRef.current, {
+  useEffect(
+    buildHydrationEffect({
       entityTypes: ['custom-play'],
-    });
-    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedCustomPlayEntries);
-
-    if (
-      refs.completedCustomPlayHydrationKeyRef.current === hydrationKey ||
-      refs.inFlightCustomPlayHydrationKeyRef.current === hydrationKey
-    ) {
-      return;
-    }
-
-    refs.inFlightCustomPlayHydrationKeyRef.current = hydrationKey;
-
-    async function hydrateCustomPlays() {
-      setIsCustomPlaysLoading(true);
-
-      if (!canAttemptBackendSync) {
-        if (!cancelled) {
-          setCustomPlaySyncError(buildOfflineCacheMessage(connectionMode, 'custom plays', bootstrap.customPlays.length > 0));
-          setIsCustomPlaySyncing(false);
-          setIsCustomPlaysLoading(false);
-        }
-        return;
-      }
-
-      try {
+      connectionMode,
+      canAttemptBackendSync,
+      latestSyncQueueRef: refs.latestSyncQueueRef,
+      completedKeyRef: refs.completedCustomPlayHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightCustomPlayHydrationKeyRef,
+      setIsLoading: setIsCustomPlaysLoading,
+      onOffline: () => {
+        setCustomPlaySyncError(buildOfflineCacheMessage(connectionMode, 'custom plays', bootstrap.customPlays.length > 0));
+        setIsCustomPlaySyncing(false);
+      },
+      onFetch: async (queuedCustomPlayEntries, isCancelled) => {
         const remoteCustomPlays = await listCustomPlaysFromApi();
-        if (cancelled) {
-          return;
-        }
+        if (isCancelled()) return;
+
         const reconciliation = reconcileQueueBackedCollection({
           remoteEntries: remoteCustomPlays,
           localEntries: refs.latestCustomPlaysRef.current,
@@ -181,9 +165,7 @@ export function useTimerSyncEffects({
           }
         }
 
-        if (
-          !areOrderedCollectionsEqual(reconciliation.nextEntries, refs.latestCustomPlaysRef.current, areCustomPlaysEqual)
-        ) {
+        if (!areOrderedCollectionsEqual(reconciliation.nextEntries, refs.latestCustomPlaysRef.current, areCustomPlaysEqual)) {
           setCustomPlays(reconciliation.nextEntries);
         }
 
@@ -191,82 +173,51 @@ export function useTimerSyncEffects({
           setCustomPlaySyncError(null);
         }
         reportBackendReachable();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
+      },
+      onError: (error) => {
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-
         setCustomPlaySyncError(
           `${formatApiErrorMessage(error, 'Custom play loading failed.')} Showing the local custom play cache instead.`
         );
-      } finally {
-        if (!cancelled) {
-          refs.completedCustomPlayHydrationKeyRef.current = hydrationKey;
-          setIsCustomPlaySyncing(false);
-          setIsCustomPlaysLoading(false);
-        }
-        if (refs.inFlightCustomPlayHydrationKeyRef.current === hydrationKey) {
-          refs.inFlightCustomPlayHydrationKeyRef.current = null;
-        }
-      }
-    }
+      },
+      onCompleted: () => {
+        setIsCustomPlaySyncing(false);
+      },
+    }),
+    [
+      bootstrap.customPlays,
+      canAttemptBackendSync,
+      connectionMode,
+      refs,
+      reportBackendReachable,
+      reportBackendUnreachable,
+      setCustomPlays,
+      setCustomPlaySyncError,
+      setIsCustomPlaysLoading,
+      setIsCustomPlaySyncing,
+      updateQueue,
+    ]
+  );
 
-    void hydrateCustomPlays();
-
-    return () => {
-      cancelled = true;
-      if (refs.inFlightCustomPlayHydrationKeyRef.current === hydrationKey) {
-        refs.inFlightCustomPlayHydrationKeyRef.current = null;
-      }
-    };
-  }, [
-    bootstrap.customPlays,
-    canAttemptBackendSync,
-    connectionMode,
-    refs,
-    reportBackendReachable,
-    reportBackendUnreachable,
-    setCustomPlays,
-    setCustomPlaySyncError,
-    setIsCustomPlaysLoading,
-    setIsCustomPlaySyncing,
-    updateQueue,
-  ]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const queuedPlaylistEntries = selectSyncQueueEntries(refs.latestSyncQueueRef.current, {
+  useEffect(
+    buildHydrationEffect({
       entityTypes: ['playlist'],
-    });
-    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedPlaylistEntries);
-
-    if (refs.completedPlaylistHydrationKeyRef.current === hydrationKey || refs.inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
-      return;
-    }
-
-    refs.inFlightPlaylistHydrationKeyRef.current = hydrationKey;
-
-    async function hydratePlaylists() {
-      setIsPlaylistsLoading(true);
-
-      if (!canAttemptBackendSync) {
-        if (!cancelled) {
-          setPlaylistSyncError(buildOfflineCacheMessage(connectionMode, 'playlists', bootstrap.playlists.length > 0));
-          setIsPlaylistSyncing(false);
-          setIsPlaylistsLoading(false);
-        }
-        return;
-      }
-
-      try {
+      connectionMode,
+      canAttemptBackendSync,
+      latestSyncQueueRef: refs.latestSyncQueueRef,
+      completedKeyRef: refs.completedPlaylistHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightPlaylistHydrationKeyRef,
+      setIsLoading: setIsPlaylistsLoading,
+      onOffline: () => {
+        setPlaylistSyncError(buildOfflineCacheMessage(connectionMode, 'playlists', bootstrap.playlists.length > 0));
+        setIsPlaylistSyncing(false);
+      },
+      onFetch: async (queuedPlaylistEntries, isCancelled) => {
         const remotePlaylists = await listPlaylistsFromApi();
-        if (cancelled) {
-          return;
-        }
+        if (isCancelled()) return;
+
         const reconciliation = reconcileQueueBackedCollection({
           remoteEntries: remotePlaylists,
           localEntries: refs.latestPlaylistsRef.current,
@@ -299,86 +250,51 @@ export function useTimerSyncEffects({
           setPlaylistSyncError(null);
         }
         reportBackendReachable();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
+      },
+      onError: (error) => {
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-
         setPlaylistSyncError(
           `${formatApiErrorMessage(error, 'Playlist loading failed.')} Showing the local playlist cache instead.`
         );
-      } finally {
-        if (!cancelled) {
-          refs.completedPlaylistHydrationKeyRef.current = hydrationKey;
-          setIsPlaylistSyncing(false);
-          setIsPlaylistsLoading(false);
-        }
-        if (refs.inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
-          refs.inFlightPlaylistHydrationKeyRef.current = null;
-        }
-      }
-    }
+      },
+      onCompleted: () => {
+        setIsPlaylistSyncing(false);
+      },
+    }),
+    [
+      bootstrap.playlists,
+      canAttemptBackendSync,
+      connectionMode,
+      refs,
+      reportBackendReachable,
+      reportBackendUnreachable,
+      setIsPlaylistsLoading,
+      setIsPlaylistSyncing,
+      setPlaylistSyncError,
+      setPlaylists,
+      updateQueue,
+    ]
+  );
 
-    void hydratePlaylists();
-
-    return () => {
-      cancelled = true;
-      if (refs.inFlightPlaylistHydrationKeyRef.current === hydrationKey) {
-        refs.inFlightPlaylistHydrationKeyRef.current = null;
-      }
-    };
-  }, [
-    bootstrap.playlists,
-    canAttemptBackendSync,
-    connectionMode,
-    refs,
-    reportBackendReachable,
-    reportBackendUnreachable,
-    setIsPlaylistsLoading,
-    setIsPlaylistSyncing,
-    setPlaylistSyncError,
-    setPlaylists,
-    updateQueue,
-  ]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const queuedSessionLogEntries = selectSyncQueueEntries(refs.latestSyncQueueRef.current, {
+  useEffect(
+    buildHydrationEffect({
       entityTypes: ['session-log'],
-    });
-    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedSessionLogEntries);
-
-    if (
-      refs.completedSessionLogHydrationKeyRef.current === hydrationKey ||
-      refs.inFlightSessionLogHydrationKeyRef.current === hydrationKey
-    ) {
-      return;
-    }
-
-    refs.inFlightSessionLogHydrationKeyRef.current = hydrationKey;
-
-    async function hydrateSessionLogs() {
-      setIsSessionLogsLoading(true);
-
-      if (!canAttemptBackendSync) {
-        if (!cancelled) {
-          refs.syncedSessionLogIdsRef.current = new Set();
-          setSessionLogSyncError(buildOfflineCacheMessage(connectionMode, 'session logs', bootstrap.sessionLogs.length > 0));
-          refs.remoteSessionLogsHydratedRef.current = true;
-          setIsSessionLogsLoading(false);
-        }
-        return;
-      }
-
-      try {
+      connectionMode,
+      canAttemptBackendSync,
+      latestSyncQueueRef: refs.latestSyncQueueRef,
+      completedKeyRef: refs.completedSessionLogHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightSessionLogHydrationKeyRef,
+      setIsLoading: setIsSessionLogsLoading,
+      onOffline: () => {
+        refs.syncedSessionLogIdsRef.current = new Set();
+        setSessionLogSyncError(buildOfflineCacheMessage(connectionMode, 'session logs', bootstrap.sessionLogs.length > 0));
+        refs.remoteSessionLogsHydratedRef.current = true;
+      },
+      onFetch: async (queuedSessionLogEntries, isCancelled) => {
         const remoteSessionLogs = (await listSessionLogsFromApi()).items;
-        if (cancelled) {
-          return;
-        }
+        if (isCancelled()) return;
 
         refs.syncedSessionLogIdsRef.current = new Set(remoteSessionLogs.map((entry) => entry.id));
         const mergedSessionLogs = applyQueuedCollectionMutations(
@@ -386,112 +302,69 @@ export function useTimerSyncEffects({
           queuedSessionLogEntries
         );
         if (!areOrderedCollectionsEqual(mergedSessionLogs, refs.latestSessionLogsRef.current, areSessionLogsEqual)) {
-          dispatch({
-            type: 'REPLACE_SESSION_LOGS',
-            payload: mergedSessionLogs,
-          });
+          dispatch({ type: 'REPLACE_SESSION_LOGS', payload: mergedSessionLogs });
         }
         if (!queuedSessionLogEntries.some((entry) => entry.state === 'failed')) {
           setSessionLogSyncError(null);
         }
         reportBackendReachable();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
+      },
+      onError: (error) => {
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-
         refs.syncedSessionLogIdsRef.current = new Set();
         setSessionLogSyncError(
           `${formatApiErrorMessage(error, 'Session log loading failed.')} Showing the local session log cache instead.`
         );
-      } finally {
-        if (!cancelled) {
-          refs.completedSessionLogHydrationKeyRef.current = hydrationKey;
-          refs.remoteSessionLogsHydratedRef.current = true;
-          setIsSessionLogsLoading(false);
-        }
-        if (refs.inFlightSessionLogHydrationKeyRef.current === hydrationKey) {
-          refs.inFlightSessionLogHydrationKeyRef.current = null;
-        }
-      }
-    }
+      },
+      onCompleted: () => {
+        refs.remoteSessionLogsHydratedRef.current = true;
+      },
+    }),
+    [
+      bootstrap.sessionLogs,
+      canAttemptBackendSync,
+      connectionMode,
+      dispatch,
+      refs,
+      reportBackendReachable,
+      reportBackendUnreachable,
+      setIsSessionLogsLoading,
+      setSessionLogSyncError,
+    ]
+  );
 
-    void hydrateSessionLogs();
-
-    return () => {
-      cancelled = true;
-      if (refs.inFlightSessionLogHydrationKeyRef.current === hydrationKey) {
-        refs.inFlightSessionLogHydrationKeyRef.current = null;
-      }
-    };
-  }, [
-    bootstrap.sessionLogs,
-    canAttemptBackendSync,
-    connectionMode,
-    dispatch,
-    refs,
-    reportBackendReachable,
-    reportBackendUnreachable,
-    setIsSessionLogsLoading,
-    setSessionLogSyncError,
-  ]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const queuedTimerSettingsEntries = selectSyncQueueEntries(refs.latestSyncQueueRef.current, {
+  useEffect(
+    buildHydrationEffect({
       entityTypes: ['timer-settings'],
-    });
-    const hydrationKey = buildQueueHydrationSignature(connectionMode, queuedTimerSettingsEntries);
-
-    if (
-      refs.completedTimerSettingsHydrationKeyRef.current === hydrationKey ||
-      refs.inFlightTimerSettingsHydrationKeyRef.current === hydrationKey
-    ) {
-      return;
-    }
-
-    refs.inFlightTimerSettingsHydrationKeyRef.current = hydrationKey;
-
-    async function hydrateTimerSettings() {
-      setIsSettingsLoading(true);
-
-      if (!canAttemptBackendSync) {
-        if (!cancelled) {
-          refs.lastPersistedTimerSettingsRef.current = bootstrap.settings;
-          setSettingsSyncError(
-            connectionMode === 'backend-unreachable'
-              ? 'Using locally saved timer settings because the backend is unavailable right now.'
-              : 'Using locally saved timer settings while you are offline.'
-          );
-          refs.remoteSettingsHydratedRef.current = true;
-          setIsSettingsLoading(false);
-        }
-        return;
-      }
-
-      try {
+      connectionMode,
+      canAttemptBackendSync,
+      latestSyncQueueRef: refs.latestSyncQueueRef,
+      completedKeyRef: refs.completedTimerSettingsHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightTimerSettingsHydrationKeyRef,
+      setIsLoading: setIsSettingsLoading,
+      onOffline: () => {
+        refs.lastPersistedTimerSettingsRef.current = bootstrap.settings;
+        setSettingsSyncError(
+          connectionMode === 'backend-unreachable'
+            ? 'Using locally saved timer settings because the backend is unavailable right now.'
+            : 'Using locally saved timer settings while you are offline.'
+        );
+        refs.remoteSettingsHydratedRef.current = true;
+      },
+      onFetch: async (queuedTimerSettingsEntries, isCancelled) => {
         const remoteSettings = await loadTimerSettingsFromApi();
-        if (cancelled) {
-          return;
-        }
+        if (isCancelled()) return;
 
         refs.lastPersistedTimerSettingsRef.current = remoteSettings;
 
-        const hasQueuedTimerSettings = queuedTimerSettingsEntries.length > 0;
-
-        if (hasQueuedTimerSettings) {
+        if (queuedTimerSettingsEntries.length > 0) {
           refs.lastPersistedTimerSettingsRef.current = remoteSettings;
-          const latestQueuedTimerSettingsEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
+          const latestQueuedEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
           const queuedSettings = applyQueuedTimerSettings(refs.latestTimerSettingsRef.current, queuedTimerSettingsEntries);
-          if (
-            latestQueuedTimerSettingsEntry &&
-            !areTimerSettingsEqual(latestQueuedTimerSettingsEntry.payload as TimerSettings, queuedSettings)
-          ) {
-            replaceQueueEntryPayload(updateQueue, latestQueuedTimerSettingsEntry.id, queuedSettings);
+          if (latestQueuedEntry && !areTimerSettingsEqual(latestQueuedEntry.payload as TimerSettings, queuedSettings)) {
+            replaceQueueEntryPayload(updateQueue, latestQueuedEntry.id, queuedSettings);
           }
           if (!areTimerSettingsEqual(queuedSettings, refs.latestTimerSettingsRef.current)) {
             dispatch({ type: 'SET_SETTINGS', payload: queuedSettings });
@@ -504,51 +377,33 @@ export function useTimerSyncEffects({
           setSettingsSyncError(null);
         }
         reportBackendReachable();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
+      },
+      onError: (error) => {
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-
         refs.lastPersistedTimerSettingsRef.current = refs.latestTimerSettingsRef.current;
         setSettingsSyncError(
           `${formatApiErrorMessage(error, 'Timer settings could not load from the backend.')} Using the local timer settings cache for now.`
         );
-      } finally {
-        if (!cancelled) {
-          refs.completedTimerSettingsHydrationKeyRef.current = hydrationKey;
-          refs.remoteSettingsHydratedRef.current = true;
-          setIsSettingsLoading(false);
-        }
-        if (refs.inFlightTimerSettingsHydrationKeyRef.current === hydrationKey) {
-          refs.inFlightTimerSettingsHydrationKeyRef.current = null;
-        }
-      }
-    }
-
-    void hydrateTimerSettings();
-
-    return () => {
-      cancelled = true;
-      if (refs.inFlightTimerSettingsHydrationKeyRef.current === hydrationKey) {
-        refs.inFlightTimerSettingsHydrationKeyRef.current = null;
-      }
-    };
-  }, [
-    bootstrap.settings,
-    canAttemptBackendSync,
-    connectionMode,
-    dispatch,
-    refs,
-    reportBackendReachable,
-    reportBackendUnreachable,
-    setIsSettingsLoading,
-    setSettingsSyncError,
-    updateQueue,
-  ]);
+      },
+      onCompleted: () => {
+        refs.remoteSettingsHydratedRef.current = true;
+      },
+    }),
+    [
+      bootstrap.settings,
+      canAttemptBackendSync,
+      connectionMode,
+      dispatch,
+      refs,
+      reportBackendReachable,
+      reportBackendUnreachable,
+      setIsSettingsLoading,
+      setSettingsSyncError,
+      updateQueue,
+    ]
+  );
 
   useEffect(() => {
     if (!refs.remoteSettingsHydratedRef.current) {
