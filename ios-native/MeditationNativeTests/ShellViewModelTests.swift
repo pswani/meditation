@@ -493,6 +493,7 @@ final class ShellViewModelTests: XCTestCase {
         let customPlay = try XCTUnwrap(SampleData.snapshot.customPlays.first)
         let (viewModel, notificationScheduler, audioPlayer, _) = try makeViewModel()
         let existingLogCount = viewModel.recentSessionLogs.count
+        let existingLogIDs = Set(viewModel.recentSessionLogs.map(\.id))
 
         XCTAssertTrue(viewModel.startCustomPlay(customPlay))
 
@@ -500,7 +501,8 @@ final class ShellViewModelTests: XCTestCase {
 
         XCTAssertNil(viewModel.activeCustomPlaySession)
         XCTAssertEqual(viewModel.recentSessionLogs.count, existingLogCount + 1)
-        XCTAssertEqual(viewModel.recentSessionLogs.first?.source, .customPlay)
+        let newLog = viewModel.recentSessionLogs.first { !existingLogIDs.contains($0.id) }
+        XCTAssertEqual(newLog?.source, .customPlay)
         while notificationScheduler.cancelCount < 1 {
             await Task.yield()
         }
