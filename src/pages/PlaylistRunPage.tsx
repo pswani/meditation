@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingTime } from '../features/timer/time';
-import { useTimer } from '../features/timer/useTimer';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
 import {
   computePlaylistRunRemainingSeconds,
   getPlaylistRunCurrentItem,
@@ -21,7 +21,7 @@ export default function PlaylistRunPage() {
     clearPlaylistRunOutcome,
     playlistRuntimeMessage,
     clearPlaylistRuntimeMessage,
-  } = useTimer();
+  } = usePlaylistRuntime();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { meditationTypes } from '../features/timer/constants';
-import { useTimer } from '../features/timer/useTimer';
+import { useSessionLog } from '../features/timer/sessionLogContext';
 import type { SessionLog } from '../types/sessionLog';
 import type { ManualLogInput, ManualLogValidationResult } from '../utils/manualLog';
 import { formatDurationLabel, formatPlannedDurationLabel } from '../utils/sessionLog';
@@ -93,7 +93,7 @@ export default function HistoryPage() {
     isSessionLogsLoading,
     isSessionLogSyncing,
     sessionLogSyncError,
-  } = useTimer();
+  } = useSessionLog();
   const navigate = useNavigate();
   const [manualLog, setManualLog] = useState<ManualLogInput>(initialManualLog);
   const [manualLogOpen, setManualLogOpen] = useState(() => sessionLogs.length === 0);

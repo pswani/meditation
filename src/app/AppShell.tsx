@@ -4,27 +4,31 @@ import { ShellStatusBanners } from './ShellStatusBanners';
 import { buildSyncStatusMessage } from './appShellHelpers';
 import { useCustomPlayAudioSync, usePlaylistAudioSync } from './useShellAudioSync';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
-import { useTimer } from '../features/timer/useTimer';
+import { useCustomPlay } from '../features/timer/customPlayContext';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
+import { useTimerActions } from '../features/timer/timerActionsContext';
+import { useTimerState } from '../features/timer/timerStateContext';
 import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/playlistRuntime';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { state: { activeSession } } = useTimerState();
+  const { recoveryMessage, clearRecoveryMessage } = useTimerActions();
   const {
-    activeSession,
     activeCustomPlayRun,
-    activePlaylistRun,
-    isPlaylistRunPaused,
-    recoveryMessage,
-    clearRecoveryMessage,
     updateCustomPlayRunProgress,
     completeCustomPlayRun,
     reportCustomPlayRuntimeIssue,
+  } = useCustomPlay();
+  const {
+    activePlaylistRun,
+    isPlaylistRunPaused,
     updatePlaylistRunProgress,
     completePlaylistRunCurrentItem,
     reportPlaylistRuntimeIssue,
-  } = useTimer();
+  } = usePlaylistRuntime();
   const {
     connectionMode,
     summary: { nextRetryCount, failedCount },

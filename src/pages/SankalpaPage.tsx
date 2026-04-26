@@ -11,7 +11,7 @@ import {
 import { useSankalpaSummary } from '../features/sankalpa/useSankalpaSummary';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
 import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
-import { useTimer } from '../features/timer/useTimer';
+import { useSessionLog } from '../features/timer/sessionLogContext';
 import type { SankalpaGoal, SankalpaValidationResult } from '../types/sankalpa';
 import {
   archiveSankalpaGoal,
@@ -29,7 +29,7 @@ import { getUserTimeZone } from '../utils/timeZone';
 const initialErrors: SankalpaValidationResult['errors'] = {};
 
 export default function SankalpaPage() {
-  const { sessionLogs } = useTimer();
+  const { sessionLogs } = useSessionLog();
   const { connectionMode, canAttemptBackendSync, reportBackendReachable, reportBackendUnreachable } = useSyncStatus();
   const userTimeZone = useMemo(() => getUserTimeZone() ?? 'UTC', []);
   const [draft, setDraft] = useState(() => createInitialSankalpaDraft());

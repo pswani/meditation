@@ -53,6 +53,12 @@ import { shouldRunForegroundCatchUp } from './foregroundCatchUp';
 import { createTimerSoundPlayer, getElapsedIntervalCueCount } from './timerSoundPlayback';
 import { createInitialTimerState, timerReducer } from './timerReducer';
 import { TimerContext, type TimerContextValue } from './timerContextObject';
+import { CustomPlayContext, type CustomPlayContextValue } from './customPlayContext';
+import { PlaylistRuntimeContext, type PlaylistRuntimeContextValue } from './playlistRuntimeContext';
+import { SessionLogContext, type SessionLogContextValue } from './sessionLogContext';
+import { TimerActionsContext, type TimerActionsContextValue } from './timerActionsContext';
+import { TimerSettingsContext, type TimerSettingsContextValue } from './timerSettingsContext';
+import { TimerStateContext, type TimerStateContextValue } from './timerStateContext';
 import {
   attemptTimerSoundPlayback,
   buildQueuedDeleteMessage,
@@ -1373,5 +1379,185 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     ]
   );
 
-  return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;
+  const timerStateValue = useMemo<TimerStateContextValue>(
+    () => ({ state, dispatch, isPaused }),
+    [state, dispatch, isPaused]
+  );
+
+  const timerActionsValue = useMemo<TimerActionsContextValue>(
+    () => ({
+      timerSoundPlaybackMessage: value.timerSoundPlaybackMessage,
+      recoveryMessage: value.recoveryMessage,
+      startSession: value.startSession,
+      pauseSession: value.pauseSession,
+      resumeSession: value.resumeSession,
+      endSessionEarly: value.endSessionEarly,
+      clearOutcome: value.clearOutcome,
+      clearTimerSoundPlaybackMessage: value.clearTimerSoundPlaybackMessage,
+      clearRecoveryMessage: value.clearRecoveryMessage,
+    }),
+    [
+      value.timerSoundPlaybackMessage,
+      value.recoveryMessage,
+      value.startSession,
+      value.pauseSession,
+      value.resumeSession,
+      value.endSessionEarly,
+      value.clearOutcome,
+      value.clearTimerSoundPlaybackMessage,
+      value.clearRecoveryMessage,
+    ]
+  );
+
+  const sessionLogValue = useMemo<SessionLogContextValue>(
+    () => ({
+      sessionLogs: value.sessionLogs,
+      recentLogs: value.recentLogs,
+      isSessionLogsLoading: value.isSessionLogsLoading,
+      isSessionLogSyncing: value.isSessionLogSyncing,
+      sessionLogSyncError: value.sessionLogSyncError,
+      addManualLog: value.addManualLog,
+      canChangeSessionLogMeditationType: value.canChangeSessionLogMeditationType,
+      updateSessionLogMeditationType: value.updateSessionLogMeditationType,
+    }),
+    [
+      value.sessionLogs,
+      value.recentLogs,
+      value.isSessionLogsLoading,
+      value.isSessionLogSyncing,
+      value.sessionLogSyncError,
+      value.addManualLog,
+      value.canChangeSessionLogMeditationType,
+      value.updateSessionLogMeditationType,
+    ]
+  );
+
+  const timerSettingsValue = useMemo<TimerSettingsContextValue>(
+    () => ({
+      settings: value.settings,
+      isSettingsLoading: value.isSettingsLoading,
+      isSettingsSyncing: value.isSettingsSyncing,
+      settingsSyncError: value.settingsSyncError,
+      setSettings: value.setSettings,
+    }),
+    [
+      value.settings,
+      value.isSettingsLoading,
+      value.isSettingsSyncing,
+      value.settingsSyncError,
+      value.setSettings,
+    ]
+  );
+
+  const customPlayValue = useMemo<CustomPlayContextValue>(
+    () => ({
+      customPlays: value.customPlays,
+      activeCustomPlayRun: value.activeCustomPlayRun,
+      customPlayRunOutcome: value.customPlayRunOutcome,
+      isCustomPlaysLoading: value.isCustomPlaysLoading,
+      isCustomPlaySyncing: value.isCustomPlaySyncing,
+      customPlaySyncError: value.customPlaySyncError,
+      customPlayRuntimeMessage: value.customPlayRuntimeMessage,
+      saveCustomPlay: value.saveCustomPlay,
+      deleteCustomPlay: value.deleteCustomPlay,
+      toggleFavoriteCustomPlay: value.toggleFavoriteCustomPlay,
+      startCustomPlayRun: value.startCustomPlayRun,
+      pauseCustomPlayRun: value.pauseCustomPlayRun,
+      resumeCustomPlayRun: value.resumeCustomPlayRun,
+      updateCustomPlayRunProgress: value.updateCustomPlayRunProgress,
+      completeCustomPlayRun: value.completeCustomPlayRun,
+      endCustomPlayRunEarly: value.endCustomPlayRunEarly,
+      clearCustomPlayRunOutcome: value.clearCustomPlayRunOutcome,
+      reportCustomPlayRuntimeIssue: value.reportCustomPlayRuntimeIssue,
+      clearCustomPlayRuntimeMessage: value.clearCustomPlayRuntimeMessage,
+    }),
+    [
+      value.customPlays,
+      value.activeCustomPlayRun,
+      value.customPlayRunOutcome,
+      value.isCustomPlaysLoading,
+      value.isCustomPlaySyncing,
+      value.customPlaySyncError,
+      value.customPlayRuntimeMessage,
+      value.saveCustomPlay,
+      value.deleteCustomPlay,
+      value.toggleFavoriteCustomPlay,
+      value.startCustomPlayRun,
+      value.pauseCustomPlayRun,
+      value.resumeCustomPlayRun,
+      value.updateCustomPlayRunProgress,
+      value.completeCustomPlayRun,
+      value.endCustomPlayRunEarly,
+      value.clearCustomPlayRunOutcome,
+      value.reportCustomPlayRuntimeIssue,
+      value.clearCustomPlayRuntimeMessage,
+    ]
+  );
+
+  const playlistRuntimeValue = useMemo<PlaylistRuntimeContextValue>(
+    () => ({
+      playlists: value.playlists,
+      lastUsedMeditation: value.lastUsedMeditation,
+      activePlaylistRun: value.activePlaylistRun,
+      playlistRunOutcome: value.playlistRunOutcome,
+      isPlaylistRunPaused: value.isPlaylistRunPaused,
+      isPlaylistsLoading: value.isPlaylistsLoading,
+      isPlaylistSyncing: value.isPlaylistSyncing,
+      playlistSyncError: value.playlistSyncError,
+      playlistRuntimeMessage: value.playlistRuntimeMessage,
+      savePlaylist: value.savePlaylist,
+      deletePlaylist: value.deletePlaylist,
+      toggleFavoritePlaylist: value.toggleFavoritePlaylist,
+      startPlaylistRun: value.startPlaylistRun,
+      clearLastUsedMeditation: value.clearLastUsedMeditation,
+      pausePlaylistRun: value.pausePlaylistRun,
+      resumePlaylistRun: value.resumePlaylistRun,
+      updatePlaylistRunProgress: value.updatePlaylistRunProgress,
+      completePlaylistRunCurrentItem: value.completePlaylistRunCurrentItem,
+      endPlaylistRunEarly: value.endPlaylistRunEarly,
+      clearPlaylistRunOutcome: value.clearPlaylistRunOutcome,
+      reportPlaylistRuntimeIssue: value.reportPlaylistRuntimeIssue,
+      clearPlaylistRuntimeMessage: value.clearPlaylistRuntimeMessage,
+    }),
+    [
+      value.playlists,
+      value.lastUsedMeditation,
+      value.activePlaylistRun,
+      value.playlistRunOutcome,
+      value.isPlaylistRunPaused,
+      value.isPlaylistsLoading,
+      value.isPlaylistSyncing,
+      value.playlistSyncError,
+      value.playlistRuntimeMessage,
+      value.savePlaylist,
+      value.deletePlaylist,
+      value.toggleFavoritePlaylist,
+      value.startPlaylistRun,
+      value.clearLastUsedMeditation,
+      value.pausePlaylistRun,
+      value.resumePlaylistRun,
+      value.updatePlaylistRunProgress,
+      value.completePlaylistRunCurrentItem,
+      value.endPlaylistRunEarly,
+      value.clearPlaylistRunOutcome,
+      value.reportPlaylistRuntimeIssue,
+      value.clearPlaylistRuntimeMessage,
+    ]
+  );
+
+  return (
+    <TimerStateContext.Provider value={timerStateValue}>
+      <TimerActionsContext.Provider value={timerActionsValue}>
+        <SessionLogContext.Provider value={sessionLogValue}>
+          <TimerSettingsContext.Provider value={timerSettingsValue}>
+            <CustomPlayContext.Provider value={customPlayValue}>
+              <PlaylistRuntimeContext.Provider value={playlistRuntimeValue}>
+                <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
+              </PlaylistRuntimeContext.Provider>
+            </CustomPlayContext.Provider>
+          </TimerSettingsContext.Provider>
+        </SessionLogContext.Provider>
+      </TimerActionsContext.Provider>
+    </TimerStateContext.Provider>
+  );
 }

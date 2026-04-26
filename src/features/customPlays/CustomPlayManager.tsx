@@ -7,7 +7,7 @@ import { useCustomPlayMediaCatalog } from './useCustomPlayMediaCatalog';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { TimerSettings } from '../../types/timer';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
-import { useTimer } from '../timer/useTimer';
+import { useCustomPlay } from '../timer/customPlayContext';
 
 const initialDraft: CustomPlayDraft = {
   name: '',
@@ -40,7 +40,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
     isCustomPlaysLoading,
     isCustomPlaySyncing,
     customPlaySyncError,
-  } = useTimer();
+  } = useCustomPlay();
   const [draft, setDraft] = useState<CustomPlayDraft>(initialDraft);
   const [errors, setErrors] = useState<CustomPlayValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);

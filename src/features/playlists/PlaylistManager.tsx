@@ -10,7 +10,8 @@ import {
   createPlaylistDraftItem,
   pruneResolvedPlaylistErrors,
 } from '../../utils/playlist';
-import { useTimer } from '../timer/useTimer';
+import { useCustomPlay } from '../timer/customPlayContext';
+import { usePlaylistRuntime } from '../timer/playlistRuntimeContext';
 
 const initialErrors: PlaylistValidationResult['errors'] = {
   itemErrors: {},
@@ -21,7 +22,6 @@ export default function PlaylistManager() {
   const navigate = useNavigate();
   const {
     playlists,
-    customPlays,
     activePlaylistRun,
     savePlaylist,
     deletePlaylist,
@@ -30,8 +30,8 @@ export default function PlaylistManager() {
     isPlaylistsLoading,
     isPlaylistSyncing,
     playlistSyncError,
-    isCustomPlaysLoading,
-  } = useTimer();
+  } = usePlaylistRuntime();
+  const { customPlays, isCustomPlaysLoading } = useCustomPlay();
   const [draft, setDraft] = useState<PlaylistDraft>(() => createInitialPlaylistDraft());
   const [errors, setErrors] = useState<PlaylistValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);
