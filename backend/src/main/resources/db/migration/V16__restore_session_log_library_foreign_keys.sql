@@ -1,6 +1,10 @@
--- Restores referential integrity dropped in V14.
--- ON DELETE SET NULL: historical session logs are preserved when a library item is deleted;
--- custom_play_name / playlist_name columns retain the point-in-time name snapshot.
+-- V16: Restore referential integrity dropped in V14. FKs now use ON DELETE SET NULL
+-- so deleting a custom play or playlist nulls the FK column in session_log while
+-- leaving the name snapshot (custom_play_name, playlist_name) intact. Historical
+-- logs retain the name of what was played even after the library item is deleted.
+-- The name fields are intentionally point-in-time and are NOT updated if the
+-- library item is renamed after the session was logged.
+-- Note: if flyway checksum fails after this comment was added, run flyway repair.
 
 -- Null out any orphaned references before adding constraints, since library items
 -- may have been deleted while FKs were absent (V14 dropped them).

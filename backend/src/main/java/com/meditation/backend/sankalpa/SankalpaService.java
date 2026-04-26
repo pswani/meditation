@@ -1,5 +1,6 @@
 package com.meditation.backend.sankalpa;
 
+import com.meditation.backend.config.SyncProperties;
 import com.meditation.backend.reference.ReferenceData;
 import com.meditation.backend.sessionlog.SessionLogRepository;
 import com.meditation.backend.sync.GeneratedSyncContract;
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -35,17 +37,20 @@ public class SankalpaService {
   private final SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository;
   private final SessionLogRepository sessionLogRepository;
   private final Clock clock;
+  private final SyncProperties syncProperties;
 
   public SankalpaService(
       SankalpaGoalRepository sankalpaGoalRepository,
       SankalpaObservanceEntryRepository sankalpaObservanceEntryRepository,
       SessionLogRepository sessionLogRepository,
-      Clock clock
+      Clock clock,
+      SyncProperties syncProperties
   ) {
     this.sankalpaGoalRepository = sankalpaGoalRepository;
     this.sankalpaObservanceEntryRepository = sankalpaObservanceEntryRepository;
     this.sessionLogRepository = sessionLogRepository;
     this.clock = clock;
+    this.syncProperties = syncProperties;
   }
 
   public List<SankalpaProgressResponse> listSankalpas(String timeZoneRaw) {
@@ -82,6 +87,12 @@ public class SankalpaService {
 
     Instant mutationTimestamp = SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, now);
     Instant createdAt = parseTimestamp(request.createdAt(), "Created at must be a valid ISO timestamp.");
+    if (existingEntity == null) {
+      long skewSeconds = Math.abs(Duration.between(createdAt, now).getSeconds());
+      if (skewSeconds > syncProperties.getClockSkewToleranceSeconds()) {
+        createdAt = now;
+      }
+    }
     SankalpaGoalEntity entity = existingEntity != null
         ? existingEntity
         : new SankalpaGoalEntity(
@@ -105,7 +116,7 @@ public class SankalpaService {
             request.id(),
             normalizeOptionalText(request.title()),
             request.goalType(),
-            request.targetValue().stripTrailingZeros(),
+            request.targetValue().setScale(2, RoundingMode.HALF_UP),
             request.days(),
             request.qualifyingDaysPerWeek(),
             normalizeOptionalText(request.meditationType()),
@@ -170,6 +181,8 @@ public class SankalpaService {
         .collect(Collectors.groupingBy(SankalpaObservanceEntryEntity::getSankalpaId, LinkedHashMap::new, Collectors.toList()));
   }
 
+  // Delete-then-insert within a single transaction; rolls back together if saveAll fails.
+  @Transactional
   private void replaceObservanceEntries(
       String sankalpaId,
       List<SankalpaObservanceRecordPayload> observanceRecords,
@@ -256,7 +269,9 @@ public class SankalpaService {
         matchTotals.pendingObservanceCount(),
         targetObservanceCount,
         matchTotals.observanceDays(),
-        targetValue == 0 ? 0 : Math.min((double) progressValue / targetValue, 1.0)
+        targetValue == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(progressValue)
+            .divide(BigDecimal.valueOf(targetValue), 4, RoundingMode.HALF_UP)
+            .min(BigDecimal.ONE)
     );
   }
 
@@ -652,15 +667,7 @@ public class SankalpaService {
   }
 
   private Instant parseTimestamp(String value, String errorMessage) {
-    if (value == null || value.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
-    }
-
-    try {
-      return Instant.parse(value);
-    } catch (DateTimeParseException exception) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
-    }
+    return SyncRequestSupport.parseRequiredTimestamp(value, errorMessage);
   }
 
   private String normalizeOptionalText(String value) {

@@ -7,7 +7,6 @@ import com.meditation.backend.sync.GeneratedSyncContract;
 import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
@@ -157,6 +156,7 @@ public class SessionLogService {
 
     // Resolve IDs against the DB. If the referenced entity was deleted before this sync
     // arrived, null the ID so the FK constraint is satisfied; the name snapshot is preserved.
+    // Snapshot: capture name at log time; not updated if library item is renamed later.
     String resolvedCustomPlayId = resolveExistingCustomPlayId(normalizeOptionalText(request.customPlayId()));
     String resolvedPlaylistId = resolveExistingPlaylistId(normalizeOptionalText(request.playlistId()));
 
@@ -419,27 +419,11 @@ public class SessionLogService {
   }
 
   private Instant parseTimestamp(String value, String errorMessage) {
-    if (value == null || value.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
-    }
-
-    try {
-      return Instant.parse(value);
-    } catch (DateTimeParseException exception) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
-    }
+    return SyncRequestSupport.parseRequiredTimestamp(value, errorMessage);
   }
 
   private Instant parseOptionalTimestamp(String value, String errorMessage) {
-    if (value == null || value.isBlank()) {
-      return null;
-    }
-
-    try {
-      return Instant.parse(value);
-    } catch (DateTimeParseException exception) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
-    }
+    return SyncRequestSupport.parseOptionalTimestamp(value, errorMessage);
   }
 
   private String normalizeManualTimerMode(String value) {

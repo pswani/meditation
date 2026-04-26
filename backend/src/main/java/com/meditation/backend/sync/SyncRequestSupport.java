@@ -34,6 +34,28 @@ public final class SyncRequestSupport {
     return syncQueuedAt != null ? syncQueuedAt : fallback;
   }
 
+  public static Instant parseRequiredTimestamp(String value, String errorMessage) {
+    if (value == null || value.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+  }
+
+  public static Instant parseOptionalTimestamp(String value, String errorMessage) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+  }
+
   public static boolean isStaleMutation(Instant existingUpdatedAt, String syncQueuedAtRaw) {
     Instant syncQueuedAt = parseOptionalSyncQueuedAt(syncQueuedAtRaw);
     return syncQueuedAt != null && existingUpdatedAt != null && existingUpdatedAt.isAfter(syncQueuedAt);

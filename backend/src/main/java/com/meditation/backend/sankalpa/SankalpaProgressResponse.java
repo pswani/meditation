@@ -1,5 +1,6 @@
 package com.meditation.backend.sankalpa;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public record SankalpaProgressResponse(
@@ -18,6 +19,6 @@ public record SankalpaProgressResponse(
     int pendingObservanceCount,
     int targetObservanceCount,
     List<SankalpaObservanceDayResponse> observanceDays,
-    double progressRatio
+    BigDecimal progressRatio
 ) {
 }
