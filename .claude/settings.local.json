@@ -51,7 +51,9 @@
       "Bash(java *)",
       "Bash(./scripts/pipeline.sh release *)",
       "Bash(osascript *)",
-      "Bash(curl -fsS http://127.0.0.1:8080/api/health)"
+      "Bash(curl -fsS http://127.0.0.1:8080/api/health)",
+      "Bash(npm test *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

@@ -15,6 +15,10 @@
 #═══════════════════════════════════════════════════════════════════════════════
 set -uo pipefail
 
+# When called with --describe, print the next task label and exit (used by parent orchestrator).
+DESCRIBE_ONLY=false
+[[ "${1:-}" == "--describe" ]] && DESCRIBE_ONLY=true
+
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$PROJECT_DIR/.claude-work-state"
 QUEUE_FILE="$PROJECT_DIR/work-queue.txt"
@@ -23,6 +27,18 @@ CLAUDE="${CLAUDE_BIN:-/Users/prashantwani/.local/bin/claude}"
 
 # Maximum wall-clock minutes to allow a single claude run before timing out.
 MAX_RUNTIME_MINUTES=90
+
+# macOS ships without GNU timeout; provide a perl-based shim if needed.
+if ! command -v timeout &>/dev/null; then
+    timeout() {
+        local duration=$1; shift
+        # Strip trailing 'm' (e.g. "90m" → seconds)
+        if [[ "$duration" == *m ]]; then
+            duration=$(( ${duration%m} * 60 ))
+        fi
+        perl -e "alarm $duration; exec @ARGV" -- "$@"
+    }
+fi
 
 # Optional flags added to every claude invocation.
 # Example: CLAUDE_FLAGS=(--dangerously-skip-permissions)
@@ -50,17 +66,18 @@ EOF
 }
 
 # ── Abort-condition detection ─────────────────────────────────────────────────
+LIMIT_PATTERN='usage.?limit|rate.?limit|quota.?exceeded|overloaded|too many requests|529'
+PERM_PATTERN='requires? (user )?approval|permission (required|denied)|not allowed to|tool.*not.*available|bash.*not.*permitted'
+
 classify_exit() {
     local exit_code=$1
     local output=$2
 
-    if echo "$output" | grep -qiE \
-        'usage.?limit|rate.?limit|quota.?exceeded|overloaded|too many requests|529|529 error'; then
+    if echo "$output" | grep -qiE "$LIMIT_PATTERN"; then
         return 2
     fi
 
-    if echo "$output" | grep -qiE \
-        'requires? (user )?approval|permission (required|denied)|not allowed to|tool.*not.*available|bash.*not.*permitted'; then
+    if echo "$output" | grep -qiE "$PERM_PATTERN"; then
         return 3
     fi
 
@@ -80,14 +97,42 @@ run_claude() {
     local tmpout
     tmpout=$(mktemp)
 
+    # Run in background so the monitoring loop can watch output in real time
     timeout "${MAX_RUNTIME_MINUTES}m" \
-        "$CLAUDE" --print "${extra_flags[@]}" "$prompt" \
-        2>&1 | tee -a "$LOG_FILE" > "$tmpout"
-    local pipe_exit=${PIPESTATUS[0]}
+        "$CLAUDE" --print "${extra_flags[@]+"${extra_flags[@]}"}" "$prompt" \
+        >"$tmpout" 2>&1 &
+    local bg_pid=$!
+
+    # Stream output to the run log as it arrives
+    tail -f "$tmpout" >>"$LOG_FILE" 2>/dev/null &
+    local tail_pid=$!
+
+    # Poll every 10 s; kill claude immediately if a usage-limit message appears
+    local kill_reason=""
+    while kill -0 "$bg_pid" 2>/dev/null; do
+        sleep 10
+        if grep -qiE "$LIMIT_PATTERN" "$tmpout" 2>/dev/null; then
+            log "Usage limit detected in output — terminating claude early"
+            kill "$bg_pid" 2>/dev/null || true
+            kill_reason="usage_limit"
+            break
+        fi
+    done
+
+    wait "$bg_pid" 2>/dev/null
+    local pipe_exit=$?
+
+    kill "$tail_pid" 2>/dev/null || true
+    wait "$tail_pid" 2>/dev/null || true
 
     local output
     output=$(cat "$tmpout")
     rm -f "$tmpout"
+
+    if [[ -n "$kill_reason" ]]; then
+        echo "$output"
+        return 2
+    fi
 
     if [[ $pipe_exit -eq 124 ]]; then
         log "claude timed out after ${MAX_RUNTIME_MINUTES} minutes"
@@ -145,6 +190,11 @@ fi
 
 log "Task ($QUEUE_REMAINING in queue): $PROMPT_LABEL"
 
+if [[ "$DESCRIBE_ONLY" == "true" ]]; then
+    echo "$PROMPT_LABEL"
+    exit 0
+fi
+
 # ── Build the prompt and choose fresh vs resume ───────────────────────────────
 EXTRA_FLAGS=()
 
@@ -172,7 +222,7 @@ fi
 # ── Execute ───────────────────────────────────────────────────────────────────
 log "Invoking claude (timeout ${MAX_RUNTIME_MINUTES}m) …"
 
-output=$(run_claude "$PROMPT" "${CLAUDE_FLAGS[@]}" "${TASK_FLAGS[@]}" "${EXTRA_FLAGS[@]}")
+output=$(run_claude "$PROMPT" ${CLAUDE_FLAGS[@]+"${CLAUDE_FLAGS[@]}"} ${TASK_FLAGS[@]+"${TASK_FLAGS[@]}"} ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"})
 claude_exit=$?
 
 log "claude exited with code $claude_exit"
