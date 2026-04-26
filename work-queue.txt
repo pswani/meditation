@@ -37,3 +37,11 @@
 - file: prompts/session-n-ios-tests-ci.md
   label: "iOS N: Tests, CI & Observability (I-M9, I-M11, I-M12, I-L5, I-L7)"
   flags: [--dangerously-skip-permissions]
+
+- file: prompts/session-o-cross-cutting-hygiene.md
+  label: "Repo Hygiene & Operational Fixes"
+  flags: [--dangerously-skip-permissions]
+
+- file: prompts/session-p-cross-cutting-ci-docs.md
+  label: "Cross-Cutting( CI Coverage, Dependency Scanning & Documentation)"
+  flags: [--dangerously-skip-permissions]
