@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -80,6 +81,7 @@ public class SessionLogService {
     );
   }
 
+  @CacheEvict(value = "summary", allEntries = true)
   public SessionLogResponse createManualSessionLog(ManualSessionLogCreateRequest request) {
     validateManualCreateRequest(request);
     String timerMode = normalizeManualTimerMode(request.timerMode());
@@ -125,6 +127,7 @@ public class SessionLogService {
     return toResponse(sessionLogRepository.save(entity));
   }
 
+  @CacheEvict(value = "summary", allEntries = true)
   public SyncMutationResult<SessionLogResponse> saveSessionLog(
       String sessionLogId,
       SessionLogUpsertRequest request,

@@ -2,6 +2,7 @@ package com.meditation.backend.sankalpa;
 
 import com.meditation.backend.sync.SyncRequestSupport;
 import com.meditation.backend.sync.SyncMutationResult;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,7 +33,7 @@ public class SankalpaController {
   @PutMapping("/{sankalpaId}")
   public ResponseEntity<SankalpaProgressResponse> saveSankalpa(
       @PathVariable String sankalpaId,
-      @RequestBody SankalpaGoalUpsertRequest request,
+      @Valid @RequestBody SankalpaGoalUpsertRequest request,
       @RequestParam(required = false) String timeZone,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {

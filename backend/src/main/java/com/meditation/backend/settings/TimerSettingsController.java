@@ -2,6 +2,7 @@ package com.meditation.backend.settings;
 
 import com.meditation.backend.sync.SyncRequestSupport;
 import com.meditation.backend.sync.SyncMutationResult;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,7 +28,7 @@ public class TimerSettingsController {
 
   @PutMapping
   public ResponseEntity<TimerSettingsResponse> saveTimerSettings(
-      @RequestBody TimerSettingsUpsertRequest request,
+      @Valid @RequestBody TimerSettingsUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     SyncMutationResult<TimerSettingsResponse> result = timerSettingsService.saveTimerSettings(request, syncQueuedAt);

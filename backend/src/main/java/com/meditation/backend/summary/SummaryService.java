@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +23,7 @@ public class SummaryService {
     this.sessionLogRepository = sessionLogRepository;
   }
 
+  @Cacheable(value = "summary", key = "#startAtRaw + '_' + #endAtRaw + '_' + #timeZoneRaw + '_' + #meditationTypeRaw + '_' + #sourceRaw")
   public SummaryResponse getSummary(
       String startAtRaw,
       String endAtRaw,

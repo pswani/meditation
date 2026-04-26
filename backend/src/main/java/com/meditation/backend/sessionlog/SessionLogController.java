@@ -2,6 +2,7 @@ package com.meditation.backend.sessionlog;
 
 import com.meditation.backend.sync.SyncRequestSupport;
 import com.meditation.backend.sync.SyncMutationResult;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,14 +37,14 @@ public class SessionLogController {
   }
 
   @PostMapping("/manual")
-  public SessionLogResponse createManualSessionLog(@RequestBody ManualSessionLogCreateRequest request) {
+  public SessionLogResponse createManualSessionLog(@Valid @RequestBody ManualSessionLogCreateRequest request) {
     return sessionLogService.createManualSessionLog(request);
   }
 
   @PutMapping("/{sessionLogId}")
   public ResponseEntity<SessionLogResponse> saveSessionLog(
       @PathVariable String sessionLogId,
-      @RequestBody SessionLogUpsertRequest request,
+      @Valid @RequestBody SessionLogUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     SyncMutationResult<SessionLogResponse> result = sessionLogService.saveSessionLog(sessionLogId, request, syncQueuedAt);

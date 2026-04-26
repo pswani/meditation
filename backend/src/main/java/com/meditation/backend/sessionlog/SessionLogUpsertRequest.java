@@ -1,5 +1,8 @@
 package com.meditation.backend.sessionlog;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PositiveOrZero;
+
 public record SessionLogUpsertRequest(
     String id,
     String startedAt,
@@ -7,13 +10,13 @@ public record SessionLogUpsertRequest(
     String meditationType,
     String timerMode,
     Integer intendedDurationSeconds,
-    int completedDurationSeconds,
+    @PositiveOrZero int completedDurationSeconds,
     String status,
     String source,
     String startSound,
     String endSound,
     boolean intervalEnabled,
-    int intervalMinutes,
+    @Min(0) int intervalMinutes,
     String intervalSound,
     String playlistId,
     String playlistName,

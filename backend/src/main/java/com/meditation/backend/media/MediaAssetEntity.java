@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "media_asset")
@@ -38,6 +39,7 @@ public class MediaAssetEntity {
   @Column(name = "active", nullable = false)
   private boolean active;
 
+  @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
 

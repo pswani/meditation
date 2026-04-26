@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: meditation-backend
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=50,expireAfterWrite=60s
   datasource:
     url: jdbc:h2:file:${MEDITATION_H2_DB_DIR:../local-data/h2}/${MEDITATION_H2_DB_NAME:meditation};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver

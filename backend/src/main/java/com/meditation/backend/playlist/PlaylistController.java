@@ -2,6 +2,7 @@ package com.meditation.backend.playlist;
 
 import com.meditation.backend.sync.SyncRequestSupport;
 import com.meditation.backend.sync.SyncMutationResult;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,7 +32,7 @@ public class PlaylistController {
   @PutMapping("/{playlistId}")
   public ResponseEntity<PlaylistResponse> savePlaylist(
       @PathVariable String playlistId,
-      @RequestBody PlaylistUpsertRequest request,
+      @Valid @RequestBody PlaylistUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     SyncMutationResult<PlaylistResponse> result = playlistService.savePlaylist(playlistId, request, syncQueuedAt);

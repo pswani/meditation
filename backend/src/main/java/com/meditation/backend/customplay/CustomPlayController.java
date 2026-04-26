@@ -2,6 +2,7 @@ package com.meditation.backend.customplay;
 
 import com.meditation.backend.sync.SyncRequestSupport;
 import com.meditation.backend.sync.SyncMutationResult;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,7 +32,7 @@ public class CustomPlayController {
   @PutMapping("/{customPlayId}")
   public ResponseEntity<CustomPlayResponse> saveCustomPlay(
       @PathVariable String customPlayId,
-      @RequestBody CustomPlayUpsertRequest request,
+      @Valid @RequestBody CustomPlayUpsertRequest request,
       @RequestHeader(name = SyncRequestSupport.SYNC_QUEUED_AT_HEADER, required = false) String syncQueuedAt
   ) {
     SyncMutationResult<CustomPlayResponse> result = customPlayService.saveCustomPlay(customPlayId, request, syncQueuedAt);
