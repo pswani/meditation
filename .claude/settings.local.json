@@ -54,7 +54,9 @@
       "Bash(curl -fsS http://127.0.0.1:8080/api/health)",
       "Bash(npm test *)",
       "Bash(npx tsc *)",
-      "Bash(git -C * log --oneline --all)"
+      "Bash(git -C * log --oneline --all)",
+      "Bash(.venv/bin/python -m claude_worker status --project meditation)",
+      "Bash(.venv/bin/python -m claude_worker status)"
     ]
   }
 }
