@@ -53,7 +53,8 @@
       "Bash(osascript *)",
       "Bash(curl -fsS http://127.0.0.1:8080/api/health)",
       "Bash(npm test *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git -C * log --oneline --all)"
     ]
   }
 }
