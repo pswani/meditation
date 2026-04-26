@@ -1,6 +1,7 @@
 package com.meditation.backend.config;
 
 import com.meditation.backend.sync.SyncClockSkewInterceptor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -23,6 +24,11 @@ public class WebConfig implements WebMvcConfigurer {
     this.syncClockSkewInterceptor = syncClockSkewInterceptor;
   }
 
+  @Bean
+  public RateLimitInterceptor rateLimitInterceptor() {
+    return new RateLimitInterceptor();
+  }
+
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     if (corsProperties.getAllowedOriginPatterns().isEmpty()) {
@@ -36,13 +42,15 @@ public class WebConfig implements WebMvcConfigurer {
         .allowedHeaders(
             "Content-Type",
             "X-Meditation-Sync-Queued-At",
-            "X-Requested-With"
+            "X-Requested-With",
+            "X-Idempotency-Key"
         );
   }
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(syncClockSkewInterceptor).addPathPatterns("/api/**");
+    registry.addInterceptor(rateLimitInterceptor()).addPathPatterns("/api/**");
   }
 
   @Override
