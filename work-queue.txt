@@ -11,8 +11,6 @@
 # Tasks run top-to-bottom. Completed tasks are removed automatically.
 # Add new tasks here; no script edits needed.
 
-Continue to complete the previous task as outlined in the prompts/session-d-issue-6-monster-file-splits.md
-
 Review the deployment architecture of the application and make recommendations if this is not the best setup to run on the mac
 
 Review the build scripts thoroughly.  Check if they follow the best practices? Are they good for this kind of application?  Do we need to redesign the scripts and rebuild?  Or would just making improvements would make them best in class?
