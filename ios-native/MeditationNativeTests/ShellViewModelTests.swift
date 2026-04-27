@@ -774,6 +774,16 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.snapshot.activeRuntime?.timerSession?.id, activeSession.id)
     }
 
+    @MainActor
+    func testShellViewModelDeallocates() throws {
+        weak var weakVM: ShellViewModel?
+        try autoreleasepool {
+            let (vm, _, _, _) = try makeViewModel()
+            weakVM = vm
+        }
+        XCTAssertNil(weakVM, "ShellViewModel should deallocate when no strong references remain")
+    }
+
     private func makeViewModel(
         snapshot: AppSnapshot = SampleData.snapshot,
         environment: AppEnvironment = .localOnly,

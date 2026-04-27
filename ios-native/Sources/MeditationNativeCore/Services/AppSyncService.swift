@@ -229,8 +229,12 @@ public struct LiveAppSyncClient: AppSyncClient {
     public init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        self.encoder = e
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        self.decoder = d
     }
 
     public func fetchRemoteState(localSnapshot: AppSnapshot, timeZoneIdentifier: String) async throws -> RemoteAppState {

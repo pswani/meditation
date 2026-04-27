@@ -21,6 +21,8 @@ public struct JSONFileStore<Value: Codable & Equatable & Sendable>: FileStore {
         self.encoder = encoder
         self.decoder = decoder
         self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        self.encoder.dateEncodingStrategy = .iso8601
+        self.decoder.dateDecodingStrategy = .iso8601
     }
 
     public func load() throws -> Value? {
