@@ -38,6 +38,7 @@ type AudioLikeConstructor = new (src: string) => AudioLike;
 export interface TimerSoundPlayer {
   prepare(labels: readonly string[]): void;
   play(label: string, cue: TimerSoundCue): Promise<TimerSoundPlaybackResult>;
+  dispose(): void;
 }
 
 class UnsupportedAudio {
@@ -150,6 +151,17 @@ export function createTimerSoundPlayer(
 
         primingByLabel.set(label, primingPromise);
       }
+    },
+    dispose() {
+      for (const audio of audioByLabel.values()) {
+        audio.pause?.();
+        if ('src' in audio) {
+          (audio as HTMLAudioElement).src = '';
+          (audio as HTMLAudioElement).load?.();
+        }
+      }
+      audioByLabel.clear();
+      primingByLabel.clear();
     },
     async play(label, cue) {
       if (label === SILENT_TIMER_SOUND_LABEL) {

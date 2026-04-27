@@ -316,6 +316,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
 
     return () => {
       isTimerProviderMountedRef.current = false;
+      timerSoundPlayerRef.current.dispose();
     };
   }, []);
 
@@ -472,6 +473,9 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
             syncTimerClockAndSessionState('scheduled-completion');
           }, completionDelayMs);
 
+    // Both visibilitychange and pageshow can fire within the same event loop turn
+    // (e.g. alt-tab back). shouldRunForegroundCatchUp uses a 750ms coalesce window
+    // to prevent duplicate completion passes from rapid back-to-back events.
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         runForegroundCatchUp();

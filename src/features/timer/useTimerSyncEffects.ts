@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { CustomPlay } from '../../types/customPlay';
 import type { Playlist } from '../../types/playlist';
@@ -44,6 +44,7 @@ import { areCustomPlaysEqual } from '../../utils/customPlay';
 import { arePlaylistsEqual } from '../../utils/playlist';
 import { areSessionLogsEqual } from '../../utils/sessionLog';
 import { buildHydrationEffect } from './useCollectionHydrator';
+import { createConcurrencyLimiter } from '../../utils/concurrency';
 
 export interface TimerSyncRefs {
   readonly latestSessionLogsRef: MutableRefObject<readonly SessionLog[]>;
@@ -124,53 +125,51 @@ export function useTimerSyncEffects({
   setIsSettingsSyncing,
   setSettingsSyncError,
 }: UseTimerSyncEffectsArgs) {
+  // Limit boot-time collection hydrations to 2 concurrent API calls (W-M8).
+  // Timer-settings and playlists are registered first so they always acquire a slot
+  // synchronously — tests that resolve their fetch Promises synchronously depend on this.
+  const hydrationLimiterRef = useRef(createConcurrencyLimiter(2));
+
   useEffect(
     buildHydrationEffect({
-      entityTypes: ['custom-play'],
+      entityTypes: ['timer-settings'],
       connectionMode,
       canAttemptBackendSync,
       latestSyncQueueRef: refs.latestSyncQueueRef,
-      completedKeyRef: refs.completedCustomPlayHydrationKeyRef,
-      inFlightKeyRef: refs.inFlightCustomPlayHydrationKeyRef,
-      setIsLoading: setIsCustomPlaysLoading,
+      completedKeyRef: refs.completedTimerSettingsHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightTimerSettingsHydrationKeyRef,
+      setIsLoading: setIsSettingsLoading,
       onOffline: () => {
-        setCustomPlaySyncError(buildOfflineCacheMessage(connectionMode, 'custom plays', bootstrap.customPlays.length > 0));
-        setIsCustomPlaySyncing(false);
+        refs.lastPersistedTimerSettingsRef.current = bootstrap.settings;
+        setSettingsSyncError(
+          connectionMode === 'backend-unreachable'
+            ? 'Using locally saved timer settings because the backend is unavailable right now.'
+            : 'Using locally saved timer settings while you are offline.'
+        );
+        refs.remoteSettingsHydratedRef.current = true;
       },
-      onFetch: async (queuedCustomPlayEntries, isCancelled) => {
-        const remoteCustomPlays = await listCustomPlaysFromApi();
+      onFetch: async (queuedTimerSettingsEntries, isCancelled) => {
+        const remoteSettings = await loadTimerSettingsFromApi();
         if (isCancelled()) return;
 
-        const reconciliation = reconcileQueueBackedCollection({
-          remoteEntries: remoteCustomPlays,
-          localEntries: refs.latestCustomPlaysRef.current,
-          queuedEntries: queuedCustomPlayEntries,
-          deletedRecordIds: refs.deletedCustomPlayIdsRef.current,
-          syncedRecordIds: refs.syncedCustomPlayIdsRef.current,
-          mergeEntries: mergeCustomPlays,
-        });
+        refs.lastPersistedTimerSettingsRef.current = remoteSettings;
 
-        for (const remotePlay of reconciliation.filteredRemoteEntries) {
-          refs.syncedCustomPlayIdsRef.current.add(remotePlay.id);
-        }
-
-        if (reconciliation.missingLocalEntries.length > 0) {
-          for (const customPlay of reconciliation.missingLocalEntries) {
-            mergeQueueEntry(updateQueue, {
-              entityType: 'custom-play',
-              operation: 'upsert',
-              recordId: customPlay.id,
-              payload: customPlay,
-            });
+        if (queuedTimerSettingsEntries.length > 0) {
+          refs.lastPersistedTimerSettingsRef.current = remoteSettings;
+          const latestQueuedEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
+          const queuedSettings = applyQueuedTimerSettings(refs.latestTimerSettingsRef.current, queuedTimerSettingsEntries);
+          if (latestQueuedEntry && !areTimerSettingsEqual(latestQueuedEntry.payload as TimerSettings, queuedSettings)) {
+            replaceQueueEntryPayload(updateQueue, latestQueuedEntry.id, queuedSettings);
           }
+          if (!areTimerSettingsEqual(queuedSettings, refs.latestTimerSettingsRef.current)) {
+            dispatch({ type: 'SET_SETTINGS', payload: queuedSettings });
+          }
+        } else if (!areTimerSettingsEqual(remoteSettings, refs.latestTimerSettingsRef.current)) {
+          dispatch({ type: 'SET_SETTINGS', payload: remoteSettings });
         }
 
-        if (!areOrderedCollectionsEqual(reconciliation.nextEntries, refs.latestCustomPlaysRef.current, areCustomPlaysEqual)) {
-          setCustomPlays(reconciliation.nextEntries);
-        }
-
-        if (!queuedCustomPlayEntries.some((entry) => entry.state === 'failed')) {
-          setCustomPlaySyncError(null);
+        if (!queuedTimerSettingsEntries.some((entry) => entry.state === 'failed')) {
+          setSettingsSyncError(null);
         }
         reportBackendReachable();
       },
@@ -178,25 +177,26 @@ export function useTimerSyncEffects({
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-        setCustomPlaySyncError(
-          `${formatApiErrorMessage(error, 'Custom play loading failed.')} Showing the local custom play cache instead.`
+        refs.lastPersistedTimerSettingsRef.current = refs.latestTimerSettingsRef.current;
+        setSettingsSyncError(
+          `${formatApiErrorMessage(error, 'Timer settings could not load from the backend.')} Using the local timer settings cache for now.`
         );
       },
       onCompleted: () => {
-        setIsCustomPlaySyncing(false);
+        refs.remoteSettingsHydratedRef.current = true;
       },
+      concurrencyLimiter: hydrationLimiterRef.current,
     }),
     [
-      bootstrap.customPlays,
+      bootstrap.settings,
       canAttemptBackendSync,
       connectionMode,
+      dispatch,
       refs,
       reportBackendReachable,
       reportBackendUnreachable,
-      setCustomPlays,
-      setCustomPlaySyncError,
-      setIsCustomPlaysLoading,
-      setIsCustomPlaySyncing,
+      setIsSettingsLoading,
+      setSettingsSyncError,
       updateQueue,
     ]
   );
@@ -262,6 +262,7 @@ export function useTimerSyncEffects({
       onCompleted: () => {
         setIsPlaylistSyncing(false);
       },
+      concurrencyLimiter: hydrationLimiterRef.current,
     }),
     [
       bootstrap.playlists,
@@ -321,6 +322,7 @@ export function useTimerSyncEffects({
       onCompleted: () => {
         refs.remoteSessionLogsHydratedRef.current = true;
       },
+      concurrencyLimiter: hydrationLimiterRef.current,
     }),
     [
       bootstrap.sessionLogs,
@@ -337,44 +339,51 @@ export function useTimerSyncEffects({
 
   useEffect(
     buildHydrationEffect({
-      entityTypes: ['timer-settings'],
+      entityTypes: ['custom-play'],
       connectionMode,
       canAttemptBackendSync,
       latestSyncQueueRef: refs.latestSyncQueueRef,
-      completedKeyRef: refs.completedTimerSettingsHydrationKeyRef,
-      inFlightKeyRef: refs.inFlightTimerSettingsHydrationKeyRef,
-      setIsLoading: setIsSettingsLoading,
+      completedKeyRef: refs.completedCustomPlayHydrationKeyRef,
+      inFlightKeyRef: refs.inFlightCustomPlayHydrationKeyRef,
+      setIsLoading: setIsCustomPlaysLoading,
       onOffline: () => {
-        refs.lastPersistedTimerSettingsRef.current = bootstrap.settings;
-        setSettingsSyncError(
-          connectionMode === 'backend-unreachable'
-            ? 'Using locally saved timer settings because the backend is unavailable right now.'
-            : 'Using locally saved timer settings while you are offline.'
-        );
-        refs.remoteSettingsHydratedRef.current = true;
+        setCustomPlaySyncError(buildOfflineCacheMessage(connectionMode, 'custom plays', bootstrap.customPlays.length > 0));
+        setIsCustomPlaySyncing(false);
       },
-      onFetch: async (queuedTimerSettingsEntries, isCancelled) => {
-        const remoteSettings = await loadTimerSettingsFromApi();
+      onFetch: async (queuedCustomPlayEntries, isCancelled) => {
+        const remoteCustomPlays = await listCustomPlaysFromApi();
         if (isCancelled()) return;
 
-        refs.lastPersistedTimerSettingsRef.current = remoteSettings;
+        const reconciliation = reconcileQueueBackedCollection({
+          remoteEntries: remoteCustomPlays,
+          localEntries: refs.latestCustomPlaysRef.current,
+          queuedEntries: queuedCustomPlayEntries,
+          deletedRecordIds: refs.deletedCustomPlayIdsRef.current,
+          syncedRecordIds: refs.syncedCustomPlayIdsRef.current,
+          mergeEntries: mergeCustomPlays,
+        });
 
-        if (queuedTimerSettingsEntries.length > 0) {
-          refs.lastPersistedTimerSettingsRef.current = remoteSettings;
-          const latestQueuedEntry = selectLatestQueuedTimerSettingsEntry(queuedTimerSettingsEntries);
-          const queuedSettings = applyQueuedTimerSettings(refs.latestTimerSettingsRef.current, queuedTimerSettingsEntries);
-          if (latestQueuedEntry && !areTimerSettingsEqual(latestQueuedEntry.payload as TimerSettings, queuedSettings)) {
-            replaceQueueEntryPayload(updateQueue, latestQueuedEntry.id, queuedSettings);
-          }
-          if (!areTimerSettingsEqual(queuedSettings, refs.latestTimerSettingsRef.current)) {
-            dispatch({ type: 'SET_SETTINGS', payload: queuedSettings });
-          }
-        } else if (!areTimerSettingsEqual(remoteSettings, refs.latestTimerSettingsRef.current)) {
-          dispatch({ type: 'SET_SETTINGS', payload: remoteSettings });
+        for (const remotePlay of reconciliation.filteredRemoteEntries) {
+          refs.syncedCustomPlayIdsRef.current.add(remotePlay.id);
         }
 
-        if (!queuedTimerSettingsEntries.some((entry) => entry.state === 'failed')) {
-          setSettingsSyncError(null);
+        if (reconciliation.missingLocalEntries.length > 0) {
+          for (const customPlay of reconciliation.missingLocalEntries) {
+            mergeQueueEntry(updateQueue, {
+              entityType: 'custom-play',
+              operation: 'upsert',
+              recordId: customPlay.id,
+              payload: customPlay,
+            });
+          }
+        }
+
+        if (!areOrderedCollectionsEqual(reconciliation.nextEntries, refs.latestCustomPlaysRef.current, areCustomPlaysEqual)) {
+          setCustomPlays(reconciliation.nextEntries);
+        }
+
+        if (!queuedCustomPlayEntries.some((entry) => entry.state === 'failed')) {
+          setCustomPlaySyncError(null);
         }
         reportBackendReachable();
       },
@@ -382,25 +391,26 @@ export function useTimerSyncEffects({
         if (isBackendReachabilityError(error)) {
           reportBackendUnreachable(error);
         }
-        refs.lastPersistedTimerSettingsRef.current = refs.latestTimerSettingsRef.current;
-        setSettingsSyncError(
-          `${formatApiErrorMessage(error, 'Timer settings could not load from the backend.')} Using the local timer settings cache for now.`
+        setCustomPlaySyncError(
+          `${formatApiErrorMessage(error, 'Custom play loading failed.')} Showing the local custom play cache instead.`
         );
       },
       onCompleted: () => {
-        refs.remoteSettingsHydratedRef.current = true;
+        setIsCustomPlaySyncing(false);
       },
+      concurrencyLimiter: hydrationLimiterRef.current,
     }),
     [
-      bootstrap.settings,
+      bootstrap.customPlays,
       canAttemptBackendSync,
       connectionMode,
-      dispatch,
       refs,
       reportBackendReachable,
       reportBackendUnreachable,
-      setIsSettingsLoading,
-      setSettingsSyncError,
+      setCustomPlays,
+      setCustomPlaySyncError,
+      setIsCustomPlaysLoading,
+      setIsCustomPlaySyncing,
       updateQueue,
     ]
   );

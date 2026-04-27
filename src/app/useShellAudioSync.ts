@@ -17,9 +17,10 @@ export function useCustomPlayAudioSync({
   reportCustomPlayRuntimeIssue,
 }: UseCustomPlayAudioSyncOptions) {
   useEffect(() => {
+    let cancelled = false;
     const audio = audioRef.current;
     if (!audio) {
-      return;
+      return () => { cancelled = true; };
     }
 
     if (!activeCustomPlayRun) {
@@ -32,7 +33,7 @@ export function useCustomPlayAudioSync({
         audio.removeAttribute('src');
         audio.load();
       }
-      return;
+      return () => { cancelled = true; };
     }
 
     if (audio.src !== new URL(activeCustomPlayRun.mediaFilePath, window.location.origin).toString()) {
@@ -55,17 +56,19 @@ export function useCustomPlayAudioSync({
       } catch {
         // JSDOM does not implement media playback.
       }
-      return;
+      return () => { cancelled = true; };
     }
 
     void audio
       .play()
       .then(() => {
-        reportCustomPlayRuntimeIssue(null);
+        if (!cancelled) reportCustomPlayRuntimeIssue(null);
       })
       .catch((error) => {
-        reportCustomPlayRuntimeIssue(buildCustomPlayMediaMessage(error));
+        if (!cancelled) reportCustomPlayRuntimeIssue(buildCustomPlayMediaMessage(error));
       });
+
+    return () => { cancelled = true; };
   }, [activeCustomPlayRun, audioRef, reportCustomPlayRuntimeIssue]);
 
   useEffect(() => {
@@ -93,9 +96,10 @@ export function usePlaylistAudioSync({
   reportPlaylistRuntimeIssue,
 }: UsePlaylistAudioSyncOptions) {
   useEffect(() => {
+    let cancelled = false;
     const audio = audioRef.current;
     if (!audio) {
-      return;
+      return () => { cancelled = true; };
     }
 
     if (!activePlaylistAudioItem || !activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
@@ -108,12 +112,12 @@ export function usePlaylistAudioSync({
         audio.removeAttribute('src');
         audio.load();
       }
-      return;
+      return () => { cancelled = true; };
     }
 
     if (!activePlaylistAudioItem.mediaFilePath) {
       reportPlaylistRuntimeIssue('The linked playlist recording is missing its media path.');
-      return;
+      return () => { cancelled = true; };
     }
 
     if (audio.src !== new URL(activePlaylistAudioItem.mediaFilePath, window.location.origin).toString()) {
@@ -136,17 +140,19 @@ export function usePlaylistAudioSync({
       } catch {
         // JSDOM does not implement media playback.
       }
-      return;
+      return () => { cancelled = true; };
     }
 
     void audio
       .play()
       .then(() => {
-        reportPlaylistRuntimeIssue(null);
+        if (!cancelled) reportPlaylistRuntimeIssue(null);
       })
       .catch((error) => {
-        reportPlaylistRuntimeIssue(buildPlaylistMediaMessage(error));
+        if (!cancelled) reportPlaylistRuntimeIssue(buildPlaylistMediaMessage(error));
       });
+
+    return () => { cancelled = true; };
   }, [activePlaylistAudioItem, activePlaylistRun, audioRef, isPlaylistRunPaused, reportPlaylistRuntimeIssue]);
 
   useEffect(() => {

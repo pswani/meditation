@@ -12,6 +12,8 @@ import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/p
 import { removeDeadLetterSyncQueueEntries } from '../utils/syncQueue';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
+const MAX_AUDIO_RETRIES = 3;
+
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,6 +30,7 @@ export default function AppShell() {
     isPlaylistRunPaused,
     updatePlaylistRunProgress,
     completePlaylistRunCurrentItem,
+    endPlaylistRunEarly,
     reportPlaylistRuntimeIssue,
   } = usePlaylistRuntime();
   const {
@@ -51,6 +54,8 @@ export default function AppShell() {
   const showActivePlaylistBanner = location.pathname !== '/practice/playlists/active';
   const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
   const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
+  const customPlayAudioErrorCountRef = useRef(0);
+  const playlistAudioErrorCountRef = useRef(0);
   const activePlaylistItem = getPlaylistRunCurrentItem(activePlaylistRun);
   const activePlaylistAudioItem =
     activePlaylistRun?.currentSegment.phase === 'item' &&
@@ -58,6 +63,36 @@ export default function AppShell() {
     isAudioBackedPlaylistItem(activePlaylistItem)
       ? activePlaylistItem
       : null;
+
+  // Release audio resources on unmount (W-H9)
+  useEffect(() => {
+    return () => {
+      const customPlayAudio = customPlayAudioRef.current;
+      if (customPlayAudio) {
+        customPlayAudio.pause();
+        customPlayAudio.src = '';
+        customPlayAudio.load();
+      }
+      const playlistAudio = playlistAudioRef.current;
+      if (playlistAudio) {
+        playlistAudio.pause();
+        playlistAudio.src = '';
+        playlistAudio.load();
+      }
+    };
+  }, []);
+
+  // Pause audio and end the run when the active playlist item is deleted mid-playback (W-M2)
+  const prevPlaylistItemRef = useRef(activePlaylistItem);
+  useEffect(() => {
+    const prev = prevPlaylistItemRef.current;
+    prevPlaylistItemRef.current = activePlaylistItem;
+
+    if (prev !== null && activePlaylistItem === null && activePlaylistRun !== null) {
+      playlistAudioRef.current?.pause();
+      endPlaylistRunEarly();
+    }
+  }, [activePlaylistItem, activePlaylistRun, endPlaylistRunEarly]);
 
   useCustomPlayAudioSync({
     audioRef: customPlayAudioRef,
@@ -136,6 +171,7 @@ export default function AppShell() {
           ref={customPlayAudioRef}
           style={{ display: 'none' }}
           onLoadedMetadata={() => {
+            customPlayAudioErrorCountRef.current = 0;
             const audio = customPlayAudioRef.current;
             if (!audio || !activeCustomPlayRun) {
               return;
@@ -162,7 +198,19 @@ export default function AppShell() {
             completeCustomPlayRun(audio?.duration || audio?.currentTime || activeCustomPlayRun?.durationSeconds || 0);
           }}
           onError={() => {
-            reportCustomPlayRuntimeIssue('The linked recording could not be loaded right now.');
+            if (customPlayAudioErrorCountRef.current < MAX_AUDIO_RETRIES) {
+              customPlayAudioErrorCountRef.current++;
+              setTimeout(() => {
+                const audio = customPlayAudioRef.current;
+                if (audio) {
+                  audio.load();
+                  audio.play().catch(() => {});
+                }
+              }, 2000);
+            } else {
+              customPlayAudioErrorCountRef.current = 0;
+              reportCustomPlayRuntimeIssue('The linked recording could not be loaded right now.');
+            }
           }}
         />
 
@@ -170,6 +218,7 @@ export default function AppShell() {
           ref={playlistAudioRef}
           style={{ display: 'none' }}
           onLoadedMetadata={() => {
+            playlistAudioErrorCountRef.current = 0;
             const audio = playlistAudioRef.current;
             if (!audio || !activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
               return;
@@ -196,7 +245,19 @@ export default function AppShell() {
             completePlaylistRunCurrentItem(audio?.duration || audio?.currentTime || 0);
           }}
           onError={() => {
-            reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded right now.');
+            if (playlistAudioErrorCountRef.current < MAX_AUDIO_RETRIES) {
+              playlistAudioErrorCountRef.current++;
+              setTimeout(() => {
+                const audio = playlistAudioRef.current;
+                if (audio) {
+                  audio.load();
+                  audio.play().catch(() => {});
+                }
+              }, 2000);
+            } else {
+              playlistAudioErrorCountRef.current = 0;
+              reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded right now.');
+            }
           }}
         />
 

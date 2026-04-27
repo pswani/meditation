@@ -2,6 +2,7 @@ import type { EffectCallback, MutableRefObject } from 'react';
 import type { SyncEntityType, SyncQueueEntry } from '../../types/sync';
 import type { SyncConnectionMode } from '../sync/syncContextObject';
 import { selectSyncQueueEntries } from '../../utils/syncQueue';
+import type { ConcurrencyLimiter } from '../../utils/concurrency';
 import { buildQueueHydrationSignature } from './queueCollectionSync';
 
 export interface CollectionHydrationOptions {
@@ -16,6 +17,7 @@ export interface CollectionHydrationOptions {
   readonly onFetch: (queuedEntries: readonly SyncQueueEntry[], isCancelled: () => boolean) => Promise<void>;
   readonly onError: (error: unknown) => void;
   readonly onCompleted?: () => void;
+  readonly concurrencyLimiter?: ConcurrencyLimiter;
 }
 
 /**
@@ -51,13 +53,24 @@ export function buildHydrationEffect(options: CollectionHydrationOptions): Effec
         return;
       }
 
+      let releaseSlot: (() => void) | undefined;
       try {
+        if (options.concurrencyLimiter) {
+          const immediate = options.concurrencyLimiter.tryAcquire();
+          if (immediate !== null) {
+            releaseSlot = immediate;
+          } else {
+            releaseSlot = await options.concurrencyLimiter.acquire();
+            if (cancelled) return;
+          }
+        }
         await options.onFetch(queuedEntries, () => cancelled);
       } catch (error) {
         if (!cancelled) {
           options.onError(error);
         }
       } finally {
+        releaseSlot?.();
         if (!cancelled) {
           options.completedKeyRef.current = hydrationKey;
           options.onCompleted?.();

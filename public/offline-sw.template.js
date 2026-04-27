@@ -1,6 +1,6 @@
 // Version is injected at build time by the inject-sw-version Vite plugin.
 // Do not edit offline-sw.js directly — edit this template instead.
-const CACHE_VERSION = "81e866de21f5";
+const CACHE_VERSION = __SW_CACHE_VERSION__;
 const APP_SHELL_CACHE = `meditation-app-shell-${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `meditation-static-assets-${CACHE_VERSION}`;
 const MEDIA_ASSET_CACHE = `meditation-media-assets-${CACHE_VERSION}`;
