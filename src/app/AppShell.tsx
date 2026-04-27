@@ -167,9 +167,10 @@ export default function AppShell() {
           <Outlet />
         </main>
 
+        <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
         <audio
           ref={customPlayAudioRef}
-          style={{ display: 'none' }}
+          controls
           onLoadedMetadata={() => {
             customPlayAudioErrorCountRef.current = 0;
             const audio = customPlayAudioRef.current;
@@ -213,10 +214,12 @@ export default function AppShell() {
             }
           }}
         />
+        </div>
 
+        <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
         <audio
           ref={playlistAudioRef}
-          style={{ display: 'none' }}
+          controls
           onLoadedMetadata={() => {
             playlistAudioErrorCountRef.current = 0;
             const audio = playlistAudioRef.current;
@@ -260,6 +263,7 @@ export default function AppShell() {
             }
           }}
         />
+        </div>
 
         <nav className="bottom-nav" aria-label="Bottom navigation">
           {primaryNavItems.map((item) => (

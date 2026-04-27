@@ -26,21 +26,25 @@ function walkFiles(entryPath: string): string[] {
     .flatMap((child) => walkFiles(path.join(entryPath, child)));
 }
 
+// If MEDITATION_APP_ASSET_VERSION is set (e.g. in CI), the hash below is bypassed entirely.
 function createAppAssetVersion(): string {
   const hash = crypto.createHash('sha256');
-  // Exclude the generated offline-sw.js (produced by inject-sw-version plugin from the template).
   const generatedSwPath = path.join(rootDir, 'public/offline-sw.js');
-  const versionInputs = ['index.html', 'package.json', 'src', 'public']
+
+  // Sort relative paths before hashing so the result is identical on macOS and Linux
+  // regardless of filesystem readdir order or locale-specific collation.
+  const sortedRelativePaths = ['index.html', 'package.json', 'src', 'public']
     .map((candidate) => path.join(rootDir, candidate))
     .filter((candidate) => fs.existsSync(candidate))
     .flatMap((candidate) => walkFiles(candidate))
-    .filter((filePath) => filePath !== generatedSwPath);
+    .filter((filePath) => filePath !== generatedSwPath)
+    .map((filePath) => path.relative(rootDir, filePath))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
-  for (const filePath of versionInputs) {
-    const relativePath = path.relative(rootDir, filePath);
+  for (const relativePath of sortedRelativePaths) {
     hash.update(relativePath);
     hash.update('\0');
-    hash.update(fs.readFileSync(filePath));
+    hash.update(fs.readFileSync(path.join(rootDir, relativePath)));
     hash.update('\0');
   }
 

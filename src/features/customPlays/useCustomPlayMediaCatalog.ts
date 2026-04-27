@@ -3,7 +3,9 @@ import type { MediaAssetMetadata } from '../../types/mediaAsset';
 import type { MediaAssetCatalogIssue, MediaAssetCatalogSource } from '../../utils/mediaAssetApi';
 import { loadCustomPlayMediaAssets } from '../../utils/mediaAssetApi';
 
-export function useCustomPlayMediaCatalog() {
+// refreshVersion can be incremented by the caller to re-fetch the catalog after a
+// custom play save or delete — ensures the recording list stays current without a full reload.
+export function useCustomPlayMediaCatalog(refreshVersion = 0) {
   const [mediaAssets, setMediaAssets] = useState<MediaAssetMetadata[]>([]);
   const [mediaCatalogSource, setMediaCatalogSource] = useState<MediaAssetCatalogSource>('sample-fallback');
   const [isMediaCatalogLoading, setIsMediaCatalogLoading] = useState(true);
@@ -37,7 +39,7 @@ export function useCustomPlayMediaCatalog() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [refreshVersion]);
 
   return {
     mediaAssets,

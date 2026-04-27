@@ -768,6 +768,8 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
     [activeCustomPlayRun]
   );
 
+  const recentLogs = useMemo(() => state.sessionLogs.slice(0, 20), [state.sessionLogs]);
+
   const value = useMemo<TimerContextValue>(
     () => ({
       settings: state.settings,
@@ -775,7 +777,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       activeSession: state.activeSession,
       lastOutcome: state.lastOutcome,
       sessionLogs: state.sessionLogs,
-      recentLogs: state.sessionLogs.slice(0, 20),
+      recentLogs,
       customPlays,
       playlists,
       lastUsedMeditation,
@@ -960,7 +962,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
           recordingLabel: play.recordingLabel,
           mediaAssetId: mediaAsset.id,
           mediaLabel: mediaAsset.label,
-          mediaFilePath: mediaAsset.filePath,
+          mediaFilePath: `${mediaAsset.filePath}?v=${encodeURIComponent(mediaAsset.updatedAt)}`,
           durationSeconds: mediaAsset.durationSeconds,
           startedAt,
           startedAtMs: nowMs,
@@ -1374,6 +1376,7 @@ export function TimerProvider({ children }: { readonly children: ReactNode }) {
       playlistRunOutcome,
       playlists,
       playlistSyncError,
+      recentLogs,
       recoveryMessage,
       sessionLogSyncError,
       settingsSyncError,

@@ -1,4 +1,6 @@
 import type { TimerSettings } from '../types/timer';
+import { timerSettingsSchema } from '../api/schemas/timerSettingsSchema';
+import { validateApiContract } from '../api/schemas/validateContract';
 import { requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import { buildSyncMutationHeaders, type SyncMutationRequestOptions } from './syncApi';
@@ -43,6 +45,7 @@ function isTimerSettingsApiResponse(value: unknown): value is TimerSettingsApiRe
 }
 
 function normalizeTimerSettingsPayload(payload: unknown): TimerSettings {
+  validateApiContract(timerSettingsSchema, payload, 'TimerSettings');
   if (!isTimerSettingsApiResponse(payload)) {
     throw new Error('Timer settings response is invalid.');
   }

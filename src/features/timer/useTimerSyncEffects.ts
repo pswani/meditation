@@ -294,7 +294,7 @@ export function useTimerSyncEffects({
         refs.remoteSessionLogsHydratedRef.current = true;
       },
       onFetch: async (queuedSessionLogEntries, isCancelled) => {
-        const remoteSessionLogs = (await listSessionLogsFromApi()).items;
+        const remoteSessionLogs = (await listSessionLogsFromApi({ size: 500 })).items;
         if (isCancelled()) return;
 
         refs.syncedSessionLogIdsRef.current = new Set(remoteSessionLogs.map((entry) => entry.id));

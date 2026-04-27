@@ -79,7 +79,7 @@ export function buildPlaylistRuntimeItems(
       customPlayRecordingLabel: customPlay.recordingLabel || undefined,
       mediaAssetId: mediaAsset.id,
       mediaLabel: mediaAsset.label,
-      mediaFilePath: mediaAsset.filePath,
+      mediaFilePath: `${mediaAsset.filePath}?v=${encodeURIComponent(mediaAsset.updatedAt)}`,
       startSound: customPlay.startSound,
       endSound: customPlay.endSound,
     });
