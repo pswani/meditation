@@ -21,6 +21,7 @@ import {
   isValidIsoDate,
   normalizePlaylistItem,
 } from './shared';
+import { safeSetItem } from './safeSetItem';
 
 interface StoredActivePlaylistRunState {
   readonly activePlaylistRun: ActivePlaylistRun;
@@ -190,7 +191,7 @@ export function saveActiveTimerState(activeSession: ActiveSession | null): void 
     return;
   }
 
-  localStorage.setItem(ACTIVE_TIMER_STATE_KEY, JSON.stringify(normalizePersistedActiveSession(activeSession)));
+  safeSetItem(ACTIVE_TIMER_STATE_KEY, JSON.stringify(normalizePersistedActiveSession(activeSession)));
 }
 
 export function loadActiveCustomPlayRunState(): ActiveCustomPlayRun | null {
@@ -213,7 +214,7 @@ export function saveActiveCustomPlayRunState(activeCustomPlayRun: ActiveCustomPl
     return;
   }
 
-  localStorage.setItem(ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY, JSON.stringify(activeCustomPlayRun));
+  safeSetItem(ACTIVE_CUSTOM_PLAY_RUN_STATE_KEY, JSON.stringify(activeCustomPlayRun));
 }
 
 export function loadActivePlaylistRunState(): StoredActivePlaylistRunState | null {
@@ -248,7 +249,7 @@ export function saveActivePlaylistRunState(activePlaylistRun: ActivePlaylistRun 
     return;
   }
 
-  localStorage.setItem(
+  safeSetItem(
     ACTIVE_PLAYLIST_RUN_STATE_KEY,
     JSON.stringify({
       activePlaylistRun,

@@ -1,2 +1,2 @@
-NEEDS_RESUME=false
-ABORT_REASON=
+NEEDS_RESUME=true
+ABORT_REASON=usage_limit

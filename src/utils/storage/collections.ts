@@ -9,6 +9,8 @@ import {
   normalizePlaylist,
   normalizeSankalpa,
 } from './shared';
+import { safeSetItem } from './safeSetItem';
+import { evictOldSessionLogs } from './sessionLogs';
 
 export function loadCustomPlays(): CustomPlay[] {
   const raw = localStorage.getItem(CUSTOM_PLAYS_KEY);
@@ -25,7 +27,10 @@ export function loadCustomPlays(): CustomPlay[] {
 }
 
 export function saveCustomPlays(customPlays: readonly CustomPlay[]): void {
-  localStorage.setItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays));
+  if (safeSetItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays)) === 'quota-exceeded') {
+    evictOldSessionLogs();
+    safeSetItem(CUSTOM_PLAYS_KEY, JSON.stringify(customPlays));
+  }
 }
 
 export function loadPlaylists(): Playlist[] {
@@ -43,7 +48,10 @@ export function loadPlaylists(): Playlist[] {
 }
 
 export function savePlaylists(playlists: readonly Playlist[]): void {
-  localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
+  if (safeSetItem(PLAYLISTS_KEY, JSON.stringify(playlists)) === 'quota-exceeded') {
+    evictOldSessionLogs();
+    safeSetItem(PLAYLISTS_KEY, JSON.stringify(playlists));
+  }
 }
 
 export function loadSankalpas(): SankalpaGoal[] {
@@ -61,5 +69,8 @@ export function loadSankalpas(): SankalpaGoal[] {
 }
 
 export function saveSankalpas(sankalpas: readonly SankalpaGoal[]): void {
-  localStorage.setItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
+  if (safeSetItem(SANKALPAS_KEY, JSON.stringify(sankalpas)) === 'quota-exceeded') {
+    evictOldSessionLogs();
+    safeSetItem(SANKALPAS_KEY, JSON.stringify(sankalpas));
+  }
 }

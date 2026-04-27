@@ -1,6 +1,14 @@
-import type { SyncEntityType, SyncOperation, SyncQueueEntry, SyncQueueSummary } from '../types/sync';
+import type { SyncEntityType, SyncOperation, SyncQueueEntry, SyncQueueEntryState, SyncQueueSummary } from '../types/sync';
+import { safeSetItem } from './storage/safeSetItem';
 
 export const SYNC_QUEUE_STORAGE_KEY = 'meditation.syncQueue.v1';
+
+export const MAX_SYNC_RETRIES = 5;
+
+export function syncRetryDelayMs(retryCount: number): number {
+  const base = Math.min(15_000 * Math.pow(2, retryCount), 300_000);
+  return Math.floor(base * (0.8 + Math.random() * 0.4));
+}
 
 /**
  * In-flight entries older than this threshold are demoted to pending on queue load.
@@ -40,8 +48,8 @@ function isSyncOperation(value: unknown): value is SyncOperation {
   return value === 'upsert' || value === 'delete';
 }
 
-function isSyncQueueEntryState(value: unknown): value is SyncQueueEntry['state'] {
-  return value === 'pending' || value === 'in-flight' || value === 'failed';
+function isSyncQueueEntryState(value: unknown): value is SyncQueueEntryState {
+  return value === 'pending' || value === 'in-flight' || value === 'failed' || value === 'dead-letter';
 }
 
 function isSyncQueueEntry(value: unknown): value is SyncQueueEntry {
@@ -71,8 +79,16 @@ function createQueueId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-
-  return `sync-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Last-resort fallback for environments without crypto (extremely old browsers)
+  let counter = (createQueueId as unknown as { _counter?: number })._counter ?? 0;
+  counter += 1;
+  (createQueueId as unknown as { _counter?: number })._counter = counter;
+  return `sync-${Date.now()}-${counter}`;
 }
 
 function sortSyncQueueEntries(queue: readonly SyncQueueEntry[]): SyncQueueEntry[] {
@@ -91,7 +107,7 @@ function normalizeHydratedQueue(
       const lastAttemptMs = entry.lastAttemptAt ? Date.parse(entry.lastAttemptAt) : null;
       const isStalled =
         lastAttemptMs === null || nowMs - lastAttemptMs > STALLED_INFLIGHT_THRESHOLD_MS;
-      return isStalled ? { ...entry, state: 'pending' } : entry;
+      return isStalled ? { ...entry, state: entry.retryCount >= MAX_SYNC_RETRIES ? 'dead-letter' : 'pending' } : entry;
     })
   );
 }
@@ -128,7 +144,7 @@ export function loadSyncQueue(): SyncQueueEntry[] {
 }
 
 export function saveSyncQueue(queue: readonly SyncQueueEntry[]): void {
-  localStorage.setItem(SYNC_QUEUE_STORAGE_KEY, JSON.stringify(sortSyncQueueEntries(queue)));
+  safeSetItem(SYNC_QUEUE_STORAGE_KEY, JSON.stringify(sortSyncQueueEntries(queue)));
 }
 
 export function buildSyncQueueRecordKey(entityType: SyncEntityType, recordId: string): string {
@@ -193,17 +209,24 @@ export function markSyncQueueEntryFailed(
   attemptedAt: string,
   lastError: string
 ): SyncQueueEntry[] {
-  return queue.map((entry) =>
-    entry.id === entryId
-      ? {
-          ...entry,
-          state: 'failed',
-          retryCount: entry.retryCount + 1,
-          lastAttemptAt: attemptedAt,
-          lastError,
-        }
-      : entry
-  );
+  return queue.map((entry) => {
+    if (entry.id !== entryId) {
+      return entry;
+    }
+    const nextRetryCount = entry.retryCount + 1;
+    const nextState: SyncQueueEntryState = nextRetryCount >= MAX_SYNC_RETRIES ? 'dead-letter' : 'failed';
+    return {
+      ...entry,
+      state: nextState,
+      retryCount: nextRetryCount,
+      lastAttemptAt: attemptedAt,
+      lastError,
+    };
+  });
+}
+
+export function removeDeadLetterSyncQueueEntries(queue: readonly SyncQueueEntry[]): SyncQueueEntry[] {
+  return queue.filter((entry) => entry.state !== 'dead-letter');
 }
 
 export function markSyncQueueEntryPending(queue: readonly SyncQueueEntry[], entryId: string): SyncQueueEntry[] {
@@ -272,6 +295,7 @@ export function summarizeSyncQueue(queue: readonly SyncQueueEntry[]): SyncQueueS
   let pendingCount = 0;
   let inFlightCount = 0;
   let failedCount = 0;
+  let deadLetterCount = 0;
 
   for (const entry of queue) {
     if (entry.state === 'pending') {
@@ -280,6 +304,8 @@ export function summarizeSyncQueue(queue: readonly SyncQueueEntry[]): SyncQueueS
       inFlightCount += 1;
     } else if (entry.state === 'failed') {
       failedCount += 1;
+    } else if (entry.state === 'dead-letter') {
+      deadLetterCount += 1;
     }
   }
 
@@ -288,6 +314,7 @@ export function summarizeSyncQueue(queue: readonly SyncQueueEntry[]): SyncQueueS
     pendingCount,
     inFlightCount,
     failedCount,
+    deadLetterCount,
     nextRetryCount: pendingCount + failedCount,
     oldestQueuedAt: queue.length > 0 ? sortSyncQueueEntries(queue)[0]?.queuedAt ?? null : null,
   };

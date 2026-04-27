@@ -415,6 +415,7 @@ export default function HistoryPage() {
                 <input
                   type="number"
                   min={1}
+                  max={1440}
                   value={manualLog.durationMinutes}
                   aria-invalid={Boolean(errors.durationMinutes)}
                   aria-describedby={manualDurationMessageId}

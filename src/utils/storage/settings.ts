@@ -1,6 +1,7 @@
 import type { TimerSettings } from '../../types/timer';
 import { normalizeTimerSettings } from '../timerSettingsNormalization';
 import { isTimerSettings, TIMER_SETTINGS_KEY } from './shared';
+import { safeSetItem } from './safeSetItem';
 
 export function loadTimerSettings(): TimerSettings | null {
   const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
@@ -21,5 +22,5 @@ export function loadTimerSettings(): TimerSettings | null {
 }
 
 export function saveTimerSettings(settings: TimerSettings): void {
-  localStorage.setItem(TIMER_SETTINGS_KEY, JSON.stringify(settings));
+  safeSetItem(TIMER_SETTINGS_KEY, JSON.stringify(settings));
 }

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ShellStatusBanners } from './ShellStatusBanners';
 import { buildSyncStatusMessage } from './appShellHelpers';
@@ -9,6 +9,7 @@ import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
 import { useTimerActions } from '../features/timer/timerActionsContext';
 import { useTimerState } from '../features/timer/timerStateContext';
 import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/playlistRuntime';
+import { removeDeadLetterSyncQueueEntries } from '../utils/syncQueue';
 import { getActiveNavItem, primaryNavItems } from './routes';
 
 export default function AppShell() {
@@ -31,8 +32,18 @@ export default function AppShell() {
   } = usePlaylistRuntime();
   const {
     connectionMode,
-    summary: { nextRetryCount, failedCount },
+    summary: { nextRetryCount, failedCount, deadLetterCount },
+    updateQueue,
   } = useSyncStatus();
+  const [storageFull, setStorageFull] = useState(false);
+
+  useEffect(() => {
+    function handleStorageQuotaExceeded() {
+      setStorageFull(true);
+    }
+    window.addEventListener('meditation:storage-quota-exceeded', handleStorageQuotaExceeded);
+    return () => window.removeEventListener('meditation:storage-quota-exceeded', handleStorageQuotaExceeded);
+  }, []);
   const activeNavItem = getActiveNavItem(location.pathname);
   const syncStatusMessage = buildSyncStatusMessage(connectionMode, nextRetryCount, failedCount);
   const showActiveTimerBanner = location.pathname !== '/practice/active';
@@ -104,6 +115,10 @@ export default function AppShell() {
             syncStatusMessage={syncStatusMessage}
             connectionMode={connectionMode}
             failedCount={failedCount}
+            deadLetterCount={deadLetterCount}
+            onDiscardDeadLetterEntries={() => updateQueue(removeDeadLetterSyncQueueEntries)}
+            storageFull={storageFull}
+            onDismissStorageFull={() => setStorageFull(false)}
             showActiveTimerBanner={showActiveTimerBanner}
             showActiveCustomPlayBanner={showActiveCustomPlayBanner}
             showActivePlaylistBanner={showActivePlaylistBanner}

@@ -129,8 +129,15 @@ export async function requestJson<TResponse, TBody = unknown>(
     let detail: string | null = null;
 
     try {
-      const responseText = await response.text();
-      detail = responseText.trim() ? responseText : null;
+      const contentType = response.headers?.get('content-type') ?? '';
+      if (contentType.includes('application/json') || contentType.includes('application/problem+json')) {
+        const json = await response.json() as Record<string, unknown>;
+        const raw = json?.detail ?? json?.message ?? json?.error ?? null;
+        detail = typeof raw === 'string' ? raw : null;
+      } else {
+        const text = await response.text();
+        detail = text.trim() || null;
+      }
     } catch {
       detail = null;
     }

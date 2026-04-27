@@ -9,6 +9,7 @@ import {
   isSummarySnapshotData,
   normalizeLastUsedMeditation,
 } from './shared';
+import { safeSetItem } from './safeSetItem';
 
 function buildSummarySnapshotStorageKey(cacheKey: string): string {
   return `${SUMMARY_SNAPSHOT_CACHE_KEY}:${cacheKey}`;
@@ -34,7 +35,7 @@ export function loadCachedMediaAssetCatalog(): MediaAssetMetadata[] | null {
 }
 
 export function saveCachedMediaAssetCatalog(assets: readonly MediaAssetMetadata[]): void {
-  localStorage.setItem(MEDIA_ASSET_CATALOG_CACHE_KEY, JSON.stringify(assets));
+  safeSetItem(MEDIA_ASSET_CATALOG_CACHE_KEY, JSON.stringify(assets));
 }
 
 export function loadCachedSummarySnapshot(cacheKey: string): SummarySnapshotData | null {
@@ -52,7 +53,7 @@ export function loadCachedSummarySnapshot(cacheKey: string): SummarySnapshotData
 }
 
 export function saveCachedSummarySnapshot(cacheKey: string, snapshot: SummarySnapshotData): void {
-  localStorage.setItem(buildSummarySnapshotStorageKey(cacheKey), JSON.stringify(snapshot));
+  safeSetItem(buildSummarySnapshotStorageKey(cacheKey), JSON.stringify(snapshot));
 }
 
 export function loadLastUsedMeditation(): LastUsedMeditation | null {
@@ -75,5 +76,5 @@ export function saveLastUsedMeditation(lastUsedMeditation: LastUsedMeditation | 
     return;
   }
 
-  localStorage.setItem(LAST_USED_MEDITATION_KEY, JSON.stringify(lastUsedMeditation));
+  safeSetItem(LAST_USED_MEDITATION_KEY, JSON.stringify(lastUsedMeditation));
 }

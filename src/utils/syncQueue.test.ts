@@ -315,6 +315,7 @@ describe('sync queue operations', () => {
       pendingCount: 1,
       inFlightCount: 0,
       failedCount: 1,
+      deadLetterCount: 0,
       nextRetryCount: 2,
       oldestQueuedAt: '2026-03-27T10:00:00.000Z',
     });

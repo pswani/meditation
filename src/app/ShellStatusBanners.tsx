@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { ActiveCustomPlayRun } from '../types/customPlay';
 import type { ActivePlaylistRun } from '../types/playlist';
 import type { ActiveSession } from '../types/timer';
@@ -11,6 +12,10 @@ interface ShellStatusBannersProps {
   readonly syncStatusMessage: string | null;
   readonly connectionMode: 'offline' | 'backend-unreachable' | 'online';
   readonly failedCount: number;
+  readonly deadLetterCount: number;
+  readonly onDiscardDeadLetterEntries: () => void;
+  readonly storageFull: boolean;
+  readonly onDismissStorageFull: () => void;
   readonly showActiveTimerBanner: boolean;
   readonly showActiveCustomPlayBanner: boolean;
   readonly showActivePlaylistBanner: boolean;
@@ -28,6 +33,10 @@ export function ShellStatusBanners({
   syncStatusMessage,
   connectionMode,
   failedCount,
+  deadLetterCount,
+  onDiscardDeadLetterEntries,
+  storageFull,
+  onDismissStorageFull,
   showActiveTimerBanner,
   showActiveCustomPlayBanner,
   showActivePlaylistBanner,
@@ -35,6 +44,12 @@ export function ShellStatusBanners({
   onOpenActiveCustomPlay,
   onOpenActivePlaylist,
 }: ShellStatusBannersProps) {
+  useEffect(() => {
+    if (!recoveryMessage) return;
+    const timerId = setTimeout(clearRecoveryMessage, 5000);
+    return () => clearTimeout(timerId);
+  }, [recoveryMessage, clearRecoveryMessage]);
+
   return (
     <>
       {activeSession && showActiveTimerBanner ? (
@@ -84,6 +99,22 @@ export function ShellStatusBanners({
       {syncStatusMessage ? (
         <div className={`status-banner ${connectionMode !== 'online' || failedCount > 0 ? 'warn' : ''}`} role="status" aria-live="polite">
           <p>{syncStatusMessage}</p>
+        </div>
+      ) : null}
+      {deadLetterCount > 0 ? (
+        <div className="status-banner warn" role="alert" aria-live="assertive">
+          <p>Some changes could not sync after several retries. Check your connection and reload to try again.</p>
+          <button type="button" className="link-button" onClick={onDiscardDeadLetterEntries}>
+            Discard
+          </button>
+        </div>
+      ) : null}
+      {storageFull ? (
+        <div className="status-banner warn" role="alert" aria-live="assertive">
+          <p>Device storage is full. Some data may not be saved. Free up space or clear old session history.</p>
+          <button type="button" className="link-button" onClick={onDismissStorageFull}>
+            Dismiss
+          </button>
         </div>
       ) : null}
     </>

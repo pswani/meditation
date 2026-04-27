@@ -75,10 +75,19 @@ export default function PlaylistManager() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const playlistName = draft.name.trim() || 'Playlist';
-    const feedbackMessage = editId ? `Playlist "${playlistName}" updated.` : `Playlist "${playlistName}" saved.`;
-    const result = await savePlaylist(draft, editId ?? undefined);
-    setErrors(result.errors);
+    const trimmedName = draft.name.trim();
+    if (!trimmedName) {
+      setErrors((current) => ({ ...current, name: 'Playlist name is required.' }));
+      return;
+    }
+    if (playlists.some((p) => p.name.trim() === trimmedName && p.id !== editId)) {
+      setErrors((current) => ({ ...current, name: 'A playlist with this name already exists.' }));
+      return;
+    }
+    const trimmedDraft = { ...draft, name: trimmedName };
+    const feedbackMessage = editId ? `Playlist "${trimmedName}" updated.` : `Playlist "${trimmedName}" saved.`;
+    const result = await savePlaylist(trimmedDraft, editId ?? undefined);
+    setErrors(result.errors ?? initialErrors);
 
     if (result.isValid && result.persisted) {
       setDraft(createInitialPlaylistDraft());
