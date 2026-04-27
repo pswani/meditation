@@ -1,47 +1,37 @@
-- file: prompts/session-e-backend-validation-schema.md
-  label: "Backend E: Validation, Schema Guards & Config (B-H6, B-H9, B-M1, B-M3, B-M12, B-M13, B-L1, B-L5, B-L8, B-L10, B-L12)"
-  flags: [--dangerously-skip-permissions]
-
-- file: prompts/session-f-backend-data-quality.md
-  label: "Backend F: Data Quality & Service Hardening (B-H2, B-H3, B-M2, B-M4, B-M5, B-M10, B-M11, B-M14, B-M15, B-L6)"
-  flags: [--dangerously-skip-permissions]
-
-- file: prompts/session-g-backend-rate-limiting-idempotency.md
-  label: "Backend G: Rate Limiting & Idempotency Keys (B-H5, B-H8)"
-  flags: [--dangerously-skip-permissions]
-
-- file: prompts/session-h-backend-refactoring.md
-  label: "Backend H: SankalpaService Refactoring & Concurrent Sync Test (B-H11, B-M17)"
-  flags: [--dangerously-skip-permissions]
-
 - file: prompts/session-i-web-error-handling.md
-  label: "Web I: Error Handling, Data Safety & Input Validation (W-H3, W-H4, W-M6, W-M10, W-M11, W-M14, W-L2, W-L3, W-L4, W-L7, W-L8, W-L11)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'Web I: Error Handling, Data Safety & Input Validation (W-H3, W-H4, W-M6,
+    W-M10, W-M11, W-M14, W-L2, W-L3, W-L4, W-L7, W-L8, W-L11)'
 - file: prompts/session-j-web-audio-sw.md
-  label: "Web J: Audio Lifecycle, Service Worker & Fetch Hygiene (W-H5, W-H9, W-M1, W-M2, W-M3, W-M8, W-M15, W-L6, W-L14)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'Web J: Audio Lifecycle, Service Worker & Fetch Hygiene (W-H5, W-H9, W-M1,
+    W-M2, W-M3, W-M8, W-M15, W-L6, W-L14)'
 - file: prompts/session-k-web-ui-quality.md
-  label: "Web K: UI Quality, Performance & Runtime Contract (W-M5, W-M9, W-M12, W-M13, W-L1, W-L5, W-L9, W-L10, W-L12, W-L13, W-L15)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'Web K: UI Quality, Performance & Runtime Contract (W-M5, W-M9, W-M12, W-M13,
+    W-L1, W-L5, W-L9, W-L10, W-L12, W-L13, W-L15)'
 - file: prompts/session-l-ios-safety.md
-  label: "iOS L: Safety, Logging & Audio Correctness (I-H2, I-H7, I-M3, I-M4, I-M8, I-M10, I-L1, I-L2, I-L3)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'iOS L: Safety, Logging & Audio Correctness (I-H2, I-H7, I-M3, I-M4, I-M8,
+    I-M10, I-L1, I-L2, I-L3)'
 - file: prompts/session-m-ios-architecture.md
-  label: "iOS M: Architecture, State Reliability & Sync Resilience (I-M1, I-M2, I-M5, I-M6, I-M7, I-L4, I-L6)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'iOS M: Architecture, State Reliability & Sync Resilience (I-M1, I-M2, I-M5,
+    I-M6, I-M7, I-L4, I-L6)'
 - file: prompts/session-n-ios-tests-ci.md
-  label: "iOS N: Tests, CI & Observability (I-M9, I-M11, I-M12, I-L5, I-L7)"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: 'iOS N: Tests, CI & Observability (I-M9, I-M11, I-M12, I-L5, I-L7)'
 - file: prompts/session-o-cross-cutting-hygiene.md
-  label: "Repo Hygiene & Operational Fixes"
-  flags: [--dangerously-skip-permissions]
-
+  flags:
+  - --dangerously-skip-permissions
+  label: Repo Hygiene & Operational Fixes
 - file: prompts/session-p-cross-cutting-ci-docs.md
-  label: "Cross-Cutting( CI Coverage, Dependency Scanning & Documentation)"
-  flags: [--dangerously-skip-permissions]
+  flags:
+  - --dangerously-skip-permissions
+  label: Cross-Cutting( CI Coverage, Dependency Scanning & Documentation)
