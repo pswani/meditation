@@ -1,4 +1,5 @@
 import type { ZodType, ZodTypeDef } from 'zod';
+import { reportError } from '../../utils/errorSink';
 
 export function validateApiContract<T>(
   schema: ZodType<T, ZodTypeDef, unknown>,
@@ -7,7 +8,7 @@ export function validateApiContract<T>(
 ): void {
   const result = schema.safeParse(raw);
   if (!result.success) {
-    console.error(`[API contract mismatch] ${context}`, result.error.flatten());
+    reportError('[API contract mismatch]', { context, issues: result.error.flatten() });
     if (import.meta.env.DEV) {
       throw new Error(`API contract mismatch in ${context}: ${result.error.message}`);
     }

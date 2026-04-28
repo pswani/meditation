@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public struct RemoteMediaAsset: Codable, Equatable, Sendable {
     public var id: String
@@ -49,6 +50,21 @@ public enum AppSyncError: Error, Equatable, Sendable {
     case backendUnavailable
     case invalidResponse(String)
     case server(statusCode: Int, message: String)
+    case contractMismatch(endpoint: String, underlying: String)
+}
+
+private let syncLogger = Logger(subsystem: "com.meditation.native", category: "sync")
+
+private extension JSONDecoder {
+    func decodeWithContext<T: Decodable>(_ type: T.Type, from data: Data, endpoint: String) throws -> T {
+        do {
+            return try decode(type, from: data)
+        } catch let error as DecodingError {
+            let description = String(describing: error)
+            syncLogger.fault("Contract mismatch at \(endpoint, privacy: .public): \(description, privacy: .public)")
+            throw AppSyncError.contractMismatch(endpoint: endpoint, underlying: description)
+        }
+    }
 }
 
 public enum AppSyncFeature {
@@ -436,7 +452,7 @@ public struct LiveAppSyncClient: AppSyncClient {
             }
 
             if httpResponse.statusCode == 204 {
-                return try decoder.decode(Response.self, from: Data("{}".utf8))
+                return try decoder.decodeWithContext(Response.self, from: Data("{}".utf8), endpoint: path)
             }
 
             guard (200 ... 299).contains(httpResponse.statusCode) else {
@@ -444,7 +460,7 @@ public struct LiveAppSyncClient: AppSyncClient {
                 throw AppSyncError.server(statusCode: httpResponse.statusCode, message: serverMessage)
             }
 
-            return try decoder.decode(Response.self, from: data)
+            return try decoder.decodeWithContext(Response.self, from: data, endpoint: path)
         } catch let error as AppSyncError {
             throw error
         } catch let error as URLError {

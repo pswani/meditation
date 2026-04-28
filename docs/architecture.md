@@ -1,5 +1,7 @@
 # Architecture
 
+> Architecture as of April 2026. Update this document when the runtime shape changes.
+
 ## Front-end architecture
 Single-page React application with route-based screens and feature-oriented modules.
 
@@ -32,54 +34,37 @@ Single-page React application with route-based screens and feature-oriented modu
 - keep H2 files and backend media files on the application host filesystem
 - reserve Vite dev and preview servers for local development and verification only
 
-## Confirmed current gaps
-- full-stack wiring is now in place for:
-  - custom plays
-  - custom-play media asset metadata and managed-library selection
-  - playlists
+## Implemented full-stack coverage
+- REST + H2 persistence is in place for:
+  - custom plays (including media asset metadata and managed-library selection)
+  - playlists (including mixed timed and linked-recording items, small gaps, active-run recovery)
   - sankalpas
   - summaries
   - timer settings
   - session logs
-- no browser upload/import workflow yet; managed custom-play media registration is still script-driven
-- playlist runtime now supports:
-  - mixed timed items and linked-recording items backed by saved `custom play` media
-  - optional small gaps between playlist items
-  - persisted active-run recovery for the current item or gap phase
-  - per-item `session log` creation for completion and early-end outcomes
+- no browser upload/import workflow; managed custom-play media registration is still script-driven
 
-## Chosen full-stack target architecture
-- keep the current React front end and route model
-- keep one Spring Boot backend application as the primary server
-- use H2 as the first persistent datastore
-- store media files under a configured filesystem root, outside the database
-- store media metadata and relative media paths in database tables
-- migrate front-end API boundaries from local shims to real REST calls incrementally
+## Current full-stack architecture
+- React front end with route model
+- one Spring Boot backend application as the primary server
+- H2 as the persistent datastore (file-backed in production, in-memory for tests)
+- media files stored under a configured filesystem root, outside the database
+- media metadata and relative media paths in database tables
 
-## Planned backend responsibilities
-- expose REST endpoints for:
+## Current backend responsibilities
+- REST endpoints:
   - health
   - custom plays
   - summaries
   - timer settings
-  - session logs
-  - manual session-log creation
+  - session logs and manual session-log creation
   - playlists
   - sankalpas
   - custom-play media assets
-- serve configured media files through stable public paths
-- own H2 persistence and schema evolution
-- validate and normalize stored records before returning them to the front end
-- manage the configured media root and DB-referenced media metadata
-
-## Planned implementation order
-1. backend foundation and H2 configuration
-2. schema/migration support and core persistence entities
-3. media metadata + filesystem conventions
-4. front-end REST integration foundation and media asset transport
-5. session-log and timer-settings backend APIs
-6. sankalpa backend APIs
-7. broader feature-by-feature migration away from local-only persistence
+- serves configured media files through stable public paths
+- owns H2 persistence and schema evolution via Flyway
+- validates and normalizes stored records before returning them to the front end
+- manages the configured media root and DB-referenced media metadata
 
 ## Current backend module structure
 - `backend/src/main/java/com/meditation/backend/config`

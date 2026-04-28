@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
   push:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC (OWASP dependency check)
 
 jobs:
   verify:
@@ -29,13 +31,25 @@ jobs:
       - name: Install web dependencies
         run: npm ci
 
+      - name: npm audit (production dependencies)
+        run: npm audit --audit-level=high --omit=dev
+        continue-on-error: true  # Don't block on advisories yet; review findings
+
       - name: Run pipeline verify
+        # pipeline.sh verify runs generate:sync-contract and git diff --exit-code,
+        # which covers all three generated tiers (TS, Java, Swift).
         run: ./scripts/pipeline.sh verify
 
       - name: Verify generated files are up to date
         run: |
           npm run generate:sync-contract
           git diff --exit-code src/generated/ backend/src/main/java/com/meditation/backend/sync/GeneratedSyncContract.java ios-native/Sources/MeditationNativeCore/Domain/GeneratedSyncContract.swift
+
+      - name: OWASP dependency check (backend)
+        if: github.event_name == 'schedule'
+        run: |
+          cd backend
+          ./mvnw org.owasp:dependency-check-maven:check
 
       - name: Check repo hygiene
         shell: bash
@@ -53,7 +67,7 @@ jobs:
 
   ios-native:
     name: iOS Native Verify
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -61,12 +75,19 @@ jobs:
       - name: Run Swift package tests
         run: swift test --package-path ios-native
 
-      - name: Build iOS app target
-        run: xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Build and test iOS app target
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project ios-native/MeditationNative.xcodeproj \
+            -scheme MeditationNative \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4' \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
 
   ios-ui-tests:
     name: iOS UI Tests
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
