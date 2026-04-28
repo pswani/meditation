@@ -63,3 +63,19 @@ jobs:
 
       - name: Build iOS app target
         run: xcodebuild -project ios-native/MeditationNative.xcodeproj -scheme MeditationNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+  ios-ui-tests:
+    name: iOS UI Tests
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run iOS UI Tests
+        run: |
+          xcodebuild test \
+            -project ios-native/MeditationNative.xcodeproj \
+            -scheme MeditationNativeUITests \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty || true

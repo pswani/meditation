@@ -784,6 +784,55 @@ final class ShellViewModelTests: XCTestCase {
         XCTAssertNil(weakVM, "ShellViewModel should deallocate when no strong references remain")
     }
 
+    // MARK: - Time warp tests (I-M9)
+
+    func testRestorationWithClockJumpForwardCompletesSession() throws {
+        let plannedDurationSeconds = 20 * 60
+        let startedAt = Date().addingTimeInterval(-(TimeInterval(plannedDurationSeconds) + 60 * 60))
+        let timerSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(mode: .fixedDuration, durationMinutes: 20, meditationType: .vipassana),
+            now: startedAt
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: timerSession)
+        let baseLogCount = snapshot.recentSessionLogs.count
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
+        XCTAssertNil(viewModel.activeSession, "Session elapsed beyond planned duration must complete on restore, not remain active")
+        XCTAssertEqual(viewModel.recentSessionLogs.count, baseLogCount + 1)
+        let log = try XCTUnwrap(viewModel.recentSessionLogs.first)
+        XCTAssertEqual(log.status, .completed)
+        XCTAssertGreaterThan(log.completedDurationSeconds, 0)
+        XCTAssertLessThanOrEqual(log.completedDurationSeconds, plannedDurationSeconds)
+    }
+
+    func testRestorationWithClockJumpBackwardClampsElapsedToZero() throws {
+        let startedAt = Date().addingTimeInterval(5 * 60)
+        let timerSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(mode: .fixedDuration, durationMinutes: 20, meditationType: .vipassana),
+            now: startedAt
+        )
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: timerSession)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
+        XCTAssertNotNil(viewModel.activeSession)
+        let elapsed = viewModel.activeSession?.elapsedSeconds(at: Date()) ?? -1
+        XCTAssertGreaterThanOrEqual(elapsed, 0, "Backward clock jump must not produce negative elapsed time")
+    }
+
+    func testRestorationWithPausedSessionPreservesElapsedAtPauseTime() throws {
+        let startedAt = Date().addingTimeInterval(-20 * 60)
+        var timerSession = try TimerFeature.makeActiveSession(
+            from: TimerSettingsDraft(mode: .fixedDuration, durationMinutes: 20, meditationType: .vipassana),
+            now: startedAt
+        )
+        timerSession.pause(at: startedAt.addingTimeInterval(5 * 60))
+        var snapshot = SampleData.snapshot
+        snapshot.activeRuntime = ActivePracticeSnapshot(timerSession: timerSession)
+        let (viewModel, _, _, _) = try makeViewModel(snapshot: snapshot)
+        XCTAssertEqual(viewModel.activeSession?.isPaused, true)
+        XCTAssertEqual(viewModel.activeSession?.elapsedSeconds(at: Date()), 5 * 60)
+    }
+
     private func makeViewModel(
         snapshot: AppSnapshot = SampleData.snapshot,
         environment: AppEnvironment = .localOnly,

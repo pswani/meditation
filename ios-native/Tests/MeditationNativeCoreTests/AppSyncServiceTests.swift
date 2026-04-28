@@ -984,6 +984,35 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(remoteState.snapshot.customPlays.first?.id, customPlay.id)
     }
 
+    // MARK: - Offline sync reconciliation (I-M12)
+
+    func testOfflineMutationReconcileAppliesPendingUpsertOverRemoteState() {
+        let customPlayID = UUID()
+        var localSnapshot = SampleData.snapshot
+        localSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Offline Draft", meditationType: .vipassana, durationSeconds: 600)]
+        let updatedCustomPlay = CustomPlay(id: customPlayID, name: "Synced Name", meditationType: .vipassana, durationSeconds: 600)
+        let pendingMutation = SyncMutation.customPlayUpsert(updatedCustomPlay)
+        var remoteSnapshot = SampleData.snapshot
+        remoteSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Server Version", meditationType: .vipassana, durationSeconds: 600)]
+        let remoteState = RemoteAppState(snapshot: remoteSnapshot, summary: nil, mediaAssets: [])
+        let result = AppSyncFeature.reconcile(remoteState: remoteState, localSnapshot: localSnapshot, pendingMutations: [pendingMutation])
+        let reconciled = result.customPlays.first(where: { $0.id == customPlayID })
+        XCTAssertNotNil(reconciled)
+        XCTAssertEqual(reconciled?.name, "Synced Name", "Pending upsert must override remote state in reconciled snapshot")
+    }
+
+    func testOfflineDeleteReconcileRemovesRecordPresentOnRemote() {
+        let customPlayID = UUID()
+        var localSnapshot = SampleData.snapshot
+        localSnapshot.customPlays = []
+        let pendingDelete = SyncMutation.customPlayDelete(id: customPlayID)
+        var remoteSnapshot = SampleData.snapshot
+        remoteSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Will Be Deleted", meditationType: .vipassana, durationSeconds: 600)]
+        let remoteState = RemoteAppState(snapshot: remoteSnapshot, summary: nil, mediaAssets: [])
+        let result = AppSyncFeature.reconcile(remoteState: remoteState, localSnapshot: localSnapshot, pendingMutations: [pendingDelete])
+        XCTAssertNil(result.customPlays.first(where: { $0.id == customPlayID }), "Pending delete must prevent remote record from appearing in reconciled snapshot")
+    }
+
     private func makeClient() -> LiveAppSyncClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
