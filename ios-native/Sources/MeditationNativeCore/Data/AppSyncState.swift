@@ -134,6 +134,9 @@ public struct SyncMutation: Identifiable, Codable, Equatable, Sendable {
 }
 
 public struct AppSyncState: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+
+    public var version: Int
     public var connectionState: SyncConnectionState
     public var pendingMutations: [SyncMutation]
     public var lastAttemptedSyncAt: Date?
@@ -141,6 +144,10 @@ public struct AppSyncState: Codable, Equatable, Sendable {
     public var lastErrorMessage: String?
     public var lastNoticeMessage: String?
     public var lastRemoteSummary: SummarySnapshot?
+    /// Set when the pending mutations queue was truncated due to exceeding the cap.
+    public var mutationQueueOverflowed: Bool
+    /// Set when sync state was recovered from corruption; triggers a full server pull.
+    public var needsFullResync: Bool
 
     public init(
         connectionState: SyncConnectionState = .localOnly,
@@ -149,8 +156,11 @@ public struct AppSyncState: Codable, Equatable, Sendable {
         lastSuccessfulSyncAt: Date? = nil,
         lastErrorMessage: String? = nil,
         lastNoticeMessage: String? = nil,
-        lastRemoteSummary: SummarySnapshot? = nil
+        lastRemoteSummary: SummarySnapshot? = nil,
+        mutationQueueOverflowed: Bool = false,
+        needsFullResync: Bool = false
     ) {
+        self.version = Self.currentVersion
         self.connectionState = connectionState
         self.pendingMutations = pendingMutations
         self.lastAttemptedSyncAt = lastAttemptedSyncAt
@@ -158,6 +168,37 @@ public struct AppSyncState: Codable, Equatable, Sendable {
         self.lastErrorMessage = lastErrorMessage
         self.lastNoticeMessage = lastNoticeMessage
         self.lastRemoteSummary = lastRemoteSummary
+        self.mutationQueueOverflowed = mutationQueueOverflowed
+        self.needsFullResync = needsFullResync
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        _ = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+
+        self.connectionState = try container.decode(SyncConnectionState.self, forKey: .connectionState)
+        self.pendingMutations = try container.decode([SyncMutation].self, forKey: .pendingMutations)
+        self.lastAttemptedSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptedSyncAt)
+        self.lastSuccessfulSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastSuccessfulSyncAt)
+        self.lastErrorMessage = try container.decodeIfPresent(String.self, forKey: .lastErrorMessage)
+        self.lastNoticeMessage = try container.decodeIfPresent(String.self, forKey: .lastNoticeMessage)
+        self.lastRemoteSummary = try container.decodeIfPresent(SummarySnapshot.self, forKey: .lastRemoteSummary)
+        self.mutationQueueOverflowed = try container.decodeIfPresent(Bool.self, forKey: .mutationQueueOverflowed) ?? false
+        self.needsFullResync = try container.decodeIfPresent(Bool.self, forKey: .needsFullResync) ?? false
+        self.version = Self.currentVersion
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case connectionState
+        case pendingMutations
+        case lastAttemptedSyncAt
+        case lastSuccessfulSyncAt
+        case lastErrorMessage
+        case lastNoticeMessage
+        case lastRemoteSummary
+        case mutationQueueOverflowed
+        case needsFullResync
     }
 
     public static let localOnly = AppSyncState()

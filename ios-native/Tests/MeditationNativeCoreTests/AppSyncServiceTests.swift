@@ -38,6 +38,31 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(state.pendingMutations[1].queuedAt, Date(timeIntervalSince1970: 30))
     }
 
+    func testEnqueueCapDropsOldestAndSetsOverflowFlag() {
+        var state = AppSyncState(connectionState: .pendingSync)
+
+        let customPlay = SampleData.snapshot.customPlays[0]
+        for i in 0 ..< AppSyncFeature.maxPendingMutations {
+            var cp = customPlay
+            cp.id = UUID()
+            cp.name = "Play \(i)"
+            state = AppSyncFeature.enqueue(.customPlayUpsert(cp, queuedAt: Date(timeIntervalSince1970: Double(i))), into: state)
+        }
+
+        XCTAssertEqual(state.pendingMutations.count, AppSyncFeature.maxPendingMutations)
+        XCTAssertFalse(state.mutationQueueOverflowed)
+
+        var overflow = customPlay
+        overflow.id = UUID()
+        overflow.name = "Overflow"
+        state = AppSyncFeature.enqueue(.customPlayUpsert(overflow, queuedAt: Date(timeIntervalSince1970: 9999)), into: state)
+
+        XCTAssertEqual(state.pendingMutations.count, AppSyncFeature.maxPendingMutations)
+        XCTAssertTrue(state.mutationQueueOverflowed)
+        XCTAssertEqual(state.pendingMutations.last?.payload.customPlay?.name, "Overflow")
+        XCTAssertEqual(state.pendingMutations.first?.payload.customPlay?.name, "Play 1")
+    }
+
     func testReconcilePreservesDeviceOnlyCustomPlayMediaAndSankalpaTitle() {
         let localSnapshot = SampleData.snapshot
         var remoteSnapshot = SampleData.snapshot

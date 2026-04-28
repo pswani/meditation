@@ -1059,7 +1059,7 @@ public enum SummaryFeature {
         )
     }
 
-    public static func filterSessionLogs(
+    static func filterSessionLogs(
         _ sessionLogs: [SessionLog],
         rangePreset: SummaryRangePreset,
         customRange: SummaryDateRange? = nil,
@@ -1121,7 +1121,7 @@ public enum SummaryFeature {
         return nil
     }
 
-    public static func deriveOverallSummary(_ sessionLogs: [SessionLog]) -> OverallSummary {
+    static func deriveOverallSummary(_ sessionLogs: [SessionLog]) -> OverallSummary {
         guard sessionLogs.isEmpty == false else {
             return OverallSummary()
         }
@@ -1141,7 +1141,7 @@ public enum SummaryFeature {
         )
     }
 
-    public static func deriveSummaryByMeditationType(_ sessionLogs: [SessionLog]) -> [SummaryByMeditationType] {
+    static func deriveSummaryByMeditationType(_ sessionLogs: [SessionLog]) -> [SummaryByMeditationType] {
         ReferenceData.meditationTypes.map { meditationType in
             let matchingLogs = sessionLogs.filter { $0.meditationType == meditationType }
             return SummaryByMeditationType(
@@ -1152,7 +1152,7 @@ public enum SummaryFeature {
         }
     }
 
-    public static func deriveSummaryBySource(_ sessionLogs: [SessionLog]) -> [SummaryBySource] {
+    static func deriveSummaryBySource(_ sessionLogs: [SessionLog]) -> [SummaryBySource] {
         ReferenceData.sessionSources.map { source in
             let sourceLogs = sessionLogs.filter { $0.source == source }
             let completedSessionLogs = sourceLogs.filter { $0.status == .completed }.count
@@ -1167,7 +1167,7 @@ public enum SummaryFeature {
         }
     }
 
-    public static func deriveSummaryByTimeOfDay(_ sessionLogs: [SessionLog]) -> [SummaryByTimeOfDay] {
+    static func deriveSummaryByTimeOfDay(_ sessionLogs: [SessionLog]) -> [SummaryByTimeOfDay] {
         ReferenceData.timeOfDayBuckets.map { bucket in
             let bucketLogs = sessionLogs.filter { timeOfDayBucketForDate($0.endedAt) == bucket }
             return SummaryByTimeOfDay(

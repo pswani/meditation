@@ -1,37 +1,34 @@
 import SwiftUI
 
 struct ActiveTimerSection: View {
-    @ObservedObject var viewModel: ShellViewModel
+    var sessionDisplay: ActiveSessionDisplay
+    var onPause: () -> Void
+    var onResume: () -> Void
+    var onRequestEnd: () -> Void
 
     var body: some View {
         SectionCard(title: "Active timer", caption: "Keep the session calm and uninterrupted") {
             VStack(alignment: .leading, spacing: 16) {
-                Text(viewModel.activeTimerPrimaryText())
+                Text(sessionDisplay.timerPrimaryText)
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .accessibilityIdentifier("activeTimerPrimaryText")
 
-                Text(viewModel.activeTimerSecondaryText())
+                Text(sessionDisplay.timerSecondaryText)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 12) {
-                    if viewModel.activeSession?.isPaused == true {
-                        Button("Resume") {
-                            viewModel.resumeTimer()
-                        }
-                        .buttonStyle(.borderedProminent)
+                    if sessionDisplay.timerIsPaused {
+                        Button("Resume") { onResume() }
+                            .buttonStyle(.borderedProminent)
                     } else {
-                        Button("Pause") {
-                            viewModel.pauseTimer()
-                        }
-                        .buttonStyle(.bordered)
+                        Button("Pause") { onPause() }
+                            .buttonStyle(.bordered)
                     }
 
-                    Button(timerEndButtonTitle) {
-                        viewModel.requestEndTimerConfirmation()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.teal)
+                    Button(timerEndButtonTitle) { onRequestEnd() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.teal)
                 }
 
                 Text(timerCaption)
@@ -42,73 +39,64 @@ struct ActiveTimerSection: View {
     }
 
     private var timerEndButtonTitle: String {
-        if viewModel.activeSession?.configuration.mode == .fixedDuration {
-            return "End early"
-        }
-
-        return "End session"
+        sessionDisplay.timerIsOpenEnded ? "End session" : "End early"
     }
 
     private var timerCaption: String {
-        if viewModel.activeSession?.configuration.mode == .fixedDuration {
+        if !sessionDisplay.timerIsOpenEnded {
             return "While this screen stays open, the timer display and selected end bell are the source of truth. If iOS locks the app near completion, the app will try to finish with the same bell; longer lock-screen spans can still fall back to notification sound or foreground catch-up."
         }
-
         return "Open-ended sessions log the actual practiced duration when you choose to end the sit."
     }
 }
 
 struct ActiveCustomPlaySection: View {
-    @ObservedObject var viewModel: ShellViewModel
+    var sessionDisplay: ActiveSessionDisplay
+    var onPause: () -> Void
+    var onResume: () -> Void
+    var onRequestEnd: () -> Void
 
     var body: some View {
         SectionCard(title: "Active custom play", caption: customPlayCaption) {
             VStack(alignment: .leading, spacing: 16) {
-                Text(viewModel.activeCustomPlaySession?.customPlay.name ?? "Custom play")
+                Text(sessionDisplay.customPlayName)
                     .font(.title3.weight(.semibold))
 
-                if let customPlay = viewModel.activeCustomPlaySession?.customPlay {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(customPlaySoundSummary(customPlay))
-                        if let recordingLabel = customPlay.recordingLabel {
-                            Text("Session note: \(recordingLabel)")
-                        }
-                        if let linkedMediaIdentifier = customPlay.linkedMediaIdentifier {
-                            Text("Linked media identifier: \(linkedMediaIdentifier)")
-                        }
-                        if let media = customPlay.media {
-                            Text("Recording: \(media.label) • \(media.sourceSummary)")
-                        }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(sessionDisplay.customPlaySoundSummaryText)
+                    if let recordingLabel = sessionDisplay.customPlayRecordingLabel {
+                        Text("Session note: \(recordingLabel)")
                     }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    if let linkedMediaIdentifier = sessionDisplay.customPlayLinkedMediaIdentifier {
+                        Text("Linked media identifier: \(linkedMediaIdentifier)")
+                    }
+                    if let mediaLabel = sessionDisplay.customPlayMediaLabel,
+                       let mediaSourceSummary = sessionDisplay.customPlayMediaSourceSummary {
+                        Text("Recording: \(mediaLabel) • \(mediaSourceSummary)")
+                    }
                 }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
 
-                Text(viewModel.activeCustomPlayPrimaryText())
+                Text(sessionDisplay.customPlayPrimaryText)
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
-                Text(viewModel.activeCustomPlaySecondaryText())
+                Text(sessionDisplay.customPlaySecondaryText)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 12) {
-                    if viewModel.activeCustomPlaySession?.isPaused == true {
-                        Button("Resume") {
-                            viewModel.resumeCustomPlay()
-                        }
-                        .buttonStyle(.borderedProminent)
+                    if sessionDisplay.customPlayIsPaused {
+                        Button("Resume") { onResume() }
+                            .buttonStyle(.borderedProminent)
                     } else {
-                        Button("Pause") {
-                            viewModel.pauseCustomPlay()
-                        }
-                        .buttonStyle(.bordered)
+                        Button("Pause") { onPause() }
+                            .buttonStyle(.bordered)
                     }
 
-                    Button("End session") {
-                        viewModel.requestEndCustomPlayConfirmation()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.teal)
+                    Button("End session") { onRequestEnd() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.teal)
                 }
 
                 Text(customPlayFooter)
@@ -118,65 +106,54 @@ struct ActiveCustomPlaySection: View {
         }
     }
 
-    private var customPlayUsesRecordingPlayback: Bool {
-        guard let customPlay = viewModel.activeCustomPlaySession?.customPlay else {
-            return false
-        }
-
-        return viewModel.canResolvePlayback(for: customPlay.media)
-    }
-
     private var customPlayCaption: String {
-        customPlayUsesRecordingPlayback
+        sessionDisplay.customPlayCanResolvePlayback
             ? "The linked recording stays aligned with the current session"
             : "This session is running with its saved duration and bells only"
     }
 
     private var customPlayFooter: String {
-        customPlayUsesRecordingPlayback
+        sessionDisplay.customPlayCanResolvePlayback
             ? "The session timing here follows the saved recording contract. If media is missing later, the app will say so instead of substituting another sound."
             : "The recording is unavailable on this device, so this custom play is finishing with its saved timing and bells only."
     }
 }
 
 struct ActivePlaylistSection: View {
-    @ObservedObject var viewModel: ShellViewModel
+    var sessionDisplay: ActiveSessionDisplay
+    var onPause: () -> Void
+    var onResume: () -> Void
+    var onRequestEnd: () -> Void
 
     var body: some View {
         SectionCard(title: "Active playlist", caption: "Each item logs explicitly while gaps stay silent") {
             VStack(alignment: .leading, spacing: 16) {
-                Text(viewModel.activePlaylistTitle())
+                Text(sessionDisplay.playlistTitle)
                     .font(.title3.weight(.semibold))
 
-                Text(viewModel.activePlaylistPrimaryText())
+                Text(sessionDisplay.playlistPrimaryText)
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
-                Text(viewModel.activePlaylistSecondaryText())
+                Text(sessionDisplay.playlistSecondaryText)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 12) {
-                    if viewModel.activePlaylistSession?.isPaused == true {
-                        Button("Resume") {
-                            viewModel.resumePlaylist()
-                        }
-                        .buttonStyle(.borderedProminent)
+                    if sessionDisplay.playlistIsPaused {
+                        Button("Resume") { onResume() }
+                            .buttonStyle(.borderedProminent)
                     } else {
-                        Button("Pause") {
-                            viewModel.pausePlaylist()
-                        }
-                        .buttonStyle(.bordered)
+                        Button("Pause") { onPause() }
+                            .buttonStyle(.bordered)
                     }
 
-                    Button("End playlist") {
-                        viewModel.requestEndPlaylistConfirmation()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.teal)
+                    Button("End playlist") { onRequestEnd() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.teal)
                 }
 
-                if let upcomingItem = viewModel.activePlaylistSession?.upcomingItem {
-                    Text("Upcoming: \(upcomingItem.title)")
+                if let upcomingItemTitle = sessionDisplay.playlistUpcomingItemTitle {
+                    Text("Upcoming: \(upcomingItemTitle)")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

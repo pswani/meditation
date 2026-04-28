@@ -1,5 +1,8 @@
 import Foundation
+import os
 import SwiftUI
+
+private let shellLogger = Logger(subsystem: "com.meditation.native", category: "shell")
 
 @MainActor
 final class ShellViewModel: ObservableObject {
@@ -27,8 +30,11 @@ final class ShellViewModel: ObservableObject {
     @Published var backendConfigurationFeedbackMessage: String?
     @Published var backendConfigurationValidationMessage: String?
 
+    let sessionDisplay = ActiveSessionDisplay()
+
     private let repository: LocalAppSnapshotRepository
     private let syncRepository: LocalAppSyncStateRepository
+    private let combinedStateStore: CombinedAppStateStore
     private let notificationScheduler: NotificationScheduling
     private let backgroundAudioKeepAlive: BackgroundAudioKeeping
     private var clockTimer: DispatchSourceTimer?
@@ -48,6 +54,7 @@ final class ShellViewModel: ObservableObject {
         syncRepository: LocalAppSyncStateRepository = .live(
             environment: AppEnvironment.from()
         ),
+        combinedStateStore: CombinedAppStateStore = .live(),
         notificationScheduler: NotificationScheduling = LiveNotificationScheduler(),
         timerCompletionBridge: TimerCompletionBridging? = nil,
         soundPlayer: TimerSoundPlaying? = nil,
@@ -58,6 +65,7 @@ final class ShellViewModel: ObservableObject {
     ) {
         self.repository = repository
         self.syncRepository = syncRepository
+        self.combinedStateStore = combinedStateStore
         self.notificationScheduler = notificationScheduler
         self.backgroundAudioKeepAlive = backgroundAudioKeepAlive ?? SilentBackgroundAudioKeepAlive()
         self.syncClientFactory = syncClientFactory
@@ -91,9 +99,14 @@ final class ShellViewModel: ObservableObject {
                     : .localOnly
             )
         } catch {
-            self.syncState = repository.environment.requiresBackend
-                ? AppSyncState(connectionState: .pendingSync)
-                : .localOnly
+            // Corruption detected — reset to a fresh state and trigger a full server pull.
+            shellLogger.error("AppSyncState corrupted, resetting: \(error.localizedDescription, privacy: .public)")
+            var fresh = AppSyncState(
+                connectionState: repository.environment.requiresBackend ? .pendingSync : .localOnly
+            )
+            fresh.needsFullResync = repository.environment.requiresBackend
+            try? syncRepository.save(fresh)
+            self.syncState = fresh
         }
 
         do {
@@ -800,6 +813,33 @@ final class ShellViewModel: ObservableObject {
         timerCoordinator.tick(at: timerNow)
         customPlayCoordinator.tick(at: now)
         playlistCoordinator.tick(at: now)
+        updateSessionDisplay(timerNow: timerNow)
+    }
+
+    private func updateSessionDisplay(timerNow: Date) {
+        sessionDisplay.timerPrimaryText = ShellViewModelPresentation.activeTimerPrimaryText(for: activeSession, now: timerNow)
+        sessionDisplay.timerSecondaryText = ShellViewModelPresentation.activeTimerSecondaryText(for: activeSession, now: timerNow)
+        sessionDisplay.timerIsPaused = activeSession?.isPaused ?? false
+        sessionDisplay.timerIsOpenEnded = activeSession?.configuration.mode == .openEnded
+
+        if let customPlay = activeCustomPlaySession?.customPlay {
+            sessionDisplay.customPlayPrimaryText = ShellViewModelPresentation.activeCustomPlayPrimaryText(for: activeCustomPlaySession, now: now)
+            sessionDisplay.customPlaySecondaryText = ShellViewModelPresentation.activeCustomPlaySecondaryText(for: activeCustomPlaySession, now: now)
+            sessionDisplay.customPlayIsPaused = activeCustomPlaySession?.isPaused ?? false
+            sessionDisplay.customPlayName = customPlay.name
+            sessionDisplay.customPlaySoundSummaryText = customPlaySoundSummary(customPlay)
+            sessionDisplay.customPlayRecordingLabel = customPlay.recordingLabel
+            sessionDisplay.customPlayLinkedMediaIdentifier = customPlay.linkedMediaIdentifier
+            sessionDisplay.customPlayMediaLabel = customPlay.media?.label
+            sessionDisplay.customPlayMediaSourceSummary = customPlay.media?.sourceSummary
+            sessionDisplay.customPlayCanResolvePlayback = canResolvePlayback(for: customPlay.media)
+        }
+
+        sessionDisplay.playlistPrimaryText = ShellViewModelPresentation.activePlaylistPrimaryText(for: activePlaylistSession, now: now)
+        sessionDisplay.playlistTitle = ShellViewModelPresentation.activePlaylistTitle(for: activePlaylistSession)
+        sessionDisplay.playlistSecondaryText = ShellViewModelPresentation.activePlaylistSecondaryText(for: activePlaylistSession)
+        sessionDisplay.playlistIsPaused = activePlaylistSession?.isPaused ?? false
+        sessionDisplay.playlistUpcomingItemTitle = activePlaylistSession?.upcomingItem?.title
     }
 
     private func handleAudioPlaybackCompletion() {
@@ -844,6 +884,7 @@ final class ShellViewModel: ObservableObject {
             snapshot.activeRuntime = currentActiveRuntimeSnapshot()
             snapshot.summary = SummaryFeature.makeStoredSummarySnapshot(from: snapshot.recentSessionLogs)
             try repository.save(snapshot)
+            try? combinedStateStore.save(snapshot: snapshot, syncState: syncState)
             isSeedData = snapshot == SampleData.snapshot
             if syncMutations.isEmpty == false {
                 for syncMutation in syncMutations {
@@ -861,6 +902,7 @@ final class ShellViewModel: ObservableObject {
     private func saveSyncState() {
         do {
             try syncRepository.save(syncState)
+            try? combinedStateStore.save(snapshot: snapshot, syncState: syncState)
         } catch {
             persistenceMessage = "Local sync state could not be saved right now."
         }
@@ -948,6 +990,8 @@ final class ShellViewModel: ObservableObject {
             )
             snapshot = result.snapshot
             syncState = result.syncState
+            syncState.mutationQueueOverflowed = false
+            syncState.needsFullResync = false
             saveSyncState()
         } catch let error as AppSyncError {
             switch error {

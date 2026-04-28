@@ -6,6 +6,7 @@ private struct BackendConfigurationDraft: Equatable {
 }
 
 struct SettingsView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var timerDefaultsDraft: TimerSettingsDraft
     @State private var backendConfigurationDraft: BackendConfigurationDraft

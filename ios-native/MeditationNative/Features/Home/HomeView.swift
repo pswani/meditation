@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
 
     var body: some View {

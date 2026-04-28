@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct GoalsView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var summaryRangePreset: SummaryRangePreset = .last7Days
     @State private var customSummaryStartDate = Calendar.current.date(

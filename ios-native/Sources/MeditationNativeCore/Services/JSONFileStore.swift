@@ -46,6 +46,49 @@ public struct JSONFileStore<Value: Codable & Equatable & Sendable>: FileStore {
     }
 }
 
+/// Wraps both AppSnapshot and AppSyncState in a single file so they are written atomically.
+/// Phase 1: written alongside the individual files as a belt-and-suspenders guard against
+/// cross-file inconsistency. Phase 2 will remove the individual files once proven stable.
+public struct CombinedAppState: Codable, Equatable, Sendable {
+    public var snapshot: AppSnapshot
+    public var syncState: AppSyncState
+    public var version: Int
+
+    public init(snapshot: AppSnapshot, syncState: AppSyncState) {
+        self.snapshot = snapshot
+        self.syncState = syncState
+        self.version = 1
+    }
+}
+
+public final class CombinedAppStateStore {
+    private let store: JSONFileStore<CombinedAppState>
+
+    public init(store: JSONFileStore<CombinedAppState>) {
+        self.store = store
+    }
+
+    public func save(snapshot: AppSnapshot, syncState: AppSyncState) throws {
+        try store.save(CombinedAppState(snapshot: snapshot, syncState: syncState))
+    }
+
+    public func load() throws -> CombinedAppState? {
+        try store.load()
+    }
+
+    public static func live(fileManager: FileManager = .default) -> CombinedAppStateStore {
+        let applicationSupportDirectory = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first ?? fileManager.temporaryDirectory
+        let storeURL = applicationSupportDirectory
+            .appendingPathComponent("MeditationNative", isDirectory: true)
+            .appendingPathComponent("combined-state.json")
+
+        return CombinedAppStateStore(store: JSONFileStore<CombinedAppState>(fileURL: storeURL))
+    }
+}
+
 public struct LocalAppSnapshotRepository {
     private let store: JSONFileStore<AppSnapshot>
     public let environment: AppEnvironment

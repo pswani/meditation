@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HistoryView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var filter = SessionLogFilter()
     @State private var isPresentingManualLogSheet = false

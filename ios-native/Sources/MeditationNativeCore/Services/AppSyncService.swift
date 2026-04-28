@@ -52,12 +52,20 @@ public enum AppSyncError: Error, Equatable, Sendable {
 }
 
 public enum AppSyncFeature {
+    public static let maxPendingMutations = 500
+
     public static func enqueue(_ mutation: SyncMutation, into state: AppSyncState) -> AppSyncState {
         var updatedState = state
         if let existingIndex = updatedState.pendingMutations.firstIndex(where: { $0.id == mutation.id }) {
             updatedState.pendingMutations[existingIndex] = mutation
         } else {
             updatedState.pendingMutations.append(mutation)
+            if updatedState.pendingMutations.count > maxPendingMutations {
+                // Drop oldest mutations first; they will be reconciled via a full server pull.
+                let overflow = updatedState.pendingMutations.count - maxPendingMutations
+                updatedState.pendingMutations.removeFirst(overflow)
+                updatedState.mutationQueueOverflowed = true
+            }
         }
         return updatedState
     }
@@ -89,7 +97,7 @@ public enum AppSyncFeature {
         return mergedSnapshot
     }
 
-    public static func applyQueuedMutation(_ mutation: SyncMutation, to snapshot: AppSnapshot) -> AppSnapshot {
+    static func applyQueuedMutation(_ mutation: SyncMutation, to snapshot: AppSnapshot) -> AppSnapshot {
         var updatedSnapshot = snapshot
 
         switch mutation.domain {
@@ -156,7 +164,7 @@ public enum AppSyncFeature {
         return updatedSnapshot
     }
 
-    public static func mergeDeviceOnlyCustomPlayFields(
+    static func mergeDeviceOnlyCustomPlayFields(
         remoteCustomPlays: [CustomPlay],
         localCustomPlays: [CustomPlay]
     ) -> [CustomPlay] {
@@ -182,7 +190,7 @@ public enum AppSyncFeature {
         }
     }
 
-    public static func mergeDeviceOnlySankalpaFields(
+    static func mergeDeviceOnlySankalpaFields(
         remoteSankalpas: [Sankalpa],
         localSankalpas: [Sankalpa]
     ) -> [Sankalpa] {
