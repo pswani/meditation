@@ -28,6 +28,7 @@ Single-page React application with route-based screens and feature-oriented modu
 - serve the frontend production build from a static web server such as nginx
 - reverse-proxy `/api/**`, `/media/custom-plays/**`, and `/media/sounds/**` from that web server to the Spring Boot backend
 - run the backend on a loopback bind such as `127.0.0.1:8080`
+- backend binds to `127.0.0.1:8080` (confirmed via `server.address` in `application.yml`) — nginx reverse-proxies all external traffic
 - keep H2 files and backend media files on the application host filesystem
 - reserve Vite dev and preview servers for local development and verification only
 

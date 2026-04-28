@@ -39,6 +39,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # --------------------------------------------------
+# Stale build/scratch files
+# --------------------------------------------------
+a.txt
+
+# --------------------------------------------------
 # Temporary / runtime files
 # --------------------------------------------------
 tmp/
@@ -82,9 +87,9 @@ test-results/
 .yarn/install-state.gz
 
 # --------------------------------------------------
-# Codex local state
-# Keep project config, ignore everything else
+# AI tool scaffolding — content is machine-generated and local
 # --------------------------------------------------
+.agents/
 .codex/*
 !.codex/config.toml
 
