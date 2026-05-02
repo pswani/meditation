@@ -51,6 +51,7 @@
 		A1000001000000000000002A /* TimerSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000031 /* TimerSessionCoordinator.swift */; };
 		A1000001000000000000002B /* DiagnosticsExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000032 /* DiagnosticsExport.swift */; };
 		A1000001000000000000002C /* ActiveSessionDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000033 /* ActiveSessionDisplay.swift */; };
+		A1000001000000000000002D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000034 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,6 +119,7 @@
 		B10000010000000000000031 /* TimerSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSessionCoordinator.swift; sourceTree = "<group>"; };
 		B10000010000000000000032 /* DiagnosticsExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsExport.swift; sourceTree = "<group>"; };
 		B10000010000000000000033 /* ActiveSessionDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionDisplay.swift; sourceTree = "<group>"; };
+		B10000010000000000000034 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -335,7 +337,7 @@
 		F10000010000000000000013 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				B1000001000000000000002F /* Assets.xcassets */,
+				B10000010000000000000034 /* Assets.xcassets */,
 				B1000001000000000000001A /* temple-bell.mp3 */,
 				B1000001000000000000001B /* gong.mp3 */,
 				B1000001000000000000002D /* vipassana-sit-20.mp3 */,
@@ -447,7 +449,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000010000000000000028 /* Assets.xcassets in Resources */,
+				A1000001000000000000002D /* Assets.xcassets in Resources */,
 				A10000010000000000000017 /* temple-bell.mp3 in Resources */,
 				A10000010000000000000018 /* gong.mp3 in Resources */,
 				A10000010000000000000026 /* vipassana-sit-20.mp3 in Resources */,

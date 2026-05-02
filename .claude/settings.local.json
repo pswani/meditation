@@ -71,7 +71,12 @@
       "Bash(nginx -T)",
       "Bash(brew services *)",
       "Bash(curl -sv http://127.0.0.1:8080/)",
-      "Bash(nginx -t)"
+      "Bash(nginx -t)",
+      "WebSearch",
+      "WebFetch(domain:www.prana-sutra.com)",
+      "WebFetch(domain:www.yogabasics.com)",
+      "WebFetch(domain:yogainternational.com)",
+      "WebFetch(domain:www.calm.com)"
     ]
   }
 }

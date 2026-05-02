@@ -1,16 +1,1 @@
-- prompt: |-
-    Create a claude.md file that is optimized for this project and based on the historical usage.  Some inputs from my side
-    1. Use the low token using effort to run the tests.  However, use the Medium to High effort mode while fixing the defects.
-    2. Use the low to medium token using effort to update the documentation.  Use the high effort mode to analyze, design, architect, code, produce prompts.
-    3. Create the necessary skills based on my past AI usage and the ones relevant to my project.
-    4. After every code change, run the basic build and tests to make sure the app works fine.
-    5. For any of the new functional requirements, enhancement, or changes, I would like claude to ask me the set of clarifying questions unitl it has the clear requirements to build a better understanding of what I am asking to implement.
-    6. I would prefer to run the plan mode for coding tasks that are medium to large rather than fixing them directly.  Run high effort mode for planning tasks.  For the coding tasks where the plan already exists run medium effort to save on the tokens.
-    7. Create skill if it makes sense for the prompt creation based on the pile->bundle->prompt framework we have in this repo.  I think it would help to have it done in a structured way every time.
-  label: Init claude
-  flags: [--dangerously-skip-permissions]
-
-- prompt: |-
-    The app is not building, fix all the defects and make sure the web, ios and the apis are working fine.
-  label: Fix build errors
-  flags: [--dangerously-skip-permissions]
+[]
