@@ -139,7 +139,7 @@ prod_nginx_site_path() {
 }
 
 prod_launchd_label() {
-  printf '%s\n' "com.meditation.backend"
+  printf '%s\n' "meditation-backend"
 }
 
 prod_launchd_plist_path() {
@@ -208,7 +208,7 @@ install_bundle_files() {
 install_backend_support_scripts() {
   run_step \
     "Installing backend support scripts into $(prod_bin_dir)" \
-    "sudo cp '$(resolve_path "scripts/common.sh")' '$(prod_bin_dir)/common.sh' && sudo cp '$(resolve_path "scripts/prod-backend-run.sh")' '$(prod_bin_dir)/prod-backend-run.sh' && sudo chmod 755 '$(prod_bin_dir)/common.sh' '$(prod_bin_dir)/prod-backend-run.sh'"
+    "sudo cp '$(resolve_path "scripts/common.sh")' '$(prod_bin_dir)/common.sh' && sudo cp '$(resolve_path "scripts/prod-backend-run.sh")' '$(prod_bin_dir)/meditation-backend' && sudo chmod 755 '$(prod_bin_dir)/common.sh' '$(prod_bin_dir)/meditation-backend'"
 }
 
 ensure_prod_env_file() {
@@ -252,7 +252,7 @@ render_installed_nginx_config() {
 render_backend_launchd_plist() {
   run_step \
     "Rendering launchd plist into $(prod_launchd_plist_path)" \
-    "sudo mkdir -p '/Library/LaunchDaemons' && sudo /bin/sh '$(resolve_path "scripts/render-launchd-plist.sh")' --output '$(prod_launchd_plist_path)' --script-path '$(prod_bin_dir)/prod-backend-run.sh' --env-file '$(prod_env_file)' --log-path '$(prod_runtime_dir)/logs/backend-production.log' --error-log-path '$(prod_runtime_dir)/logs/backend-production.log'"
+    "sudo mkdir -p '/Library/LaunchDaemons' && sudo /bin/sh '$(resolve_path "scripts/render-launchd-plist.sh")' --output '$(prod_launchd_plist_path)' --script-path '$(prod_bin_dir)/meditation-backend' --env-file '$(prod_env_file)' --log-path '$(prod_runtime_dir)/logs/backend-production.log' --error-log-path '$(prod_runtime_dir)/logs/backend-production.log'"
 }
 
 restart_backend_service() {

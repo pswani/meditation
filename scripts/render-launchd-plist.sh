@@ -11,7 +11,7 @@ print_usage() {
 }
 
 output_path=""
-label="com.meditation.backend"
+label="meditation-backend"
 script_path=""
 env_file="/opt/meditation/shared/meditation.env"
 log_path="/opt/meditation/runtime-production/logs/backend-production.log"
@@ -76,7 +76,6 @@ plist_text=$(cat <<EOF
     <string>${label}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/sh</string>
         <string>${script_path}</string>
     </array>
     <key>EnvironmentVariables</key>

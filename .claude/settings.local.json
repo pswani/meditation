@@ -76,7 +76,10 @@
       "WebFetch(domain:www.prana-sutra.com)",
       "WebFetch(domain:www.yogabasics.com)",
       "WebFetch(domain:yogainternational.com)",
-      "WebFetch(domain:www.calm.com)"
+      "WebFetch(domain:www.calm.com)",
+      "Bash(xargs cat *)",
+      "Bash(grep *)",
+      "Bash(sudo launchctl *)"
     ]
   }
 }

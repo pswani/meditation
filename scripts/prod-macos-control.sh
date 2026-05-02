@@ -97,7 +97,7 @@ prod_backend_log_path() {
 }
 
 prod_launchd_label() {
-  printf '%s\n' "com.meditation.backend"
+  printf '%s\n' "meditation-backend"
 }
 
 prod_launchd_plist_path() {
