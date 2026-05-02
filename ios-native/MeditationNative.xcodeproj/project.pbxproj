@@ -335,6 +335,7 @@
 		F10000010000000000000013 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				B1000001000000000000002F /* Assets.xcassets */,
 				B1000001000000000000001A /* temple-bell.mp3 */,
 				B1000001000000000000001B /* gong.mp3 */,
 				B1000001000000000000002D /* vipassana-sit-20.mp3 */,
@@ -446,6 +447,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000010000000000000028 /* Assets.xcassets in Resources */,
 				A10000010000000000000017 /* temple-bell.mp3 in Resources */,
 				A10000010000000000000018 /* gong.mp3 in Resources */,
 				A10000010000000000000026 /* vipassana-sit-20.mp3 in Resources */,
@@ -592,6 +594,7 @@
 		I10000010000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 435KZ98WJR;
@@ -622,6 +625,7 @@
 		I10000010000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 435KZ98WJR;
