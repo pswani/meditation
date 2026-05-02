@@ -21,6 +21,7 @@ The app must work well on:
 8. log sessions manually
 9. summarize meditation by type or overall
 10. define and track sankalpa goals
+11. practice guided ratio-based pranayama routines
 
 ## Meditation types
 - Vipassana
@@ -51,6 +52,15 @@ The app must work well on:
 - resume
 - end early for fixed sessions
 - manual end for open-ended sessions
+
+### Pranayama
+- part of the same practice flow as timer meditation
+- built-in presets for guided ratio-based breathing
+- live setup summary of derived inhale, hold, exhale, and hold-out values
+- support either cycle-count-first or duration-first setup
+- step-wise active timer with current phase and current/total cycle display
+- distinct non-spoken transition sounds with optional mute
+- accurate logging of preset and actual phase values used
 
 ### Custom Plays
 - create

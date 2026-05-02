@@ -7,6 +7,7 @@ This folder is for durable reference docs only.
 Use these first when you need the current product, architecture, UX, or operator truth:
 
 - `product-requirements.md`
+- `pranayama-product-spec.md`
 - `architecture.md`
 - `ux-spec.md`
 - `screen-inventory.md`

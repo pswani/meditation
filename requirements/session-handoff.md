@@ -56,6 +56,7 @@ This file is the concise handoff for the repository as it exists now. Use it as 
   - native iPhone sync banners and practice-library cards are more compact and less technical
   - native iPhone custom play and playlist Add actions now open full-screen create flows with clear `New custom play` and `New playlist` titles
 - The main remaining product gap is a fuller user-managed or backend-backed `custom play` media source beyond the current script-driven registration flow.
+- A durable product draft for guided `Pranayama` now lives in `docs/pranayama-product-spec.md`, covering ratio-based presets, phase guidance, warnings, session logging, and web/iPhone behavior expectations.
 - Real-device QA still matters for iPhone Safari timer completion behavior and native iPhone notification or lock-screen audio edge cases; the web timer now has a scheduled unfocused completion path when the browser page remains runnable.
 - Native iPhone helper scripts now auto-run the full scheme XCTest suite whenever Xcode lists an eligible simulator or device destination, while still allowing `MEDITATION_IOS_RUN_SCHEME_TESTS=0` for an intentional build-plus-SwiftPM-only pass.
 - The repo now includes a shared meditation app icon set derived from the native Practice symbol direction, with web favicon and manifest icons under `public/icons/` plus an iPhone `Assets.xcassets/AppIcon.appiconset`.

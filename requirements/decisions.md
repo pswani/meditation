@@ -2,6 +2,8 @@
 
 ## Product and architecture
 - Keep the app as a React + TypeScript + Vite SPA backed by one Spring Boot service in `backend/`.
+- Add future guided `Pranayama` support as a practice option inside the existing practice flow rather than as a separate product area.
+- Keep the first `Pranayama` release focused on ratio-based presets with plain-English labels and optional Sanskrit support text, rather than technique-specific instruction or an open-ended custom routine builder.
 - Keep the shared app icon direction centered on a calm seated-practice mark so the iPhone launcher icon and web favicon stay visually aligned with the native Practice tab.
 - If a native iOS client is pursued, keep it as a separate SwiftUI app under `ios-native/` rather than replacing or embedding the existing web app.
 - Keep H2 as the repository's default local and early-production datastore, with Flyway managing schema changes.
