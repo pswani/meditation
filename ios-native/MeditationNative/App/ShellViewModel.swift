@@ -1007,6 +1007,9 @@ final class ShellViewModel: ObservableObject {
             case .server(_, let message):
                 syncState.connectionState = .backendUnavailable
                 syncState.lastErrorMessage = message
+            case .contractMismatch(let endpoint, _):
+                syncState.connectionState = .invalidBackendResponse
+                syncState.lastErrorMessage = "Unexpected response from \(endpoint)."
             }
             syncState.lastNoticeMessage = nil
             saveSyncState()

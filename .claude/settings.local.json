@@ -57,7 +57,21 @@
       "Bash(git -C * log --oneline --all)",
       "Bash(.venv/bin/python -m claude_worker status --project meditation)",
       "Bash(.venv/bin/python -m claude_worker status)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(./scripts/pipeline.sh build *)",
+      "Bash(node *)",
+      "Bash(grep -n 'ZodTypeDef\\\\|export.*ZodType\\\\b\\\\|$ZodTypeInternals\\\\|$ZodType' node_modules/zod/index.d.ts)",
+      "Bash(grep -n 'ZodType\\\\|ZodTypeDef\\\\|$Zod' node_modules/zod/v4/index.d.ts)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(curl -s http://127.0.0.1:8080/)",
+      "Bash(curl -s http://127.0.0.1:8080/api/)",
+      "Bash(xargs ls *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8080/)",
+      "Bash(lsof -iTCP:80 -sTCP:LISTEN -n -P)",
+      "Bash(nginx -T)",
+      "Bash(brew services *)",
+      "Bash(curl -sv http://127.0.0.1:8080/)",
+      "Bash(nginx -t)"
     ]
   }
 }

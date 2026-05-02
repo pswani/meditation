@@ -50,6 +50,7 @@
 		A10000010000000000000029 /* CustomPlaySessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000030 /* CustomPlaySessionCoordinator.swift */; };
 		A1000001000000000000002A /* TimerSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000031 /* TimerSessionCoordinator.swift */; };
 		A1000001000000000000002B /* DiagnosticsExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000032 /* DiagnosticsExport.swift */; };
+		A1000001000000000000002C /* ActiveSessionDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000010000000000000033 /* ActiveSessionDisplay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +117,7 @@
 		B10000010000000000000030 /* CustomPlaySessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPlaySessionCoordinator.swift; sourceTree = "<group>"; };
 		B10000010000000000000031 /* TimerSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSessionCoordinator.swift; sourceTree = "<group>"; };
 		B10000010000000000000032 /* DiagnosticsExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsExport.swift; sourceTree = "<group>"; };
+		B10000010000000000000033 /* ActiveSessionDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionDisplay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,6 +211,7 @@
 			children = (
 				B10000010000000000000001 /* MeditationNativeApp.swift */,
 				B10000010000000000000002 /* ShellViewModel.swift */,
+				B10000010000000000000033 /* ActiveSessionDisplay.swift */,
 				B10000010000000000000023 /* ShellRuntimeSafetyPrompt.swift */,
 				B10000010000000000000024 /* ShellViewModelPresentation.swift */,
 				B10000010000000000000025 /* ShellSnapshotSupport.swift */,
@@ -504,6 +507,7 @@
 				A10000010000000000000029 /* CustomPlaySessionCoordinator.swift in Sources */,
 				A1000001000000000000002A /* TimerSessionCoordinator.swift in Sources */,
 				A1000001000000000000002B /* DiagnosticsExport.swift in Sources */,
+				A1000001000000000000002C /* ActiveSessionDisplay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

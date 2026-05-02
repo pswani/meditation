@@ -1,8 +1,8 @@
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType } from 'zod';
 import { reportError } from '../../utils/errorSink';
 
 export function validateApiContract<T>(
-  schema: ZodType<T, ZodTypeDef, unknown>,
+  schema: ZodType<T>,
   raw: unknown,
   context: string
 ): void {
