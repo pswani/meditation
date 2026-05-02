@@ -12,29 +12,24 @@ import {
   selectFavoriteCustomPlays,
 } from '../features/home/homePageHelpers';
 import { useSankalpaProgress } from '../features/sankalpa/useSankalpaProgress';
-import { useTimer } from '../features/timer/useTimer';
+import { useCustomPlay } from '../features/timer/customPlayContext';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
+import { useSessionLog } from '../features/timer/sessionLogContext';
+import { useTimerActions } from '../features/timer/timerActionsContext';
+import { useTimerSettings } from '../features/timer/timerSettingsContext';
+import { useTimerState } from '../features/timer/timerStateContext';
 import type { CustomPlay } from '../types/customPlay';
 import { applyCustomPlayToTimerSettings } from '../utils/customPlay';
 import { deriveTodayActivitySummary, selectRecentSessionLogs, selectTopActiveSankalpaProgress } from '../utils/home';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const {
-    settings,
-    sessionLogs,
-    customPlays,
-    playlists,
-    lastUsedMeditation,
-    activeSession,
-    activeCustomPlayRun,
-    activePlaylistRun,
-    startSession,
-    startCustomPlayRun,
-    startPlaylistRun,
-    isSettingsLoading,
-    isPlaylistsLoading,
-    settingsSyncError,
-  } = useTimer();
+  const { settings, isSettingsLoading, settingsSyncError } = useTimerSettings();
+  const { sessionLogs } = useSessionLog();
+  const { customPlays, activeCustomPlayRun, startCustomPlayRun } = useCustomPlay();
+  const { playlists, lastUsedMeditation, activePlaylistRun, startPlaylistRun, isPlaylistsLoading } = usePlaylistRuntime();
+  const { state: { activeSession } } = useTimerState();
+  const { startSession } = useTimerActions();
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const { progressEntries: sankalpaProgressEntries, isLoading: isSankalpaLoading, syncMessage: sankalpaSyncMessage } =
     useSankalpaProgress(sessionLogs);

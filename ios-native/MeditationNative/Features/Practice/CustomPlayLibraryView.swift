@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CustomPlayLibraryView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var isPresentingEditor = false
     @State private var draft = CustomPlayDraft()
@@ -133,6 +134,7 @@ struct CustomPlayLibraryView: View {
 }
 
 struct CustomPlayEditorView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @Binding var draft: CustomPlayDraft
     @Environment(\.dismiss) private var dismiss

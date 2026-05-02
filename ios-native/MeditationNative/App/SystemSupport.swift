@@ -1,8 +1,12 @@
 import AVFoundation
+import Combine
 import Foundation
+import os
 import SwiftUI
 import UIKit
 @preconcurrency import UserNotifications
+
+private let audioLogger = Logger(subsystem: "com.meditation.native", category: "audio")
 
 enum NotificationPermissionState: Equatable {
     case checking
@@ -244,11 +248,42 @@ protocol BackgroundAudioKeeping: AnyObject {
 @MainActor
 final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAudioPlayerDelegate {
     private var activePlayers: [AVAudioPlayer] = []
+    private var cancellables = Set<AnyCancellable>()
+
+    override init() {
+        super.init()
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    let playerCount = self.activePlayers.count
+                    self.activePlayers.forEach { $0.stop() }
+                    self.activePlayers = []
+                    for _ in 0..<playerCount {
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    break
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func playSound(named soundName: String?) {
-        guard let resourceName = TimerSoundCatalog.bundledResourceName(for: soundName),
-              let fileURL = Bundle.main.url(forResource: resourceName, withExtension: "mp3")
-        else {
+        guard let resourceName = TimerSoundCatalog.bundledResourceName(for: soundName) else {
+            return
+        }
+        guard let fileURL = Bundle.main.url(forResource: resourceName, withExtension: "mp3") else {
+            #if DEBUG
+            assertionFailure("Bundled sound not found: \(resourceName).mp3 — check the app bundle")
+            #else
+            audioLogger.error("Bundled sound not found: \(resourceName, privacy: .public).mp3")
+            #endif
             return
         }
 
@@ -263,6 +298,7 @@ final class SystemSoundPlayer: NSObject, TimerSoundPlaying, @preconcurrency AVAu
             }
             activePlayers.append(player)
         } catch {
+            audioLogger.error("SystemSoundPlayer failed to play \(resourceName, privacy: .public): \(error.localizedDescription, privacy: .public)")
             PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
             return
         }
@@ -310,6 +346,33 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
     private var player: AVPlayer?
     private var playbackCompletionObserver: NSObjectProtocol?
     private var holdsPlaybackSessionLease = false
+    private var cancellables = Set<AnyCancellable>()
+
+    override init() {
+        super.init()
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    self.player?.pause()
+                    if self.holdsPlaybackSessionLease {
+                        self.holdsPlaybackSessionLease = false
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    let shouldResume = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                        .flatMap(AVAudioSession.InterruptionOptions.init(rawValue:))
+                        .map { $0.contains(.shouldResume) } ?? false
+                    if shouldResume { try? self.resumePlayback() }
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func startPlayback(for media: CustomPlayMedia, environment: AppEnvironment, at offsetSeconds: TimeInterval = 0) throws {
         stopPlayback()
@@ -340,6 +403,7 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 
     func pausePlayback() {
         player?.pause()
+        releasePlaybackSessionLeaseIfNeeded()
     }
 
     func resumePlayback() throws {
@@ -459,13 +523,22 @@ final class BundledCustomPlayAudioPlayer: NSObject, CustomPlayAudioControlling {
 final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
     private let engine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
-    private let silentBuffer: AVAudioPCMBuffer
+    private let silentBuffer: AVAudioPCMBuffer?
     private(set) var isActive = false
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
-        let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
         let frameCapacity: AVAudioFrameCount = 4_410
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)!
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1) else {
+            audioLogger.fault("SilentBackgroundAudioKeepAlive: failed to create audio format")
+            silentBuffer = nil
+            return
+        }
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity) else {
+            audioLogger.fault("SilentBackgroundAudioKeepAlive: failed to create silent buffer")
+            silentBuffer = nil
+            return
+        }
         buffer.frameLength = frameCapacity
         if let channelData = buffer.floatChannelData {
             channelData[0].initialize(repeating: 0, count: Int(frameCapacity))
@@ -475,6 +548,28 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
         engine.attach(playerNode)
         engine.connect(playerNode, to: engine.mainMixerNode, format: format)
         engine.prepare()
+
+        NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let interruptionType = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+                switch interruptionType {
+                case .began:
+                    if self.isActive {
+                        self.isActive = false
+                        PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
+                    }
+                case .ended:
+                    let shouldResume = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                        .flatMap(AVAudioSession.InterruptionOptions.init(rawValue:))
+                        .map { $0.contains(.shouldResume) } ?? false
+                    if shouldResume { self.begin() }
+                @unknown default: break
+                }
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -483,9 +578,7 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
     }
 
     func begin() {
-        guard isActive == false else {
-            return
-        }
+        guard let silentBuffer, !isActive else { return }
 
         do {
             try PlaybackAudioSessionSupport.activatePlaybackSession()
@@ -497,7 +590,9 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
                 playerNode.play()
             }
             isActive = true
+            audioLogger.debug("SilentBackgroundAudioKeepAlive started successfully")
         } catch {
+            audioLogger.error("SilentBackgroundAudioKeepAlive failed to start: \(error.localizedDescription, privacy: .public)")
             PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
             playerNode.stop()
             engine.stop()
@@ -506,14 +601,13 @@ final class SilentBackgroundAudioKeepAlive: BackgroundAudioKeeping {
     }
 
     func end() {
-        guard isActive else {
-            return
-        }
+        guard isActive else { return }
 
         playerNode.stop()
-        engine.pause()
+        engine.stop()
         PlaybackAudioSessionSupport.deactivatePlaybackSessionIfNeeded()
         isActive = false
+        audioLogger.debug("SilentBackgroundAudioKeepAlive stopped")
     }
 }
 
@@ -546,7 +640,12 @@ enum PlaybackAudioSessionSupport {
         }
 
         let session = AVAudioSession.sharedInstance()
-        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+        do {
+            try session.setActive(false, options: [.notifyOthersOnDeactivation])
+            audioLogger.debug("Audio session deactivated")
+        } catch {
+            audioLogger.error("Audio session deactivation failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }
 

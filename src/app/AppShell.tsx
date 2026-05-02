@@ -1,34 +1,52 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ShellStatusBanners } from './ShellStatusBanners';
 import { buildSyncStatusMessage } from './appShellHelpers';
 import { useCustomPlayAudioSync, usePlaylistAudioSync } from './useShellAudioSync';
 import { useSyncStatus } from '../features/sync/useSyncStatus';
-import { useTimer } from '../features/timer/useTimer';
+import { useCustomPlay } from '../features/timer/customPlayContext';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
+import { useTimerActions } from '../features/timer/timerActionsContext';
+import { useTimerState } from '../features/timer/timerStateContext';
 import { getPlaylistRunCurrentItem, isAudioBackedPlaylistItem } from '../utils/playlistRuntime';
+import { removeDeadLetterSyncQueueEntries } from '../utils/syncQueue';
 import { getActiveNavItem, primaryNavItems } from './routes';
+
+const MAX_AUDIO_RETRIES = 3;
 
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { state: { activeSession } } = useTimerState();
+  const { recoveryMessage, clearRecoveryMessage } = useTimerActions();
   const {
-    activeSession,
     activeCustomPlayRun,
-    activePlaylistRun,
-    isPlaylistRunPaused,
-    recoveryMessage,
-    clearRecoveryMessage,
     updateCustomPlayRunProgress,
     completeCustomPlayRun,
     reportCustomPlayRuntimeIssue,
+  } = useCustomPlay();
+  const {
+    activePlaylistRun,
+    isPlaylistRunPaused,
     updatePlaylistRunProgress,
     completePlaylistRunCurrentItem,
+    endPlaylistRunEarly,
     reportPlaylistRuntimeIssue,
-  } = useTimer();
+  } = usePlaylistRuntime();
   const {
     connectionMode,
-    summary: { nextRetryCount, failedCount },
+    summary: { nextRetryCount, failedCount, deadLetterCount },
+    updateQueue,
   } = useSyncStatus();
+  const [storageFull, setStorageFull] = useState(false);
+
+  useEffect(() => {
+    function handleStorageQuotaExceeded() {
+      setStorageFull(true);
+    }
+    window.addEventListener('meditation:storage-quota-exceeded', handleStorageQuotaExceeded);
+    return () => window.removeEventListener('meditation:storage-quota-exceeded', handleStorageQuotaExceeded);
+  }, []);
   const activeNavItem = getActiveNavItem(location.pathname);
   const syncStatusMessage = buildSyncStatusMessage(connectionMode, nextRetryCount, failedCount);
   const showActiveTimerBanner = location.pathname !== '/practice/active';
@@ -36,6 +54,8 @@ export default function AppShell() {
   const showActivePlaylistBanner = location.pathname !== '/practice/playlists/active';
   const customPlayAudioRef = useRef<HTMLAudioElement | null>(null);
   const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
+  const customPlayAudioErrorCountRef = useRef(0);
+  const playlistAudioErrorCountRef = useRef(0);
   const activePlaylistItem = getPlaylistRunCurrentItem(activePlaylistRun);
   const activePlaylistAudioItem =
     activePlaylistRun?.currentSegment.phase === 'item' &&
@@ -43,6 +63,36 @@ export default function AppShell() {
     isAudioBackedPlaylistItem(activePlaylistItem)
       ? activePlaylistItem
       : null;
+
+  // Release audio resources on unmount (W-H9)
+  useEffect(() => {
+    return () => {
+      const customPlayAudio = customPlayAudioRef.current;
+      if (customPlayAudio) {
+        customPlayAudio.pause();
+        customPlayAudio.src = '';
+        customPlayAudio.load();
+      }
+      const playlistAudio = playlistAudioRef.current;
+      if (playlistAudio) {
+        playlistAudio.pause();
+        playlistAudio.src = '';
+        playlistAudio.load();
+      }
+    };
+  }, []);
+
+  // Pause audio and end the run when the active playlist item is deleted mid-playback (W-M2)
+  const prevPlaylistItemRef = useRef(activePlaylistItem);
+  useEffect(() => {
+    const prev = prevPlaylistItemRef.current;
+    prevPlaylistItemRef.current = activePlaylistItem;
+
+    if (prev !== null && activePlaylistItem === null && activePlaylistRun !== null) {
+      playlistAudioRef.current?.pause();
+      endPlaylistRunEarly();
+    }
+  }, [activePlaylistItem, activePlaylistRun, endPlaylistRunEarly]);
 
   useCustomPlayAudioSync({
     audioRef: customPlayAudioRef,
@@ -100,6 +150,10 @@ export default function AppShell() {
             syncStatusMessage={syncStatusMessage}
             connectionMode={connectionMode}
             failedCount={failedCount}
+            deadLetterCount={deadLetterCount}
+            onDiscardDeadLetterEntries={() => updateQueue(removeDeadLetterSyncQueueEntries)}
+            storageFull={storageFull}
+            onDismissStorageFull={() => setStorageFull(false)}
             showActiveTimerBanner={showActiveTimerBanner}
             showActiveCustomPlayBanner={showActiveCustomPlayBanner}
             showActivePlaylistBanner={showActivePlaylistBanner}
@@ -113,10 +167,12 @@ export default function AppShell() {
           <Outlet />
         </main>
 
+        <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
         <audio
           ref={customPlayAudioRef}
-          style={{ display: 'none' }}
+          controls
           onLoadedMetadata={() => {
+            customPlayAudioErrorCountRef.current = 0;
             const audio = customPlayAudioRef.current;
             if (!audio || !activeCustomPlayRun) {
               return;
@@ -143,14 +199,29 @@ export default function AppShell() {
             completeCustomPlayRun(audio?.duration || audio?.currentTime || activeCustomPlayRun?.durationSeconds || 0);
           }}
           onError={() => {
-            reportCustomPlayRuntimeIssue('The linked recording could not be loaded right now.');
+            if (customPlayAudioErrorCountRef.current < MAX_AUDIO_RETRIES) {
+              customPlayAudioErrorCountRef.current++;
+              setTimeout(() => {
+                const audio = customPlayAudioRef.current;
+                if (audio) {
+                  audio.load();
+                  audio.play().catch(() => {});
+                }
+              }, 2000);
+            } else {
+              customPlayAudioErrorCountRef.current = 0;
+              reportCustomPlayRuntimeIssue('The linked recording could not be loaded right now.');
+            }
           }}
         />
+        </div>
 
+        <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
         <audio
           ref={playlistAudioRef}
-          style={{ display: 'none' }}
+          controls
           onLoadedMetadata={() => {
+            playlistAudioErrorCountRef.current = 0;
             const audio = playlistAudioRef.current;
             if (!audio || !activePlaylistRun || activePlaylistRun.currentSegment.phase !== 'item') {
               return;
@@ -177,9 +248,22 @@ export default function AppShell() {
             completePlaylistRunCurrentItem(audio?.duration || audio?.currentTime || 0);
           }}
           onError={() => {
-            reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded right now.');
+            if (playlistAudioErrorCountRef.current < MAX_AUDIO_RETRIES) {
+              playlistAudioErrorCountRef.current++;
+              setTimeout(() => {
+                const audio = playlistAudioRef.current;
+                if (audio) {
+                  audio.load();
+                  audio.play().catch(() => {});
+                }
+              }, 2000);
+            } else {
+              playlistAudioErrorCountRef.current = 0;
+              reportPlaylistRuntimeIssue('The linked playlist recording could not be loaded right now.');
+            }
           }}
         />
+        </div>
 
         <nav className="bottom-nav" aria-label="Bottom navigation">
           {primaryNavItems.map((item) => (

@@ -42,8 +42,10 @@ function parseManualTimestamp(timestamp: string): number | null {
 export function validateManualLogInput(input: ManualLogInput, now: Date = new Date()): ManualLogValidationResult {
   const errors: ManualLogValidationResult['errors'] = {};
 
-  if (Number.isNaN(input.durationMinutes) || input.durationMinutes <= 0) {
-    errors.durationMinutes = 'Duration must be greater than 0.';
+  if (Number.isNaN(input.durationMinutes) || input.durationMinutes < 1) {
+    errors.durationMinutes = 'Duration must be between 1 and 1440 minutes.';
+  } else if (input.durationMinutes > 1440) {
+    errors.durationMinutes = 'Duration must be between 1 and 1440 minutes.';
   }
 
   if (!input.meditationType) {

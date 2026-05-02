@@ -49,6 +49,7 @@ For complex or multi-step changes, also follow:
 - Avoid adding dependencies unless clearly justified.
 - Do not refactor unrelated areas.
 - Prefer incremental vertical slices over broad unfinished scaffolding.
+- Use `useCallback` for callbacks passed as props; use `useMemo` for expensive computed values. Always provide complete dependency arrays (enforced by `react-hooks/exhaustive-deps`).
 
 ## App architecture expectations
 - `src/pages` contains route-level screens.

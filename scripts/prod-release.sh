@@ -136,4 +136,20 @@ if [ -n "$email_address" ]; then
   set -- "$@" --email "$email_address"
 fi
 
-exec "$SCRIPT_DIR/prod-macos-setup.sh" "$@"
+"$SCRIPT_DIR/prod-macos-setup.sh" "$@"
+
+# Smoke test: wait for the backend to become healthy (up to 30 seconds)
+printf '%s\n' "Waiting for backend to start..."
+HEALTH_URL="http://127.0.0.1:8080/api/health"
+MAX_ATTEMPTS=15
+attempt=0
+until curl --silent --fail --max-time 2 "${HEALTH_URL}" >/dev/null 2>&1; do
+    attempt=$((attempt + 1))
+    if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
+        printf '%s\n' "ERROR: Backend did not become healthy after ${MAX_ATTEMPTS} attempts."
+        printf '%s\n' "Check logs: ./scripts/prod-macos-control.sh logs"
+        exit 1
+    fi
+    sleep 2
+done
+printf '%s\n' "Backend is healthy. Deploy complete."

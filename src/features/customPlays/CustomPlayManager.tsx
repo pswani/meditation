@@ -7,7 +7,7 @@ import { useCustomPlayMediaCatalog } from './useCustomPlayMediaCatalog';
 import type { CustomPlayDraft, CustomPlayValidationResult } from '../../types/customPlay';
 import type { TimerSettings } from '../../types/timer';
 import { applyCustomPlayToTimerSettings } from '../../utils/customPlay';
-import { useTimer } from '../timer/useTimer';
+import { useCustomPlay } from '../timer/customPlayContext';
 
 const initialDraft: CustomPlayDraft = {
   name: '',
@@ -40,7 +40,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
     isCustomPlaysLoading,
     isCustomPlaySyncing,
     customPlaySyncError,
-  } = useTimer();
+  } = useCustomPlay();
   const [draft, setDraft] = useState<CustomPlayDraft>(initialDraft);
   const [errors, setErrors] = useState<CustomPlayValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);
@@ -48,7 +48,8 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
   const [appliedPlayId, setAppliedPlayId] = useState<string | null>(null);
   const [saveFeedbackMessage, setSaveFeedbackMessage] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<FeedbackTone>('ok');
-  const { mediaAssets, mediaCatalogSource, isMediaCatalogLoading, mediaLoadError, mediaLoadIssueKind } = useCustomPlayMediaCatalog();
+  const [mediaCatalogVersion, setMediaCatalogVersion] = useState(0);
+  const { mediaAssets, mediaCatalogSource, isMediaCatalogLoading, mediaLoadError, mediaLoadIssueKind } = useCustomPlayMediaCatalog(mediaCatalogVersion);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +63,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
       setEditId(null);
       setFeedbackTone('ok');
       setSaveFeedbackMessage(feedbackMessage);
+      setMediaCatalogVersion((v) => v + 1);
     } else {
       setSaveFeedbackMessage(null);
     }
@@ -112,6 +114,7 @@ export default function CustomPlayManager({ timerSettings, onApplyCustomPlay, on
 
     setPendingDeleteId(null);
     setSaveFeedbackMessage(null);
+    setMediaCatalogVersion((v) => v + 1);
 
     if (editId === playId) {
       setEditId(null);

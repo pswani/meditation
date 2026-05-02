@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import PlaylistManager from '../features/playlists/PlaylistManager';
-import { useTimer } from '../features/timer/useTimer';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
 
 export default function PlaylistsPage() {
   const navigate = useNavigate();
-  const { activePlaylistRun, playlistRunOutcome, clearPlaylistRunOutcome } = useTimer();
+  const { activePlaylistRun, playlistRunOutcome, clearPlaylistRunOutcome } = usePlaylistRuntime();
 
   return (
     <section className="page-card playlist-screen">

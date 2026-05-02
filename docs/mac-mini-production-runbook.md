@@ -199,6 +199,23 @@ If you only need a clean runtime restart without reinstalling files:
 ./scripts/prod-macos-control.sh restart
 ```
 
+## Database Backup
+
+H2 data lives in `/opt/meditation/shared/h2/`. Run a consistent snapshot backup:
+
+```bash
+./scripts/backup-db.sh
+# Default destination: /opt/meditation/backups/db-YYYYMMDD-HHMMSS/
+# Custom destination:
+./scripts/backup-db.sh /Volumes/ExternalDrive/meditation-backups
+```
+
+**Recommended:** schedule this daily via launchd or cron. The script stops the
+backend briefly for a consistent copy, then restarts it.
+
+**Restore:** stop the backend, replace the `.mv.db` file(s) with the backup copy,
+restart.
+
 ## Notes
 
 - The production host should only serve the built frontend files from `nginx`.

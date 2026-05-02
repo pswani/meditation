@@ -6,9 +6,12 @@ private struct BackendConfigurationDraft: Equatable {
 }
 
 struct SettingsView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var timerDefaultsDraft: TimerSettingsDraft
     @State private var backendConfigurationDraft: BackendConfigurationDraft
+    @State private var diagnosticsPreparing = false
+    @State private var diagnosticsShareItem: String?
 
     init(viewModel: ShellViewModel) {
         self.viewModel = viewModel
@@ -191,6 +194,29 @@ struct SettingsView: View {
                             Text(lastErrorMessage)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                SectionCard(title: "Diagnostics", caption: "Export recent app logs for troubleshooting") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let shareItem = diagnosticsShareItem {
+                            ShareLink(item: shareItem) {
+                                Label("Share diagnostic report", systemImage: "square.and.arrow.up")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.teal)
+                        } else {
+                            Button(diagnosticsPreparing ? "Collecting logs…" : "Collect Diagnostics") {
+                                guard !diagnosticsPreparing else { return }
+                                diagnosticsPreparing = true
+                                Task {
+                                    diagnosticsShareItem = (try? await DiagnosticsExport.collectLogs()) ?? "No recent logs."
+                                    diagnosticsPreparing = false
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(diagnosticsPreparing)
                         }
                     }
                 }

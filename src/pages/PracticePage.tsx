@@ -4,7 +4,12 @@ import { PracticeSetupForm } from '../features/timer/PracticeSetupForm';
 import { PracticeToolsPanel } from '../features/timer/PracticeToolsPanel';
 import { formatRemainingTime } from '../features/timer/time';
 import { usePracticeSetupState } from '../features/timer/usePracticeSetupState';
-import { useTimer } from '../features/timer/useTimer';
+import { useCustomPlay } from '../features/timer/customPlayContext';
+import { usePlaylistRuntime } from '../features/timer/playlistRuntimeContext';
+import { useSessionLog } from '../features/timer/sessionLogContext';
+import { useTimerActions } from '../features/timer/timerActionsContext';
+import { useTimerSettings } from '../features/timer/timerSettingsContext';
+import { useTimerState } from '../features/timer/timerStateContext';
 import type { TimerSettings } from '../types/timer';
 
 interface PracticeRouteState {
@@ -13,19 +18,12 @@ interface PracticeRouteState {
 }
 
 export default function PracticePage() {
-  const {
-    settings: defaultSettings,
-    activeSession,
-    activeCustomPlayRun,
-    activePlaylistRun,
-    startSession,
-    clearOutcome,
-    lastOutcome,
-    isSessionLogSyncing,
-    sessionLogSyncError,
-    isSettingsLoading,
-    settingsSyncError,
-  } = useTimer();
+  const { settings: defaultSettings, isSettingsLoading, settingsSyncError } = useTimerSettings();
+  const { state: { activeSession, lastOutcome } } = useTimerState();
+  const { activeCustomPlayRun } = useCustomPlay();
+  const { activePlaylistRun } = usePlaylistRuntime();
+  const { startSession, clearOutcome } = useTimerActions();
+  const { isSessionLogSyncing, sessionLogSyncError } = useSessionLog();
   const navigate = useNavigate();
   const location = useLocation();
   const isTimerStartBlockedByPlaylistRun = Boolean(activePlaylistRun) || Boolean(activeCustomPlayRun) || isSettingsLoading;

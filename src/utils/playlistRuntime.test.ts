@@ -64,7 +64,7 @@ describe('playlistRuntime', () => {
       customPlayRecordingLabel: 'Vipassana Sit (20 min)',
       mediaAssetId: 'media-vipassana-sit-20',
       mediaLabel: 'Vipassana Sit (20 min)',
-      mediaFilePath: '/media/custom-plays/vipassana-sit-20.mp3',
+      mediaFilePath: '/media/custom-plays/vipassana-sit-20.mp3?v=2026-03-24T08%3A00%3A00.000Z',
       startSound: 'Temple Bell',
       endSound: 'Gong',
     });

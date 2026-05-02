@@ -19,6 +19,9 @@ export function buildAutoLogEntry({ session, endedAt, completedDurationSeconds, 
         ? Math.max(0, Math.min(intendedDurationSeconds, normalizedCompletedDurationSeconds))
         : Math.max(0, normalizedCompletedDurationSeconds);
 
+  // startedAt and endedAt are client wall-clock times; server re-stamps updatedAt
+  // via X-Meditation-Sync-Queued-At. completedDurationSeconds uses accumulated elapsedSeconds,
+  // not endedAt-startedAt, so pause/resume and wall-clock drift don't corrupt the value.
   return {
     id: `${session.startedAtMs}-${session.timerMode}-${status}-${Math.round(safeCompletedDurationSeconds)}`,
     startedAt: session.startedAt,

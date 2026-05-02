@@ -44,12 +44,13 @@ describe('api client', () => {
     });
   });
 
-  it('throws a typed error for non-ok responses', async () => {
+  it('throws a typed error for non-ok responses with plain text body', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
+        headers: { get: () => 'text/plain' },
         text: async () => 'backend unavailable',
       })
     );
@@ -59,6 +60,25 @@ describe('api client', () => {
       kind: 'http',
       status: 503,
       detail: 'backend unavailable',
+    });
+  });
+
+  it('throws a typed error for non-ok responses with JSON body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        headers: { get: () => 'application/problem+json' },
+        json: async () => ({ status: 400, title: 'Bad Request', detail: 'Duration must be greater than 0.' }),
+      })
+    );
+
+    await expect(requestJson('/health')).rejects.toMatchObject<ApiClientError>({
+      name: 'ApiClientError',
+      kind: 'http',
+      status: 400,
+      detail: 'Duration must be greater than 0.',
     });
   });
 

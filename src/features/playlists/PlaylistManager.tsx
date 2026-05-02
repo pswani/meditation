@@ -10,7 +10,8 @@ import {
   createPlaylistDraftItem,
   pruneResolvedPlaylistErrors,
 } from '../../utils/playlist';
-import { useTimer } from '../timer/useTimer';
+import { useCustomPlay } from '../timer/customPlayContext';
+import { usePlaylistRuntime } from '../timer/playlistRuntimeContext';
 
 const initialErrors: PlaylistValidationResult['errors'] = {
   itemErrors: {},
@@ -21,7 +22,6 @@ export default function PlaylistManager() {
   const navigate = useNavigate();
   const {
     playlists,
-    customPlays,
     activePlaylistRun,
     savePlaylist,
     deletePlaylist,
@@ -30,8 +30,8 @@ export default function PlaylistManager() {
     isPlaylistsLoading,
     isPlaylistSyncing,
     playlistSyncError,
-    isCustomPlaysLoading,
-  } = useTimer();
+  } = usePlaylistRuntime();
+  const { customPlays, isCustomPlaysLoading } = useCustomPlay();
   const [draft, setDraft] = useState<PlaylistDraft>(() => createInitialPlaylistDraft());
   const [errors, setErrors] = useState<PlaylistValidationResult['errors']>(initialErrors);
   const [editId, setEditId] = useState<string | null>(null);
@@ -75,10 +75,19 @@ export default function PlaylistManager() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const playlistName = draft.name.trim() || 'Playlist';
-    const feedbackMessage = editId ? `Playlist "${playlistName}" updated.` : `Playlist "${playlistName}" saved.`;
-    const result = await savePlaylist(draft, editId ?? undefined);
-    setErrors(result.errors);
+    const trimmedName = draft.name.trim();
+    if (!trimmedName) {
+      setErrors((current) => ({ ...current, name: 'Playlist name is required.' }));
+      return;
+    }
+    if (playlists.some((p) => p.name.trim() === trimmedName && p.id !== editId)) {
+      setErrors((current) => ({ ...current, name: 'A playlist with this name already exists.' }));
+      return;
+    }
+    const trimmedDraft = { ...draft, name: trimmedName };
+    const feedbackMessage = editId ? `Playlist "${trimmedName}" updated.` : `Playlist "${trimmedName}" saved.`;
+    const result = await savePlaylist(trimmedDraft, editId ?? undefined);
+    setErrors(result.errors ?? initialErrors);
 
     if (result.isValid && result.persisted) {
       setDraft(createInitialPlaylistDraft());

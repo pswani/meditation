@@ -32,3 +32,35 @@ import Testing
     #expect(snapshot == SampleData.snapshot)
     #expect(FileManager.default.fileExists(atPath: fileURL.path))
 }
+
+@Test func decodesLegacyV1SnapshotWithoutVersionField() throws {
+    let json = """
+    {
+        "timerDraft": { "mode": "fixed-duration", "durationMinutes": 20 },
+        "recentSessionLogs": [],
+        "customPlays": [],
+        "playlists": [],
+        "sankalpas": []
+    }
+    """
+    let data = try #require(json.data(using: .utf8))
+    let snapshot = try JSONDecoder().decode(AppSnapshot.self, from: data)
+    #expect(snapshot.version == AppSnapshot.currentVersion)
+    #expect(snapshot.recentSessionLogs.isEmpty)
+}
+
+@Test func decodesLegacyAppSyncStateWithoutVersionOrNewFields() throws {
+    let json = """
+    {
+        "connectionState": "pending-sync",
+        "pendingMutations": [],
+        "lastAttemptedSyncAt": null,
+        "lastSuccessfulSyncAt": null
+    }
+    """
+    let data = try #require(json.data(using: .utf8))
+    let state = try JSONDecoder().decode(AppSyncState.self, from: data)
+    #expect(state.version == AppSyncState.currentVersion)
+    #expect(state.mutationQueueOverflowed == false)
+    #expect(state.needsFullResync == false)
+}

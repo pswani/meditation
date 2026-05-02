@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { reportError } from '../utils/errorSink';
 
 interface Props {
   children: ReactNode;
@@ -21,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     this.props.onError?.(error, info);
-    console.error('[ErrorBoundary]', error, info.componentStack);
+    reportError('[ErrorBoundary]', { error: error.message, componentStack: info.componentStack });
   }
 
   render() {

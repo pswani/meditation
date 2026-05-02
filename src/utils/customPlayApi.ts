@@ -1,4 +1,6 @@
 import type { CustomPlay } from '../types/customPlay';
+import { customPlaySchema } from '../api/schemas/customPlaySchema';
+import { validateApiContract } from '../api/schemas/validateContract';
 import { ApiClientError, requestJson } from './apiClient';
 import { buildApiPath, buildApiUrl } from './apiConfig';
 import {
@@ -86,6 +88,7 @@ function isCustomPlayApiResponse(value: unknown): value is CustomPlayApiResponse
 }
 
 function normalizeCustomPlayPayload(payload: unknown): CustomPlay {
+  validateApiContract(customPlaySchema, payload, 'CustomPlay');
   if (!isCustomPlayApiResponse(payload)) {
     throw new Error('Custom play response is invalid.');
   }

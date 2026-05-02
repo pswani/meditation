@@ -69,6 +69,25 @@ Update as work proceeds.
 - Keep milestones small and concrete.
 - Do not ask for “next steps” in the middle of an active plan unless truly blocked by missing business input.
 
+## Mac mini → Cloud Migration
+
+**Current state:** Single Mac mini running nginx + Spring Boot + H2. Acceptable for single-user home use.
+
+**Known limitations:**
+- No redundancy: one hardware failure = full outage + data loss (mitigated by `scripts/backup-db.sh`)
+- H2 is not suitable for multi-user or high-write workloads
+- Depends on residential internet uptime and dynamic IP (mitigated by DNS)
+
+**Migration path when needed:**
+1. Provision a VPS (e.g., Hetzner CX21 or DigitalOcean Droplet)
+2. Switch backend datasource to PostgreSQL (env vars in `application-prod.yml` already prepared)
+3. Migrate H2 → Postgres via Flyway baseline
+4. Move media storage to an object store (S3 or Backblaze B2)
+5. Update nginx config (`scripts/render-nginx-config.sh`) for new host
+6. Wire CI/CD deploy step (SSH + bundle install)
+
+This is a significant project (~2 weeks) and is not planned for the near term.
+
 ## Example milestone pattern
 1. define domain types and validation utilities
 2. build feature state and persistence

@@ -6,6 +6,7 @@ import {
   normalizeTimerSoundLabel,
 } from '../timerSound';
 import { isSessionLog, SESSION_LOGS_KEY } from './shared';
+import { safeSetItem } from './safeSetItem';
 
 export function loadSessionLogs(): SessionLog[] {
   const raw = localStorage.getItem(SESSION_LOGS_KEY);
@@ -34,6 +35,18 @@ export function loadSessionLogs(): SessionLog[] {
   }
 }
 
+export function evictOldSessionLogs(): void {
+  const logs = loadSessionLogs();
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const trimmed = logs.filter((log) => new Date(log.endedAt).getTime() > cutoff);
+  if (trimmed.length < logs.length) {
+    safeSetItem(SESSION_LOGS_KEY, JSON.stringify(trimmed));
+  }
+}
+
 export function saveSessionLogs(logs: readonly SessionLog[]): void {
-  localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(logs));
+  if (safeSetItem(SESSION_LOGS_KEY, JSON.stringify(logs)) === 'quota-exceeded') {
+    evictOldSessionLogs();
+    safeSetItem(SESSION_LOGS_KEY, JSON.stringify(logs));
+  }
 }

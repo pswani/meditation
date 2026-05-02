@@ -38,6 +38,31 @@ final class AppSyncServiceTests: XCTestCase {
         XCTAssertEqual(state.pendingMutations[1].queuedAt, Date(timeIntervalSince1970: 30))
     }
 
+    func testEnqueueCapDropsOldestAndSetsOverflowFlag() {
+        var state = AppSyncState(connectionState: .pendingSync)
+
+        let customPlay = SampleData.snapshot.customPlays[0]
+        for i in 0 ..< AppSyncFeature.maxPendingMutations {
+            var cp = customPlay
+            cp.id = UUID()
+            cp.name = "Play \(i)"
+            state = AppSyncFeature.enqueue(.customPlayUpsert(cp, queuedAt: Date(timeIntervalSince1970: Double(i))), into: state)
+        }
+
+        XCTAssertEqual(state.pendingMutations.count, AppSyncFeature.maxPendingMutations)
+        XCTAssertFalse(state.mutationQueueOverflowed)
+
+        var overflow = customPlay
+        overflow.id = UUID()
+        overflow.name = "Overflow"
+        state = AppSyncFeature.enqueue(.customPlayUpsert(overflow, queuedAt: Date(timeIntervalSince1970: 9999)), into: state)
+
+        XCTAssertEqual(state.pendingMutations.count, AppSyncFeature.maxPendingMutations)
+        XCTAssertTrue(state.mutationQueueOverflowed)
+        XCTAssertEqual(state.pendingMutations.last?.payload.customPlay?.name, "Overflow")
+        XCTAssertEqual(state.pendingMutations.first?.payload.customPlay?.name, "Play 1")
+    }
+
     func testReconcilePreservesDeviceOnlyCustomPlayMediaAndSankalpaTitle() {
         let localSnapshot = SampleData.snapshot
         var remoteSnapshot = SampleData.snapshot
@@ -65,7 +90,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -80,7 +105,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [
                             [
@@ -111,7 +136,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": SampleData.snapshot.customPlays[0].id.uuidString.lowercased(),
@@ -129,9 +154,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/playlists":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/sankalpas":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "goal": [
@@ -151,7 +176,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 3,
@@ -190,7 +215,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": "media-1",
@@ -206,7 +231,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -247,7 +272,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch (request.httpMethod, request.url?.path) {
             case ("PUT", "/api/sankalpas/\(sankalpa.id.uuidString.lowercased())"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "goal": [
                             "id": sankalpa.id.uuidString.lowercased(),
@@ -265,7 +290,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/settings/timer"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -280,13 +305,13 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/session-logs"):
-                return URLProtocolStub.jsonResponse(["items": []])
+                return try URLProtocolStub.jsonResponse(["items": []])
             case (_, "/api/custom-plays"):
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case (_, "/api/playlists"):
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case (_, "/api/sankalpas"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "goal": [
@@ -306,7 +331,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/summaries"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 0,
@@ -323,9 +348,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/media/custom-plays"):
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -359,7 +384,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -374,7 +399,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [
                             [
@@ -408,9 +433,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays", "/api/playlists", "/api/sankalpas":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 1,
@@ -424,9 +449,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -443,7 +468,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -458,7 +483,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [
                             [
@@ -493,9 +518,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays", "/api/playlists", "/api/sankalpas":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 1,
@@ -509,9 +534,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -530,7 +555,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -545,7 +570,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [],
                         "page": 0,
@@ -555,7 +580,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": "custom-play-legacy-server-id",
@@ -573,9 +598,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/playlists", "/api/sankalpas":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 0,
@@ -589,9 +614,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -612,7 +637,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -627,7 +652,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [],
                         "page": 0,
@@ -637,7 +662,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -655,9 +680,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/playlists", "/api/sankalpas":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 0,
@@ -671,7 +696,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": "media-ajapa-breath-15",
@@ -687,7 +712,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -724,7 +749,7 @@ final class AppSyncServiceTests: XCTestCase {
 
         URLProtocolStub.handler = { request in
             if request.httpMethod == "PUT", request.url?.path == "/api/session-logs/\(sessionLog.id.uuidString.lowercased())" {
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": sessionLog.id.uuidString.lowercased(),
                         "startedAt": sessionLog.startedAt.ISO8601Format(),
@@ -750,7 +775,7 @@ final class AppSyncServiceTests: XCTestCase {
 
             switch request.url?.path {
             case "/api/settings/timer":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -765,7 +790,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/session-logs":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "items": [
                             [
@@ -796,13 +821,13 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/custom-plays":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/playlists":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/sankalpas":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case "/api/summaries":
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 1,
@@ -819,9 +844,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case "/api/media/custom-plays":
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -854,7 +879,7 @@ final class AppSyncServiceTests: XCTestCase {
         URLProtocolStub.handler = { request in
             switch (request.httpMethod, request.url?.path) {
             case ("DELETE", "/api/custom-plays/\(customPlay.id.uuidString.lowercased())"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "outcome": "stale",
                         "currentRecord": [
@@ -871,7 +896,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/settings/timer"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "id": "default",
                         "timerMode": "fixed",
@@ -886,9 +911,9 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/session-logs"):
-                return URLProtocolStub.jsonResponse(["items": []])
+                return try URLProtocolStub.jsonResponse(["items": []])
             case (_, "/api/custom-plays"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": customPlay.id.uuidString.lowercased(),
@@ -904,11 +929,11 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/playlists"):
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case (_, "/api/sankalpas"):
-                return URLProtocolStub.jsonResponse([])
+                return try URLProtocolStub.jsonResponse([])
             case (_, "/api/summaries"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         "overallSummary": [
                             "totalSessionLogs": 0,
@@ -925,7 +950,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             case (_, "/api/media/custom-plays"):
-                return URLProtocolStub.jsonResponse(
+                return try URLProtocolStub.jsonResponse(
                     [
                         [
                             "id": "media-1",
@@ -941,7 +966,7 @@ final class AppSyncServiceTests: XCTestCase {
                     ]
                 )
             default:
-                return URLProtocolStub.jsonResponse([:])
+                return try URLProtocolStub.jsonResponse([:])
             }
         }
 
@@ -957,6 +982,35 @@ final class AppSyncServiceTests: XCTestCase {
             "A newer backend version already exists, so this custom play delete was not applied."
         )
         XCTAssertEqual(remoteState.snapshot.customPlays.first?.id, customPlay.id)
+    }
+
+    // MARK: - Offline sync reconciliation (I-M12)
+
+    func testOfflineMutationReconcileAppliesPendingUpsertOverRemoteState() {
+        let customPlayID = UUID()
+        var localSnapshot = SampleData.snapshot
+        localSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Offline Draft", meditationType: .vipassana, durationSeconds: 600)]
+        let updatedCustomPlay = CustomPlay(id: customPlayID, name: "Synced Name", meditationType: .vipassana, durationSeconds: 600)
+        let pendingMutation = SyncMutation.customPlayUpsert(updatedCustomPlay)
+        var remoteSnapshot = SampleData.snapshot
+        remoteSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Server Version", meditationType: .vipassana, durationSeconds: 600)]
+        let remoteState = RemoteAppState(snapshot: remoteSnapshot, summary: nil, mediaAssets: [])
+        let result = AppSyncFeature.reconcile(remoteState: remoteState, localSnapshot: localSnapshot, pendingMutations: [pendingMutation])
+        let reconciled = result.customPlays.first(where: { $0.id == customPlayID })
+        XCTAssertNotNil(reconciled)
+        XCTAssertEqual(reconciled?.name, "Synced Name", "Pending upsert must override remote state in reconciled snapshot")
+    }
+
+    func testOfflineDeleteReconcileRemovesRecordPresentOnRemote() {
+        let customPlayID = UUID()
+        var localSnapshot = SampleData.snapshot
+        localSnapshot.customPlays = []
+        let pendingDelete = SyncMutation.customPlayDelete(id: customPlayID)
+        var remoteSnapshot = SampleData.snapshot
+        remoteSnapshot.customPlays = [CustomPlay(id: customPlayID, name: "Will Be Deleted", meditationType: .vipassana, durationSeconds: 600)]
+        let remoteState = RemoteAppState(snapshot: remoteSnapshot, summary: nil, mediaAssets: [])
+        let result = AppSyncFeature.reconcile(remoteState: remoteState, localSnapshot: localSnapshot, pendingMutations: [pendingDelete])
+        XCTAssertNil(result.customPlays.first(where: { $0.id == customPlayID }), "Pending delete must prevent remote record from appearing in reconciled snapshot")
     }
 
     private func makeClient() -> LiveAppSyncClient {
@@ -976,14 +1030,16 @@ private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
         requests = []
     }
 
-    static func jsonResponse(_ object: Any, statusCode: Int = 200) -> (HTTPURLResponse, Data) {
-        let data = try! JSONSerialization.data(withJSONObject: object, options: [])
-        let response = HTTPURLResponse(
+    static func jsonResponse(_ object: Any, statusCode: Int = 200) throws -> (HTTPURLResponse, Data) {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [])
+        guard let response = HTTPURLResponse(
             url: URL(string: "http://127.0.0.1:8080")!,
             statusCode: statusCode,
             httpVersion: nil,
             headerFields: ["Content-Type": "application/json"]
-        )!
+        ) else {
+            throw NSError(domain: "URLProtocolStub", code: 1, userInfo: [NSLocalizedDescriptionKey: "HTTPURLResponse init failed"])
+        }
         return (response, data)
     }
 

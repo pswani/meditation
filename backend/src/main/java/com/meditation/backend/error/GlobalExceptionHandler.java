@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -26,6 +27,17 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(statusCode).body(
         ProblemDetail.of(statusCode, title, ex.getReason())
     );
+  }
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+    String detail = ex.getBindingResult().getFieldErrors().stream()
+        .map(e -> e.getField() + " " + e.getDefaultMessage())
+        .findFirst()
+        .orElse("Validation failed");
+    log.warn("Validation error: {}", detail);
+    return ProblemDetail.of(HttpStatus.BAD_REQUEST.value(), "Bad Request", detail);
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)

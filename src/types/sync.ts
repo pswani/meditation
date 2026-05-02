@@ -1,6 +1,6 @@
 export type SyncEntityType = 'timer-settings' | 'session-log' | 'custom-play' | 'playlist' | 'sankalpa';
 export type SyncOperation = 'upsert' | 'delete';
-export type SyncQueueEntryState = 'pending' | 'in-flight' | 'failed';
+export type SyncQueueEntryState = 'pending' | 'in-flight' | 'failed' | 'dead-letter';
 
 export interface SyncQueueEntry {
   readonly id: string;
@@ -20,6 +20,7 @@ export interface SyncQueueSummary {
   readonly pendingCount: number;
   readonly inFlightCount: number;
   readonly failedCount: number;
+  readonly deadLetterCount: number;
   readonly nextRetryCount: number;
   readonly oldestQueuedAt: string | null;
 }

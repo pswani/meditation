@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public struct RemoteMediaAsset: Codable, Equatable, Sendable {
     public var id: String
@@ -49,15 +50,38 @@ public enum AppSyncError: Error, Equatable, Sendable {
     case backendUnavailable
     case invalidResponse(String)
     case server(statusCode: Int, message: String)
+    case contractMismatch(endpoint: String, underlying: String)
+}
+
+private let syncLogger = Logger(subsystem: "com.meditation.native", category: "sync")
+
+private extension JSONDecoder {
+    func decodeWithContext<T: Decodable>(_ type: T.Type, from data: Data, endpoint: String) throws -> T {
+        do {
+            return try decode(type, from: data)
+        } catch let error as DecodingError {
+            let description = String(describing: error)
+            syncLogger.fault("Contract mismatch at \(endpoint, privacy: .public): \(description, privacy: .public)")
+            throw AppSyncError.contractMismatch(endpoint: endpoint, underlying: description)
+        }
+    }
 }
 
 public enum AppSyncFeature {
+    public static let maxPendingMutations = 500
+
     public static func enqueue(_ mutation: SyncMutation, into state: AppSyncState) -> AppSyncState {
         var updatedState = state
         if let existingIndex = updatedState.pendingMutations.firstIndex(where: { $0.id == mutation.id }) {
             updatedState.pendingMutations[existingIndex] = mutation
         } else {
             updatedState.pendingMutations.append(mutation)
+            if updatedState.pendingMutations.count > maxPendingMutations {
+                // Drop oldest mutations first; they will be reconciled via a full server pull.
+                let overflow = updatedState.pendingMutations.count - maxPendingMutations
+                updatedState.pendingMutations.removeFirst(overflow)
+                updatedState.mutationQueueOverflowed = true
+            }
         }
         return updatedState
     }
@@ -89,7 +113,7 @@ public enum AppSyncFeature {
         return mergedSnapshot
     }
 
-    public static func applyQueuedMutation(_ mutation: SyncMutation, to snapshot: AppSnapshot) -> AppSnapshot {
+    static func applyQueuedMutation(_ mutation: SyncMutation, to snapshot: AppSnapshot) -> AppSnapshot {
         var updatedSnapshot = snapshot
 
         switch mutation.domain {
@@ -156,7 +180,7 @@ public enum AppSyncFeature {
         return updatedSnapshot
     }
 
-    public static func mergeDeviceOnlyCustomPlayFields(
+    static func mergeDeviceOnlyCustomPlayFields(
         remoteCustomPlays: [CustomPlay],
         localCustomPlays: [CustomPlay]
     ) -> [CustomPlay] {
@@ -182,7 +206,7 @@ public enum AppSyncFeature {
         }
     }
 
-    public static func mergeDeviceOnlySankalpaFields(
+    static func mergeDeviceOnlySankalpaFields(
         remoteSankalpas: [Sankalpa],
         localSankalpas: [Sankalpa]
     ) -> [Sankalpa] {
@@ -229,8 +253,12 @@ public struct LiveAppSyncClient: AppSyncClient {
     public init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        self.encoder = e
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        self.decoder = d
     }
 
     public func fetchRemoteState(localSnapshot: AppSnapshot, timeZoneIdentifier: String) async throws -> RemoteAppState {
@@ -424,7 +452,7 @@ public struct LiveAppSyncClient: AppSyncClient {
             }
 
             if httpResponse.statusCode == 204 {
-                return try decoder.decode(Response.self, from: Data("{}".utf8))
+                return try decoder.decodeWithContext(Response.self, from: Data("{}".utf8), endpoint: path)
             }
 
             guard (200 ... 299).contains(httpResponse.statusCode) else {
@@ -432,7 +460,7 @@ public struct LiveAppSyncClient: AppSyncClient {
                 throw AppSyncError.server(statusCode: httpResponse.statusCode, message: serverMessage)
             }
 
-            return try decoder.decode(Response.self, from: data)
+            return try decoder.decodeWithContext(Response.self, from: data, endpoint: path)
         } catch let error as AppSyncError {
             throw error
         } catch let error as URLError {

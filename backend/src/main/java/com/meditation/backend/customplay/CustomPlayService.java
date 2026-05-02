@@ -6,10 +6,10 @@ import com.meditation.backend.sync.GeneratedSyncContract;
 import com.meditation.backend.sync.SyncMutationResult;
 import com.meditation.backend.sync.SyncRequestSupport;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -35,6 +35,7 @@ public class CustomPlayService {
         .toList();
   }
 
+  @Transactional
   public SyncMutationResult<CustomPlayResponse> saveCustomPlay(
       String customPlayId,
       CustomPlayUpsertRequest request,
@@ -71,6 +72,7 @@ public class CustomPlayService {
     );
   }
 
+  @Transactional
   public CustomPlayDeleteResult deleteCustomPlay(String customPlayId, String syncQueuedAtRaw) {
     CustomPlayEntity existingEntity = customPlayRepository.findById(customPlayId).orElse(null);
     if (existingEntity == null) {
@@ -149,24 +151,12 @@ public class CustomPlayService {
   }
 
   private Instant resolveMutationTimestamp(String syncQueuedAtRaw, String requestUpdatedAt) {
-    Instant fallbackTimestamp = parseOptionalTimestamp(requestUpdatedAt);
+    Instant fallbackTimestamp = SyncRequestSupport.parseOptionalTimestamp(requestUpdatedAt, "Custom play sync timestamp is invalid.");
     return SyncRequestSupport.resolveMutationTimestamp(syncQueuedAtRaw, fallbackTimestamp != null ? fallbackTimestamp : Instant.now());
   }
 
   private Instant resolveCreatedAt(String requestCreatedAt, Instant fallbackTimestamp) {
-    Instant createdAt = parseOptionalTimestamp(requestCreatedAt);
+    Instant createdAt = SyncRequestSupport.parseOptionalTimestamp(requestCreatedAt, "Custom play sync timestamp is invalid.");
     return createdAt != null ? createdAt : fallbackTimestamp;
-  }
-
-  private Instant parseOptionalTimestamp(String value) {
-    if (value == null || value.isBlank()) {
-      return null;
-    }
-
-    try {
-      return Instant.parse(value);
-    } catch (DateTimeParseException exception) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom play sync timestamp is invalid.");
-    }
   }
 }

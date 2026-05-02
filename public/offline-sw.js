@@ -1,23 +1,16 @@
-function resolveCacheVersion() {
-  try {
-    const serviceWorkerUrl = new URL(self.location.href);
-    const version = serviceWorkerUrl.searchParams.get('v');
-    return version && version.trim().length > 0 ? version.trim() : 'dev';
-  } catch {
-    return 'dev';
-  }
-}
-
-const CACHE_VERSION = resolveCacheVersion();
+// Version is injected at build time by the inject-sw-version Vite plugin.
+// Do not edit offline-sw.js directly — edit this template instead.
+const CACHE_VERSION = "67d13b8c907b";
 const APP_SHELL_CACHE = `meditation-app-shell-${CACHE_VERSION}`;
 const STATIC_ASSET_CACHE = `meditation-static-assets-${CACHE_VERSION}`;
 const MEDIA_ASSET_CACHE = `meditation-media-assets-${CACHE_VERSION}`;
 const MEDIA_CACHE_INDEX_URL = '/__offline__/media-cache-index';
 const MAX_CACHEABLE_MEDIA_BYTES = 25 * 1024 * 1024;
-const MAX_MEDIA_CACHE_ENTRIES = 12;
+const MAX_MEDIA_CACHE_ENTRIES = 50; // secondary safety limit; bytes-first eviction is primary
 const APP_SHELL_URL = '/';
 const MANIFEST_URL = '/manifest.webmanifest';
 const CACHE_URLS_MESSAGE_TYPE = 'CACHE_URLS';
+const SKIP_WAITING_MESSAGE_TYPE = 'SKIP_WAITING';
 
 function isSameOrigin(url) {
   return url.origin === self.location.origin;
@@ -92,6 +85,7 @@ function isCacheableMediaResponse(response) {
   return contentLength !== null && contentLength <= MAX_CACHEABLE_MEDIA_BYTES;
 }
 
+// Index format: [{url: string, sizeBytes: number}, ...]
 async function readMediaCacheIndex(cache) {
   const response = await cache.match(MEDIA_CACHE_INDEX_URL);
   if (!response) {
@@ -99,19 +93,28 @@ async function readMediaCacheIndex(cache) {
   }
 
   try {
-    const payload = await response.json();
-    return Array.isArray(payload?.urls)
-      ? payload.urls.filter((value) => typeof value === 'string' && value.length > 0)
-      : [];
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    // Migrate old format: { urls: ['url1', ...] }
+    if (data.length === 0) {
+      return [];
+    }
+    if (typeof data[0] === 'string') {
+      return data.map((url) => ({ url, sizeBytes: 0 }));
+    }
+    // Old wrapped format: { urls: [...] } stored as array element — shouldn't happen, guard anyway
+    return data.filter((entry) => entry && typeof entry.url === 'string');
   } catch {
     return [];
   }
 }
 
-async function writeMediaCacheIndex(cache, urls) {
+async function writeMediaCacheIndex(cache, entries) {
   await cache.put(
     MEDIA_CACHE_INDEX_URL,
-    new Response(JSON.stringify({ urls }), {
+    new Response(JSON.stringify(entries), {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -119,15 +122,26 @@ async function writeMediaCacheIndex(cache, urls) {
   );
 }
 
-async function rememberCachedMediaUrl(cache, url) {
-  const currentUrls = await readMediaCacheIndex(cache);
-  const nextUrls = [...currentUrls.filter((value) => value !== url), url];
-  const overflowCount = Math.max(0, nextUrls.length - MAX_MEDIA_CACHE_ENTRIES);
-  const evictedUrls = nextUrls.slice(0, overflowCount);
-  const retainedUrls = nextUrls.slice(overflowCount);
+async function rememberCachedMediaUrl(cache, url, sizeBytes) {
+  const index = await readMediaCacheIndex(cache);
+  const withoutCurrent = index.filter((entry) => entry.url !== url);
+  let updated = [...withoutCurrent, { url, sizeBytes }];
 
-  await Promise.all(evictedUrls.map((value) => cache.delete(value)));
-  await writeMediaCacheIndex(cache, retainedUrls);
+  // Evict oldest entries until total bytes fit within the byte cap
+  let totalBytes = updated.reduce((sum, entry) => sum + (entry.sizeBytes ?? 0), 0);
+  while (totalBytes > MAX_CACHEABLE_MEDIA_BYTES && updated.length > 1) {
+    const evicted = updated.shift();
+    await cache.delete(evicted.url);
+    totalBytes -= (evicted.sizeBytes ?? 0);
+  }
+
+  // Secondary safety cap: never store more than MAX_MEDIA_CACHE_ENTRIES index entries
+  while (updated.length > MAX_MEDIA_CACHE_ENTRIES) {
+    const evicted = updated.shift();
+    await cache.delete(evicted.url);
+  }
+
+  await writeMediaCacheIndex(cache, updated);
 }
 
 async function cacheMediaResponse(cache, cacheKey, response) {
@@ -135,8 +149,10 @@ async function cacheMediaResponse(cache, cacheKey, response) {
     return false;
   }
 
+  // isCacheableMediaResponse already requires content-length to be present and valid
+  const sizeBytes = readContentLength(response) ?? 0;
   await cache.put(cacheKey, response.clone());
-  await rememberCachedMediaUrl(cache, cacheKey);
+  await rememberCachedMediaUrl(cache, cacheKey, sizeBytes);
   return true;
 }
 
@@ -224,12 +240,19 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (!event.data || event.data.type !== CACHE_URLS_MESSAGE_TYPE) {
+  if (!event.data) {
     return;
   }
 
-  const urls = Array.isArray(event.data.payload?.urls) ? event.data.payload.urls : [];
-  event.waitUntil(cacheUrls(urls));
+  if (event.data.type === SKIP_WAITING_MESSAGE_TYPE) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
+
+  if (event.data.type === CACHE_URLS_MESSAGE_TYPE) {
+    const urls = Array.isArray(event.data.payload?.urls) ? event.data.payload.urls : [];
+    event.waitUntil(cacheUrls(urls));
+  }
 });
 
 self.addEventListener('fetch', (event) => {

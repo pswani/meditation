@@ -38,6 +38,7 @@ type AudioLikeConstructor = new (src: string) => AudioLike;
 export interface TimerSoundPlayer {
   prepare(labels: readonly string[]): void;
   play(label: string, cue: TimerSoundCue): Promise<TimerSoundPlaybackResult>;
+  dispose(): void;
 }
 
 class UnsupportedAudio {
@@ -151,6 +152,17 @@ export function createTimerSoundPlayer(
         primingByLabel.set(label, primingPromise);
       }
     },
+    dispose() {
+      for (const audio of audioByLabel.values()) {
+        audio.pause?.();
+        if ('src' in audio) {
+          (audio as HTMLAudioElement).src = '';
+          (audio as HTMLAudioElement).load?.();
+        }
+      }
+      audioByLabel.clear();
+      primingByLabel.clear();
+    },
     async play(label, cue) {
       if (label === SILENT_TIMER_SOUND_LABEL) {
         return {
@@ -193,11 +205,11 @@ export function createTimerSoundPlayer(
   };
 }
 
-export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number): number {
-  return getActiveSessionElapsedSeconds(session, nowMs);
+export function getCompletedSessionSeconds(session: ActiveSession, nowMs: number, nowPerformanceMs?: number): number {
+  return getActiveSessionElapsedSeconds(session, nowMs, nowPerformanceMs);
 }
 
-export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number): number {
+export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number, nowPerformanceMs?: number): number {
   if (!session.intervalEnabled || session.intervalMinutes <= 0) {
     return 0;
   }
@@ -207,7 +219,7 @@ export function getElapsedIntervalCueCount(session: ActiveSession, nowMs: number
     return 0;
   }
 
-  const completedSeconds = getCompletedSessionSeconds(session, nowMs);
+  const completedSeconds = getCompletedSessionSeconds(session, nowMs, nowPerformanceMs);
 
   if (session.timerMode === 'open-ended' || session.intendedDurationSeconds === null) {
     return Math.floor(completedSeconds / intervalSeconds);

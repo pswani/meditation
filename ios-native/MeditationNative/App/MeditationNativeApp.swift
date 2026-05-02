@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct MeditationNativeApp: App {
+    // @StateObject: owns the ViewModel lifecycle. Pass to children as @ObservedObject —
+    // never let a child hold @StateObject of the same instance.
     @StateObject private var viewModel: ShellViewModel
 
     init() {

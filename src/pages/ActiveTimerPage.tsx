@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingTime, getActiveSessionClockSeconds } from '../features/timer/time';
-import { useTimer } from '../features/timer/useTimer';
+import { useSessionLog } from '../features/timer/sessionLogContext';
+import { useTimerActions } from '../features/timer/timerActionsContext';
+import { useTimerState } from '../features/timer/timerStateContext';
 import { detectTimerRuntimeEnvironment } from '../utils/timerRuntime';
 
 export default function ActiveTimerPage() {
+  const { state: { activeSession, lastOutcome }, isPaused } = useTimerState();
   const {
-    activeSession,
-    isPaused,
     pauseSession,
     resumeSession,
     endSessionEarly,
-    lastOutcome,
     clearOutcome,
     timerSoundPlaybackMessage,
     clearTimerSoundPlaybackMessage,
-    isSessionLogSyncing,
-    sessionLogSyncError,
-  } = useTimer();
+  } = useTimerActions();
+  const { isSessionLogSyncing, sessionLogSyncError } = useSessionLog();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
   const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+  const [clockNowPerformanceMs, setClockNowPerformanceMs] = useState(() => performance.now());
   const timerRuntime = useMemo(() => detectTimerRuntimeEnvironment(), []);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export default function ActiveTimerPage() {
 
   useEffect(() => {
     setClockNowMs(Date.now());
+    setClockNowPerformanceMs(performance.now());
 
     if (!activeSession || isPaused) {
       return;
@@ -38,6 +39,7 @@ export default function ActiveTimerPage() {
 
     const intervalId = window.setInterval(() => {
       setClockNowMs(Date.now());
+      setClockNowPerformanceMs(performance.now());
     }, 500);
 
     return () => {
@@ -111,7 +113,7 @@ export default function ActiveTimerPage() {
     );
   }
 
-  const timerClockSeconds = getActiveSessionClockSeconds(activeSession, clockNowMs);
+  const timerClockSeconds = getActiveSessionClockSeconds(activeSession, clockNowMs, clockNowPerformanceMs);
   const isOpenEndedSession = activeSession.timerMode === 'open-ended';
   const timerClockLabel = isOpenEndedSession ? 'Elapsed' : 'Remaining';
   const endActionLabel = isOpenEndedSession ? 'End Session' : 'End Early';

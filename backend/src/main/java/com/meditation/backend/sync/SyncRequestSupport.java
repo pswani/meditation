@@ -13,6 +13,7 @@ public final class SyncRequestSupport {
   public static final String SYNC_OUTCOME_APPLIED = GeneratedSyncContract.SYNC_OUTCOME_APPLIED;
   public static final String SYNC_OUTCOME_STALE = GeneratedSyncContract.SYNC_OUTCOME_STALE;
   public static final String SYNC_OUTCOME_DELETED = GeneratedSyncContract.SYNC_OUTCOME_DELETED;
+  public static final String IDEMPOTENCY_KEY_HEADER = "X-Idempotency-Key";
 
   private SyncRequestSupport() {
   }
@@ -32,6 +33,28 @@ public final class SyncRequestSupport {
   public static Instant resolveMutationTimestamp(String syncQueuedAtRaw, Instant fallback) {
     Instant syncQueuedAt = parseOptionalSyncQueuedAt(syncQueuedAtRaw);
     return syncQueuedAt != null ? syncQueuedAt : fallback;
+  }
+
+  public static Instant parseRequiredTimestamp(String value, String errorMessage) {
+    if (value == null || value.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+  }
+
+  public static Instant parseOptionalTimestamp(String value, String errorMessage) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return Instant.parse(value);
+    } catch (DateTimeParseException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+    }
   }
 
   public static boolean isStaleMutation(Instant existingUpdatedAt, String syncQueuedAtRaw) {

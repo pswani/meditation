@@ -7,6 +7,8 @@ node_modules/
 # Build output / caches
 # --------------------------------------------------
 dist/
+# Generated at build time from public/offline-sw.template.js by the inject-sw-version Vite plugin
+public/offline-sw.js
 build/
 coverage/
 .vite/
@@ -35,6 +37,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# --------------------------------------------------
+# Stale build/scratch files
+# --------------------------------------------------
+a.txt
 
 # --------------------------------------------------
 # Temporary / runtime files
@@ -80,9 +87,9 @@ test-results/
 .yarn/install-state.gz
 
 # --------------------------------------------------
-# Codex local state
-# Keep project config, ignore everything else
+# AI tool scaffolding — content is machine-generated and local
 # --------------------------------------------------
+.agents/
 .codex/*
 !.codex/config.toml
 
@@ -91,3 +98,8 @@ test-results/
 # --------------------------------------------------
 local-data/
 exports/
+
+# --------------------------------------------------
+# Claude Code memory
+# --------------------------------------------------
+memory/

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { NotificationSettingsPanel } from '../features/timer/NotificationSettingsPanel';
 import { SettingsDefaultsPanel } from '../features/timer/SettingsDefaultsPanel';
 import { defaultTimerSettings } from '../features/timer/constants';
-import { useTimer } from '../features/timer/useTimer';
+import { useTimerSettings } from '../features/timer/timerSettingsContext';
 import type { TimerMode, TimerSettings } from '../types/timer';
 import { detectTimerRuntimeEnvironment, requestTimerNotificationPermission } from '../utils/timerRuntime';
 import { getIntervalBellCount, validateTimerSettings } from '../utils/timerValidation';
 import { hasTimerSettingsChanges, type SaveMessageTone, type SavePhase } from './settingsPageHelpers';
 
 export default function SettingsPage() {
-  const { settings, setSettings, isSettingsLoading, isSettingsSyncing, settingsSyncError } = useTimer();
+  const { settings, setSettings, isSettingsLoading, isSettingsSyncing, settingsSyncError } = useTimerSettings();
   const [draft, setDraft] = useState<TimerSettings>(settings);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveMessageTone, setSaveMessageTone] = useState<SaveMessageTone>('ok');

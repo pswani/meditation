@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TimerSetupSection: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
 
     var body: some View {
@@ -24,6 +25,7 @@ struct TimerSetupSection: View {
 }
 
 struct FeaturedCustomPlayLibrarySection: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     let openLibrary: () -> Void
 
@@ -88,6 +90,7 @@ struct FeaturedCustomPlayLibrarySection: View {
 }
 
 struct FeaturedPlaylistLibrarySection: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
 
     var body: some View {

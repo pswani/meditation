@@ -20,7 +20,8 @@ public class PlaylistItemEntity {
   @Column(name = "playlist_id", nullable = false, length = 64)
   private String playlistId;
 
-  @Column(name = "external_id", nullable = false, length = 64)
+  // Stable client-facing ID; set at creation and never updated. See V5/V6 migrations.
+  @Column(name = "external_id", nullable = false, length = 64, updatable = false)
   private String externalId;
 
   @Column(name = "position_index", nullable = false)

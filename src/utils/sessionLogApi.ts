@@ -1,4 +1,6 @@
 import type { SessionLog } from '../types/sessionLog';
+import { sessionLogSchema } from '../api/schemas/sessionLogSchema';
+import { validateApiContract } from '../api/schemas/validateContract';
 import { isSessionLogSource } from '../types/referenceData';
 import type { ManualLogCreateRequest } from './manualLog';
 import { requestJson } from './apiClient';
@@ -117,6 +119,7 @@ function isSessionLogApiResponse(value: unknown): value is SessionLogApiResponse
 }
 
 function normalizeSessionLogPayload(payload: unknown): SessionLog {
+  validateApiContract(sessionLogSchema, payload, 'SessionLog');
   if (!isSessionLogApiResponse(payload)) {
     throw new Error('Session log response is invalid.');
   }

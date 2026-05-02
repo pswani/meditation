@@ -2,6 +2,12 @@ import Foundation
 
 enum ShellViewModelPresentation {
     static func syncBannerMessage(for syncState: AppSyncState) -> String? {
+        if syncState.mutationQueueOverflowed {
+            return "Some offline changes were discarded due to extended offline period. Sync now to restore from server."
+        }
+        if syncState.needsFullResync {
+            return "Local sync state was reset. Your data will re-sync from the server."
+        }
         switch syncState.connectionState {
         case .localOnly:
             if syncState.pendingMutationCount > 0 {

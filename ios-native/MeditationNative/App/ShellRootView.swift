@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ShellRootView: View {
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @Environment(\.scenePhase) private var scenePhase
     private let accentColor = Color(red: 0.12, green: 0.48, blue: 0.42)

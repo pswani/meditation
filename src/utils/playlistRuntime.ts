@@ -37,7 +37,7 @@ export function isAudioBackedPlaylistItem(item: ActivePlaylistRunItem | Playlist
 }
 
 export function getPlaylistItemDurationSeconds(item: Pick<ActivePlaylistRunItem, 'durationMinutes'>): number {
-  return Math.round(item.durationMinutes * 60);
+  return Math.max(60, Math.round(item.durationMinutes * 60));
 }
 
 export function buildPlaylistRuntimeItems(
@@ -79,7 +79,7 @@ export function buildPlaylistRuntimeItems(
       customPlayRecordingLabel: customPlay.recordingLabel || undefined,
       mediaAssetId: mediaAsset.id,
       mediaLabel: mediaAsset.label,
-      mediaFilePath: mediaAsset.filePath,
+      mediaFilePath: `${mediaAsset.filePath}?v=${encodeURIComponent(mediaAsset.updatedAt)}`,
       startSound: customPlay.startSound,
       endSound: customPlay.endSound,
     });

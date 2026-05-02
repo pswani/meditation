@@ -11,7 +11,7 @@ describe('manual log helpers', () => {
     });
 
     expect(result.isValid).toBe(false);
-    expect(result.errors.durationMinutes).toMatch(/greater than 0/i);
+    expect(result.errors.durationMinutes).toMatch(/between 1 and 1440/i);
     expect(result.errors.meditationType).toMatch(/required/i);
     expect(result.errors.sessionTimestamp).toMatch(/required/i);
   });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingTime } from '../features/timer/time';
-import { useTimer } from '../features/timer/useTimer';
+import { useCustomPlay } from '../features/timer/customPlayContext';
 import { formatDurationLabel } from '../utils/sessionLog';
 
 export default function CustomPlayRunPage() {
@@ -14,7 +14,7 @@ export default function CustomPlayRunPage() {
     clearCustomPlayRunOutcome,
     customPlayRuntimeMessage,
     clearCustomPlayRuntimeMessage,
-  } = useTimer();
+  } = useCustomPlay();
   const navigate = useNavigate();
   const [showEndEarlyConfirm, setShowEndEarlyConfirm] = useState(false);
 

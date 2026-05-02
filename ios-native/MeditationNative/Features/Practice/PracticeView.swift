@@ -7,6 +7,7 @@ struct PracticeView: View {
         var id: Self { self }
     }
 
+    // @ObservedObject: does NOT own lifecycle. Instance is owned by MeditationNativeApp's @StateObject.
     @ObservedObject var viewModel: ShellViewModel
     @State private var destination: Destination?
 
@@ -14,11 +15,26 @@ struct PracticeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if viewModel.activeSession != nil {
-                    ActiveTimerSection(viewModel: viewModel)
+                    ActiveTimerSection(
+                        sessionDisplay: viewModel.sessionDisplay,
+                        onPause: { viewModel.pauseTimer() },
+                        onResume: { viewModel.resumeTimer() },
+                        onRequestEnd: { viewModel.requestEndTimerConfirmation() }
+                    )
                 } else if viewModel.activeCustomPlaySession != nil {
-                    ActiveCustomPlaySection(viewModel: viewModel)
+                    ActiveCustomPlaySection(
+                        sessionDisplay: viewModel.sessionDisplay,
+                        onPause: { viewModel.pauseCustomPlay() },
+                        onResume: { viewModel.resumeCustomPlay() },
+                        onRequestEnd: { viewModel.requestEndCustomPlayConfirmation() }
+                    )
                 } else if viewModel.activePlaylistSession != nil {
-                    ActivePlaylistSection(viewModel: viewModel)
+                    ActivePlaylistSection(
+                        sessionDisplay: viewModel.sessionDisplay,
+                        onPause: { viewModel.pausePlaylist() },
+                        onResume: { viewModel.resumePlaylist() },
+                        onRequestEnd: { viewModel.requestEndPlaylistConfirmation() }
+                    )
                 } else {
                     TimerSetupSection(viewModel: viewModel)
                     FeaturedCustomPlayLibrarySection(
