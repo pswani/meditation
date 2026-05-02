@@ -2,6 +2,7 @@
 
 ## Product and architecture
 - Keep the app as a React + TypeScript + Vite SPA backed by one Spring Boot service in `backend/`.
+- Keep the shared app icon direction centered on a calm seated-practice mark so the iPhone launcher icon and web favicon stay visually aligned with the native Practice tab.
 - If a native iOS client is pursued, keep it as a separate SwiftUI app under `ios-native/` rather than replacing or embedding the existing web app.
 - Keep H2 as the repository's default local and early-production datastore, with Flyway managing schema changes.
 - Keep media files on disk under the configured media root and store stable metadata plus relative paths in the database.
