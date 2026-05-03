@@ -7,6 +7,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/common.sh"
 
 load_local_env
+ensure_npm_install
 ensure_media_root >/dev/null
 
 cd "$ROOT_DIR"

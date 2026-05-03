@@ -265,9 +265,15 @@ restart_backend_service() {
 }
 
 restart_nginx_service() {
-  run_step \
-    "Starting or restarting nginx through Homebrew services" \
-    "sudo brew services restart nginx || sudo brew services start nginx"
+  if pgrep -x nginx >/dev/null 2>&1; then
+    run_step \
+      "Reloading nginx config" \
+      "sudo nginx -s reload"
+  else
+    run_step \
+      "Starting nginx" \
+      "sudo nginx"
+  fi
 }
 
 maybe_install_certbot_certificate() {

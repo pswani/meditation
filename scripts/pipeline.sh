@@ -32,6 +32,7 @@ USAGE
 
 run_verify() {
   load_local_env
+  ensure_npm_install
   cd "$ROOT_DIR"
   npm run typecheck
   npm run lint

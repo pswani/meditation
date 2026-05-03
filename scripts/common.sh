@@ -4,6 +4,13 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 
+ensure_npm_install() {
+  if [ ! -d "$ROOT_DIR/node_modules" ] || [ "$ROOT_DIR/package-lock.json" -nt "$ROOT_DIR/node_modules" ]; then
+    printf '%s\n' "Running npm install..."
+    (cd "$ROOT_DIR" && npm install)
+  fi
+}
+
 load_local_env() {
   if [ -f "$ROOT_DIR/.env" ]; then
     set -a

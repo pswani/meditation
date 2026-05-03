@@ -21,8 +21,25 @@ public struct JSONFileStore<Value: Codable & Equatable & Sendable>: FileStore {
         self.encoder = encoder
         self.decoder = decoder
         self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        self.encoder.dateEncodingStrategy = .iso8601
-        self.decoder.dateDecodingStrategy = .iso8601
+
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let wholeSecondFormatter = ISO8601DateFormatter()
+
+        self.encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(fractionalFormatter.string(from: date))
+        }
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            if let date = fractionalFormatter.date(from: string) { return date }
+            if let date = wholeSecondFormatter.date(from: string) { return date }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO 8601 date: \(string)"
+            )
+        }
     }
 
     public func load() throws -> Value? {

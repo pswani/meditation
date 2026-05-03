@@ -126,13 +126,11 @@ backend_http_state() {
 }
 
 nginx_service_state() {
-  state=$(brew services list | awk '$1 == "nginx" {print $2}')
-  if [ -n "$state" ]; then
-    printf '%s\n' "$state"
+  if pgrep -x nginx >/dev/null 2>&1; then
+    printf '%s\n' "started"
     return
   fi
-
-  printf '%s\n' "not-installed"
+  printf '%s\n' "stopped"
 }
 
 assert_installed() {
@@ -186,20 +184,26 @@ stop_backend_service() {
 }
 
 start_nginx_service() {
-  run_step \
-    "Starting or restarting nginx" \
-    "sudo brew services start nginx || sudo brew services restart nginx"
+  if pgrep -x nginx >/dev/null 2>&1; then
+    run_step \
+      "Reloading nginx config" \
+      "sudo nginx -s reload"
+  else
+    run_step \
+      "Starting nginx" \
+      "sudo nginx"
+  fi
 }
 
 stop_nginx_service() {
-  if [ "$(nginx_service_state)" = "none" ] || [ "$(nginx_service_state)" = "not-installed" ]; then
+  if ! pgrep -x nginx >/dev/null 2>&1; then
     printf '%s\n' "nginx is already stopped."
     return
   fi
 
   run_step \
     "Stopping nginx" \
-    "sudo brew services stop nginx"
+    "sudo nginx -s quit"
 }
 
 print_status() {
